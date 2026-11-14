@@ -110,6 +110,11 @@ Three choices shaped this design; each was settled in conversation.
    React 19 with Chakra UI v3 and TanStack Router, Query, Form and Table, Vitest with MSW, Playwright.
 9. **The frontend is part of the framework.** A backend-only scaffold is not a prototype.
 10. **Licence: Apache 2.0**, as `who` and `jpa-utils` are; the repository is already public.
+11. **Forms validate with Zod.** The generator writes one Zod schema per request record beside its
+    TypeScript type in the app's `api.ts`, mirroring the record's Bean Validation annotations, and forms
+    pass it to TanStack Form as a Standard Schema validator (no adapter). The server stays the
+    authority: its 400 field errors still reach the fields through `showProblem`. Stage 1's form code
+    needs no change for this, since it already reads `{ message }` errors.
 
 ## 2. The parts
 
@@ -306,7 +311,8 @@ theme, members) as app code.
 **Stage 3: checks.** The template's `CLAUDE.md` rules as build failures: every handler gated on a
 permission; no `@ExceptionHandler` outside roux; time from the injected `Clock`; edited records carry a
 `version`; icons only from `react-icons/lu`; every client route registered; and a check that the
-generated TypeScript types still match the Java records (decision 6).
+generated TypeScript types and Zod schemas still match the Java records and their Bean Validation
+annotations (decisions 6 and 11).
 
 **Stage 4: the rest of the runtime.** `roux-time`, `roux-spa`, `roux-who` (and the browser's `who`
 client half), `roux-activity`, `roux-theme`, `roux-defaults`, `roux-test` and
