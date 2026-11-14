@@ -19,17 +19,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.RecordComponent;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 import com.jayway.jsonpath.JsonPath;
 
-/** The configuration processor describes roux's properties, so an IDE can complete them. */
+/** The hand-written metadata describes roux's properties, so an IDE can complete them. */
 class RouxProblemsPropertiesMetadataTest {
 
   @Test
@@ -48,5 +54,43 @@ class RouxProblemsPropertiesMetadataTest {
       }
     }
     assertThat(names).contains("roux.problems.enabled", "roux.problems.api-path-prefix");
+  }
+
+  @Test
+  void metadataMatchesTheRecord() throws IOException {
+    String json;
+    try (InputStream in =
+        getClass()
+            .getClassLoader()
+            .getResourceAsStream("META-INF/spring-configuration-metadata.json")) {
+      json = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+    }
+
+    Map<String, List<String>> expected = new TreeMap<>();
+    RecordComponent[] components = RouxProblemsProperties.class.getRecordComponents();
+    Constructor<?> canonical = RouxProblemsProperties.class.getDeclaredConstructors()[0];
+    for (int i = 0; i < components.length; i++) {
+      Class<?> type = components[i].getType();
+      String javaType = type == boolean.class ? Boolean.class.getName() : type.getName();
+      String defaultValue =
+          canonical.getParameters()[i].getAnnotation(DefaultValue.class).value()[0];
+      expected.put(
+          "roux.problems." + kebabCase(components[i].getName()), List.of(javaType, defaultValue));
+    }
+
+    List<String> names = JsonPath.read(json, "$.properties[*].name");
+    assertThat(names).containsExactlyInAnyOrderElementsOf(expected.keySet());
+    expected.forEach(
+        (name, typeAndDefault) -> {
+          String filter = "$.properties[?(@.name == '" + name + "')]";
+          List<String> types = JsonPath.read(json, filter + ".type");
+          List<Object> defaults = JsonPath.read(json, filter + ".defaultValue");
+          assertThat(types).containsExactly(typeAndDefault.get(0));
+          assertThat(defaults).extracting(String::valueOf).containsExactly(typeAndDefault.get(1));
+        });
+  }
+
+  private static String kebabCase(String camelCase) {
+    return camelCase.replaceAll("([A-Z])", "-$1").toLowerCase(Locale.ROOT);
   }
 }
