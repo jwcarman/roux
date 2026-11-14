@@ -63,15 +63,26 @@ describe("useClearQueriesOnIdentityChange", () => {
 });
 
 describe("createQueryClient", () => {
-  function watched() {
+  /** A watched query whose fetches take a moment: `completed` counts the ones that have finished. */
+  function watched(refetchFails = false) {
     const client = createQueryClient();
     let fetches = 0;
+    let completed = 0;
     const observer = new QueryObserver(client, {
       queryKey: ["customers", "list"],
-      queryFn: () => Promise.resolve(++fetches),
+      retry: false,
+      queryFn: async () => {
+        const first = ++fetches === 1;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        if (refetchFails && !first) {
+          throw new ApiError(404);
+        }
+        completed++;
+        return completed;
+      },
     });
     const unsubscribe = observer.subscribe(() => undefined);
-    return { client, fetches: () => fetches, unsubscribe };
+    return { client, fetches: () => fetches, completed: () => completed, unsubscribe };
   }
 
   async function settled(count: () => number, expected: number) {
@@ -81,8 +92,37 @@ describe("createQueryClient", () => {
   }
 
   it("refreshesTheNamedQueriesAfterSuccess", async () => {
-    const { client, fetches, unsubscribe } = watched();
+    const { client, completed, unsubscribe } = watched();
+    await settled(completed, 1);
+    const mutation = new MutationObserver(client, {
+      mutationFn: () => Promise.resolve("saved"),
+      meta: { refreshes: [["customers"]] },
+    });
+
+    await expect(mutation.mutate()).resolves.toBe("saved");
+
+    expect(completed()).toBe(2);
+    unsubscribe();
+  });
+
+  it("refreshesAfterARefusalToo", async () => {
+    const { client, completed, unsubscribe } = watched();
+    await settled(completed, 1);
+    const mutation = new MutationObserver(client, {
+      mutationFn: () => Promise.reject(new ApiError(409)),
+      meta: { refreshes: [["customers"]] },
+    });
+
+    await expect(mutation.mutate()).rejects.toBeInstanceOf(ApiError);
+
+    expect(completed()).toBe(2);
+    unsubscribe();
+  });
+
+  it("aRefetchThatFailsLeavesASuccessfulMutationSuccessful", async () => {
+    const { client, fetches, unsubscribe } = watched(true);
     await settled(fetches, 1);
+    await new Promise((resolve) => setTimeout(resolve, 30));
     const mutation = new MutationObserver(client, {
       mutationFn: () => Promise.resolve("saved"),
       meta: { refreshes: [["customers"]] },
@@ -94,23 +134,9 @@ describe("createQueryClient", () => {
     unsubscribe();
   });
 
-  it("refreshesAfterARefusalToo", async () => {
-    const { client, fetches, unsubscribe } = watched();
-    await settled(fetches, 1);
-    const mutation = new MutationObserver(client, {
-      mutationFn: () => Promise.reject(new ApiError(409)),
-      meta: { refreshes: [["customers"]] },
-    });
-
-    await expect(mutation.mutate()).rejects.toBeInstanceOf(ApiError);
-
-    expect(fetches()).toBe(2);
-    unsubscribe();
-  });
-
   it("aMutationWithoutMetaRefreshesNothing", async () => {
-    const { client, fetches, unsubscribe } = watched();
-    await settled(fetches, 1);
+    const { client, fetches, completed, unsubscribe } = watched();
+    await settled(completed, 1);
     const mutation = new MutationObserver(client, { mutationFn: () => Promise.resolve("saved") });
 
     await mutation.mutate();
