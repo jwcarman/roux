@@ -1,17 +1,20 @@
-import { useMutation, useQueryClient, type QueryKey } from "@tanstack/react-query";
-import { ApiError } from "./client";
+import {
+  useMutation,
+  useQueryClient,
+  type QueryClient,
+  type QueryKey,
+  type UseMutationOptions,
+} from "@tanstack/react-query";
+import { ApiError, isSessionLost } from "./client";
+import { hasRouxRefreshes } from "./queryClient";
 import { notify } from "../feedback/notify";
-import { problemOf } from "../problem";
 
-export interface ServerActionOptions<Variables> {
-  /** Sends the request, such as `(skill) => send("POST", `/api/skills/${skill.id}/archive`)`. */
-  request: (variables: Variables) => Promise<Response>;
-  /** What the user reads when the server gives no reason, such as `Could not archive Oi-zuki`. */
-  failure: (variables: Variables) => string;
-  /** The queries to refresh once the request is answered, refused or not: a refusal often means the page is out of date. */
-  refreshes?: (variables: Variables) => QueryKey[];
-  /** Runs once the request succeeds, before the refresh: a success toast, closing a dialog. */
-  onSuccess?: (response: Response, variables: Variables) => void | Promise<void>;
+/** What a server action adds to its mutation: the failure title, and what to do on success. */
+export interface ServerActionOptions<TData, TVariables> {
+  /** The toast title when the request is refused, such as `Could not archive Acme`. Defaults to `Could not save`. */
+  failure?: string | ((variables: TVariables) => string);
+  /** Runs once the request succeeds: a success toast, closing a dialog. The mutation's own `onSuccess` runs too. */
+  onSuccess?: (data: TData, variables: TVariables) => void | Promise<void>;
 }
 
 export interface ServerAction<Variables> {
@@ -22,40 +25,64 @@ export interface ServerAction<Variables> {
 }
 
 /**
- * One request that changes something, as a TanStack Query mutation. A refusal tells the user the
- * server's reason (its Problem Detail), or `failure` when it gave none; either way the queries
- * named by `refreshes` are refreshed. For a form's submission, use `showProblem` instead.
+ * Shows why a request was refused, titled by the failure: the server's reason (its Problem Detail)
+ * under `title`. A lost session (401) shows nothing, because the session provider sends the user to
+ * sign in; anything else (a network failure) shows `title` alone.
  */
-export function useServerAction<Variables = void>(options: ServerActionOptions<Variables>): ServerAction<Variables> {
+export function refusalToast(error: unknown, title: string): void {
+  if (isSessionLost(error)) {
+    return;
+  }
+  if (error instanceof ApiError) {
+    notify.problem(error.problem, title);
+  } else {
+    notify.error(title);
+  }
+}
+
+/**
+ * Throws when a mutation names `meta.refreshes` but `client` is not roux's, which would silently
+ * refresh nothing.
+ */
+export function assertRefreshesHonoured(
+  client: QueryClient,
+  mutation: { meta?: { refreshes?: readonly QueryKey[] } },
+): void {
+  if (mutation.meta?.refreshes !== undefined && !hasRouxRefreshes(client)) {
+    throw new Error("meta.refreshes needs roux's query client: use createQueryClient() from @jwcarman/roux-web/api");
+  }
+}
+
+/**
+ * Runs a TanStack Query mutation as one user action. A refusal tells the user the server's reason
+ * (its Problem Detail) under `failure`; `run` answers whether it succeeded. The queries the
+ * mutation names in `meta.refreshes` are refreshed by the query client, not by this hook.
+ */
+export function useServerAction<TData, TVariables = void>(
+  mutation: UseMutationOptions<TData, Error, TVariables>,
+  options: ServerActionOptions<TData, TVariables> = {},
+): ServerAction<TVariables> {
   const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: async (variables: Variables) => {
-      const response = await options.request(variables);
-      if (!response.ok) {
-        throw new ApiError(response.status, await problemOf(response));
-      }
-      return response;
+  const { mutateAsync, isPending } = useMutation({
+    ...mutation,
+    onSuccess: async (data, variables, onMutateResult, context) => {
+      await mutation.onSuccess?.(data, variables, onMutateResult, context);
+      await options.onSuccess?.(data, variables);
     },
-    onSuccess: (response, variables) => options.onSuccess?.(response, variables),
-    onError: (error, variables) => {
-      const fallback = options.failure(variables);
-      if (error instanceof ApiError) {
-        notify.problem(error.problem, fallback);
-      } else {
-        notify.error(fallback);
-      }
-    },
-    onSettled: async (_data, _error, variables) => {
-      const keys = options.refreshes?.(variables) ?? [];
-      await Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
+    onError: async (error, variables, onMutateResult, context) => {
+      await mutation.onError?.(error, variables, onMutateResult, context);
+      const { failure = "Could not save" } = options;
+      refusalToast(error, typeof failure === "function" ? failure(variables) : failure);
     },
   });
   return {
-    run: (variables) =>
-      mutation.mutateAsync(variables).then(
+    run: async (variables) => {
+      assertRefreshesHonoured(queryClient, mutation);
+      return mutateAsync(variables).then(
         () => true,
         () => false,
-      ),
-    pending: mutation.isPending,
+      );
+    },
+    pending: isPending,
   };
 }

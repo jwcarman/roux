@@ -14,9 +14,10 @@ export const notify = {
   error(title: string, detail?: string): void {
     toaster.create({ type: "error", title, description: detail });
   },
-  /** A failed request: the problem's detail, or `fallback`; a server error adds its reference. */
-  problem(problem: Problem, fallback: string): void {
+  /** A refused request: `title` names the failure, the description is the problem's detail, then its reference on its own line. */
+  problem(problem: Problem, title: string): void {
     const reference = problem.errorId === undefined ? undefined : `Reference: ${problem.errorId}`;
-    toaster.create({ type: "error", title: problem.detail ?? fallback, description: reference });
+    const description = [problem.detail, reference].filter((line) => line !== undefined).join("\n");
+    toaster.create({ type: "error", title, description: description === "" ? undefined : description });
   },
 };
