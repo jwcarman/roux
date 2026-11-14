@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "type": "module",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jwcarman/roux.git",
+    "directory": "web/roux-web"
+  },
+  "homepage": "https://github.com/jwcarman/roux#readme",
+  "bugs": "https://github.com/jwcarman/roux/issues",
   "sideEffects": false,
   "files": [
     "dist"
