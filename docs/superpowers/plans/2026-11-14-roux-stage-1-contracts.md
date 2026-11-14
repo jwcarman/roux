@@ -384,16 +384,31 @@ it("session.json matches the client")    → apiSettings() defaults equal sessio
 - [ ] **Step 4: Run the tests and the bar.** Run `test`, `coverage`, `build` and `mutate`. Expected: all pass, 100%, 0 survivors, `dist/table/index.js` exists.
 - [ ] **Step 5: Commit.** Commit message: `feat(web): query tables in roux-web/table`
 
+### Task 6b: A `feedback` subpath (James's direction)
+
+The template keeps its user feedback together (`components/feedback`), and `ErrorMessage` is used by
+non-table components that stay in the app. So roux-web gets a fifth subpath,
+`@jwcarman/roux-web/feedback`, holding:
+- `ErrorMessage` and `ErrorMessageProps` (moved from `src/table/`);
+- `notify`, `toaster` and `Toaster` (moved from `src/api/`);
+- `ConfirmProvider`, `useConfirm` and `ConfirmOptions`, which Task 7 adds here, not under `form`.
+
+`/api` keeps the client, its configuration and `useServerAction`. `/table` keeps only tables.
+Internal imports between subpaths are relative (`../feedback/notify`). Add `./feedback` to `exports`
+and the Vite entries, and move the matching tests. Done when test, coverage, typecheck, build and
+mutate pass, and `dist/feedback/index.js` exists. Commit message:
+`refactor(web): a feedback subpath for notifications, confirmation and error messages`.
+
 ### Task 7: Forms
 
 **Files:**
-- Create (moved from `T/frontend/src/`): `form/{form.tsx,formContext.ts,errors.ts,values.ts}`, `form/fields/*.tsx`, `components/form/FormDialog.tsx`, `components/feedback/ConfirmProvider.tsx` → `web/roux-web/src/form/` (fields in `src/form/fields/`)
+- Create (moved from `T/frontend/src/`): `form/{form.tsx,formContext.ts,errors.ts,values.ts}`, `form/fields/*.tsx`, `components/form/FormDialog.tsx`  → `web/roux-web/src/form/` (fields in `src/form/fields/`)
 - Create: `src/form/index.ts`; add `./form` to `exports` and the Vite entries
-- Test (moved): `form.test.tsx`, `showProblem.test.tsx`, `errors.test.ts`, `values.test.ts`, `fields/CheckboxField.test.tsx`, `FormDialog.test.tsx`, `ConfirmProvider.test.tsx`
+- Test (moved): `form.test.tsx`, `showProblem.test.tsx`, `errors.test.ts`, `values.test.ts`, `fields/CheckboxField.test.tsx`, `FormDialog.test.tsx`; and `components/feedback/ConfirmProvider.tsx` with its test → `src/feedback/` (Task 6b)
 
 **Interfaces:**
 - Consumes: `problemOf`, `Problem` (Task 4), `notify` (Task 5).
-- Produces: `useAppForm`, `withForm`, `showServerErrors`, `showProblem`, `fieldContext`, `useFieldContext`, `formContext`, `useFormContext`, `errorMessages`, `fieldErrorsOf`, `textOrNull`, `numberOrNull`, `numberInputOf`, `inputOf`, `dateTimeInputOf`, `instantOrNull`, the field components, `FormDialog`, `ConfirmProvider`, `useConfirm`, `ConfirmOptions`, all unchanged.
+- Produces: `useAppForm`, `withForm`, `showServerErrors`, `showProblem`, `fieldContext`, `useFieldContext`, `formContext`, `useFormContext`, `errorMessages`, `fieldErrorsOf`, `textOrNull`, `numberOrNull`, `numberInputOf`, `inputOf`, `dateTimeInputOf`, `instantOrNull`, the field components, `FormDialog`, all unchanged (from `form`); and `ConfirmProvider`, `useConfirm`, `ConfirmOptions` (from `feedback`).
 - `ConfirmProvider`'s `import { DANGER_PALETTE } from "../../theme"` becomes a module constant `const DANGER_PALETTE = "red";` (the template's value).
 
 - [ ] **Step 1: Move the tests and update their imports.**
