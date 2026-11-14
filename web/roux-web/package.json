@@ -34,7 +34,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json --emitDeclarationOnly && vite build",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json --emitDeclarationOnly && vite build",
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
