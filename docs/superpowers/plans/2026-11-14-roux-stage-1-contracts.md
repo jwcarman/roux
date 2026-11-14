@@ -417,6 +417,33 @@ mutate pass, and `dist/feedback/index.js` exists. Commit message:
 - [ ] **Step 4: Run the tests and the bar.** Run `test`, `coverage`, `build` and `mutate`. Expected: all pass, 100%, 0 survivors, `dist/form/index.js` exists.
 - [ ] **Step 5: Commit.** Commit message: `feat(web): forms that show problems in roux-web/form`
 
+### Task 7b: Formatting and linting for `web/` (James's direction)
+
+The Java side is formatted by Spotless in every build; `web/` gets the same.
+
+**Files:**
+- Create: `web/roux-web/.prettierrc.json` and `.prettierignore` (`dist`, `coverage`, `reports`, `.stryker-tmp`)
+- Create: `web/roux-web/eslint.config.js`, a flat config
+- Modify: `web/roux-web/package.json` (devDependencies pinned exactly; scripts `format`, `format:check`, `lint`)
+- Modify: every source and test file the formatter or linter changes
+
+**Interfaces:**
+- Prettier config: match the existing code's style rather than impose a new one. Use `printWidth: 120` and settle the other options (quotes, trailing commas) from what the moved code already does, so the first `format` run changes as little as possible.
+- ESLint config:
+  - `@eslint/js` `recommended`;
+  - `typescript-eslint` `recommendedTypeChecked`, with `parserOptions.projectService: true`;
+  - `eslint-plugin-react-hooks` `recommended`;
+  - `eslint-config-prettier` last;
+  - `no-restricted-syntax` banning `ImportNamespaceSpecifier`, with the message "No star imports: import each name you use".
+  - Ignore `dist`, `coverage`, `reports` and `.stryker-tmp`. Test files are linted too.
+- Scripts: `"format": "prettier --write ."`, `"format:check": "prettier --check ."`, `"lint": "eslint ."`.
+
+- [ ] **Step 1: Add the configs and scripts.** Run `npm run lint` and `npm run format:check`, and record the findings in the report: these are the RED evidence.
+- [ ] **Step 2: Commit the tooling alone.** Commit message: `build(web): Prettier and ESLint`.
+- [ ] **Step 3: Format.** Run `npm run format`, then commit as `style(web): format with Prettier` (formatting only).
+- [ ] **Step 4: Fix every lint finding without disabling a rule.** No `eslint-disable`, and no rule turned off to make code pass, apart from the ignores listed above. A fix that could change behaviour goes in its own commit with a test. Commit as `refactor(web): satisfy the linter`.
+- [ ] **Step 5: Verify.** Run `npm run lint && npm run format:check && npm test && npm run coverage && npm run typecheck && npm run build && npm run mutate`. Expected: all pass, with no lint warnings.
+
 ### Task 8: CI and the release workflow
 
 **Files:**
@@ -424,7 +451,7 @@ mutate pass, and `dist/feedback/index.js` exists. Commit message:
 - Modify: `README.md` (modules, how to depend on them, the `NPM_TOKEN` and Central secrets a maintainer needs)
 
 **Interfaces:**
-- `ci.yml`: runs on push and on pull requests to `main`. Job `java`: Liberica Java 25, `./mvnw -B verify`. Job `web`: Node LTS, `npm ci`, then `test`, `coverage` and `build` in `web/`. Mutation (`-Ppit`, `npm run mutate`) runs in a third job, on pull requests only. Actions are pinned by SHA, as in `who`'s workflows.
+- `ci.yml`: runs on push and on pull requests to `main`. Job `java`: Liberica Java 25, `./mvnw -B verify`. Job `web`: Node LTS, `npm ci`, then `format:check`, `lint`, `typecheck`, `test`, `coverage` and `build` in `web/`. Mutation (`-Ppit`, `npm run mutate`) runs in a third job, on pull requests only. Actions are pinned by SHA, as in `who`'s workflows.
 - `release.yml`: on `release: types: [created]`. Job `maven`: a copy of `who`'s `maven-publish.yml`, with `-pl '!runtime/roux-contract-tests'` and the attestation paths changed to `runtime/roux-*/target/roux-*.jar`. Job `npm`:
   - `actions/setup-node` with `registry-url: https://registry.npmjs.org`;
   - `npm ci` in `web/`;
