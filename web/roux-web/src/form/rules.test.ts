@@ -31,6 +31,15 @@ describe("rules", () => {
       expect(fieldRules.get(text().max(3))).toEqual({ required: true, maxLength: 3 });
     });
 
+    it("reports only blank for a blank value, without running the schema's refinements", () => {
+      const long = text().refine((value) => value.length > 3, { error: "Too short" });
+      expect(messagesOf(long.safeParse(""))).toEqual(["Must not be blank"]);
+      const matching = z
+        .object({ password: text(), confirm: text() })
+        .refine((v) => v.password === v.confirm, { path: ["confirm"], error: "Must match" });
+      expect(messagesOf(matching.safeParse({ password: "", confirm: "secret" }))).toEqual(["Must not be blank"]);
+    });
+
     it("reports only blank for a blank value with a limit", () => {
       expect(messagesOf(text().max(3).safeParse(""))).toEqual(["Must not be blank"]);
     });
@@ -129,6 +138,13 @@ describe("rules", () => {
     it("refuses empty", () => {
       expect(messagesOf(date().safeParse(""))).toEqual(["Must not be empty"]);
       expect(fieldRules.get(date())).toEqual({ required: true });
+    });
+
+    it("reports only empty for an empty date, without running the schema's refinements", () => {
+      const range = z
+        .object({ from: date(), to: date() })
+        .refine((v) => v.from <= v.to, { path: ["to"], error: "To before from" });
+      expect(messagesOf(range.safeParse({ from: "2026-11-14", to: "" }))).toEqual(["Must not be empty"]);
     });
 
     it("refuses something that is not a date", () => {

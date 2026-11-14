@@ -27,7 +27,7 @@ export interface FormDialogProps {
   submitLabel?: string;
   /** Whether it is open, for a page that opens it from code; without it, the dialog keeps its own. */
   open?: boolean;
-  /** Told each time it opens or closes, including the close after a save. */
+  /** Told each time it opens or closes; after a save it is told `false`, so a controlling page closes it. */
   onOpenChange?: (open: boolean) => void;
   /** The form's fields. */
   children: ReactNode;

@@ -77,7 +77,9 @@ export type TextRule<Out extends string | null = string> = Rule<
 function textSchema(state: TextState): z.ZodString {
   let schema = z.string().trim();
   if (state.required) {
-    schema = schema.min(1, { error: NOT_BLANK });
+    // `abort`: a blank value reports only that it is blank; the schema's own refinements (a match,
+    // a minimum length) do not run on it.
+    schema = schema.min(1, { error: NOT_BLANK, abort: true });
   }
   if (state.max !== undefined) {
     schema = schema.max(state.max, { error: `Must be between 0 and ${state.max} characters` });
@@ -156,7 +158,7 @@ export type DateRule<Out extends string | null = string> = Rule<
 
 /** A date input's value, or `""` when not `required`. */
 function dateSchema(required: boolean): z.ZodString {
-  return (required ? z.string().min(1, { error: NOT_EMPTY }) : z.string()).refine(
+  return (required ? z.string().min(1, { error: NOT_EMPTY, abort: true }) : z.string()).refine(
     (value) => value === "" || z.regexes.date.test(value),
     { error: NOT_EXPECTED_FORMAT },
   );
