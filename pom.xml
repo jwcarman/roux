@@ -58,6 +58,12 @@
         <google-java-format.version>1.35.0</google-java-format.version>
         <pitest.plugin.version>1.30.2</pitest.plugin.version>
         <pitest-junit5.plugin.version>1.2.3</pitest-junit5.plugin.version>
+        <sonar.plugin.version>5.8.0.7211</sonar.plugin.version>
+
+        <!-- SonarCloud Configuration -->
+        <sonar.organization>jwcarman</sonar.organization>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <sonar.projectKey>jwcarman_roux</sonar.projectKey>
 
         <!-- JaCoCo argLine (written by jacoco:prepare-agent) -->
         <jacocoArgLine></jacocoArgLine>
@@ -175,6 +181,11 @@
                 <configuration>
                     <argLine>@{jacocoArgLine} -javaagent:"${org.mockito:mockito-core:jar}" -javaagent:"${net.bytebuddy:byte-buddy-agent:jar}" -Xshare:off</argLine>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>${sonar.plugin.version}</version>
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
