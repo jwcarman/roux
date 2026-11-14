@@ -15,9 +15,12 @@
  */
 package org.jwcarman.roux.problems;
 
+import org.jwcarman.jpa.pagination.UnknownSortByValueException;
+import org.jwcarman.who.spring.security.web.SignInFailedException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
@@ -28,13 +31,16 @@ import org.springframework.boot.webmvc.autoconfigure.error.ErrorViewResolver;
 import org.springframework.boot.webmvc.error.ErrorAttributes;
 import org.springframework.boot.webmvc.error.ErrorController;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportRuntimeHints;
+import org.springframework.security.access.AccessDeniedException;
 
 /**
  * Answers a servlet application's errors as Problem Details: the advices, and the error page that
  * answers a JSON client with a problem. Ahead of Spring Boot's error handling, so its error
  * controller gives way to this one. Off with {@code roux.problems.enabled=false}; an application's
- * own bean of any of the three takes that one's place.
+ * own bean of any of them takes that one's place. The advices for Spring Security, who and
+ * jpa-utils are there only when that library is.
  */
 @AutoConfiguration(before = ErrorMvcAutoConfiguration.class)
 @ConditionalOnWebApplication(type = Type.SERVLET)
@@ -62,5 +68,39 @@ public class RouxProblemsAutoConfiguration {
       WebProperties webProperties,
       ObjectProvider<ErrorViewResolver> errorViewResolvers) {
     return new ProblemErrorController(errorAttributes, webProperties, errorViewResolvers);
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  @ConditionalOnClass(AccessDeniedException.class)
+  static class SecurityConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    SecurityProblemsAdvice securityProblemsAdvice() {
+      return new SecurityProblemsAdvice();
+    }
+
+    /** Needs Spring Security too: who's exceptions are its authentication failures. */
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnClass(SignInFailedException.class)
+    static class WhoConfiguration {
+
+      @Bean
+      @ConditionalOnMissingBean
+      WhoProblemsAdvice whoProblemsAdvice() {
+        return new WhoProblemsAdvice();
+      }
+    }
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  @ConditionalOnClass(UnknownSortByValueException.class)
+  static class PagingConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    PagingProblemsAdvice pagingProblemsAdvice() {
+      return new PagingProblemsAdvice();
+    }
   }
 }

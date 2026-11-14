@@ -45,8 +45,10 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Answers every error the API raises as an RFC 9457 Problem Detail. Spring MVC's own exceptions
- * come from {@link ResponseEntityExceptionHandler}; the template's, Bean Validation's and who's are
- * mapped here. Features add no handlers of their own.
+ * come from {@link ResponseEntityExceptionHandler}; Bean Validation's and roux's own exceptions are
+ * mapped here. Spring Security's, who's and jpa-utils' have their own advices ({@link
+ * SecurityProblemsAdvice}, {@link WhoProblemsAdvice}, {@link PagingProblemsAdvice}), there only
+ * when that library is. Features add no handlers of their own.
  */
 @RestControllerAdvice
 @Order(Ordered.LOWEST_PRECEDENCE - 1)

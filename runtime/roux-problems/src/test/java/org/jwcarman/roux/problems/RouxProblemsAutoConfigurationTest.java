@@ -18,7 +18,10 @@ package org.jwcarman.roux.problems;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import org.jwcarman.jpa.pagination.UnknownSortByValueException;
+import org.jwcarman.who.spring.security.web.SignInFailedException;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration;
@@ -26,6 +29,7 @@ import org.springframework.boot.webmvc.autoconfigure.error.ErrorMvcAutoConfigura
 import org.springframework.boot.webmvc.error.ErrorController;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.AccessDeniedException;
 
 class RouxProblemsAutoConfigurationTest {
 
@@ -119,5 +123,53 @@ class RouxProblemsAutoConfigurationTest {
                     .doesNotHaveBean(ProblemsAdvice.class)
                     .doesNotHaveBean(RootProblemsAdvice.class)
                     .doesNotHaveBean(ProblemErrorController.class));
+  }
+
+  @Test
+  void withoutWhoNoWhoAdvice() {
+    web.withClassLoader(new FilteredClassLoader(SignInFailedException.class))
+        .run(
+            context ->
+                assertThat(context)
+                    .hasNotFailed()
+                    .doesNotHaveBean(WhoProblemsAdvice.class)
+                    .hasSingleBean(SecurityProblemsAdvice.class));
+  }
+
+  @Test
+  void withoutSecurityNoSecurityAdvice() {
+    web.withClassLoader(new FilteredClassLoader(AccessDeniedException.class))
+        .run(
+            context ->
+                assertThat(context)
+                    .hasNotFailed()
+                    .doesNotHaveBean(SecurityProblemsAdvice.class)
+                    .doesNotHaveBean(WhoProblemsAdvice.class)
+                    .hasSingleBean(ProblemsAdvice.class));
+  }
+
+  @Test
+  void withoutJpaUtilsNoPagingAdvice() {
+    web.withClassLoader(new FilteredClassLoader(UnknownSortByValueException.class))
+        .run(
+            context ->
+                assertThat(context)
+                    .hasNotFailed()
+                    .doesNotHaveBean(PagingProblemsAdvice.class)
+                    .hasSingleBean(ProblemsAdvice.class));
+  }
+
+  @Test
+  void withEverythingAllThree() {
+    web.run(
+        context -> {
+          assertThat(context)
+              .hasSingleBean(WhoProblemsAdvice.class)
+              .hasSingleBean(SecurityProblemsAdvice.class)
+              .hasSingleBean(PagingProblemsAdvice.class);
+          assertThat(context.getBean(WhoProblemsAdvice.class)).isNotNull();
+          assertThat(context.getBean(SecurityProblemsAdvice.class)).isNotNull();
+          assertThat(context.getBean(PagingProblemsAdvice.class)).isNotNull();
+        });
   }
 }
