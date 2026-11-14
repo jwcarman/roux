@@ -142,7 +142,13 @@ function StateForm({ settings, reload }: { settings: AppSettings; reload: () => 
 }
 
 async function showPage(settleMs?: number, offline?: boolean) {
-  renderWithProviders(<SettingsPage settleMs={settleMs} offline={offline} />, createQueryClient());
+  renderWithProviders(
+    <>
+      <SettingsPage settleMs={settleMs} offline={offline} />
+      <Toaster />
+    </>,
+    createQueryClient(),
+  );
   const user = userEvent.setup();
   await screen.findByRole("textbox", { name: "App name" });
   return user;
@@ -310,7 +316,13 @@ describe("a form on a page", () => {
       ),
     );
     const client = createQueryClient();
-    renderWithProviders(<SettingsPage />, client);
+    renderWithProviders(
+      <>
+        <SettingsPage />
+        <Toaster />
+      </>,
+      client,
+    );
     const user = userEvent.setup();
     await screen.findByRole("textbox", { name: "App name" });
 

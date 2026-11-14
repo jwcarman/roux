@@ -102,17 +102,22 @@ export function useSchemaForm<S extends FormSchema, TData>(options: SchemaFormOp
     form.reset(latestDefaults.current);
   }
 
-  // After a conflict (409), the defaults the refused save was made from. Someone else saved first;
-  // when the mutation's refreshes bring their record (new defaults), the form starts over from it,
-  // or the next save would send this draft at the new version and undo their change. A 409 that
-  // brings no new record (a create refused as a duplicate) keeps what was typed. The refreshes are
-  // done before the refusal reaches here, so the first check after it decides, and uses it up: a
-  // record that changes later (a refetch on focus) never wipes a draft without a refusal to say why.
-  const conflictFrom = useRef<{ defaults: z.input<S> } | undefined>(undefined);
+  // After a conflict (409), the defaults the refused save was made from and the draft it sent.
+  // Someone else saved first; when the mutation's refreshes bring their record (new defaults, which
+  // can render a little after the refusal), the form starts over from it, or the next save would
+  // send this draft at the new version and undo their change. A 409 that brings no new record (a
+  // create refused as a duplicate) keeps what was typed. The note is used up once the draft is
+  // edited, or the form is submitted again, saved or restarted, so a record that changes later (a
+  // refetch on focus) never wipes work done since the refusal.
+  const conflictFrom = useRef<{ defaults: z.input<S>; draft: unknown } | undefined>(undefined);
   function restartIfRefreshed(): void {
     const conflict = conflictFrom.current;
-    conflictFrom.current = undefined;
-    if (conflict !== undefined && !evaluate(latestDefaults.current, conflict.defaults)) {
+    // An edited draft is a new object, never the refused one again: the note is spent.
+    if (
+      conflict !== undefined &&
+      form.state.values === conflict.draft &&
+      !evaluate(latestDefaults.current, conflict.defaults)
+    ) {
       restart();
     }
   }
@@ -132,13 +137,15 @@ export function useSchemaForm<S extends FormSchema, TData>(options: SchemaFormOp
     assertRefreshesHonoured(queryClient, mutation);
     const parsed = schema.parse(value);
     const submittedFrom = latestDefaults.current;
+    const draft = form.state.values;
+    conflictFrom.current = undefined;
     let data: TData;
     try {
       data = await mutateAsync(parsed);
     } catch (error) {
       // Before the toast: showing it can render this hook at once, and that render must see the conflict.
       if (error instanceof ApiError && error.status === 409) {
-        conflictFrom.current = { defaults: submittedFrom };
+        conflictFrom.current = { defaults: submittedFrom, draft };
       }
       showRefusal(error);
       return;
