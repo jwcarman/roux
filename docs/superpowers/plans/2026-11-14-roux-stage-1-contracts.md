@@ -448,7 +448,7 @@ The Java side is formatted by Spotless in every build; `web/` gets the same.
 
 **Files:**
 - Create: `.github/workflows/ci.yml`, `.github/workflows/release.yml`
-- Modify: `README.md` (modules, how to depend on them, the `NPM_TOKEN` and Central secrets a maintainer needs)
+- Modify: `README.md` (modules, how to depend on them, the npm trusted-publisher setup and the Central secrets a maintainer needs)
 
 **Interfaces:**
 - `ci.yml`: runs on push and on pull requests to `main`. Job `java`: Liberica Java 25, `./mvnw -B verify`. Job `web`: Node LTS, `npm ci`, then `format:check`, `lint`, `typecheck`, `test`, `coverage` and `build` in `web/`. Mutation (`-Ppit`, `npm run mutate`) runs in a third job, on pull requests only. Actions are pinned by SHA, as in `who`'s workflows.
@@ -457,7 +457,7 @@ The Java side is formatted by Spotless in every build; `web/` gets the same.
   - `npm ci` in `web/`;
   - `npm version "$RELEASE_TAG" --no-git-tag-version -w @jwcarman/roux-web`;
   - `npm run build -w @jwcarman/roux-web`;
-  - `npm publish -w @jwcarman/roux-web --access public --provenance` with `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}`;
+  - `npm publish -w @jwcarman/roux-web --access public` through npm trusted publishing (OIDC; no token, provenance automatic), and the `maven` job runs only after `npm` succeeds;
   - permissions `id-token: write`.
 
 - [ ] **Step 1: Write both workflows.**
@@ -499,7 +499,7 @@ Work in `~/IdeaProjects/noir-app-template` on a new branch, `roux-stage-1`.
 
 ### Task 10: Release 0.1.0 and point the template at it
 
-- [ ] **Step 1: Release roux.** Merge the roux PR. James adds the repository secrets (`NPM_TOKEN`, plus the Central and GPG secrets `who` uses) and creates GitHub release `0.1.0`, following the `cutting-oss-release` skill (CHANGELOG, then bump to `0.2.0-SNAPSHOT`).
+- [ ] **Step 1: Release roux.** Merge the roux PR. James configures the npm trusted publisher for `@jwcarman/roux-web` and adds the repository secrets (the Central and GPG secrets `who` uses) and creates GitHub release `0.1.0`, following the `cutting-oss-release` skill (CHANGELOG, then bump to `0.2.0-SNAPSHOT`).
 - [ ] **Step 2: Verify the release.** Check that the `release.yml` run is green and that `npm view @jwcarman/roux-web version` prints `0.1.0`. Then check Maven Central:
 
 ```sh
