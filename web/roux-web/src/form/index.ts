@@ -1,7 +1,7 @@
 export { errorMessages, fieldErrorsOf } from "./errors";
 export { useAppForm, withForm } from "./form";
 export { fieldContext, formContext, useFieldContext, useFormContext } from "./formContext";
-export { FormDialog, type FormDialogProps } from "./FormDialog";
+export { FormDialog, type DialogForm, type FormDialogProps } from "./FormDialog";
 export { useSchemaForm, type SchemaForm, type SchemaFormOptions } from "./schemaForm";
 export {
   date,

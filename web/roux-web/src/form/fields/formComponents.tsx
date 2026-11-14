@@ -45,11 +45,12 @@ export function SubmitButton({ children, ...props }: Omit<ButtonProps, "type" | 
   );
 }
 
-/** Puts every field back to its default value. */
+/** Puts every field back to its default value; disabled while the form is clean, as there is nothing to undo. */
 export function ResetButton({ children = "Reset", ...props }: Omit<ButtonProps, "type" | "onClick">) {
   const form = useFormContext();
+  const dirty = useStore(form.store, (state) => state.isDirty);
   return (
-    <Button type="button" variant="outline" onClick={() => form.reset()} {...props}>
+    <Button type="button" variant="outline" onClick={() => form.reset()} disabled={!dirty} {...props}>
       {children}
     </Button>
   );
