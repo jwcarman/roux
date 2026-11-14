@@ -1,0 +1,6 @@
+{
+  "title": "Not Found",
+  "status": 404,
+  "detail": "No note 42",
+  "instance": "/api/contract/not-found"
+}

@@ -89,7 +89,9 @@
     </scm>
 
     <modules>
+        <module>runtime/roux-bom</module>
         <module>runtime/roux-problems</module>
+        <module>runtime/roux-contract-tests</module>
     </modules>
 
     <dependencyManagement>

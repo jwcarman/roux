@@ -1,0 +1,6 @@
+{
+  "title": "Conflict",
+  "status": 409,
+  "detail": "The name Ada is taken",
+  "instance": "/api/contract/conflict"
+}

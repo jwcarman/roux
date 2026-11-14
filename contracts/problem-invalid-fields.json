@@ -1,0 +1,12 @@
+{
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "The request has invalid fields",
+  "errors": [
+    {
+      "field": "title",
+      "message": "Must not be blank"
+    }
+  ],
+  "instance": "/api/contract/invalid-fields"
+}

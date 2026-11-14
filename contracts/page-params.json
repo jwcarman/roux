@@ -1,0 +1,30 @@
+[
+  {
+    "query": "",
+    "pageIndex": null,
+    "pageSize": null,
+    "sortBy": null,
+    "sortDirection": null
+  },
+  {
+    "query": "?pageIndex=2&pageSize=25",
+    "pageIndex": 2,
+    "pageSize": 25,
+    "sortBy": null,
+    "sortDirection": null
+  },
+  {
+    "query": "?pageIndex=0&pageSize=25&sortBy=name&sortDirection=DESC",
+    "pageIndex": 0,
+    "pageSize": 25,
+    "sortBy": "name",
+    "sortDirection": "DESC"
+  },
+  {
+    "query": "?sortBy=name&sortDirection=ASC",
+    "pageIndex": null,
+    "pageSize": null,
+    "sortBy": "name",
+    "sortDirection": "ASC"
+  }
+]

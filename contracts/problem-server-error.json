@@ -1,0 +1,7 @@
+{
+  "title": "Internal Server Error",
+  "status": 500,
+  "detail": "Something went wrong",
+  "errorId": "<uuid>",
+  "instance": "/api/contract/server-error"
+}
