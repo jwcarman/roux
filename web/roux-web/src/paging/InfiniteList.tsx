@@ -100,7 +100,7 @@ export function InfiniteList<T>({
             as="li"
             key={getItemKey(item)}
             borderWidth="1px"
-            borderTopWidth={index === 0 ? "1px" : "0"}
+            borderTopWidth={index === 0 ? undefined : "0"}
             _hover={{ bg: "bg.muted" }}
           >
             {renderItem(item, index)}

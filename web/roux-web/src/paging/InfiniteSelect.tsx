@@ -109,7 +109,6 @@ export function InfiniteSelect<T>({
         selectionBehavior="replace"
         required={required}
         invalid={invalid}
-        positioning={{ sameWidth: true }}
       >
         <Combobox.Label>{label}</Combobox.Label>
         <Combobox.Control>
