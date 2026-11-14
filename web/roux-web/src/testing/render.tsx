@@ -10,7 +10,11 @@ export function testQueryClient(): QueryClient {
 
 function providers(client: QueryClient) {
   return function Providers({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}><ChakraProvider value={defaultSystem}>{children}</ChakraProvider></QueryClientProvider>;
+    return (
+      <QueryClientProvider client={client}>
+        <ChakraProvider value={defaultSystem}>{children}</ChakraProvider>
+      </QueryClientProvider>
+    );
   };
 }
 

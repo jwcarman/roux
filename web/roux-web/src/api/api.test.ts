@@ -187,8 +187,8 @@ describe("ApiError", () => {
   });
 
   it("takes its message from the problem's detail", () => {
-    expect(new ApiError(404, { type: "about:blank", title: "Not Found", status: 404, detail: "No such note" }).message).toBe(
-      "No such note",
-    );
+    expect(
+      new ApiError(404, { type: "about:blank", title: "Not Found", status: 404, detail: "No such note" }).message,
+    ).toBe("No such note");
   });
 });

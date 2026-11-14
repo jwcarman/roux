@@ -36,7 +36,10 @@ describe("notify", () => {
   it("announces a problem's detail", async () => {
     renderWithProviders(<Toaster />);
     act(() =>
-      notify.problem({ type: "about:blank", title: "Conflict", status: 409, detail: "Already deactivated" }, "Could not deactivate"),
+      notify.problem(
+        { type: "about:blank", title: "Conflict", status: 409, detail: "Already deactivated" },
+        "Could not deactivate",
+      ),
     );
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Already deactivated");
@@ -53,7 +56,13 @@ describe("notify", () => {
     renderWithProviders(<Toaster />);
     act(() =>
       notify.problem(
-        { type: "about:blank", title: "Internal Server Error", status: 500, detail: "Something went wrong", errorId: "7f3a" },
+        {
+          type: "about:blank",
+          title: "Internal Server Error",
+          status: 500,
+          detail: "Something went wrong",
+          errorId: "7f3a",
+        },
         "Could not save",
       ),
     );

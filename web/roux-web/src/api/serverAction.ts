@@ -26,9 +26,7 @@ export interface ServerAction<Variables> {
  * server's reason (its Problem Detail), or `failure` when it gave none; either way the queries
  * named by `refreshes` are refreshed. For a form's submission, use `showProblem` instead.
  */
-export function useServerAction<Variables = void>(
-  options: ServerActionOptions<Variables>,
-): ServerAction<Variables> {
+export function useServerAction<Variables = void>(options: ServerActionOptions<Variables>): ServerAction<Variables> {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async (variables: Variables) => {
@@ -53,10 +51,11 @@ export function useServerAction<Variables = void>(
     },
   });
   return {
-    run: (variables) => mutation.mutateAsync(variables).then(
-      () => true,
-      () => false,
-    ),
+    run: (variables) =>
+      mutation.mutateAsync(variables).then(
+        () => true,
+        () => false,
+      ),
     pending: mutation.isPending,
   };
 }

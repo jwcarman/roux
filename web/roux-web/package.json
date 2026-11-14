@@ -4,14 +4,34 @@
   "type": "module",
   "license": "Apache-2.0",
   "sideEffects": false,
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "exports": {
-    "./problem": { "types": "./dist/problem/index.d.ts", "import": "./dist/problem/index.js" },
-    "./api": { "types": "./dist/api/index.d.ts", "import": "./dist/api/index.js" },
-    "./paging": { "types": "./dist/paging/index.d.ts", "import": "./dist/paging/index.js" },
-    "./table": { "types": "./dist/table/index.d.ts", "import": "./dist/table/index.js" },
-    "./feedback": { "types": "./dist/feedback/index.d.ts", "import": "./dist/feedback/index.js" },
-    "./form": { "types": "./dist/form/index.d.ts", "import": "./dist/form/index.js" }
+    "./problem": {
+      "types": "./dist/problem/index.d.ts",
+      "import": "./dist/problem/index.js"
+    },
+    "./api": {
+      "types": "./dist/api/index.d.ts",
+      "import": "./dist/api/index.js"
+    },
+    "./paging": {
+      "types": "./dist/paging/index.d.ts",
+      "import": "./dist/paging/index.js"
+    },
+    "./table": {
+      "types": "./dist/table/index.d.ts",
+      "import": "./dist/table/index.js"
+    },
+    "./feedback": {
+      "types": "./dist/feedback/index.d.ts",
+      "import": "./dist/feedback/index.js"
+    },
+    "./form": {
+      "types": "./dist/form/index.d.ts",
+      "import": "./dist/form/index.js"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --emitDeclarationOnly && vite build",

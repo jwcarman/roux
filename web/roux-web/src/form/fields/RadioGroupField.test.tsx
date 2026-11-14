@@ -35,7 +35,8 @@ function directionOf(radio: HTMLElement): string | undefined {
   const stack = radio.closest("[data-part='item']")!.parentElement!;
   const rules = Array.from(document.styleSheets).flatMap((sheet) => Array.from(sheet.cssRules));
   const own = rules.find(
-    (rule): rule is CSSStyleRule => rule instanceof CSSStyleRule && stack.matches(rule.selectorText) && rule.style.flexDirection !== "",
+    (rule): rule is CSSStyleRule =>
+      rule instanceof CSSStyleRule && stack.matches(rule.selectorText) && rule.style.flexDirection !== "",
   );
   return own?.style.flexDirection;
 }

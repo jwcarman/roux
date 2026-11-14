@@ -368,7 +368,12 @@ describe("useQueryTable with params kept by the caller", () => {
       people(30),
     );
     await waitFor(() =>
-      expect(onParamsChange).toHaveBeenCalledWith({ pageIndex: 2, pageSize: 10, sortBy: "EMAIL", sortDirection: "DESC" }),
+      expect(onParamsChange).toHaveBeenCalledWith({
+        pageIndex: 2,
+        pageSize: 10,
+        sortBy: "EMAIL",
+        sortDirection: "DESC",
+      }),
     );
   });
 
