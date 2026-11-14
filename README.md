@@ -70,6 +70,8 @@ Java 25 and Spring Boot 4.1. Licensed under the [Apache License 2.0](LICENSE).
 Creating a GitHub Release triggers `.github/workflows/release.yml`; the release tag is the version. It publishes
 the Java modules to Maven Central and `@jwcarman/roux-web` to npm. A maintainer needs these repository secrets:
 
-- `NPM_TOKEN`: an npm automation token that can publish `@jwcarman/roux-web`.
+- `NPM_TOKEN`: an npm **granular access token** with read and write (publish) access to the `@jwcarman` scope or the
+  `@jwcarman/roux-web` package, with "bypass 2FA" enabled so CI can publish. (npm's classic "automation" tokens are
+  retired.) The release's `verify` job runs `npm whoami` with it, so a bad token stops the release before Central.
 - `CENTRAL_TOKEN_USERNAME` and `CENTRAL_TOKEN_PASSWORD`: the Sonatype Central Portal user token.
 - `GPG_SIGNING_KEY` and `GPG_SIGNING_KEY_PASSWORD`: the armored private key that signs the Java artifacts, and its passphrase.
