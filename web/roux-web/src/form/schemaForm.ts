@@ -112,8 +112,8 @@ export function useSchemaForm<S extends FormSchema, TData>(options: SchemaFormOp
       restart();
     }
   }
-  // Checked after every render: the mutation's move to `error` re-renders this hook after the
-  // refusal, whether the refreshed record rendered before it or arrives later.
+  // Checked after every render: the refusal's toast and the mutation's move to `error` render this
+  // hook once the conflict is noted, whether the refreshed record rendered before or arrives later.
   useEffect(restartIfRefreshed);
 
   const validator: SchemaValidator<S> = schema;
@@ -132,10 +132,11 @@ export function useSchemaForm<S extends FormSchema, TData>(options: SchemaFormOp
     try {
       data = await mutateAsync(parsed);
     } catch (error) {
-      showRefusal(error);
+      // Before the toast: showing it can render this hook at once, and that render must see the conflict.
       if (error instanceof ApiError && error.status === 409) {
         conflictFrom.current = { defaults: submittedFrom };
       }
+      showRefusal(error);
       return;
     }
     await onSuccess?.(data, parsed);

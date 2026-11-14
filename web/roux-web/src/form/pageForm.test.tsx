@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 import { mutationOptions, useQuery } from "@tanstack/react-query";
-import { screen, waitFor } from "@testing-library/react";
+import { useEffect, useState } from "react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { sendJson } from "../api/client";
 import { createQueryClient } from "../api/queryClient";
+import { Toaster, toaster } from "../feedback/toaster";
 import { renderWithProviders } from "../testing/render";
 import { server } from "../testing/server";
 import { text } from "./rules";
@@ -98,6 +100,47 @@ function SettingsPage({ settleMs, offline }: { settleMs?: number; offline?: bool
   return query.data ? <SettingsForm settings={query.data} settleMs={settleMs} offline={offline} /> : null;
 }
 
+const loadSettings = () => fetch("/api/settings/1").then((response) => response.json() as Promise<AppSettings>);
+
+/**
+ * The record kept in React state rather than in a query, and reloaded by the mutation itself after
+ * every answer (as an app's session might keep the signed-in user's profile), with the toaster on.
+ */
+function StatePage() {
+  const [settings, setSettings] = useState<AppSettings>();
+  useEffect(() => {
+    void loadSettings().then(setSettings);
+  }, []);
+  const reload = () => loadSettings().then(setSettings);
+  return (
+    <>
+      {settings && <StateForm settings={settings} reload={reload} />}
+      <Toaster />
+    </>
+  );
+}
+
+function StateForm({ settings, reload }: { settings: AppSettings; reload: () => Promise<void> }) {
+  const form = useSchemaForm({
+    schema: appSchema,
+    defaultValues: { appName: settings.name },
+    mutation: {
+      mutationFn: (request: z.output<typeof appSchema>) =>
+        sendJson<AppSettings>("PUT", "/api/settings/1", { ...request, version: settings.version }),
+      onSettled: reload,
+    },
+  });
+  return (
+    <form.AppForm>
+      <form.Form>
+        <form.AppField name="appName">{(f) => <f.InputField label="App name" />}</form.AppField>
+        <form.SubmitButton>Save</form.SubmitButton>
+        <form.ResetButton />
+      </form.Form>
+    </form.AppForm>
+  );
+}
+
 async function showPage(settleMs?: number, offline?: boolean) {
   renderWithProviders(<SettingsPage settleMs={settleMs} offline={offline} />, createQueryClient());
   const user = userEvent.setup();
@@ -117,6 +160,10 @@ async function rename(user: ReturnType<typeof userEvent.setup>, name: string) {
 describe("a form on a page", () => {
   beforeEach(() => {
     document.cookie = "XSRF-TOKEN=a%2Bb";
+  });
+
+  afterEach(() => {
+    act(() => toaster.remove());
   });
 
   it("stays after a save, clean, with nothing to reset", async () => {
@@ -231,5 +278,23 @@ describe("a form on a page", () => {
     // The refresh did bring their record: it is what Reset goes back to.
     await user.click(resetButton());
     expect(appName()).toHaveValue("Theirs");
+  });
+
+  it("starts over after a conflict when the mutation itself reloads a record kept in state", async () => {
+    const { bodies, saveElsewhere } = serveSettings();
+    renderWithProviders(<StatePage />, createQueryClient());
+    const user = userEvent.setup();
+    await screen.findByRole("textbox", { name: "App name" });
+    saveElsewhere("Theirs");
+
+    await rename(user, "Mine");
+    await user.click(saveButton());
+
+    expect(await screen.findByText("This record changed since you loaded it")).toBeInTheDocument();
+    await waitFor(() => expect(appName()).toHaveValue("Theirs"));
+
+    await user.click(saveButton());
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies[1]).toEqual({ appName: "Theirs", version: 4 });
   });
 });
