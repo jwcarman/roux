@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { defineConfig } from "vitest/config";
 
 // One entry per subpath export: adding a subpath is one name here and one entry in package.json's "exports".
-const entries = ["problem", "api", "paging"];
+const entries = ["problem", "api", "paging", "table"];
 
 const { peerDependencies } = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as {
   peerDependencies: Record<string, string>;
