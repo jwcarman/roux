@@ -39,9 +39,6 @@
         <project.build.outputTimestamp>2026-11-13T21:38:25Z</project.build.outputTimestamp>
         <required.maven.version>3.8</required.maven.version>
 
-        <!-- Suppress Maven 4.0.0 future compatibility warnings -->
-        <maven.project.sourceRoots.warningsDisabled>true</maven.project.sourceRoots.warningsDisabled>
-
         <!-- Dependency Versions -->
         <spring-boot.version>4.1.2</spring-boot.version>
         <who.version>0.15.0</who.version>
