@@ -1,0 +1,123 @@
+/*
+ * Copyright © 2026 James Carman
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.jwcarman.roux.problems;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
+import org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration;
+import org.springframework.boot.webmvc.autoconfigure.error.ErrorMvcAutoConfiguration;
+import org.springframework.boot.webmvc.error.ErrorController;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+class RouxProblemsAutoConfigurationTest {
+
+  private final WebApplicationContextRunner web =
+      new WebApplicationContextRunner()
+          .withConfiguration(
+              AutoConfigurations.of(
+                  RouxProblemsAutoConfiguration.class,
+                  DispatcherServletAutoConfiguration.class,
+                  ErrorMvcAutoConfiguration.class));
+
+  @Configuration(proxyBeanMethods = false)
+  static class UserErrorController {
+    static final ErrorController CONTROLLER = new ErrorController() {};
+
+    @Bean
+    ErrorController errorController() {
+      return CONTROLLER;
+    }
+  }
+
+  @Configuration(proxyBeanMethods = false)
+  static class UserProblemsAdvice {
+    static final ProblemsAdvice ADVICE =
+        new ProblemsAdvice(new RouxProblemsProperties(true, "/api/"));
+
+    @Bean
+    ProblemsAdvice userProblemsAdvice() {
+      return ADVICE;
+    }
+  }
+
+  @Test
+  void registersAdviceAndErrorController() {
+    web.run(
+        context -> {
+          assertThat(context)
+              .hasSingleBean(ProblemsAdvice.class)
+              .hasSingleBean(RootProblemsAdvice.class)
+              .hasSingleBean(ProblemErrorController.class)
+              .hasSingleBean(ErrorController.class);
+          // a factory method that returned null would still pass the checks above
+          assertThat(context.getBean(ProblemsAdvice.class)).isNotNull();
+          assertThat(context.getBean(RootProblemsAdvice.class)).isNotNull();
+          assertThat(context.getBean(ErrorController.class))
+              .isInstanceOf(ProblemErrorController.class);
+        });
+  }
+
+  @Test
+  void disabledByProperty() {
+    web.withPropertyValues("roux.problems.enabled=false")
+        .run(
+            context ->
+                assertThat(context)
+                    .doesNotHaveBean(ProblemsAdvice.class)
+                    .doesNotHaveBean(RootProblemsAdvice.class)
+                    .doesNotHaveBean(ProblemErrorController.class));
+  }
+
+  @Test
+  void backsOffForUserErrorController() {
+    web.withUserConfiguration(UserErrorController.class)
+        .run(
+            context -> {
+              assertThat(context)
+                  .doesNotHaveBean(ProblemErrorController.class)
+                  .hasSingleBean(ProblemsAdvice.class);
+              assertThat(context.getBean(ErrorController.class))
+                  .isSameAs(UserErrorController.CONTROLLER);
+            });
+  }
+
+  @Test
+  void backsOffForUserProblemsAdvice() {
+    web.withUserConfiguration(UserProblemsAdvice.class)
+        .run(
+            context -> {
+              assertThat(context).hasSingleBean(ProblemsAdvice.class);
+              assertThat(context.getBean(ProblemsAdvice.class)).isSameAs(UserProblemsAdvice.ADVICE);
+            });
+  }
+
+  @Test
+  void notInNonWebApplication() {
+    new ApplicationContextRunner()
+        .withConfiguration(AutoConfigurations.of(RouxProblemsAutoConfiguration.class))
+        .run(
+            context ->
+                assertThat(context)
+                    .doesNotHaveBean(ProblemsAdvice.class)
+                    .doesNotHaveBean(RootProblemsAdvice.class)
+                    .doesNotHaveBean(ProblemErrorController.class));
+  }
+}
