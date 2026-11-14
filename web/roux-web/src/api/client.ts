@@ -1,5 +1,6 @@
 import { problemOf, type Problem } from "../problem/problem";
 import { apiSettings } from "./config";
+import { resolveUrl, type QueryParams } from "./url";
 
 export class ApiError extends Error {
   constructor(
@@ -49,32 +50,64 @@ async function csrfHeader(): Promise<Record<string, string>> {
   return token === undefined ? {} : { "X-XSRF-TOKEN": token };
 }
 
-export async function get(path: string): Promise<Response> {
-  const response = await fetch(path, {
-    credentials: "same-origin",
-    headers: { Accept: "application/json" },
-  });
-  return notice(path, response);
+/** Options for a read: query `params` and an abort `signal`. */
+export interface RequestOptions {
+  params?: QueryParams;
+  signal?: AbortSignal;
 }
 
-export async function send(method: "POST" | "PUT" | "DELETE", path: string, body?: unknown): Promise<Response> {
+/** GETs `path` (under `baseUrl` unless it starts with a slash). */
+export async function get(path: string, options: RequestOptions = {}): Promise<Response> {
+  const url = resolveUrl(path, options.params);
+  const response = await fetch(url, {
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+    signal: options.signal,
+  });
+  return notice(url, response);
+}
+
+/** Sends a write, with the CSRF header and a JSON body when there is one. */
+export async function send(
+  method: "POST" | "PUT" | "PATCH" | "DELETE",
+  path: string,
+  body?: unknown,
+): Promise<Response> {
+  const url = resolveUrl(path);
   const headers: Record<string, string> = { Accept: "application/json", ...(await csrfHeader()) };
   if (body !== undefined) {
     headers["Content-Type"] = "application/json";
   }
-  const response = await fetch(path, {
+  const response = await fetch(url, {
     method,
     credentials: "same-origin",
     headers,
     body: JSON.stringify(body), // undefined, so no body, when there is none
   });
-  return notice(path, response);
+  return notice(url, response);
 }
 
-export async function getJson<T>(path: string): Promise<T> {
-  const response = await get(path);
+/** GETs JSON; rejects with an {@link ApiError} on a non-2xx answer. */
+export async function getJson<T>(path: string, options?: RequestOptions): Promise<T> {
+  const response = await get(path, options);
   if (!response.ok) {
     throw new ApiError(response.status, await problemOf(response));
+  }
+  return (await response.json()) as T;
+}
+
+/** Sends a write and parses the JSON answer (a 204 resolves `undefined`); rejects with an {@link ApiError} on a non-2xx answer. */
+export async function sendJson<T>(
+  method: "POST" | "PUT" | "PATCH" | "DELETE",
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  const response = await send(method, path, body);
+  if (!response.ok) {
+    throw new ApiError(response.status, await problemOf(response));
+  }
+  if (response.status === 204) {
+    return undefined as T;
   }
   return (await response.json()) as T;
 }

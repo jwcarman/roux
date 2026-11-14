@@ -73,6 +73,7 @@ describe("the shared contracts", () => {
 
   it("session.json matches the client", async () => {
     expect(apiSettings()).toEqual({
+      baseUrl: "/api",
       csrfBootstrapPath: session.csrfBootstrapPath,
       sessionPathPrefix: session.sessionPathPrefix,
     });

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, getJson, isSessionLost, onSessionLost, send } from "./client";
+import { ApiError, getJson, isSessionLost, onSessionLost, send, sendJson } from "./client";
 import { server } from "../testing/server";
 
 /** Every request, whatever its method or path, answers `status`. */
@@ -151,6 +151,84 @@ describe("api", () => {
 
     expect(request?.headers.get("Content-Type")).toBeNull();
     await expect(request?.text()).resolves.toBe("");
+  });
+
+  it("passes the abort signal to fetch", async () => {
+    server.use(http.get("/api/customers", () => HttpResponse.json({})));
+    const controller = new AbortController();
+    controller.abort();
+
+    const error = await getJson("customers", { signal: controller.signal }).catch((e: unknown) => e);
+
+    expect((error as Error).name).toBe("AbortError");
+  });
+
+  it("sends the query params of a read", async () => {
+    let search = "";
+    server.use(
+      http.get("/api/customers", ({ request }) => {
+        search = new URL(request.url).search;
+        return HttpResponse.json({});
+      }),
+    );
+
+    await getJson("customers", { params: { q: "ann" } });
+
+    expect(search).toBe("?q=ann");
+  });
+
+  it("sendJson resolves the parsed body", async () => {
+    server.use(http.post("/api/customers", () => HttpResponse.json({ id: "1" }, { status: 201 })));
+
+    await expect(sendJson<{ id: string }>("POST", "customers", { name: "Ann" })).resolves.toEqual({ id: "1" });
+  });
+
+  it("sendJson resolves undefined for a 204", async () => {
+    server.use(http.delete("/api/customers/1", () => new HttpResponse(null, { status: 204 })));
+
+    await expect(sendJson("DELETE", "customers/1")).resolves.toBeUndefined();
+  });
+
+  it("sendJson rejects with the problem the server answered", async () => {
+    server.use(
+      http.post("/api/customers", () =>
+        HttpResponse.json(
+          { title: "Conflict", status: 409, detail: "Edited elsewhere" },
+          { status: 409, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+
+    const error = await sendJson("POST", "customers", {}).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).status).toBe(409);
+    expect((error as ApiError).problem.detail).toBe("Edited elsewhere");
+  });
+
+  it("sends PATCH with the CSRF header", async () => {
+    let method = "";
+    let token: string | null = null;
+    server.use(
+      http.patch("/api/customers/1", ({ request }) => {
+        method = request.method;
+        token = request.headers.get("X-XSRF-TOKEN");
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await send("PATCH", "customers/1", { name: "Bo" });
+
+    expect(method).toBe("PATCH");
+    expect(token).toBe("a+b");
+  });
+
+  it("reports a 401 on a relative path, checking the resolved URL", async () => {
+    respond(401);
+
+    await getJson("customers").catch((e: unknown) => e);
+
+    expect(lost).toHaveBeenCalledOnce();
   });
 });
 

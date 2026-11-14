@@ -23,17 +23,17 @@ describe("api settings", () => {
   });
 
   afterEach(() => {
-    configureApi({ csrfBootstrapPath: "/who/me", sessionPathPrefix: "/api/" });
+    configureApi({ baseUrl: "/api", csrfBootstrapPath: "/who/me", sessionPathPrefix: "/api/" });
   });
 
   it("defaults to who's paths", () => {
-    expect(apiSettings()).toEqual({ csrfBootstrapPath: "/who/me", sessionPathPrefix: "/api/" });
+    expect(apiSettings()).toEqual({ baseUrl: "/api", csrfBootstrapPath: "/who/me", sessionPathPrefix: "/api/" });
   });
 
   it("merges a partial setting", () => {
     configureApi({ sessionPathPrefix: "/rest/" });
 
-    expect(apiSettings()).toEqual({ csrfBootstrapPath: "/who/me", sessionPathPrefix: "/rest/" });
+    expect(apiSettings()).toEqual({ baseUrl: "/api", csrfBootstrapPath: "/who/me", sessionPathPrefix: "/rest/" });
   });
 
   it("hands out a copy, so only configureApi changes the settings", () => {
