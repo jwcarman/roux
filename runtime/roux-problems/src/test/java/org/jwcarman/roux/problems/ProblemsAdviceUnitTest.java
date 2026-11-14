@@ -38,8 +38,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 /** The advice's paths a running application seldom takes, called directly. */
 class ProblemsAdviceUnitTest {
 
-  private final ProblemsAdvice advice =
-      new ProblemsAdvice(new RouxProblemsProperties(true, "/api/"));
+  private final ProblemsAdvice advice = new ProblemsAdvice("/api/");
 
   private static NoResourceFoundException missing(String path) {
     return new NoResourceFoundException(HttpMethod.GET, path, path);

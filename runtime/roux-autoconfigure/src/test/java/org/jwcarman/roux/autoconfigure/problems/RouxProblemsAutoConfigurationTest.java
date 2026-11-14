@@ -13,12 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jwcarman.roux.problems;
+package org.jwcarman.roux.autoconfigure.problems;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.jwcarman.jpa.pagination.UnknownSortByValueException;
+import org.jwcarman.roux.problems.PagingProblemsAdvice;
+import org.jwcarman.roux.problems.ProblemErrorController;
+import org.jwcarman.roux.problems.ProblemsAdvice;
+import org.jwcarman.roux.problems.RootProblemsAdvice;
+import org.jwcarman.roux.problems.SecurityProblemsAdvice;
+import org.jwcarman.roux.problems.WhoProblemsAdvice;
 import org.jwcarman.who.spring.security.web.SignInFailedException;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
@@ -53,8 +59,7 @@ class RouxProblemsAutoConfigurationTest {
 
   @Configuration(proxyBeanMethods = false)
   static class UserProblemsAdvice {
-    static final ProblemsAdvice ADVICE =
-        new ProblemsAdvice(new RouxProblemsProperties(true, "/api/"));
+    static final ProblemsAdvice ADVICE = new ProblemsAdvice("/api/");
 
     @Bean
     ProblemsAdvice userProblemsAdvice() {
@@ -171,5 +176,20 @@ class RouxProblemsAutoConfigurationTest {
           assertThat(context.getBean(SecurityProblemsAdvice.class)).isNotNull();
           assertThat(context.getBean(PagingProblemsAdvice.class)).isNotNull();
         });
+  }
+
+  @Test
+  void notWithoutRouxProblems() {
+    web.withClassLoader(new FilteredClassLoader(ProblemsAdvice.class))
+        .run(
+            context ->
+                assertThat(context)
+                    .hasNotFailed()
+                    .doesNotHaveBean(ProblemsAdvice.class)
+                    .doesNotHaveBean(RootProblemsAdvice.class)
+                    .doesNotHaveBean(ProblemErrorController.class)
+                    .doesNotHaveBean(SecurityProblemsAdvice.class)
+                    .doesNotHaveBean(WhoProblemsAdvice.class)
+                    .doesNotHaveBean(PagingProblemsAdvice.class));
   }
 }

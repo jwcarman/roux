@@ -57,15 +57,16 @@ public class ProblemsAdvice extends ResponseEntityExceptionHandler {
   static final String INVALID_FIELDS = "The request has invalid fields";
   static final String SIGN_IN = "Sign in to continue";
 
-  private final RouxProblemsProperties properties;
+  private final String apiPathPrefix;
 
   /**
    * Creates the advice.
    *
-   * @param properties where the API's paths begin, among the rest of roux-problems' settings
+   * @param apiPathPrefix where the API's paths begin: a path under it that matches nothing is a
+   *     problem, and any other is a page the error page renders
    */
-  public ProblemsAdvice(RouxProblemsProperties properties) {
-    this.properties = properties;
+  public ProblemsAdvice(String apiPathPrefix) {
+    this.apiPathPrefix = apiPathPrefix;
   }
 
   /** A problem for {@code status}, its title the status's reason phrase. */
@@ -133,7 +134,7 @@ public class ProblemsAdvice extends ResponseEntityExceptionHandler {
   protected ResponseEntity<Object> handleNoResourceFoundException(
       NoResourceFoundException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
     if (request instanceof ServletWebRequest servlet
-        && !servlet.getRequest().getRequestURI().startsWith(properties.apiPathPrefix())
+        && !servlet.getRequest().getRequestURI().startsWith(apiPathPrefix)
         && servlet.getResponse() != null) {
       try {
         servlet.getResponse().sendError(HttpStatus.NOT_FOUND.value());

@@ -40,10 +40,6 @@
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-autoconfigure</artifactId>
-        </dependency>
-        <dependency>
             <!-- DataIntegrityViolationException and OptimisticLockingFailureException, which the
                  advice answers whatever the application persists with -->
             <groupId>org.springframework</groupId>

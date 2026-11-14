@@ -15,18 +15,21 @@
  */
 package org.jwcarman.roux.problems;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * The application roux-problems' tests run: Spring MVC with the auto-configuration, and no
- * database. It scans nothing, as an application's own scan never reaches roux, so the advices and
- * the error controller come from the auto-configuration alone. Spring Security is on the classpath,
- * so every request is let through here.
+ * The application roux-problems' tests run: Spring MVC with Spring Boot's auto-configuration, and
+ * no database. roux-problems is a library, so the advices and the error controller are wired here,
+ * as roux-autoconfigure wires them in an application; the API path prefix comes from {@code
+ * roux.problems.api-path-prefix}, {@code /api/} by default, as there. Spring Security is on the
+ * classpath, so every request is let through here.
  */
 @SpringBootConfiguration
 @EnableAutoConfiguration(
@@ -36,7 +39,19 @@ import org.springframework.security.web.SecurityFilterChain;
       // the tests sign in with spring-security-test's user(), so no generated password
       "org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration"
     })
+@Import({
+  RootProblemsAdvice.class,
+  SecurityProblemsAdvice.class,
+  WhoProblemsAdvice.class,
+  PagingProblemsAdvice.class,
+  ProblemErrorController.class
+})
 class ProblemsTestApplication {
+
+  @Bean
+  ProblemsAdvice problemsAdvice(@Value("${roux.problems.api-path-prefix:/api/}") String prefix) {
+    return new ProblemsAdvice(prefix);
+  }
 
   @Bean
   SecurityFilterChain permitAll(HttpSecurity http) {
