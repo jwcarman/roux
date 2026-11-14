@@ -15,3 +15,5 @@ export {
   type UseQueryTableOptions,
   type UseQueryTableResult,
 } from "./useQueryTable";
+export { DebouncedSearchInput, type DebouncedSearchInputProps } from "./DebouncedSearchInput";
+export { SearchInput, type SearchInputProps } from "./SearchInput";

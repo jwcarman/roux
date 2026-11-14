@@ -15,3 +15,5 @@ export {
   type SortDirection,
   type TableSearch,
 } from "./paging";
+export { InfiniteList, type InfiniteListProps, type LoadMode } from "./InfiniteList";
+export { InfiniteSelect, type InfiniteSelectProps, type InfiniteSelectQuery } from "./InfiniteSelect";
