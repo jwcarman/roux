@@ -42,7 +42,8 @@ class ProblemsRuntimeHintsTest {
   }
 
   @Test
-  void theValidationMessagesAreIncluded() {
-    assertThat(RuntimeHintsPredicates.resource().forBundle("ValidationMessages")).accepts(hints);
+  void theContributorValidationMessagesAreIncluded() {
+    assertThat(RuntimeHintsPredicates.resource().forBundle("ContributorValidationMessages"))
+        .accepts(hints);
   }
 }
