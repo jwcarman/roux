@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Toaster, toaster } from "./toaster";
+import { Toaster, toaster } from "../feedback/toaster";
 import { useServerAction } from "./serverAction";
 import { invariantViolation } from "../testing/problems";
 import { renderHookWithProviders, renderWithProviders } from "../testing/render";

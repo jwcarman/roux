@@ -1,5 +1,5 @@
 import { Stack } from "@chakra-ui/react";
-import { ErrorMessage } from "./ErrorMessage";
+import { ErrorMessage } from "../feedback/ErrorMessage";
 import { useQueryTable, type UseQueryTableOptions } from "./useQueryTable";
 import { TableView, type TableViewProps } from "./TableView";
 

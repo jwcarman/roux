@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { ApiError } from "./client";
-import { notify } from "./notify";
+import { notify } from "../feedback/notify";
 import { problemOf } from "../problem";
 
 export interface ServerActionOptions<Variables> {

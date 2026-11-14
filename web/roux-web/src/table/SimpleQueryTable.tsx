@@ -9,7 +9,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { useState } from "react";
-import { ErrorMessage } from "./ErrorMessage";
+import { ErrorMessage } from "../feedback/ErrorMessage";
 import { TanstackTable, type TanstackTableProps } from "./TanstackTable";
 
 export type SimpleQueryTableProps<T> = Omit<TanstackTableProps<T>, "table" | "isLoading" | "isError" | "columns"> & {
