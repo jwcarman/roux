@@ -66,7 +66,7 @@ export async function send(method: "POST" | "PUT" | "DELETE", path: string, body
     method,
     credentials: "same-origin",
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: JSON.stringify(body), // undefined, so no body, when there is none
   });
   return notice(path, response);
 }

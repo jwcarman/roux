@@ -32,10 +32,9 @@ export async function problemOf(response: Response): Promise<Problem> {
     return fallback;
   }
   try {
-    const body = (await response.json()) as Record<string, unknown> | null;
-    if (body === null || typeof body !== "object") {
-      return fallback;
-    }
+    // Object() turns a null or primitive body into an object with none of a problem's members,
+    // so it reads as the fallback.
+    const body = Object(await response.json()) as Record<string, unknown>;
     const problem: Problem = {
       type: typeof body.type === "string" ? body.type : "about:blank",
       title: typeof body.title === "string" ? body.title : fallback.title,
