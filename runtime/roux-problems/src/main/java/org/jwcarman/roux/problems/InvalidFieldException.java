@@ -22,6 +22,8 @@ package org.jwcarman.roux.problems;
  */
 public class InvalidFieldException extends InvariantViolationException {
 
+  private static final long serialVersionUID = 1L;
+
   private final String field;
 
   /**
