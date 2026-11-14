@@ -257,9 +257,9 @@ operations generate add/edit forms that need these components to exist in roux.
   declarations; tested with Vitest; published to npm under the same version as the Java modules.
 - **One release, both registries.** The GitHub `release: created` trigger that publishes to Maven
   Central (the `cutting-oss-release` workflow) also publishes `@jwcarman/roux-web` to npm (public
-  access, with provenance), using an npm automation token stored as the repository secret
-  `NPM_TOKEN`. The author owns the `@jwcarman` scope; adding the secret is theirs to do before the
-  first release.
+  access, with provenance) through npm trusted publishing (OIDC), so no npm token is stored. npm
+  publishes first and Maven Central runs only after it succeeds. The author owns the `@jwcarman`
+  scope and configures the trusted publisher (`jwcarman/roux`, `release.yml`) on npmjs.com.
 - **Repository:** a Maven reactor at the root (`runtime/`) and an npm workspace (`web/`); `contracts/`
   at the root, read by both. CI builds and tests both halves on every change.
 
