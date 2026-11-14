@@ -237,21 +237,21 @@ describe("pageQuery with filters", () => {
     expect(pageQuery({ pageIndex: 1, role: "OWNER", status: undefined })).toBe("?pageIndex=1&role=OWNER");
   });
 
-describe("tableSearchOf, at the edges", () => {
-  const SORTS = ["NAME", "EMAIL"] as const;
+  describe("tableSearchOf, at the edges", () => {
+    const SORTS = ["NAME", "EMAIL"] as const;
 
-  it("drops a page written as blank text", () => {
-    for (const pageIndex of ["", "  "]) {
-      expect(tableSearchOf({ pageIndex }, SORTS)).toEqual({});
-    }
-  });
+    it("drops a page written as blank text", () => {
+      for (const pageIndex of ["", "  "]) {
+        expect(tableSearchOf({ pageIndex }, SORTS)).toEqual({});
+      }
+    });
 
-  it("keeps the first page and the smallest page size", () => {
-    expect(tableSearchOf({ pageIndex: 0, pageSize: 1 }, SORTS)).toEqual({ pageIndex: 0, pageSize: 1 });
-  });
+    it("keeps the first page and the smallest page size", () => {
+      expect(tableSearchOf({ pageIndex: 0, pageSize: 1 }, SORTS)).toEqual({ pageIndex: 0, pageSize: 1 });
+    });
 
-  it("reads an ascending direction in any case", () => {
-    expect(tableSearchOf({ sortDirection: "asc" }, SORTS)).toEqual({ sortDirection: "ASC" });
+    it("reads an ascending direction in any case", () => {
+      expect(tableSearchOf({ sortDirection: "asc" }, SORTS)).toEqual({ sortDirection: "ASC" });
+    });
   });
-});
 });

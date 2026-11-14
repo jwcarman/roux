@@ -13,7 +13,11 @@ const columns: ColumnDef<Person, unknown>[] = [
   column.accessor("email", { id: "EMAIL", header: "Email" }),
 ];
 
-function show(query: () => Promise<Person[]>, enabled = true, initialSort: { id: string; desc: boolean } | null = { id: "NAME", desc: false }) {
+function show(
+  query: () => Promise<Person[]>,
+  enabled = true,
+  initialSort: { id: string; desc: boolean } | null = { id: "NAME", desc: false },
+) {
   const spy = vi.fn(query);
   renderWithProviders(
     <SimpleQueryTable

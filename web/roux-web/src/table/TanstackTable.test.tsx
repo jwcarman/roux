@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
-import { createColumnHelper, getCoreRowModel, useReactTable, type ColumnDef, type SortingState } from "@tanstack/react-table";
+import {
+  createColumnHelper,
+  getCoreRowModel,
+  useReactTable,
+  type ColumnDef,
+  type SortingState,
+} from "@tanstack/react-table";
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { people, type Person } from "../testing/fakeServer";
@@ -21,7 +27,9 @@ function Harness({
   rows = 1,
   sorting = [],
   ...props
-}: { columns?: ColumnDef<Person, unknown>[]; rows?: number; sorting?: SortingState } & Partial<TanstackTableProps<Person>>) {
+}: { columns?: ColumnDef<Person, unknown>[]; rows?: number; sorting?: SortingState } & Partial<
+  TanstackTableProps<Person>
+>) {
   const table = useReactTable({
     data: people(rows),
     columns,
@@ -48,7 +56,9 @@ describe("TanstackTable", () => {
   it("shows a different icon for an ascending, a descending and an unsorted column", () => {
     const icon = (sorting: SortingState) => {
       const { container, unmount } = renderWithProviders(<Harness sorting={sorting} />);
-      const svg = within(screen.getByRole("columnheader", { name: "Name" })).getByRole("button").querySelector("svg");
+      const svg = within(screen.getByRole("columnheader", { name: "Name" }))
+        .getByRole("button")
+        .querySelector("svg");
       const html = svg?.outerHTML ?? "";
       unmount();
       container.remove();

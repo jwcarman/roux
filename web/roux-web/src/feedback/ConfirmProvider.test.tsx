@@ -66,7 +66,10 @@ describe("useConfirm", () => {
     const box = [new DOMRect(0, 0, 10, 10)] as unknown as DOMRectList;
     const boxes = vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue(box as never);
     const has = Element.prototype.hasAttribute;
-    const skipped = vi.spyOn(Element.prototype, "hasAttribute").mockImplementation(function (this: Element, name: string) {
+    const skipped = vi.spyOn(Element.prototype, "hasAttribute").mockImplementation(function (
+      this: Element,
+      name: string,
+    ) {
       return name === "data-no-autofocus" && this.textContent === "Cancel" ? true : has.call(this, name);
     });
     try {
