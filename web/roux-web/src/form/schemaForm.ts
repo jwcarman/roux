@@ -1,6 +1,6 @@
 import { evaluate, type FormOptions, type StandardSchemaV1 } from "@tanstack/react-form";
 import { useMutation, useQueryClient, type UseMutationOptions } from "@tanstack/react-query";
-import { useMemo, useRef } from "react";
+import { useRef, useState } from "react";
 import type { z } from "zod";
 import { ApiError } from "../api/client";
 import { assertRefreshesHonoured, refusalToast } from "../api/serverAction";
@@ -128,20 +128,20 @@ export function useSchemaForm<S extends FormSchema, TData>(options: SchemaFormOp
     refusalToast(error, failure);
   }
 
-  return useMemo(
-    () =>
-      Object.assign(form, {
-        restart: () => {
-          formDefaults.current = latestDefaults.current;
-          form.reset(latestDefaults.current);
-        },
-        onSaved: (listener: () => void) => {
-          listeners.current.add(listener);
-          return () => {
-            listeners.current.delete(listener);
-          };
-        },
-      }),
-    [form],
+  // Made once: TanStack Form's form keeps its identity from render to render, and so does this.
+  const [schemaForm] = useState(() =>
+    Object.assign(form, {
+      restart: () => {
+        formDefaults.current = latestDefaults.current;
+        form.reset(latestDefaults.current);
+      },
+      onSaved: (listener: () => void) => {
+        listeners.current.add(listener);
+        return () => {
+          listeners.current.delete(listener);
+        };
+      },
+    }),
   );
+  return schemaForm;
 }

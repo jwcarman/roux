@@ -21,7 +21,7 @@ function step(schema: z.ZodType | undefined, key: string): z.ZodType | undefined
  */
 export function rulesOfField(form: AnyFormApi, name: string): FieldRule {
   let schema: z.ZodType | undefined = form.options.validators?.onSubmit as z.ZodType | undefined;
-  for (const key of name.split(/[.[\]]+/).filter((part) => part !== "")) {
+  for (const key of name.split(/[.[\]]/).filter((part) => part !== "")) {
     schema = step(schema, key);
   }
   return (schema && fieldRules.get(schema)) ?? { required: false };

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { MutationObserver, QueryClient, QueryObserver } from "@tanstack/react-query";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "./client";
 import { createQueryClient, hasRouxRefreshes, shouldRetry, useClearQueriesOnIdentityChange } from "./queryClient";
 import { renderHookWithProviders, testQueryClient } from "../testing/render";
@@ -13,6 +13,7 @@ describe("shouldRetry", () => {
   });
 
   it("retries a server error or a network failure twice", () => {
+    expect(shouldRetry(0, new ApiError(500))).toBe(true);
     expect(shouldRetry(0, new ApiError(503))).toBe(true);
     expect(shouldRetry(1, new TypeError("Failed to fetch"))).toBe(true);
     expect(shouldRetry(2, new ApiError(500))).toBe(false);
@@ -44,6 +45,21 @@ describe("useClearQueriesOnIdentityChange", () => {
     rerender("ada");
     rerender("ada");
     expect(cached(client)).toBeDefined();
+  });
+
+  it("keeps the cache when the session reloads for the same identity", () => {
+    const { client, rerender } = track();
+    rerender("ada");
+    rerender(undefined);
+    expect(cached(client)).toBeDefined();
+    rerender("ada");
+    expect(cached(client)).toBeDefined();
+  });
+
+  it("clears the cache when the session loads signed out", () => {
+    const { client, rerender } = track();
+    rerender(null);
+    expect(cached(client)).toBeUndefined();
   });
 
   it("clears the cache on signing out", () => {
@@ -137,11 +153,30 @@ describe("createQueryClient", () => {
   it("aMutationWithoutMetaRefreshesNothing", async () => {
     const { client, fetches, completed, unsubscribe } = watched();
     await settled(completed, 1);
+    const invalidate = vi.spyOn(client, "invalidateQueries");
     const mutation = new MutationObserver(client, { mutationFn: () => Promise.resolve("saved") });
 
     await mutation.mutate();
 
     expect(fetches()).toBe(1);
+    expect(invalidate).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it("refreshesOnlyTheNamedQueries", async () => {
+    const { client, completed, unsubscribe } = watched();
+    await settled(completed, 1);
+    client.setQueryData(["orders"], ["cached"]);
+    const mutation = new MutationObserver(client, {
+      mutationFn: () => Promise.resolve("saved"),
+      meta: { refreshes: [["customers"]] },
+    });
+
+    await mutation.mutate();
+
+    expect(client.getQueryState(["orders"])?.isInvalidated).toBe(false);
+    expect(client.getQueryState(["customers", "list"])?.isInvalidated).toBe(false);
+    expect(completed()).toBe(2);
     unsubscribe();
   });
 

@@ -21,8 +21,8 @@ describe("rules", () => {
       expect(messagesOf(text().safeParse("   "))).toEqual(["Must not be blank"]);
     });
 
-    it("is required", () => {
-      expect(fieldRules.get(text())).toEqual({ required: true });
+    it("is required, with no length limit", () => {
+      expect(fieldRules.get(text())).toStrictEqual({ required: true });
     });
 
     it("limits the length of the trimmed value", () => {
@@ -44,7 +44,7 @@ describe("rules", () => {
     it("registers either order the same", () => {
       expect(fieldRules.get(text().max(100).optional())).toEqual({ required: false, maxLength: 100 });
       expect(fieldRules.get(text().optional().max(100))).toEqual({ required: false, maxLength: 100 });
-      expect(fieldRules.get(text().optional())).toEqual({ required: false });
+      expect(fieldRules.get(text().optional())).toStrictEqual({ required: false });
     });
 
     it("keeps the last limit and stays optional", () => {
@@ -112,7 +112,7 @@ describe("rules", () => {
       expect(phone().safeParse(value)).toEqual({ success: true, data: value });
     });
 
-    it.each(["555-121", "614-555-CALL", "call me"])("refuses %s", (value) => {
+    it.each(["555-121", "614-555-CALL", "call me", "call 5551212", "5551212 call"])("refuses %s", (value) => {
       expect(messagesOf(phone().safeParse(value))).toEqual(["Is not in the expected format"]);
     });
 
@@ -159,6 +159,7 @@ describe("rules", () => {
 
     it("refuses unset", () => {
       expect(messagesOf(number().safeParse(undefined))).toEqual(["Must not be empty"]);
+      expect(messagesOf(number().safeParse(Number.NaN))).toEqual(["Must not be empty"]);
       expect(fieldRules.get(number())).toEqual({ required: true });
     });
 
@@ -212,6 +213,12 @@ describe("rules", () => {
 
     it("is required", () => {
       expect(fieldRules.get(oneOf(statuses))).toEqual({ required: true });
+    });
+
+    it("takes the placeholder in, then refuses it as no value chosen, naming the values", () => {
+      expect(oneOf(statuses).safeParse("").error?.issues).toMatchObject([
+        { code: "invalid_value", values: ["LEAD", "ACTIVE"], message: "Must not be empty" },
+      ]);
     });
 
     it("takes a select's placeholder as input", () => {

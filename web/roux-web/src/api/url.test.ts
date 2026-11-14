@@ -22,6 +22,8 @@ describe("resolveUrl", () => {
     configureApi({ baseUrl: "/v2/" });
 
     expect(resolveUrl("customers")).toBe("/v2/customers");
+    configureApi({ baseUrl: "/v3//" });
+    expect(resolveUrl("customers")).toBe("/v3/customers");
   });
 
   it("uses a path with a leading slash as it is", () => {

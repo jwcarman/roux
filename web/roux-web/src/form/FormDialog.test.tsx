@@ -398,6 +398,23 @@ describe("FormDialog managing itself", () => {
     expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 
+  it("listens to the form it is given now, not the one it was first given", () => {
+    const leaveFirst = vi.fn();
+    const first = stubForm({ onSaved: vi.fn(() => leaveFirst) });
+    const second = stubForm({ onSaved: vi.fn(() => vi.fn()) });
+    const dialog = (form: typeof first) => (
+      <FormDialog form={form} title="Stub" trigger={<Button>Open</Button>}>
+        <p>Body</p>
+      </FormDialog>
+    );
+    const { rerender } = renderWithProviders(dialog(first));
+
+    rerender(dialog(second));
+
+    expect(leaveFirst).toHaveBeenCalledTimes(1);
+    expect(second.onSaved).toHaveBeenCalledTimes(1);
+  });
+
   it("restarts a form that can, rather than resetting it, once closed", () => {
     const form = stubForm({ restart: vi.fn() });
     renderWithProviders(

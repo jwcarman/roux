@@ -184,6 +184,20 @@ describe("useServerAction", () => {
     await waitFor(() => expect(result.current.pending).toBe(false));
   });
 
+  it("answers true without an onSuccess", async () => {
+    answerArchive(() => Response.json({ id: "7" }));
+    renderWithProviders(<Toaster />);
+    const { result } = renderHookWithProviders(() => useServerAction(archive), createQueryClient());
+
+    let done: boolean | undefined;
+    await act(async () => {
+      done = await result.current.run({ id: "7", name: "Acme" });
+    });
+
+    expect(done).toBe(true);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("rejects, naming createQueryClient, when meta.refreshes meets a plain QueryClient", async () => {
     answerArchive(() => Response.json({ id: "7" }));
     const { result } = renderHookWithProviders(() => useServerAction(archive), new QueryClient());

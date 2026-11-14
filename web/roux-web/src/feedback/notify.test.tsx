@@ -49,10 +49,13 @@ describe("notify", () => {
   });
 
   it("gives no description when the problem has neither detail nor reference", async () => {
+    const create = vi.spyOn(toaster, "create");
     renderWithProviders(<Toaster />);
     act(() => notify.problem({ type: "about:blank", title: "Bad Gateway", status: 502 }, "Could not save the profile"));
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not save the profile");
     expect(document.querySelector("[data-part=description]")).toBeNull();
+    expect(create).toHaveBeenCalledWith({ type: "error", title: "Could not save the profile", description: undefined });
+    create.mockRestore();
   });
 
   it("puts the reference on its own line after the detail", async () => {

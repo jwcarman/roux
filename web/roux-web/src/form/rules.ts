@@ -77,14 +77,14 @@ export type TextRule<Out extends string | null = string> = Rule<
 function textSchema(state: TextState): z.ZodString {
   let schema = z.string().trim();
   if (state.required) {
-    // `abort`: a blank value reports only that it is blank, not that it is a malformed address.
-    schema = schema.min(1, { error: NOT_BLANK, abort: true });
+    schema = schema.min(1, { error: NOT_BLANK });
   }
   if (state.max !== undefined) {
     schema = schema.max(state.max, { error: `Must be between 0 and ${state.max} characters` });
   }
   const { format } = state;
   if (format !== undefined) {
+    // A blank value passes the format: it reports only that it is blank, not that it is malformed.
     schema = schema.refine((value) => value === "" || format.test(value), { error: format.message });
   }
   return schema;
@@ -156,7 +156,7 @@ export type DateRule<Out extends string | null = string> = Rule<
 
 /** A date input's value, or `""` when not `required`. */
 function dateSchema(required: boolean): z.ZodString {
-  return (required ? z.string().min(1, { error: NOT_EMPTY, abort: true }) : z.string()).refine(
+  return (required ? z.string().min(1, { error: NOT_EMPTY }) : z.string()).refine(
     (value) => value === "" || z.regexes.date.test(value),
     { error: NOT_EXPECTED_FORMAT },
   );
@@ -174,7 +174,7 @@ export function date(): DateRule {
 // --- number ---------------------------------------------------------------------------------------
 
 interface NumberState {
-  integer: boolean;
+  integer?: boolean;
   min?: number;
   max?: number;
 }
@@ -240,7 +240,7 @@ function optionalNumber(state: NumberState): NumberRule<number | null> {
 
 /** A required number: `Must not be empty`. */
 export function number(): NumberRule {
-  return requiredNumber({ integer: false });
+  return requiredNumber({});
 }
 
 /** A required whole number: `Must not be empty`, `Must be a whole number`. */

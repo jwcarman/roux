@@ -13,6 +13,7 @@ const schema = z.object({
   company: text().optional(),
   address: z.object({ street: text() }),
   items: z.array(z.object({ title: text().max(7) })),
+  tags: z.array(text().max(20)),
   notes: z.string().refine((value) => value !== "x"),
 });
 
@@ -21,6 +22,7 @@ const defaultValues = {
   company: "",
   address: { street: "" },
   items: [{ title: "" }],
+  tags: [""],
   notes: "",
 };
 
@@ -43,6 +45,7 @@ describe("rulesOfField", () => {
     const { result } = renderHookWithProviders(useSchemaFormOf);
     expect(rulesOfField(result.current, "address.street")).toEqual({ required: true });
     expect(rulesOfField(result.current, "items[0].title")).toEqual({ required: true, maxLength: 7 });
+    expect(rulesOfField(result.current, "tags[0]")).toEqual({ required: true, maxLength: 20 });
   });
 
   it("is not required for a name the schema lacks, or one that steps into a leaf", () => {
