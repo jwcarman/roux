@@ -297,4 +297,36 @@ describe("a form on a page", () => {
     await waitFor(() => expect(bodies).toHaveLength(2));
     expect(bodies[1]).toEqual({ appName: "Theirs", version: 4 });
   });
+
+  it("keeps the draft when a later refetch changes the record after a 409 that changed nothing", async () => {
+    let record: AppSettings = { id: "1", name: "Roux", version: 3 };
+    server.use(
+      http.get("/api/settings/1", () => HttpResponse.json(record)),
+      http.put("/api/settings/1", () =>
+        HttpResponse.json(
+          { type: "about:blank", title: "Conflict", status: 409, detail: "That name is taken" },
+          { status: 409, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+    const client = createQueryClient();
+    renderWithProviders(<SettingsPage />, client);
+    const user = userEvent.setup();
+    await screen.findByRole("textbox", { name: "App name" });
+
+    await rename(user, "Mine");
+    await user.click(saveButton());
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    await rename(user, "Mine, again");
+
+    // Later, someone else's save arrives with an unrelated refetch (the window regaining focus).
+    record = { id: "1", name: "Theirs", version: 4 };
+    await act(() => client.invalidateQueries({ queryKey: ["settings"] }));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+
+    expect(appName()).toHaveValue("Mine, again");
+    // The refetch did bring their record: it is what Reset goes back to.
+    await user.click(resetButton());
+    expect(appName()).toHaveValue("Theirs");
+  });
 });

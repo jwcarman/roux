@@ -97,18 +97,22 @@ export function useSchemaForm<S extends FormSchema, TData>(options: SchemaFormOp
 
   /** Back to the caller's latest defaults: a dialog's fresh start, or the record a conflict refreshed. */
   function restart(): void {
+    conflictFrom.current = undefined;
     formDefaults.current = latestDefaults.current;
     form.reset(latestDefaults.current);
   }
 
   // After a conflict (409), the defaults the refused save was made from. Someone else saved first;
-  // once the mutation's refreshes bring their record (new defaults), the form starts over from it,
+  // when the mutation's refreshes bring their record (new defaults), the form starts over from it,
   // or the next save would send this draft at the new version and undo their change. A 409 that
-  // brings no new record (a create refused as a duplicate) keeps what was typed.
+  // brings no new record (a create refused as a duplicate) keeps what was typed. The refreshes are
+  // done before the refusal reaches here, so the first check after it decides, and uses it up: a
+  // record that changes later (a refetch on focus) never wipes a draft without a refusal to say why.
   const conflictFrom = useRef<{ defaults: z.input<S> } | undefined>(undefined);
   function restartIfRefreshed(): void {
-    if (conflictFrom.current !== undefined && !evaluate(latestDefaults.current, conflictFrom.current.defaults)) {
-      conflictFrom.current = undefined;
+    const conflict = conflictFrom.current;
+    conflictFrom.current = undefined;
+    if (conflict !== undefined && !evaluate(latestDefaults.current, conflict.defaults)) {
       restart();
     }
   }
@@ -140,6 +144,7 @@ export function useSchemaForm<S extends FormSchema, TData>(options: SchemaFormOp
       return;
     }
     await onSuccess?.(data, parsed);
+    conflictFrom.current = undefined;
     formDefaults.current = value;
     form.reset(value);
     listeners.current.forEach((listener) => listener());
