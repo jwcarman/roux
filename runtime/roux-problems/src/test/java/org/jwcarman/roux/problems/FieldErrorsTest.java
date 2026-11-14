@@ -75,9 +75,13 @@ class FieldErrorsTest {
   }
 
   static class Service {
-    public void invite(@Valid Invitation invitation) {}
+    public void invite(@Valid Invitation invitation) {
+      // only the signature matters: the validator reads its constraints
+    }
 
-    public void note(@Size(max = 3) String note) {}
+    public void note(@Size(max = 3) String note) {
+      // only the signature matters: the validator reads its constraints
+    }
   }
 
   record Invitation(@NotBlank String email) {}
@@ -176,7 +180,9 @@ class FieldErrorsTest {
   }
 
   static class Notes {
-    public void tag(String tag) {}
+    public void tag(String tag) {
+      // only the signature matters: the validator reads its constraints
+    }
   }
 
   @Test

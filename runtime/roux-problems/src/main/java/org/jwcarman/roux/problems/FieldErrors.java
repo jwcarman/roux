@@ -79,26 +79,34 @@ final class FieldErrors {
   private static String path(Path path) {
     List<Path.Node> nodes = new ArrayList<>();
     path.forEach(nodes::add);
-    int start = 0;
-    if (!nodes.isEmpty() && isExecutable(nodes.getFirst())) {
-      start = 1;
-      if (nodes.size() > 2 && nodes.get(1).getKind() == ElementKind.PARAMETER) {
-        start = 2;
-      }
-    }
     StringBuilder field = new StringBuilder();
-    for (Path.Node node : nodes.subList(start, nodes.size())) {
-      if (node.isInIterable()) {
-        Object at = node.getIndex() != null ? node.getIndex() : node.getKey();
-        if (at != null) {
-          field.append('[').append(at).append(']');
-        }
-      }
-      if (node.getKind() != ElementKind.CONTAINER_ELEMENT && node.getName() != null) {
-        field.append(field.isEmpty() ? "" : ".").append(node.getName());
-      }
+    for (Path.Node node : nodes.subList(firstFieldNode(nodes), nodes.size())) {
+      appendNode(field, node);
     }
     return field.toString();
+  }
+
+  /**
+   * Where the field path starts: past the method or constructor node, and past the parameter node
+   * when the violation is on one of that parameter's own fields.
+   */
+  private static int firstFieldNode(List<Path.Node> nodes) {
+    if (nodes.isEmpty() || !isExecutable(nodes.getFirst())) {
+      return 0;
+    }
+    return nodes.size() > 2 && nodes.get(1).getKind() == ElementKind.PARAMETER ? 2 : 1;
+  }
+
+  private static void appendNode(StringBuilder field, Path.Node node) {
+    if (node.isInIterable()) {
+      Object at = node.getIndex() != null ? node.getIndex() : node.getKey();
+      if (at != null) {
+        field.append('[').append(at).append(']');
+      }
+    }
+    if (node.getKind() != ElementKind.CONTAINER_ELEMENT && node.getName() != null) {
+      field.append(field.isEmpty() ? "" : ".").append(node.getName());
+    }
   }
 
   private static boolean isExecutable(Path.Node node) {

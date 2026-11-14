@@ -89,10 +89,12 @@ class ProblemsAdviceUnitTest {
         };
     ServletWebRequest request =
         new ServletWebRequest(new MockHttpServletRequest("GET", "/page"), broken);
+    NoResourceFoundException exception = missing("/page");
+    HttpHeaders headers = new HttpHeaders();
     assertThatThrownBy(
             () ->
                 advice.handleNoResourceFoundException(
-                    missing("/page"), new HttpHeaders(), HttpStatus.NOT_FOUND, request))
+                    exception, headers, HttpStatus.NOT_FOUND, request))
         .isInstanceOf(UncheckedIOException.class)
         .hasRootCauseMessage("connection reset");
   }

@@ -27,7 +27,7 @@ jobs:
           node-version: 'lts/*'
           registry-url: https://registry.npmjs.org
       - name: Install web dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
         working-directory: web
       - name: Set version
         env:
@@ -122,7 +122,7 @@ jobs:
             exit 1
           fi
       - name: Install web dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
         working-directory: web
       - name: Set version
         env:
