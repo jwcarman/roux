@@ -38,7 +38,8 @@ jobs:
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./mvnw -B sonar:sonar
+        # Fully qualified: this Maven does not resolve the "sonar:" prefix from the project's plugins.
+        run: ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
 
   web:
     runs-on: ubuntu-latest
