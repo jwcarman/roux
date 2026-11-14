@@ -1,6 +1,6 @@
 import { evaluate, type FormOptions, type StandardSchemaV1 } from "@tanstack/react-form";
 import { useMutation, useQueryClient, type UseMutationOptions } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { z } from "zod";
 import { ApiError } from "../api/client";
 import { assertRefreshesHonoured, refusalToast } from "../api/serverAction";
@@ -73,7 +73,9 @@ export type SchemaForm<S extends FormSchema> = SchemaAppForm<S> & {
  * other refusal, are toasted under `failure`; a lost session (401) shows nothing. After a save the
  * saved values become the form's defaults: it is clean, and Reset goes back to them. The form stays
  * submitting until the mutation's `meta.refreshes` have refetched, and a submit while one is out
- * sends nothing.
+ * sends nothing. A conflict (409) that the refreshes answer with a changed record starts the form
+ * over from it: the draft is dropped, so the next save cannot quietly undo whoever saved first. A
+ * 409 that changes nothing (a create refused as a duplicate) keeps what was typed.
  */
 export function useSchemaForm<S extends FormSchema, TData>(options: SchemaFormOptions<S, TData>): SchemaForm<S> {
   const { schema, defaultValues, mutation, onSuccess, failure = "Could not save" } = options;
@@ -93,6 +95,27 @@ export function useSchemaForm<S extends FormSchema, TData>(options: SchemaFormOp
   }
   latestDefaults.current = defaultValues;
 
+  /** Back to the caller's latest defaults: a dialog's fresh start, or the record a conflict refreshed. */
+  function restart(): void {
+    formDefaults.current = latestDefaults.current;
+    form.reset(latestDefaults.current);
+  }
+
+  // After a conflict (409), the defaults the refused save was made from. Someone else saved first;
+  // once the mutation's refreshes bring their record (new defaults), the form starts over from it,
+  // or the next save would send this draft at the new version and undo their change. A 409 that
+  // brings no new record (a create refused as a duplicate) keeps what was typed.
+  const conflictFrom = useRef<{ defaults: z.input<S> } | undefined>(undefined);
+  function restartIfRefreshed(): void {
+    if (conflictFrom.current !== undefined && !evaluate(latestDefaults.current, conflictFrom.current.defaults)) {
+      conflictFrom.current = undefined;
+      restart();
+    }
+  }
+  // Checked after every render: the mutation's move to `error` re-renders this hook after the
+  // refusal, whether the refreshed record rendered before it or arrives later.
+  useEffect(restartIfRefreshed);
+
   const validator: SchemaValidator<S> = schema;
   const form = useSchemaAppForm<S>({
     defaultValues: formDefaults.current,
@@ -104,11 +127,15 @@ export function useSchemaForm<S extends FormSchema, TData>(options: SchemaFormOp
   async function save(value: z.input<S>): Promise<void> {
     assertRefreshesHonoured(queryClient, mutation);
     const parsed = schema.parse(value);
+    const submittedFrom = latestDefaults.current;
     let data: TData;
     try {
       data = await mutateAsync(parsed);
     } catch (error) {
       showRefusal(error);
+      if (error instanceof ApiError && error.status === 409) {
+        conflictFrom.current = { defaults: submittedFrom };
+      }
       return;
     }
     await onSuccess?.(data, parsed);
@@ -131,10 +158,7 @@ export function useSchemaForm<S extends FormSchema, TData>(options: SchemaFormOp
   // Made once: TanStack Form's form keeps its identity from render to render, and so does this.
   const [schemaForm] = useState(() =>
     Object.assign(form, {
-      restart: () => {
-        formDefaults.current = latestDefaults.current;
-        form.reset(latestDefaults.current);
-      },
+      restart,
       onSaved: (listener: () => void) => {
         listeners.current.add(listener);
         return () => {

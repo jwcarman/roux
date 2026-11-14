@@ -20,15 +20,20 @@ interface AppSettings {
   version: number;
 }
 
-function updateSettings(settings: AppSettings) {
+function updateSettings(settings: AppSettings, settleMs?: number) {
   return mutationOptions({
     mutationFn: (request: z.output<typeof appSchema>) =>
       sendJson<AppSettings>("PUT", `/api/settings/${settings.id}`, { ...request, version: settings.version }),
     meta: { refreshes: [["settings"]] },
+    // Settling late lets the refreshed record render before the save is answered.
+    ...(settleMs === undefined ? {} : { onSettled: () => new Promise((resolve) => setTimeout(resolve, settleMs)) }),
   });
 }
 
-/** Serves GET and PUT /api/settings/1, each PUT bumping the version; returns the PUTs' bodies. */
+/**
+ * Serves GET and PUT /api/settings/1, each PUT bumping the version, or answering 409 when it is not
+ * at the current one; returns the PUTs' bodies, and `saveElsewhere` for someone else's save.
+ */
 function serveSettings() {
   let record: AppSettings = { id: "1", name: "Roux", version: 3 };
   const bodies: unknown[] = [];
@@ -37,18 +42,42 @@ function serveSettings() {
     http.put("/api/settings/1", async ({ request }) => {
       const body = (await request.json()) as { appName: string; version: number };
       bodies.push(body);
+      if (body.version !== record.version) {
+        return HttpResponse.json(
+          { type: "about:blank", title: "Conflict", status: 409, detail: "This record changed since you loaded it" },
+          { status: 409, headers: { "Content-Type": "application/problem+json" } },
+        );
+      }
       record = { id: "1", name: body.appName, version: body.version + 1 };
       return HttpResponse.json(record);
     }),
   );
-  return { bodies };
+  const saveElsewhere = (name: string) => {
+    record = { id: "1", name, version: record.version + 1 };
+  };
+  return { bodies, saveElsewhere };
 }
 
-function SettingsForm({ settings }: { settings: AppSettings }) {
+/** A save that fails without asking the server, with an error that only looks like a 409. */
+const failingSave = mutationOptions({
+  mutationFn: (request: z.output<typeof appSchema>): Promise<AppSettings> =>
+    Promise.reject(Object.assign(new Error(`Offline: ${request.appName} was not saved`), { status: 409 })),
+  meta: { refreshes: [["settings"]] },
+});
+
+function SettingsForm({
+  settings,
+  settleMs,
+  offline,
+}: {
+  settings: AppSettings;
+  settleMs?: number;
+  offline?: boolean;
+}) {
   const form = useSchemaForm({
     schema: appSchema,
     defaultValues: { appName: settings.name },
-    mutation: updateSettings(settings),
+    mutation: offline ? failingSave : updateSettings(settings, settleMs),
   });
   return (
     <form.AppForm>
@@ -61,16 +90,16 @@ function SettingsForm({ settings }: { settings: AppSettings }) {
   );
 }
 
-function SettingsPage() {
+function SettingsPage({ settleMs, offline }: { settleMs?: number; offline?: boolean }) {
   const query = useQuery({
     queryKey: ["settings", "1"],
     queryFn: () => fetch("/api/settings/1").then((response) => response.json() as Promise<AppSettings>),
   });
-  return query.data ? <SettingsForm settings={query.data} /> : null;
+  return query.data ? <SettingsForm settings={query.data} settleMs={settleMs} offline={offline} /> : null;
 }
 
-async function showPage() {
-  renderWithProviders(<SettingsPage />, createQueryClient());
+async function showPage(settleMs?: number, offline?: boolean) {
+  renderWithProviders(<SettingsPage settleMs={settleMs} offline={offline} />, createQueryClient());
   const user = userEvent.setup();
   await screen.findByRole("textbox", { name: "App name" });
   return user;
@@ -137,5 +166,70 @@ describe("a form on a page", () => {
       { appName: "Noir", version: 3 },
       { appName: "Noir 2", version: 4 },
     ]);
+  });
+
+  it.each([
+    ["renders after the refusal", undefined],
+    ["renders before the refusal", 50],
+  ])("starts over from the refreshed record after a conflict (the record %s)", async (_, settleMs) => {
+    const { bodies, saveElsewhere } = serveSettings();
+    const user = await showPage(settleMs);
+    saveElsewhere("Theirs");
+
+    await rename(user, "Mine");
+    await user.click(saveButton());
+
+    await waitFor(() => expect(appName()).toHaveValue("Theirs"));
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    expect(resetButton()).toBeDisabled();
+
+    await user.click(saveButton());
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies).toEqual([
+      { appName: "Mine", version: 3 },
+      { appName: "Theirs", version: 4 },
+    ]);
+  });
+
+  it("keeps the draft after any other refusal, though the refresh brings a changed record", async () => {
+    let record: AppSettings = { id: "1", name: "Roux", version: 3 };
+    server.use(
+      http.get("/api/settings/1", () => HttpResponse.json(record)),
+      http.put("/api/settings/1", () =>
+        HttpResponse.json(
+          { type: "about:blank", title: "Bad Request", status: 400, detail: "Too long" },
+          { status: 400, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+    const user = await showPage();
+    record = { id: "1", name: "Theirs", version: 4 };
+
+    await rename(user, "Mine");
+    await user.click(saveButton());
+
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(appName()).toHaveValue("Mine");
+    // The refresh did bring their record: it is what Reset goes back to.
+    await user.click(resetButton());
+    expect(appName()).toHaveValue("Theirs");
+  });
+
+  it("keeps the draft when a save fails with an error that is not the server's 409", async () => {
+    let record: AppSettings = { id: "1", name: "Roux", version: 3 };
+    server.use(http.get("/api/settings/1", () => HttpResponse.json(record)));
+    const user = await showPage(undefined, true);
+    record = { id: "1", name: "Theirs", version: 4 };
+
+    await rename(user, "Mine");
+    await user.click(saveButton());
+
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(appName()).toHaveValue("Mine");
+    // The refresh did bring their record: it is what Reset goes back to.
+    await user.click(resetButton());
+    expect(appName()).toHaveValue("Theirs");
   });
 });
