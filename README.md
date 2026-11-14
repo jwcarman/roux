@@ -60,7 +60,7 @@ The React, Chakra UI and TanStack libraries are peer dependencies; the app suppl
 ./mvnw -Ppit verify    # mutation testing; any surviving mutant fails the build
 ```
 
-For the web package, run in `web/` (after `npm ci` there and in `web/lint-tools`): `npm run format:check`,
+For the web package, run in `web/` with `-w @jwcarman/roux-web` (after `npm ci` there and in `web/lint-tools`): `npm run format:check`,
 `lint`, `typecheck`, `coverage`, `build`, and `npm run mutate` for mutation testing.
 
 Java 25 and Spring Boot 4.1. Licensed under the [Apache License 2.0](LICENSE).

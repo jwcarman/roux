@@ -36,22 +36,22 @@ jobs:
         run: npm ci
         working-directory: web/lint-tools
       - name: Check formatting
-        run: npm run format:check
+        run: npm run format:check -w @jwcarman/roux-web
         working-directory: web
       - name: Lint
-        run: npm run lint
+        run: npm run lint -w @jwcarman/roux-web
         working-directory: web
       - name: Typecheck
-        run: npm run typecheck
+        run: npm run typecheck -w @jwcarman/roux-web
         working-directory: web
       - name: Test
-        run: npm test
+        run: npm test -w @jwcarman/roux-web
         working-directory: web
       - name: Coverage
-        run: npm run coverage
+        run: npm run coverage -w @jwcarman/roux-web
         working-directory: web
       - name: Build
-        run: npm run build
+        run: npm run build -w @jwcarman/roux-web
         working-directory: web
 
   mutation:
@@ -74,5 +74,5 @@ jobs:
         run: npm ci
         working-directory: web
       - name: Mutation testing (web)
-        run: npm run mutate
+        run: npm run mutate -w @jwcarman/roux-web
         working-directory: web
