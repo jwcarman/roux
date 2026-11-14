@@ -1,3 +1,4 @@
+import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, renderHook, type RenderOptions } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
@@ -9,7 +10,7 @@ export function testQueryClient(): QueryClient {
 
 function providers(client: QueryClient) {
   return function Providers({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    return <QueryClientProvider client={client}><ChakraProvider value={defaultSystem}>{children}</ChakraProvider></QueryClientProvider>;
   };
 }
 
