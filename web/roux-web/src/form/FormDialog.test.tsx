@@ -35,7 +35,7 @@ function Harness({ onSave }: { onSave: (name: string) => Promise<boolean> }) {
   );
 }
 
-async function openDialog(onSave: (name: string) => Promise<boolean> = async () => true) {
+async function openDialog(onSave: (name: string) => Promise<boolean> = () => Promise.resolve(true)) {
   const save = vi.fn(onSave);
   renderWithProviders(<Harness onSave={save} />);
   const user = userEvent.setup();
@@ -77,7 +77,7 @@ describe("FormDialog", () => {
   });
 
   it("stays open when the save fails", async () => {
-    const { user, dialog } = await openDialog(async () => false);
+    const { user, dialog } = await openDialog(() => Promise.resolve(false));
     await user.type(screen.getByLabelText("Name"), "Ada");
     await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(dialog).toHaveAttribute("data-state", "open"));
@@ -101,7 +101,7 @@ describe("FormDialog", () => {
   });
 
   it("does not empty the form as it opens, only once it has closed", async () => {
-    renderWithProviders(<Harness onSave={async () => true} />);
+    renderWithProviders(<Harness onSave={() => Promise.resolve(true)} />);
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Prefill" }));
 
