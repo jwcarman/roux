@@ -23,7 +23,8 @@ export function RadioGroupField({
       <RadioGroup.Root
         name={field.name}
         value={field.state.value}
-        onValueChange={({ value }) => field.handleChange(value ?? "")}
+        // The group is only ever cleared by choosing, so a change always carries a choice.
+        onValueChange={({ value }) => field.handleChange(value as string)}
         onBlur={field.handleBlur}
       >
         <RadioGroup.Label>{label}</RadioGroup.Label>

@@ -19,16 +19,19 @@ function Harness({ onSave }: { onSave: (name: string) => Promise<boolean> }) {
     },
   });
   return (
-    <FormDialog
-      form={form}
-      title="Name something"
-      trigger={<Button>Open</Button>}
-      submitLabel="Save"
-      open={open}
-      onOpenChange={setOpen}
-    >
-      <form.AppField name="name">{(field) => <field.InputField label="Name" />}</form.AppField>
-    </FormDialog>
+    <>
+      <Button onClick={() => form.setFieldValue("name", "Draft")}>Prefill</Button>
+      <FormDialog
+        form={form}
+        title="Name something"
+        trigger={<Button>Open</Button>}
+        submitLabel="Save"
+        open={open}
+        onOpenChange={setOpen}
+      >
+        <form.AppField name="name">{(field) => <field.InputField label="Name" />}</form.AppField>
+      </FormDialog>
+    </>
   );
 }
 
@@ -95,5 +98,15 @@ describe("FormDialog", () => {
     await waitFor(() =>
       expect(screen.getByRole("dialog", { name: "Name something" })).toHaveAttribute("data-state", "closed"),
     );
+  });
+
+  it("does not empty the form as it opens, only once it has closed", async () => {
+    renderWithProviders(<Harness onSave={async () => true} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Prefill" }));
+
+    await user.click(screen.getByRole("button", { name: "Open" }));
+
+    expect(await screen.findByLabelText("Name")).toHaveValue("Draft");
   });
 });

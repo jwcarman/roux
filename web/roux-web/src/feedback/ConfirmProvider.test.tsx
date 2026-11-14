@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { Button } from "@chakra-ui/react";
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
-import { renderWithProviders } from "../testing/render";
+import { describe, expect, it, vi } from "vitest";
+import { renderHookWithProviders, renderWithProviders } from "../testing/render";
 import { ConfirmProvider, useConfirm } from "./ConfirmProvider";
 
-function Asker({ answers }: { answers: boolean[] }) {
+function Asker({ answers, destructive = true }: { answers: boolean[]; destructive?: boolean }) {
   const confirm = useConfirm();
   return (
     <Button
@@ -16,7 +16,7 @@ function Asker({ answers }: { answers: boolean[] }) {
             title: "Deactivate Grace Hopper?",
             message: "She won't be able to sign in.",
             confirmLabel: "Deactivate",
-            destructive: true,
+            destructive,
           }),
         )
       }
@@ -26,11 +26,11 @@ function Asker({ answers }: { answers: boolean[] }) {
   );
 }
 
-async function ask() {
+async function ask(destructive = true) {
   const answers: boolean[] = [];
   renderWithProviders(
     <ConfirmProvider>
-      <Asker answers={answers} />
+      <Asker answers={answers} destructive={destructive} />
     </ConfirmProvider>,
   );
   const user = userEvent.setup();
@@ -39,10 +39,64 @@ async function ask() {
   return { answers, user, dialog };
 }
 
+/** The colour palette Chakra's stylesheet gives `button`, by the name of the palette it points at. */
+function paletteOf(button: HTMLElement): string | undefined {
+  const rules = Array.from(document.styleSheets).flatMap((sheet) => Array.from(sheet.cssRules));
+  for (const rule of rules) {
+    if (rule instanceof CSSStyleRule && button.matches(rule.selectorText)) {
+      const palette = /--chakra-colors-color-palette-500: var\(--chakra-colors-([a-z]+)-500\)/.exec(rule.cssText);
+      if (palette !== null) {
+        return palette[1];
+      }
+    }
+  }
+  return undefined;
+}
+
 describe("useConfirm", () => {
   it("asks in an alert dialog named by its title, with its message", async () => {
     const { dialog } = await ask();
     expect(dialog).toHaveTextContent("She won't be able to sign in.");
+  });
+
+  it("puts focus on Cancel first, so Enter alone never confirms", async () => {
+    // jsdom has no layout, so give every element a box or nothing counts as tabbable. Mark Cancel
+    // as the one the dialog's own fallback skips, so only the provider's explicit choice can put
+    // focus on it.
+    const box = [new DOMRect(0, 0, 10, 10)] as unknown as DOMRectList;
+    const boxes = vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue(box as never);
+    const has = Element.prototype.hasAttribute;
+    const skipped = vi.spyOn(Element.prototype, "hasAttribute").mockImplementation(function (this: Element, name: string) {
+      return name === "data-no-autofocus" && this.textContent === "Cancel" ? true : has.call(this, name);
+    });
+    try {
+      await ask();
+      await waitFor(() => expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus());
+    } finally {
+      skipped.mockRestore();
+      boxes.mockRestore();
+    }
+  });
+
+  it("paints the confirm button red when the action is destructive", async () => {
+    await ask(true);
+    expect(paletteOf(screen.getByRole("button", { name: "Deactivate" }))).toBe("red");
+  });
+
+  it("leaves the confirm button in the default palette otherwise", async () => {
+    await ask(false);
+    expect(paletteOf(screen.getByRole("button", { name: "Deactivate" }))).not.toBe("red");
+  });
+
+  it("answers once when a button is pressed again after the dialog has closed", async () => {
+    const { answers, user } = await ask();
+    const confirmButton = screen.getByRole("button", { name: "Deactivate" });
+    await user.click(confirmButton);
+    await waitFor(() => expect(answers).toEqual([true]));
+
+    fireEvent.click(confirmButton);
+
+    expect(answers).toEqual([true]);
   });
 
   it("answers true when confirmed", async () => {
@@ -69,5 +123,33 @@ describe("useConfirm", () => {
     const { answers, user } = await ask();
     await user.click(screen.getByRole("button", { name: "Close" }));
     await waitFor(() => expect(answers).toEqual([false]));
+  });
+});
+
+describe("useConfirm outside a provider", () => {
+  it("fails with a message that names the missing provider", () => {
+    expect(() => renderHookWithProviders(() => useConfirm())).toThrow("useConfirm outside ConfirmProvider");
+  });
+});
+
+describe("useConfirm across renders", () => {
+  it("hands every render the same function", () => {
+    const seen: unknown[] = [];
+    function Probe() {
+      seen.push(useConfirm());
+      return null;
+    }
+    const { rerender } = renderWithProviders(
+      <ConfirmProvider>
+        <Probe />
+      </ConfirmProvider>,
+    );
+    rerender(
+      <ConfirmProvider>
+        <Probe />
+      </ConfirmProvider>,
+    );
+
+    expect(new Set(seen).size).toBe(1);
   });
 });
