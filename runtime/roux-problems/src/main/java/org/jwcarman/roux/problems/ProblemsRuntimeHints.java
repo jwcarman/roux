@@ -35,6 +35,6 @@ public class ProblemsRuntimeHints implements RuntimeHintsRegistrar {
             FieldProblem.class,
             MemberCategory.INVOKE_PUBLIC_METHODS,
             MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);
-    hints.resources().registerResourceBundle("ValidationMessages");
+    hints.resources().registerResourceBundle("ContributorValidationMessages");
   }
 }
