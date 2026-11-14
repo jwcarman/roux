@@ -23,8 +23,9 @@ fit together:
    on top of the components. Generated code belongs to the app, so a person or an agent changes it
    like any other code.
 
-The opinions are what join the two: the generator uses the components the way their author would, and
-checks fail the build when code drifts from that way.
+The opinions are what join the two: the generator uses the components the way their author would, so
+the right way is the easy way. roux is an accelerator, not an enforcer. For teams that want to hold
+exactly to its conventions, it also ships the rules as an opt-in **strict mode** (stage 3).
 
 roux is its own product. noir is its first and largest user, but roux stands on its own for a developer
 at a terminal: whatever noir's agents can do with it, a developer can do with the same commands.
@@ -39,7 +40,7 @@ plumbing comes from roux dependencies, and its features are generated code that 
 2. `roux new acme-crm` produces a working app equivalent to today's template, and operations add
    entities, list screens and forms that follow every convention; the same input always gives the
    same diff. (Stage 2.)
-3. A generated app fails its build when code breaks a convention. (Stage 3.)
+3. An app that turns on strict mode fails its build when code breaks a convention. (Stage 3.)
 4. noir builds apps with roux and the result is measurably cheaper and more consistent than without it.
 
 ## Goals, non-goals, anti-goals
@@ -78,7 +79,7 @@ Three choices shaped this design; each was settled in conversation.
 **How a browser client for an endpoint comes to exist.**
 - A. *The generator writes it as plain code* (chosen): with the controller and its records it writes
   the matching `api.ts` functions and TypeScript types, using roux's client. Readable, owned by the app;
-  drift after hand edits is caught by a check (stage 3).
+  drift after hand edits is caught by a test the generator writes into the app (stage 3).
 - B. Generated at build time from OpenAPI: types never drift, but a generated client nobody reads, and
   more tooling in every build.
 
@@ -115,6 +116,10 @@ Three choices shaped this design; each was settled in conversation.
     pass it to TanStack Form as a Standard Schema validator (no adapter). The server stays the
     authority: its 400 field errors still reach the fields through `showProblem`. Stage 1's form code
     needs no change for this, since it already reads `{ message }` errors.
+12. **Endpoints speak records.** Generated controllers take and return Java records, never entities.
+    Records are named by what they are (`Customer`, `CustomerDetail`), requests `<Thing>Request`
+    (`CustomerRequest`), and lists `PageDto<Customer>`. This is the generator's convention, the
+    template's today. Strict mode (stage 3) can hold hand-written code to it.
 
 ## 2. The parts
 
@@ -124,7 +129,7 @@ roux (one repository, one version)
 ├── runtime, web       @jwcarman/roux-web                                     stage 1, 4
 ├── contracts          wire-shape fixtures both halves are tested against     stage 1
 ├── generator          roux new, operations: CLI, Maven plugin, MCP server   stage 2, 5
-├── checks             ArchUnit rules; @jwcarman/eslint-config-roux          stage 3
+├── strict mode        opt-in ArchUnit rules; @jwcarman/eslint-config-roux    stage 3
 ├── migrations         OpenRewrite recipes; roux upgrade                     stage 5
 └── reference/         the app roux produces, built and measured on every change
 ```
@@ -308,11 +313,22 @@ a Maven plugin. Principles carried from that work:
 Until stage 4, `roux new` writes the template's remaining infrastructure (the SPA shell, activity,
 theme, members) as app code.
 
-**Stage 3: checks.** The template's `CLAUDE.md` rules as build failures: every handler gated on a
-permission; no `@ExceptionHandler` outside roux; time from the injected `Clock`; edited records carry a
-`version`; icons only from `react-icons/lu`; every client route registered; and a check that the
-generated TypeScript types and Zod schemas still match the Java records and their Bean Validation
-annotations (decisions 6 and 11).
+**Stage 3: strict mode, and the drift test.**
+- **Strict mode is opt-in.** The template's `CLAUDE.md` rules ship as ArchUnit rules (in `roux-test`)
+  and an ESLint preset (`@jwcarman/eslint-config-roux/strict`). An app that turns them on fails its
+  build when code breaks a convention:
+  - every handler is gated on a permission;
+  - no `@ExceptionHandler` outside roux;
+  - time comes from the injected `Clock`;
+  - edited records carry a `version`;
+  - endpoints take and return records, never entities;
+  - icons come only from `react-icons/lu`;
+  - every client route is registered.
+
+  Nothing turns it on by default.
+- **The drift test is on by default, because it guards roux's own output.** The generator writes a
+  test into each app checking that the generated TypeScript types and Zod schemas still match the Java
+  records and their Bean Validation annotations (decisions 6 and 11).
 
 **Stage 4: the rest of the runtime.** `roux-time`, `roux-spa`, `roux-who` (and the browser's `who`
 client half), `roux-activity`, `roux-theme`, `roux-defaults`, `roux-test` and
