@@ -18,7 +18,10 @@
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
-    "mutate": "stryker run"
+    "mutate": "stryker run",
+    "format": "../lint-tools/node_modules/.bin/prettier --write .",
+    "format:check": "../lint-tools/node_modules/.bin/prettier --check .",
+    "lint": "../lint-tools/node_modules/.bin/eslint -c ../lint-tools/eslint.config.mjs ."
   },
   "peerDependencies": {
     "@chakra-ui/react": "^3.38.0",
