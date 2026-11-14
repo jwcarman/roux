@@ -86,7 +86,7 @@ describe("useQueryTable", () => {
 
   it("goes back to the first page when the query key changes, even inside an object", async () => {
     const seen: { search: string | undefined; params: PageParams }[] = [];
-    let search: string | undefined;
+    let search: string | undefined = undefined;
     const endpoint = fakeEndpoint(people(60));
     const query = (params: PageParams) => {
       seen.push({ search, params });

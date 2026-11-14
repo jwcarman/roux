@@ -20,20 +20,30 @@ describe("useDebounce", () => {
   it("follows a change once it has held for the delay", () => {
     const { result, rerender } = renderHook(({ value }) => useDebounce(value, 300), { initialProps: { value: "a" } });
     rerender({ value: "ab" });
-    act(() => vi.advanceTimersByTime(299));
+    act(() => {
+      vi.advanceTimersByTime(299);
+    });
     expect(result.current).toBe("a");
-    act(() => vi.advanceTimersByTime(1));
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
     expect(result.current).toBe("ab");
   });
 
   it("skips values that change again within the delay", () => {
     const { result, rerender } = renderHook(({ value }) => useDebounce(value, 300), { initialProps: { value: "a" } });
     rerender({ value: "ab" });
-    act(() => vi.advanceTimersByTime(200));
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
     rerender({ value: "abc" });
-    act(() => vi.advanceTimersByTime(200));
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
     expect(result.current).toBe("a");
-    act(() => vi.advanceTimersByTime(100));
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
     expect(result.current).toBe("abc");
   });
 });

@@ -26,7 +26,7 @@ describe("useServerAction", () => {
 
   it("refreshes what it names and answers true when the request succeeds", async () => {
     const ok = new Response(null, { status: 204 });
-    const { result, onSuccess, invalidate } = setup(async () => ok);
+    const { result, onSuccess, invalidate } = setup(() => Promise.resolve(ok));
 
     let done: boolean | undefined;
     await act(async () => {
@@ -40,7 +40,7 @@ describe("useServerAction", () => {
   });
 
   it("tells the user the server's reason and answers false when it refuses", async () => {
-    const { result, onSuccess } = setup(async () => invariantViolation("Already archived"));
+    const { result, onSuccess } = setup(() => Promise.resolve(invariantViolation("Already archived")));
 
     let done: boolean | undefined;
     await act(async () => {
@@ -53,7 +53,7 @@ describe("useServerAction", () => {
   });
 
   it("refreshes after a refusal too, since the page may be out of date", async () => {
-    const { result, invalidate } = setup(async () => invariantViolation("Already archived"));
+    const { result, invalidate } = setup(() => Promise.resolve(invariantViolation("Already archived")));
 
     await act(async () => {
       await result.current.run("kata");
@@ -64,8 +64,8 @@ describe("useServerAction", () => {
   });
 
   it("falls back to its own message when the request cannot be sent", async () => {
-    const { result } = setup(async () => {
-      throw new TypeError("Failed to fetch");
+    const { result } = setup(() => {
+      return Promise.reject(new TypeError("Failed to fetch"));
     });
 
     await act(async () => {
@@ -77,7 +77,10 @@ describe("useServerAction", () => {
 
   it("succeeds without refreshing when it names nothing to refresh", async () => {
     const hook = renderHookWithProviders(() =>
-      useServerAction({ request: async () => new Response(null, { status: 204 }), failure: () => "Could not archive" }),
+      useServerAction({
+        request: () => Promise.resolve(new Response(null, { status: 204 })),
+        failure: () => "Could not archive",
+      }),
     );
     const invalidate = vi.spyOn(hook.client, "invalidateQueries");
 

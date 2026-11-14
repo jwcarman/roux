@@ -19,15 +19,15 @@ const query = async (params: PageParams) => {
   return { ...page, data: page.data.map((row) => ({ ...row })) };
 };
 
-let selection: ReadonlyMap<string, Person> = new Map();
+const picked: { selection: ReadonlyMap<string, Person> } = { selection: new Map() };
 
-function Harness() {
+function Harness({ onPicked }: { onPicked: (next: ReadonlyMap<string, Person>) => void }) {
   const [selected, setSelected] = useState<ReadonlyMap<string, Person>>(new Map());
   const columns: ColumnDef<Person, unknown>[] = [
     createSelectColumn<Person>({
       selected,
       onSelectedChange: (next) => {
-        selection = next;
+        onPicked(next);
         setSelected(next);
       },
       keyOf: (row) => row.id,
@@ -49,8 +49,14 @@ function Harness() {
 }
 
 function show() {
-  selection = new Map();
-  renderWithProviders(<Harness />);
+  picked.selection = new Map();
+  renderWithProviders(
+    <Harness
+      onPicked={(next) => {
+        picked.selection = next;
+      }}
+    />,
+  );
   return userEvent.setup();
 }
 
@@ -62,11 +68,11 @@ describe("createSelectColumn", () => {
   it("selects and unselects a row by its key", async () => {
     const user = show();
     await user.click(await screen.findByRole("checkbox", { name: "Select Person 002" }));
-    expect([...selection.keys()]).toEqual(["p2"]);
+    expect([...picked.selection.keys()]).toEqual(["p2"]);
     expect(screen.getByRole("checkbox", { name: "Select Person 002" })).toBeChecked();
 
     await user.click(screen.getByRole("checkbox", { name: "Select Person 002" }));
-    expect(selection.size).toBe(0);
+    expect(picked.selection.size).toBe(0);
   });
 
   it("shows the page as partly selected when some of its rows are", async () => {
@@ -79,7 +85,7 @@ describe("createSelectColumn", () => {
     const user = show();
     await screen.findByText("Person 001");
     await user.click(selectAll());
-    expect(selection.size).toBe(10);
+    expect(picked.selection.size).toBe(10);
     expect(selectAll()).toBeChecked();
   });
 
@@ -89,10 +95,10 @@ describe("createSelectColumn", () => {
     await user.click(screen.getByRole("button", { name: "Next page" }));
     await screen.findByText("Person 011");
     await user.click(selectAll());
-    expect(selection.size).toBe(11);
+    expect(picked.selection.size).toBe(11);
 
     await user.click(selectAll());
-    expect([...selection.keys()]).toEqual(["p1"]);
+    expect([...picked.selection.keys()]).toEqual(["p1"]);
 
     await user.click(screen.getByRole("button", { name: "Previous page" }));
     await waitFor(() => expect(screen.getByRole("checkbox", { name: "Select Person 001" })).toBeChecked());
@@ -107,7 +113,7 @@ describe("createSelectColumn", () => {
   });
 
   it("offers nothing to select on an empty page", async () => {
-    selection = new Map();
+    picked.selection = new Map();
     renderWithProviders(
       <QueryTable
         aria-label="People"
@@ -115,7 +121,7 @@ describe("createSelectColumn", () => {
         query={fakeEndpoint([])}
         columns={[
           createSelectColumn<Person>({
-            selected: selection,
+            selected: picked.selection,
             onSelectedChange: () => undefined,
             keyOf: (row) => row.id,
             labelOf: (row) => row.name,

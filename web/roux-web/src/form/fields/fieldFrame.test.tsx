@@ -11,8 +11,9 @@ interface Values {
 }
 
 function Harness({ onSubmit, onFormSubmit }: { onSubmit: (value: Values) => void; onFormSubmit?: () => void }) {
+  const defaultValues: Values = { name: "", age: undefined };
   const form = useAppForm({
-    defaultValues: { name: "", age: undefined } as Values,
+    defaultValues,
     onSubmit: ({ value }) => onSubmit(value),
   });
   const twoProblems = () => ["Enter a name", "Use letters only"];

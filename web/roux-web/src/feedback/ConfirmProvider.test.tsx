@@ -64,13 +64,12 @@ describe("useConfirm", () => {
     // as the one the dialog's own fallback skips, so only the provider's explicit choice can put
     // focus on it.
     const box = [new DOMRect(0, 0, 10, 10)] as unknown as DOMRectList;
-    const boxes = vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue(box as never);
-    const has = Element.prototype.hasAttribute;
+    const boxes = vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue(box);
     const skipped = vi.spyOn(Element.prototype, "hasAttribute").mockImplementation(function (
       this: Element,
       name: string,
     ) {
-      return name === "data-no-autofocus" && this.textContent === "Cancel" ? true : has.call(this, name);
+      return name === "data-no-autofocus" && this.textContent === "Cancel" ? true : this.getAttribute(name) !== null;
     });
     try {
       await ask();
