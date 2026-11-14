@@ -139,8 +139,8 @@ says so.
 
 ### 3.1 Errors
 
-**Java: `roux-problems`**, an auto-configured module (on when its classes are present, off with
-`roux.problems.enabled=false`). From `org.jwcarman.noir.app.web.problems`: `ProblemsAdvice`,
+**Java: `roux-problems`**, a plain library, auto-configured by `roux-autoconfigure` (3.6): on when
+its classes are present, off with `roux.problems.enabled=false`. From `org.jwcarman.noir.app.web.problems`: `ProblemsAdvice`,
 `RootProblemsAdvice`, `ProblemErrorController`, `FieldErrors`, `FieldProblem`, `ServerErrors`,
 `NotFoundException`, `InvariantViolationException`, `InvalidFieldException`, `ProblemsRuntimeHints`;
 and a new `ConflictException` (409).
@@ -231,9 +231,16 @@ operations generate add/edit forms that need these components to exist in roux.
 
 ### 3.6 Packaging
 
-- **Java:** `roux-problems`; `roux-bom` (roux's modules plus pinned `who` and `jpa-utils`);
-  `roux-spring-boot-starter` (`roux-problems` and `jpa-utils`). Published to Maven Central with the
-  `cutting-oss-release` workflow. First version `0.1.0`.
+- **Java, in Spring Boot's idiomatic starter layout** (as `who` does it):
+  - `roux-problems`, a plain library with no auto-configuration;
+  - `roux-autoconfigure`, all of roux's auto-configuration, with optional dependencies on the libraries
+    it configures and an `@ConditionalOnClass` guard on each;
+  - `roux-spring-boot-starter`, with no code, depending on `roux-autoconfigure`, `roux-problems`,
+    `jpa-utils` and Spring Boot's validation and Spring MVC starters;
+  - `roux-bom`, which manages roux's modules plus pinned `who` and `jpa-utils`. It does not inherit
+    Spring Boot's dependency management, so importing it never changes an app's Spring Boot versions.
+
+  Published to Maven Central with the `cutting-oss-release` workflow. First version `0.1.0`.
 - **npm:** one package, `@jwcarman/roux-web`, with the subpath exports `problem`, `api`, `paging`,
   `table`, `form`. React, Chakra UI, TanStack Query, Table and Form, and `react-icons` are peer
   dependencies at the template's current major versions. Built with Vite library mode to ESM with type

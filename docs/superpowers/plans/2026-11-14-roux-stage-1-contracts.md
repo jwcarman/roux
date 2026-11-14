@@ -251,6 +251,43 @@ void responseMatchesFixture(String fixture, String method, String path)
 
 - [ ] **Step 6: Commit.** Commit message: `feat: roux-bom, the starter, and Java contract tests against shared fixtures`
 
+### Task 3b: Spring Boot's idiomatic starter layout
+
+Added after Task 3, at James's direction. It follows `who`'s layout (`~/IdeaProjects/who/who-autoconfigure`
+and `who-spring-boot-starter`).
+
+**Files:**
+- Create: `runtime/roux-autoconfigure/pom.xml`. Move into it, under package `org.jwcarman.roux.autoconfigure.problems`: `RouxProblemsAutoConfiguration` (with its nested security / who / paging configurations), `RouxProblemsProperties`, the `META-INF/spring/…AutoConfiguration.imports` file, and the auto-configuration tests (`RouxProblemsAutoConfigurationTest` and its condition and back-off cases).
+- Create: `runtime/roux-spring-boot-starter/pom.xml`: jar packaging, no code (as `who-spring-boot-starter`).
+- Modify: `runtime/roux-problems`: remove the Spring Boot auto-configuration dependency and annotations, so it is a library. The classes the auto-configuration creates become public with public constructors (`ProblemsAdvice`, `RootProblemsAdvice`, `ProblemErrorController`, `SecurityProblemsAdvice`, `WhoProblemsAdvice`, `PagingProblemsAdvice`, `ProblemsRuntimeHints`). `ProblemsAdvice` takes `String apiPathPrefix` instead of `RouxProblemsProperties`. Its tests wire the advice explicitly (`@Import`) instead of through auto-configuration, and keep 100% coverage of the module.
+- Modify: `runtime/roux-bom/pom.xml`: no parent that imports `spring-boot-dependencies`; it manages `roux-problems`, `roux-autoconfigure`, `roux-spring-boot-starter`, the `who-bom` 0.15.0 import and `jpa-utils` 0.1.0. It carries its own release metadata (name, URL, licence, developers, SCM) and the release profile's plugins.
+- Modify: `runtime/roux-contract-tests/pom.xml`: depend on `roux-spring-boot-starter` (test scope) instead of the individual modules, so the contracts are tested through the starter, as an app gets them.
+- Modify: the root `pom.xml` module list.
+
+**Interfaces:**
+- Consumes: Tasks 1–3.
+- Produces:
+  - `roux-autoconfigure`: `@AutoConfiguration(before = ErrorMvcAutoConfiguration.class) @ConditionalOnClass(ProblemsAdvice.class) … public class RouxProblemsAutoConfiguration`. The conditions, properties and bean methods are as in Task 1, and the nested configurations as in Task 2. `roux-problems`, Spring Security, `who-spring-security` and `jpa-utils` are `<optional>true</optional>`. `spring-boot-configuration-processor` and `spring-boot-autoconfigure-processor` are annotation processors, so the property metadata is generated.
+  - `roux-spring-boot-starter`: depends on `roux-autoconfigure`, `roux-problems`, `jpa-utils`, `spring-boot-starter-validation` and Spring Boot 4's Spring MVC starter.
+
+- [ ] **Step 1: Move the auto-configuration tests to `roux-autoconfigure` and write the new ones.**
+
+```java
+// roux-autoconfigure: RouxProblemsAutoConfigurationTest (moved cases, plus)
+@Test void notWithoutRouxProblems()  → FilteredClassLoader(ProblemsAdvice.class): no roux beans, context starts
+// roux-autoconfigure: RouxProblemsPropertiesMetadataTest
+@Test void metadataDescribesProperties() → META-INF/spring-configuration-metadata.json on the classpath lists roux.problems.enabled and roux.problems.api-path-prefix
+// roux-contract-tests: StarterTest
+@Test void starterBringsTheWholeContract() → a context built from the starter alone has ProblemsAdvice, PagingProblemsAdvice and jpa-utils' PagingWebAutoConfiguration
+```
+
+- [ ] **Step 2: Run the tests and confirm they fail.** Run `./mvnw -q verify`. Expected: FAIL (module missing).
+- [ ] **Step 3: Restructure as listed under Files.**
+- [ ] **Step 4: Verify.**
+  - Run `./mvnw verify` and `./mvnw -q -Ppit verify`. Expected: BUILD SUCCESS, 100% coverage per module, 0 survivors, and no new warnings.
+  - Run `./mvnw -q -pl runtime/roux-bom help:effective-pom | grep -c spring-boot-dependencies`. Expected: `0`.
+- [ ] **Step 5: Commit.** Commit message: `refactor: idiomatic starter layout — roux-autoconfigure and a code-free starter`
+
 ### Task 4: The web package, and the problem, paging and API client modules
 
 **Files:**
