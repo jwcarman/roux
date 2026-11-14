@@ -1,0 +1,23 @@
+{
+  "$schema": "../node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vite.config.ts"
+  },
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "src/**/*.{ts,tsx}",
+    "!src/testing/**",
+    "!src/**/*.test.*",
+    "!src/**/index.ts"
+  ],
+  "reporters": [
+    "clear-text",
+    "progress",
+    "html"
+  ],
+  "thresholds": {
+    "break": 100
+  },
+  "tsconfigFile": "tsconfig.stryker-skip.json"
+}
