@@ -1,0 +1,25 @@
+{
+  "groups": [
+    {
+      "name": "roux.problems",
+      "type": "org.jwcarman.roux.autoconfigure.problems.RouxProblemsProperties",
+      "sourceType": "org.jwcarman.roux.autoconfigure.problems.RouxProblemsProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "roux.problems.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether roux answers errors as Problem Details at all.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.problems.RouxProblemsProperties",
+      "defaultValue": true
+    },
+    {
+      "name": "roux.problems.api-path-prefix",
+      "type": "java.lang.String",
+      "description": "Where the API's paths begin: a path under it that matches nothing is a problem, and any other is a page the error page renders.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.problems.RouxProblemsProperties",
+      "defaultValue": "/api/"
+    }
+  ]
+}
