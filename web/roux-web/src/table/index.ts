@@ -1,4 +1,3 @@
-export { ErrorMessage, type ErrorMessageProps } from "./ErrorMessage";
 export { FilterChips, type FilterChipsProps, type FilterOption } from "./FilterChips";
 export { QueryTable, type QueryTableProps } from "./QueryTable";
 export { createSelectColumn, type SelectColumnOptions } from "./selectColumn";
