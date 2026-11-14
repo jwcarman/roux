@@ -26,7 +26,7 @@ MSW 3, Stryker.
 
 - Maven groupId `org.jwcarman.roux`; Java package root `org.jwcarman.roux`. npm package `@jwcarman/roux-web`.
 - First version: Maven `0.1.0-SNAPSHOT` until the release sets `0.1.0`; npm `0.1.0`. One version for all of roux's parts.
-- Java 25; Spring Boot 4.1.2. Curated pins in `roux-bom`: `who` 0.15.0 and `jpa-utils` 0.1.0 (the versions the template uses today, so behaviour does not change).
+- Java 25; Spring Boot 4.1.2. Curated pins in `roux-bom`: `who` 0.15.0 and `jpa-utils` 0.2.0 (`who` as the template uses it; `jpa-utils` at its current release, whose only change is tie order under a descending sort).
 - License: Apache 2.0. Every Java file carries the same license header `who` uses, applied by Spotless with google-java-format, as in `who`'s POM.
 - No `@SuppressWarnings`, `eslint-disable`, `// @ts-ignore` or other suppressions. No star imports in any language.
 - Moved code keeps its behaviour, its messages and its doc comments. Cleanups are separate commits with their own tests.
@@ -58,7 +58,7 @@ roux/
     problem-conflict.json   problem-server-error.json    problem-unknown-sort.json
     page.json               page-params.json             session.json
   runtime/
-    roux-bom/pom.xml                       roux modules + who 0.15.0 + jpa-utils 0.1.0
+    roux-bom/pom.xml                       roux modules + who 0.15.0 + jpa-utils 0.2.0
     roux-problems/                         errors (3.1)
       src/main/java/org/jwcarman/roux/problems/…
       src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports
@@ -197,7 +197,7 @@ so it can reach the package-private classes.
 - Test: `runtime/roux-contract-tests/src/test/java/org/jwcarman/roux/contracts/ProblemContractTest.java`, `PageContractTest.java`, `SessionContractTest.java`, plus `ContractTestApplication.java`, `ContractTestController.java`, `StandInSecurity.java`, `Fixtures.java`
 
 **Interfaces:**
-- Consumes: `roux-problems` (Tasks 1–2), `jpa-utils` 0.1.0 (`PageDto`, `PaginationDto`, `PageParams`, `PagingWebAutoConfiguration`).
+- Consumes: `roux-problems` (Tasks 1–2), `jpa-utils` 0.2.0 (`PageDto`, `PaginationDto`, `PageParams`, `PagingWebAutoConfiguration`).
 - Produces the fixture files that Task 4 reads, with these exact names and shapes:
 
 | File | Content |
@@ -217,7 +217,7 @@ first run's actual output, checked by eye against the template's behaviour, then
 on they are frozen.
 
 - [ ] **Step 1: Write the BOM and the starter.**
-  - `roux-bom` manages `roux-problems`, `roux-spring-boot-starter`, `org.jwcarman.who:who-bom:0.15.0` (import) and `org.jwcarman.jpa:jpa-utils:0.1.0`.
+  - `roux-bom` manages `roux-problems`, `roux-spring-boot-starter`, `org.jwcarman.who:who-bom:0.15.0` (import) and `org.jwcarman.jpa:jpa-utils:0.2.0`.
   - The starter depends on `roux-problems` and `jpa-utils`.
   - Add both modules to the reactor, then run `./mvnw -q verify`. Expected: BUILD SUCCESS.
 
@@ -260,7 +260,7 @@ and `who-spring-boot-starter`).
 - Create: `runtime/roux-autoconfigure/pom.xml`. Move into it, under package `org.jwcarman.roux.autoconfigure.problems`: `RouxProblemsAutoConfiguration` (with its nested security / who / paging configurations), `RouxProblemsProperties`, the `META-INF/spring/…AutoConfiguration.imports` file, and the auto-configuration tests (`RouxProblemsAutoConfigurationTest` and its condition and back-off cases).
 - Create: `runtime/roux-spring-boot-starter/pom.xml`: jar packaging, no code (as `who-spring-boot-starter`).
 - Modify: `runtime/roux-problems`: remove the Spring Boot auto-configuration dependency and annotations, so it is a library. The classes the auto-configuration creates become public with public constructors (`ProblemsAdvice`, `RootProblemsAdvice`, `ProblemErrorController`, `SecurityProblemsAdvice`, `WhoProblemsAdvice`, `PagingProblemsAdvice`, `ProblemsRuntimeHints`). `ProblemsAdvice` takes `String apiPathPrefix` instead of `RouxProblemsProperties`. Its tests wire the advice explicitly (`@Import`) instead of through auto-configuration, and keep 100% coverage of the module.
-- Modify: `runtime/roux-bom/pom.xml`: no parent that imports `spring-boot-dependencies`; it manages `roux-problems`, `roux-autoconfigure`, `roux-spring-boot-starter`, the `who-bom` 0.15.0 import and `jpa-utils` 0.1.0. It carries its own release metadata (name, URL, licence, developers, SCM) and the release profile's plugins.
+- Modify: `runtime/roux-bom/pom.xml`: no parent that imports `spring-boot-dependencies`; it manages `roux-problems`, `roux-autoconfigure`, `roux-spring-boot-starter`, the `who-bom` 0.15.0 import and `jpa-utils` 0.2.0. It carries its own release metadata (name, URL, licence, developers, SCM) and the release profile's plugins.
 - Modify: `runtime/roux-contract-tests/pom.xml`: depend on `roux-spring-boot-starter` (test scope) instead of the individual modules, so the contracts are tested through the starter, as an app gets them.
 - Modify: the root `pom.xml` module list.
 
