@@ -1,7 +1,8 @@
 export { errorMessages, fieldErrorsOf } from "./errors";
-export { showProblem, showServerErrors, useAppForm, withForm } from "./form";
+export { useAppForm, withForm } from "./form";
 export { fieldContext, formContext, useFieldContext, useFormContext } from "./formContext";
 export { FormDialog, type FormDialogProps } from "./FormDialog";
+export { useSchemaForm, type SchemaForm, type SchemaFormOptions } from "./schemaForm";
 export {
   date,
   email,

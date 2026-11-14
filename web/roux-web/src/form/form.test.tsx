@@ -3,7 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../testing/render";
-import { showServerErrors, useAppForm } from "./form";
+import { placeServerErrors, useAppForm } from "./form";
 
 interface Values {
   name: string;
@@ -21,7 +21,15 @@ type Submit = (value: Values, unplaced: (fields: Record<string, string>) => stri
 function Harness({ onSubmit }: { onSubmit: Submit }) {
   const form = useAppForm({
     defaultValues: DEFAULTS,
-    onSubmit: async ({ value }) => onSubmit(value, (fields) => showServerErrors(form, fields)),
+    onSubmit: async ({ value }) =>
+      onSubmit(value, (fields) =>
+        placeServerErrors(form, {
+          type: "about:blank",
+          title: "Bad Request",
+          status: 400,
+          errors: Object.entries(fields).map(([field, message]) => ({ field, message })),
+        }),
+      ),
   });
   const required = ({ value }: { value: string }) => (value.trim() ? undefined : "Enter a name");
   return (

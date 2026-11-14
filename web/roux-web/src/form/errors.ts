@@ -23,7 +23,7 @@ export function errorMessages(errors: readonly unknown[]): string[] {
   return [...new Set(messages.filter((message) => message.trim() !== ""))];
 }
 
-/** A problem's field errors, the first message for each field, for `showServerErrors`. */
+/** A problem's field errors, the first message for each field, as `useSchemaForm` places them. */
 export function fieldErrorsOf(problem: Problem): Record<string, string> {
   const fields: Record<string, string> = {};
   for (const { field, message } of problem.errors ?? []) {
