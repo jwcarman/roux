@@ -18,7 +18,7 @@ export {
   type NumberRule,
   type TextRule,
 } from "./rules";
-export { dateTimeInputOf, inputOf, instantOrNull, numberInputOf, numberOrNull, textOrNull } from "./values";
+export { dateTimeInputOf, inputOf, numberInputOf } from "./values";
 export { CheckboxField, type CheckboxFieldProps } from "./fields/CheckboxField";
 export { Form, ResetButton, SubmitButton, SubmittingIndicator } from "./fields/formComponents";
 export { FormField, type FormFieldProps } from "./fields/FormField";

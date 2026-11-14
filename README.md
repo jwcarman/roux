@@ -51,7 +51,81 @@ npm install @jwcarman/roux-web
 import { ... } from "@jwcarman/roux-web/problem";
 ```
 
-The React, Chakra UI and TanStack libraries are peer dependencies; the app supplies them.
+The React, Chakra UI, TanStack and Zod libraries are peer dependencies; the app supplies them.
+
+### A resource, end to end
+
+A Zod schema built from roux's rules (their messages are the server's, word for word):
+
+```ts
+import { z } from "zod";
+import { email, oneOf, text } from "@jwcarman/roux-web/form";
+
+export const CUSTOMER_STATUSES = ["LEAD", "ACTIVE", "CHURNED"] as const;
+
+export const customerRequestSchema = z.object({
+  name: text().max(100),
+  email: email(),
+  company: text().optional(),
+  status: oneOf(CUSTOMER_STATUSES),
+});
+```
+
+An API module, one typed function per endpoint. A path without a leading slash goes under `baseUrl`
+(`/api` by default); one with it (`/who/me`) is used as it is:
+
+```ts
+import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
+
+export const customersApi = {
+  get: (id: string, signal?: AbortSignal) => getJson<CustomerDetail>(path`customers/${id}`, { signal }),
+  list: (params: CustomerListParams, signal?: AbortSignal) =>
+    getJson<PageDto<Customer>>("customers", { params, signal }),
+  create: (request: CustomerRequest) => sendJson<CustomerDetail>("POST", "customers", request),
+  update: (id: string, request: CustomerRequest & { version: number }) =>
+    sendJson<CustomerDetail>("PUT", path`customers/${id}`, request),
+};
+```
+
+A mutation, declared once. Build the app's query client with `createQueryClient()`, and the queries named
+in `meta.refreshes` are refetched after every answer, a refusal included:
+
+```ts
+import { mutationOptions } from "@tanstack/react-query";
+
+export const updateCustomer = (id: string, version: number) =>
+  mutationOptions({
+    mutationFn: (request: CustomerRequest) => customersApi.update(id, { ...request, version }),
+    meta: { refreshes: [queryKeys.customers.detail(id), queryKeys.customers.lists()] },
+  });
+```
+
+And the form. `useSchemaForm` validates with the schema, submits its parsed output through the mutation,
+puts a 400's field errors under their fields and toasts any other refusal; the dialog opens, closes and
+resets itself:
+
+```tsx
+export function CustomerFormDialog({ customer, trigger }: { customer?: CustomerDetail; trigger: ReactElement }) {
+  const form = useSchemaForm({
+    schema: customerRequestSchema,
+    defaultValues: customer ?? { name: "", email: "", company: "", status: "LEAD" },
+    mutation: customer ? updateCustomer(customer.id, customer.version) : createCustomer,
+    onSuccess: (saved) => notify.success(`${saved.name} was saved`),
+  });
+
+  return (
+    <FormDialog form={form} title={customer ? `Edit ${customer.name}` : "New customer"} trigger={trigger}>
+      <form.AppField name="name">{(f) => <f.InputField label="Name" />}</form.AppField>
+      <form.AppField name="email">{(f) => <f.InputField label="Email" type="email" />}</form.AppField>
+      <form.AppField name="company">{(f) => <f.InputField label="Company" />}</form.AppField>
+      <form.AppField name="status">{(f) => <f.SelectField label="Status" options={CUSTOMER_STATUSES} />}</form.AppField>
+    </FormDialog>
+  );
+}
+```
+
+`required` and `maxLength` come from the schema. A button that calls the server uses
+`useServerAction(archiveCustomer(id))`.
 
 ## Building
 

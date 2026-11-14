@@ -11,17 +11,21 @@ import { fieldErrorsOf } from "./errors";
 import type { Problem } from "../problem/problem";
 
 /**
- * The app's forms: TanStack Form with Chakra fields.
+ * The app's forms: TanStack Form with Chakra fields. Most forms want `useSchemaForm`, which is this
+ * with a Zod schema and a mutation wired in:
  *
- *   const form = useAppForm({ defaultValues: { name: "" }, onSubmit: async ({ value }) => ... });
- *   <form.AppForm>
- *     <form.Form>
- *       <form.AppField name="name" validators={{ onBlur: ({ value }) => (value.trim() ? undefined : "Enter a name") }}>
- *         {(field) => <field.InputField label="Name" required />}
- *       </form.AppField>
- *       <form.SubmitButton>Save</form.SubmitButton>
- *     </form.Form>
- *   </form.AppForm>
+ *   const form = useSchemaForm({
+ *     schema: customerRequestSchema,
+ *     defaultValues: { name: "", email: "" },
+ *     mutation: createCustomer,
+ *     onSuccess: (saved) => notify.success(`${saved.name} was saved`),
+ *   });
+ *   <FormDialog form={form} title="New customer" trigger={<Button>New customer</Button>}>
+ *     <form.AppField name="name">{(f) => <f.InputField label="Name" />}</form.AppField>
+ *     <form.AppField name="email">{(f) => <f.InputField label="Email" type="email" />}</form.AppField>
+ *   </FormDialog>
+ *
+ * `useAppForm` is for a form that submits by hand.
  */
 export const { useAppForm, withForm } = createFormHook({
   fieldContext,
