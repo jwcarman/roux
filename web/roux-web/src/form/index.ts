@@ -25,5 +25,5 @@ export { FormField, type FormFieldProps } from "./fields/FormField";
 export { InputField, type InputFieldProps } from "./fields/InputField";
 export { NumberField, type NumberFieldProps } from "./fields/NumberField";
 export { RadioGroupField, type RadioGroupFieldProps } from "./fields/RadioGroupField";
-export { SelectField, type Option, type SelectFieldProps } from "./fields/SelectField";
+export { SelectField, type Option, type SelectFieldProps, type SelectValue } from "./fields/SelectField";
 export { TextAreaField, type TextAreaFieldProps } from "./fields/TextAreaField";

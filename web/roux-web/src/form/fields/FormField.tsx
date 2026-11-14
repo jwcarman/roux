@@ -3,11 +3,13 @@ import { useStore } from "@tanstack/react-form";
 import type { ReactNode } from "react";
 import { errorMessages } from "../errors";
 import { useFieldContext } from "../formContext";
+import { rulesOfField } from "./fieldRules";
 
 export interface FormFieldProps {
   label: ReactNode;
   /** A hint under the field, replaced by its errors when it has any. */
   helperText?: ReactNode;
+  /** Shows the required indicator; defaults to what the form's schema says of the field. */
   required?: boolean;
   /**
    * The control names itself with `label` (a radio group's own group label), so the frame shows no
@@ -23,9 +25,16 @@ export interface FormFieldProps {
  * been left or the form submitted, never while a first entry is still being typed, and a server's
  * error for the field shows at once (TanStack Form clears it when the field changes).
  */
-export function FormField({ label, helperText, required, controlLabelled = false, children }: FormFieldProps) {
+export function FormField({
+  label,
+  helperText,
+  required: requiredProp,
+  controlLabelled = false,
+  children,
+}: FormFieldProps) {
   const field = useFieldContext<unknown>();
   const submitted = useStore(field.form.store, (state) => state.submissionAttempts > 0);
+  const required = requiredProp ?? rulesOfField(field.form, field.name).required;
   const meta = field.state.meta;
   const messages = meta.isBlurred || submitted || meta.errorMap.onServer ? errorMessages(meta.errors) : [];
 

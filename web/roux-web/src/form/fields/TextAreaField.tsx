@@ -1,5 +1,6 @@
 import { Textarea, type TextareaProps } from "@chakra-ui/react";
 import { useFieldContext } from "../formContext";
+import { rulesOfField } from "./fieldRules";
 import { FormField, type FormFieldProps } from "./FormField";
 
 export type TextAreaFieldProps = Omit<TextareaProps, "value" | "onChange" | "onBlur" | "name" | "required"> &
@@ -15,6 +16,7 @@ export function TextAreaField({ label, helperText, required, ...props }: TextAre
         value={field.state.value}
         onChange={(event) => field.handleChange(event.target.value)}
         onBlur={field.handleBlur}
+        maxLength={rulesOfField(field.form, field.name).maxLength}
         {...props}
       />
     </FormField>

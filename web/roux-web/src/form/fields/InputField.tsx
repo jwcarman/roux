@@ -1,5 +1,6 @@
 import { Input, type InputProps } from "@chakra-ui/react";
 import { useFieldContext } from "../formContext";
+import { rulesOfField } from "./fieldRules";
 import { FormField, type FormFieldProps } from "./FormField";
 
 export type InputFieldProps = Omit<InputProps, "value" | "onChange" | "onBlur" | "name" | "required"> &
@@ -15,6 +16,7 @@ export function InputField({ label, helperText, required, ...props }: InputField
         value={field.state.value}
         onChange={(event) => field.handleChange(event.target.value)}
         onBlur={field.handleBlur}
+        maxLength={rulesOfField(field.form, field.name).maxLength}
         {...props}
       />
     </FormField>
