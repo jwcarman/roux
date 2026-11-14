@@ -1,0 +1,14 @@
+target/
+.flattened-pom.xml
+.idea/
+*.iml
+.DS_Store
+*.log
+.classpath
+.project
+.settings/
+.worktrees/
+logs/
+
+# superpowers working files (SDD ledgers, briefs, review packages)
+.superpowers/
