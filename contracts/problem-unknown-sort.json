@@ -1,0 +1,12 @@
+{
+  "title": "Bad Request",
+  "status": 400,
+  "detail": "The request has invalid fields",
+  "errors": [
+    {
+      "field": "sortBy",
+      "message": "Unknown sort by value \"nope\", expecting one of id, name."
+    }
+  ],
+  "instance": "/api/contract/page"
+}

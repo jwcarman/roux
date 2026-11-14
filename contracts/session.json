@@ -1,0 +1,7 @@
+{
+  "csrfBootstrapPath": "/who/me",
+  "sessionPathPrefix": "/api/",
+  "csrfCookie": "XSRF-TOKEN",
+  "csrfHeader": "X-XSRF-TOKEN",
+  "sessionLostStatus": 401
+}
