@@ -25,6 +25,11 @@ jobs:
         with:
           node-version: 'lts/*'
           registry-url: https://registry.npmjs.org
+      # A bad NPM_TOKEN must stop the release here, before Central (irreversible) publishes.
+      - name: Check the npm token
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm whoami --registry https://registry.npmjs.org
       - name: Install web dependencies
         run: npm ci
         working-directory: web
