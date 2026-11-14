@@ -8,7 +8,8 @@ permissions:
   contents: read
 
 jobs:
-  # Nothing reaches Maven Central (irreversible) unless the tag is a plain version and the npm side rehearses clean.
+  # Nothing publishes unless the tag is a plain version and the npm side rehearses clean.
+  # Order after that: npm first, then Maven Central only if npm succeeded, so an npm failure never strands a Central release.
   verify:
     runs-on: ubuntu-latest
     steps:
@@ -25,11 +26,6 @@ jobs:
         with:
           node-version: 'lts/*'
           registry-url: https://registry.npmjs.org
-      # A bad NPM_TOKEN must stop the release here, before Central (irreversible) publishes.
-      - name: Check the npm token
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm whoami --registry https://registry.npmjs.org
       - name: Install web dependencies
         run: npm ci
         working-directory: web
@@ -46,7 +42,7 @@ jobs:
         working-directory: web
 
   maven:
-    needs: verify
+    needs: [verify, npm]
     runs-on: ubuntu-latest
     permissions:
       # write: attach the jars, their signatures and the provenance to the GitHub Release
@@ -108,7 +104,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      # npm provenance
+      # npm trusted publishing (OIDC): no token; provenance is generated automatically
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -116,6 +112,15 @@ jobs:
         with:
           node-version: 'lts/*'
           registry-url: https://registry.npmjs.org
+          # no restored cache in a publishing job
+          package-manager-cache: false
+      - name: Check npm supports trusted publishing
+        run: |
+          v="$(npm --version)"
+          if ! printf '11.5.1\n%s\n' "$v" | sort -V -C; then
+            echo "::error::npm $v is too old for trusted publishing (needs 11.5.1 or later)"
+            exit 1
+          fi
       - name: Install web dependencies
         run: npm ci
         working-directory: web
@@ -128,7 +133,5 @@ jobs:
         run: npm run build -w @jwcarman/roux-web
         working-directory: web
       - name: Publish package
-        run: npm publish -w @jwcarman/roux-web --access public --provenance
+        run: npm publish -w @jwcarman/roux-web --access public
         working-directory: web
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
