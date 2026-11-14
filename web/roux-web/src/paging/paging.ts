@@ -122,9 +122,14 @@ export interface TableSearch<S extends string = string> {
   search?: string;
 }
 
-function wholeNumberOf(value: unknown): number | undefined {
+function isWholeNumber(value: unknown): value is number {
+  return Number.isInteger(value);
+}
+
+/** `value`, or the number its text spells, when that is a whole number of at least `min`. */
+function wholeNumberOf(value: unknown, min: number): number | undefined {
   const number = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
-  return typeof number === "number" && Number.isInteger(number) ? number : undefined;
+  return isWholeNumber(number) && number >= min ? number : undefined;
 }
 
 /**
@@ -133,14 +138,14 @@ function wholeNumberOf(value: unknown): number | undefined {
  * the page size is capped at {@link MAX_PAGE_SIZE}.
  */
 export function tableSearchOf<S extends string>(raw: Record<string, unknown>, sorts: readonly S[]): TableSearch<S> {
-  const pageIndex = wholeNumberOf(raw.pageIndex);
-  const pageSize = wholeNumberOf(raw.pageSize);
+  const pageIndex = wholeNumberOf(raw.pageIndex, 0);
+  const pageSize = wholeNumberOf(raw.pageSize, 1);
   const direction = typeof raw.sortDirection === "string" ? raw.sortDirection.toUpperCase() : undefined;
   // Every key is named, undefined when dropped: TanStack Router merges a route's search over its
   // parent's, which holds the raw values, so a key left out would let the raw value through.
   return {
-    pageIndex: pageIndex !== undefined && pageIndex >= 0 ? pageIndex : undefined,
-    pageSize: pageSize !== undefined && pageSize >= 1 ? Math.min(pageSize, MAX_PAGE_SIZE) : undefined,
+    pageIndex,
+    pageSize: pageSize === undefined ? undefined : Math.min(pageSize, MAX_PAGE_SIZE),
     sortBy: sorts.find((sort) => sort === raw.sortBy),
     sortDirection: direction === "ASC" || direction === "DESC" ? direction : undefined,
     search: typeof raw.search === "string" ? searchTermOf(raw.search, 0) : undefined,
