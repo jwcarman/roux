@@ -42,14 +42,10 @@
 
     <dependencies>
         <dependency>
+            <!-- the contracts as an application gets them: through the starter -->
             <groupId>org.jwcarman.roux</groupId>
-            <artifactId>roux-problems</artifactId>
+            <artifactId>roux-spring-boot-starter</artifactId>
             <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jwcarman.jpa</groupId>
-            <artifactId>jpa-utils</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

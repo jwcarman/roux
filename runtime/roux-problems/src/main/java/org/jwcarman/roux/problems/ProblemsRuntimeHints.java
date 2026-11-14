@@ -25,7 +25,7 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar;
  * ProblemDetail's untyped properties, where ahead-of-time processing cannot see it, and the
  * readable validation messages are a resource bundle that must be included explicitly.
  */
-class ProblemsRuntimeHints implements RuntimeHintsRegistrar {
+public class ProblemsRuntimeHints implements RuntimeHintsRegistrar {
 
   @Override
   public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {

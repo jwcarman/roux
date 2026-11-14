@@ -13,9 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jwcarman.roux.problems;
+package org.jwcarman.roux.autoconfigure.problems;
 
 import org.jwcarman.jpa.pagination.UnknownSortByValueException;
+import org.jwcarman.roux.problems.PagingProblemsAdvice;
+import org.jwcarman.roux.problems.ProblemErrorController;
+import org.jwcarman.roux.problems.ProblemsAdvice;
+import org.jwcarman.roux.problems.ProblemsRuntimeHints;
+import org.jwcarman.roux.problems.RootProblemsAdvice;
+import org.jwcarman.roux.problems.SecurityProblemsAdvice;
+import org.jwcarman.roux.problems.WhoProblemsAdvice;
 import org.jwcarman.who.spring.security.web.SignInFailedException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -39,10 +46,11 @@ import org.springframework.security.access.AccessDeniedException;
  * Answers a servlet application's errors as Problem Details: the advices, and the error page that
  * answers a JSON client with a problem. Ahead of Spring Boot's error handling, so its error
  * controller gives way to this one. Off with {@code roux.problems.enabled=false}; an application's
- * own bean of any of them takes that one's place. The advices for Spring Security, who and
- * jpa-utils are there only when that library is.
+ * own bean of any of them takes that one's place. Only with roux-problems on the classpath. The
+ * advices for Spring Security, who and jpa-utils are there only when that library is.
  */
 @AutoConfiguration(before = ErrorMvcAutoConfiguration.class)
+@ConditionalOnClass(ProblemsAdvice.class)
 @ConditionalOnWebApplication(type = Type.SERVLET)
 @ConditionalOnBooleanProperty(name = "roux.problems.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(RouxProblemsProperties.class)
@@ -52,7 +60,7 @@ public class RouxProblemsAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   ProblemsAdvice problemsAdvice(RouxProblemsProperties properties) {
-    return new ProblemsAdvice(properties);
+    return new ProblemsAdvice(properties.apiPathPrefix());
   }
 
   @Bean

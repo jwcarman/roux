@@ -22,24 +22,66 @@
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>org.jwcarman.roux</groupId>
-        <artifactId>roux-parent</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
-        <relativePath>../../pom.xml</relativePath>
-    </parent>
-
+    <!-- No parent: roux-parent imports spring-boot-dependencies, and an application importing
+         this BOM must keep its own Spring Boot's managed versions. So the release metadata and
+         the release profile are repeated here rather than inherited. -->
+    <groupId>org.jwcarman.roux</groupId>
     <artifactId>roux-bom</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Roux - BOM</name>
     <description>Bill of Materials for Roux: version alignment for consumers</description>
+
+    <url>https://github.com/jwcarman/roux</url>
+    <inceptionYear>2026</inceptionYear>
+
+    <developers>
+        <developer>
+            <id>jwcarman</id>
+            <name>James Carman</name>
+        </developer>
+    </developers>
+
+    <licenses>
+        <license>
+            <name>Apache 2</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+            <comments>A business-friendly OSS license</comments>
+        </license>
+    </licenses>
+
+    <scm>
+        <url>https://github.com/jwcarman/roux</url>
+        <connection>scm:git:git@github.com:jwcarman/roux.git</connection>
+        <developerConnection>scm:git:git@github.com:jwcarman/roux.git</developerConnection>
+    </scm>
+
+    <properties>
+        <who.version>0.15.0</who.version>
+        <jpa-utils.version>0.2.0</jpa-utils.version>
+
+        <!-- Plugin Versions -->
+        <gpg.plugin.version>3.2.8</gpg.plugin.version>
+        <sonatype.plugin.version>0.12.0</sonatype.plugin.version>
+    </properties>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>org.jwcarman.roux</groupId>
                 <artifactId>roux-problems</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jwcarman.roux</groupId>
+                <artifactId>roux-autoconfigure</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jwcarman.roux</groupId>
+                <artifactId>roux-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -56,4 +98,46 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <profiles>
+        <!-- A BOM has no sources or Javadoc: of the parent's release plugins it needs only
+             publishing and signing. -->
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>${sonatype.plugin.version}</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>true</autoPublish>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>${gpg.plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <gpgArguments>
+                                <arg>--pinentry-mode</arg>
+                                <arg>loopback</arg>
+                            </gpgArguments>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
