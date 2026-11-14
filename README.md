@@ -60,6 +60,10 @@ The React, Chakra UI and TanStack libraries are peer dependencies; the app suppl
 ./mvnw -Ppit verify    # mutation testing; any surviving mutant fails the build
 ```
 
+Mutation testing is incremental: PIT and Stryker keep each mutant's result in `.mutation-history/`
+(git-ignored) and re-test only what changed. Delete that folder for a full run. In CI the
+`Mutation` workflow caches it between runs, and runs in full twice a month.
+
 For the web package, run in `web/` with `-w @jwcarman/roux-web` (after `npm ci` there and in `web/lint-tools`): `npm run format:check`,
 `lint`, `typecheck`, `coverage`, `build`, and `npm run mutate` for mutation testing.
 

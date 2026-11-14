@@ -12,3 +12,6 @@ logs/
 
 # superpowers working files (SDD ledgers, briefs, review packages)
 .superpowers/
+
+# incremental mutation-testing history (PIT and Stryker); cached in CI, never committed
+.mutation-history/

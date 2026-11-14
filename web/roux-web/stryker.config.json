@@ -10,5 +10,7 @@
   "thresholds": {
     "break": 100
   },
-  "tsconfigFile": "tsconfig.stryker-skip.json"
+  "tsconfigFile": "tsconfig.stryker-skip.json",
+  "incremental": true,
+  "incrementalFile": "../../.mutation-history/stryker-incremental.json"
 }
