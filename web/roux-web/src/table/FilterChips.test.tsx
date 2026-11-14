@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { Button, ButtonGroup } from "@chakra-ui/react";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -40,5 +41,44 @@ describe("FilterChips", () => {
   it("offers no All chip unless asked", () => {
     renderWithProviders(<FilterChips label="Role" options={ROLES} value="OWNER" onChange={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "All" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Owners" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Members" })).toBeInTheDocument();
+  });
+
+  it("is not a joined button group", () => {
+    renderWithProviders(<FilterChips label="Role" options={ROLES} value="OWNER" onChange={vi.fn()} />);
+    expect(getComputedStyle(screen.getByRole("button", { name: "Owners" })).borderStartEndRadius).not.toBe("0px");
+  });
+
+  it("fills the chosen chip and outlines the others", () => {
+    renderWithProviders(<FilterChips label="Role" options={ROLES} value="OWNER" onChange={vi.fn()} />);
+    const chosen = getComputedStyle(screen.getByRole("button", { name: "Owners" }));
+    const other = getComputedStyle(screen.getByRole("button", { name: "Members" }));
+    expect(chosen.backgroundColor).not.toBe(other.backgroundColor);
+    expect(other.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+  });
+
+  it("outlines the other chips, as an outline button is", () => {
+    renderWithProviders(
+      <>
+        <FilterChips label="Role" options={ROLES} value="OWNER" onChange={vi.fn()} />
+        <Button variant="outline">Reference</Button>
+      </>,
+    );
+    const other = getComputedStyle(screen.getByRole("button", { name: "Members" }));
+    const outline = getComputedStyle(screen.getByRole("button", { name: "Reference" }));
+    expect(other.borderColor).toBe(outline.borderColor);
+    expect(other.borderColor).not.toBe(getComputedStyle(screen.getByRole("button", { name: "Owners" })).borderColor);
+  });
+
+  it("fills the chosen chip even inside a toolbar that outlines its buttons", () => {
+    renderWithProviders(
+      <ButtonGroup variant="outline">
+        <FilterChips label="Role" options={ROLES} value="OWNER" onChange={vi.fn()} />
+      </ButtonGroup>,
+    );
+    const chosen = getComputedStyle(screen.getByRole("button", { name: "Owners" }));
+    const other = getComputedStyle(screen.getByRole("button", { name: "Members" }));
+    expect(chosen.backgroundColor).not.toBe(other.backgroundColor);
   });
 });

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { PageDto, PageParams } from "../paging/paging";
@@ -123,7 +123,7 @@ describe("QueryTable", () => {
     await user.clear(screen.getByRole("spinbutton", { name: "Page" }));
 
     expect(query.mock.calls.length).toBe(calls);
-    expect(screen.getByText("Person 026")).toBeInTheDocument();
+    expect(screen.getByText("Showing 26 to 50 of 60 rows")).toBeInTheDocument();
   });
 
   it("says which rows it shows", async () => {
@@ -164,5 +164,73 @@ describe("QueryTable", () => {
     show(() => Promise.reject(new Error("down")));
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not load the people.");
     expect(screen.queryByText("Nobody here.")).toBeNull();
+  });
+
+  it("sorts one column at a time, even with the multi-sort key held", async () => {
+    const { user } = show();
+    await screen.findByText("Person 001");
+    await user.click(screen.getByRole("button", { name: "Name" }));
+    await user.keyboard("{Shift>}");
+    await user.click(screen.getByRole("button", { name: "Email" }));
+    await user.keyboard("{/Shift}");
+    expect(screen.getByRole("columnheader", { name: "Email" })).toHaveAttribute("aria-sort", "ascending");
+    expect(screen.getByRole("columnheader", { name: "Name" })).toHaveAttribute("aria-sort", "none");
+  });
+
+  it("never turns the sort off: a column sorts ascending, descending, ascending again", async () => {
+    const { user } = show();
+    await screen.findByText("Person 001");
+    await user.click(screen.getByRole("button", { name: "Name" }));
+    await user.click(screen.getByRole("button", { name: "Name" }));
+    await waitFor(() =>
+      expect(screen.getByRole("columnheader", { name: "Name" })).toHaveAttribute("aria-sort", "ascending"),
+    );
+  });
+
+  it("shows no error once the rows have loaded", async () => {
+    show();
+    await screen.findByText("Person 001");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("says by default that the rows could not be loaded", async () => {
+    renderWithProviders(
+      <QueryTable
+        aria-label="People"
+        queryKey={["people"]}
+        query={() => Promise.reject(new Error("down"))}
+        columns={columns}
+      />,
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not load the rows.");
+  });
+
+  it("says how many pages there are, and which one it is on", async () => {
+    const { user } = show();
+    await screen.findByText("Person 001");
+    expect(screen.getByText("of 3")).toBeInTheDocument();
+    const pageField = screen.getByRole("spinbutton", { name: "Page" });
+    expect(pageField).toHaveValue("1");
+    expect(pageField).toHaveAttribute("aria-valuemax", "3");
+    expect(pageField).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+    await screen.findByText("Person 026");
+    await waitFor(() => expect(screen.getByRole("spinbutton", { name: "Page" })).toHaveValue("2"));
+  });
+
+  it("has nowhere to go to when everything fits on one page", async () => {
+    show(fakeEndpoint(people(5)));
+    await screen.findByText("Person 001");
+    expect(screen.getByText("of 1")).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "Page" })).toBeDisabled();
+  });
+
+  it("selects the page number when the field is focused, to type over it", async () => {
+    show();
+    await screen.findByText("Person 001");
+    const pageField = screen.getByRole<HTMLInputElement>("spinbutton", { name: "Page" });
+    act(() => pageField.focus());
+    expect([pageField.selectionStart, pageField.selectionEnd]).toEqual([0, pageField.value.length]);
   });
 });

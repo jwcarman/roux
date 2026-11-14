@@ -97,4 +97,35 @@ describe("createSelectColumn", () => {
     await user.click(screen.getByRole("button", { name: "Previous page" }));
     await waitFor(() => expect(screen.getByRole("checkbox", { name: "Select Person 001" })).toBeChecked());
   });
+
+  it("shows an untouched page as unchecked", async () => {
+    show();
+    await screen.findByText("Person 001");
+    expect(selectAll()).not.toBeChecked();
+    expect(selectAll()).not.toBePartiallyChecked();
+    expect(selectAll()).toBeEnabled();
+  });
+
+  it("offers nothing to select on an empty page", async () => {
+    selection = new Map();
+    renderWithProviders(
+      <QueryTable
+        aria-label="People"
+        queryKey={["nobody"]}
+        query={fakeEndpoint([])}
+        columns={[
+          createSelectColumn<Person>({
+            selected: selection,
+            onSelectedChange: () => undefined,
+            keyOf: (row) => row.id,
+            labelOf: (row) => row.name,
+          }),
+        ]}
+        emptyText="Nobody here."
+      />,
+    );
+    await screen.findByText("Nobody here.");
+    expect(selectAll()).toBeDisabled();
+    expect(selectAll()).not.toBeChecked();
+  });
 });

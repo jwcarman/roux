@@ -26,7 +26,6 @@ export function createSelectColumn<T>({
 }: SelectColumnOptions<T>): ColumnDef<T, unknown> {
   return createColumnHelper<T>().display({
     id: "select",
-    enableSorting: false,
     header: ({ table }) => {
       const rows = table.getRowModel().rows.map((row) => row.original);
       const chosen = rows.filter((row) => selected.has(keyOf(row))).length;

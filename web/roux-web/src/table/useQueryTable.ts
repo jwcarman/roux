@@ -86,15 +86,14 @@ function stateOf(params: TableSearch, initialSort: ColumnSort | undefined, initi
  * then applies to the initial sort's column.
  */
 function sortingOf(params: TableSearch, initialSort: ColumnSort | undefined): SortingState {
-  const sortBy = params.sortBy ?? initialSort?.id;
-  if (sortBy === undefined) {
+  if (params.sortBy !== undefined) {
+    return [{ id: params.sortBy, desc: params.sortDirection === "DESC" }];
+  }
+  if (initialSort === undefined) {
     return [];
   }
-  const desc =
-    params.sortDirection === undefined
-      ? params.sortBy === undefined && (initialSort?.desc ?? false)
-      : params.sortDirection === "DESC";
-  return [{ id: sortBy, desc }];
+  const desc = params.sortDirection === undefined ? initialSort.desc : params.sortDirection === "DESC";
+  return [{ id: initialSort.id, desc }];
 }
 
 function paramsOf({ pagination, sorting }: TableState): TableParams {
@@ -154,14 +153,11 @@ export function useQueryTable<T>({
   // keeping the params resets the page itself, in the same update that changes the key.
   const keyHash = hashKey(queryKey);
   const [listedKey, setListedKey] = useState(keyHash);
-  let current = state.pagination;
   if (listedKey !== keyHash) {
     setListedKey(keyHash);
-    if (!controlled && own.pagination.pageIndex !== 0) {
-      current = { ...own.pagination, pageIndex: 0 };
-      setOwn({ ...own, pagination: current });
-    }
+    setOwn({ ...own, pagination: { ...own.pagination, pageIndex: 0 } });
   }
+  const current = state.pagination;
 
   const request = pageParamsOf(current, state.sorting);
   const result = useQuery({
@@ -173,14 +169,12 @@ export function useQueryTable<T>({
 
   // Rows removed elsewhere, or a page typed into the URL, can leave the table past the last page:
   // move to the last one.
-  const loadedPageCount = result.isPlaceholderData ? undefined : page?.pagination.totalPageCount;
+  const loadedPageCount = result.isPlaceholderData ? Infinity : (page?.pagination.totalPageCount ?? Infinity);
   const pastTheEnd =
-    loadedPageCount !== undefined && current.pageIndex > 0 && current.pageIndex >= loadedPageCount
-      ? Math.max(0, loadedPageCount - 1)
-      : undefined;
+    current.pageIndex > 0 && current.pageIndex >= loadedPageCount ? Math.max(0, loadedPageCount - 1) : undefined;
   const pageSize = current.pageSize;
   const sortBy = state.sorting[0]?.id;
-  const sortDesc = state.sorting[0]?.desc ?? false;
+  const sortDesc = state.sorting[0]?.desc === true;
   useEffect(() => {
     if (pastTheEnd === undefined) {
       return;
@@ -208,8 +202,8 @@ export function useQueryTable<T>({
     onSortingChange: (updater: Updater<SortingState>) =>
       update({ sorting: functionalUpdate(updater, state.sorting), pagination: { ...current, pageIndex: 0 } }),
     getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    manualSorting: true,
+    // The server pages and sorts (no paginated or sorted row model is set), and this is what keeps a
+    // server-paged table on its page when its data changes.
     autoResetPageIndex: false,
     enableMultiSort: false,
     enableSortingRemoval: false,
