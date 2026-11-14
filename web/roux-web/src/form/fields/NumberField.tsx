@@ -8,6 +8,11 @@ export type NumberFieldProps = Omit<FormFieldProps, "children"> & {
   step?: number;
 };
 
+/** What the input shows for the field's value: nothing for `undefined`. */
+export function numberTextOf(value: number | undefined): string {
+  return value === undefined ? "" : String(value);
+}
+
 /** A number input; an empty or unreadable entry is `undefined`, never NaN. */
 export function NumberField({ label, helperText, required, min, max, step }: NumberFieldProps) {
   const field = useFieldContext<number | undefined>();
@@ -15,7 +20,7 @@ export function NumberField({ label, helperText, required, min, max, step }: Num
     <FormField label={label} helperText={helperText} required={required}>
       <NumberInput.Root
         name={field.name}
-        value={field.state.value === undefined ? "" : String(field.state.value)}
+        value={numberTextOf(field.state.value)}
         onValueChange={({ valueAsNumber }) =>
           field.handleChange(Number.isFinite(valueAsNumber) ? valueAsNumber : undefined)
         }

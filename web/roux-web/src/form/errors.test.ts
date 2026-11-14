@@ -39,6 +39,16 @@ describe("fieldErrorsOf", () => {
   });
 
   it("is empty for a problem with no field errors", () => {
-    expect(fieldErrorsOf({ type: "about:blank", title: "Conflict", status: 409 })).toEqual({});
+    expect(fieldErrorsOf({ type: "about:blank", title: "Conflict", status: 409 })).toStrictEqual({});
+  });
+});
+
+describe("errorMessages and fieldErrorsOf, edge cases", () => {
+  it("drops messages that are only whitespace", () => {
+    expect(errorMessages(["   ", "Enter a name"])).toEqual(["Enter a name"]);
+  });
+
+  it("reads no field errors from a problem that names none", () => {
+    expect(fieldErrorsOf({ type: "about:blank", title: "Bad Request", status: 400 })).toStrictEqual({});
   });
 });

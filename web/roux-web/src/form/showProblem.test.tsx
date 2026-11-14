@@ -72,4 +72,10 @@ describe("showProblem", () => {
     expect(screen.getByLabelText("Email")).toHaveAttribute("aria-invalid", "true");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
+
+  it("toasts several messages it cannot place together, separated by a space", async () => {
+    await submit(() => invalidFields({ first: "Pick a day", second: "Pick a time" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Pick a day Pick a time");
+  });
 });

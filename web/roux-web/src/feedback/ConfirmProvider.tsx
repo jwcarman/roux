@@ -1,5 +1,5 @@
 import { Button, CloseButton, Dialog, Portal } from "@chakra-ui/react";
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useRef, useState, type ReactNode } from "react";
 
 const DANGER_PALETTE = "red";
 
@@ -39,9 +39,9 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<Pending | null>(null);
   const cancel = useRef<HTMLButtonElement>(null);
 
-  const confirm = useCallback<Confirm>(
-    (options) => new Promise<boolean>((resolve) => setPending({ options, resolve })),
-    [],
+  // Made once, so `useConfirm` hands every render the same function.
+  const [confirm] = useState<Confirm>(
+    () => (options: ConfirmOptions) => new Promise<boolean>((resolve) => setPending({ options, resolve })),
   );
 
   function answer(confirmed: boolean) {
@@ -55,11 +55,8 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       <Dialog.Root
         role="alertdialog"
         open={pending !== null}
-        onOpenChange={(event) => {
-          if (!event.open) {
-            answer(false);
-          }
-        }}
+        // Only ever asked to close: it opens when a question is pending, which `open` already says.
+        onOpenChange={() => answer(false)}
         initialFocusEl={() => cancel.current}
       >
         <Portal>
