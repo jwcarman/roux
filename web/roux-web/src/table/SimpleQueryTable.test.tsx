@@ -13,7 +13,7 @@ const columns: ColumnDef<Person, unknown>[] = [
   column.accessor("email", { id: "EMAIL", header: "Email" }),
 ];
 
-function show(query: () => Promise<Person[]>, enabled = true) {
+function show(query: () => Promise<Person[]>, enabled = true, initialSort: { id: string; desc: boolean } | null = { id: "NAME", desc: false }) {
   const spy = vi.fn(query);
   renderWithProviders(
     <SimpleQueryTable
@@ -21,7 +21,7 @@ function show(query: () => Promise<Person[]>, enabled = true) {
       queryKey={["people", "all"]}
       query={spy}
       columns={columns}
-      initialSort={{ id: "NAME", desc: false }}
+      initialSort={initialSort ?? undefined}
       getRowId={(row) => row.id}
       enabled={enabled}
       emptyText="Nobody here."
@@ -73,5 +73,57 @@ describe("SimpleQueryTable", () => {
     const { query } = show(() => Promise.resolve(people(3)), false);
     await screen.findByRole("table", { name: "People" });
     expect(query).not.toHaveBeenCalled();
+  });
+
+  it("shows the rows in the order given when there is no initial sort", async () => {
+    show(() => Promise.resolve([...people(3)].reverse()), true, null);
+    await screen.findByText("Person 003");
+    expect(names()).toEqual(["Person 003", "Person 002", "Person 001"]);
+  });
+
+  it("fetches at once and sorts one column at a time", async () => {
+    renderWithProviders(
+      <SimpleQueryTable
+        aria-label="People"
+        queryKey={["people", "bare"]}
+        query={() => Promise.resolve(people(3))}
+        columns={columns}
+        initialSort={{ id: "NAME", desc: false }}
+      />,
+    );
+    await screen.findByText("Person 001");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Name" }));
+    await user.keyboard("{Shift>}");
+    await user.click(screen.getByRole("button", { name: "Email" }));
+    await user.keyboard("{/Shift}");
+    expect(screen.getByRole("columnheader", { name: "Email" })).toHaveAttribute("aria-sort", "ascending");
+    expect(screen.getByRole("columnheader", { name: "Name" })).toHaveAttribute("aria-sort", "none");
+  });
+
+  it("never turns the sort off: a column sorts descending, then ascending again", async () => {
+    const { user } = show(() => Promise.resolve(people(3)));
+    await screen.findByText("Person 001");
+    await user.click(screen.getByRole("button", { name: "Name" }));
+    await user.click(screen.getByRole("button", { name: "Name" }));
+    expect(screen.getByRole("columnheader", { name: "Name" })).toHaveAttribute("aria-sort", "ascending");
+  });
+
+  it("shows no error once the rows have loaded", async () => {
+    show(() => Promise.resolve(people(3)));
+    await screen.findByText("Person 001");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("says by default that the rows could not be loaded", async () => {
+    renderWithProviders(
+      <SimpleQueryTable
+        aria-label="People"
+        queryKey={["people", "failing"]}
+        query={() => Promise.reject(new Error("down"))}
+        columns={columns}
+      />,
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not load the rows.");
   });
 });

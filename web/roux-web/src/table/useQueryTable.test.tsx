@@ -124,6 +124,8 @@ describe("useQueryTable", () => {
 
     await waitFor(() => expect(result.current.table.getState().pagination.pageIndex).toBe(1));
     expect(lastParams(query).pageIndex).toBe(1);
+    expect(result.current.table.getState().sorting).toEqual([{ id: "NAME", desc: false }]);
+    expect(result.current.table.getState().pagination.pageSize).toBe(25);
   });
 
   it("never asks for more rows than a Paginator returns", async () => {
@@ -164,6 +166,63 @@ describe("useQueryTable", () => {
     const { result } = setUp({ query: () => Promise.reject(new Error("down")) });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.table.getRowModel().rows).toEqual([]);
+  });
+
+  it("stays on the first page when the query key changes there", async () => {
+    const { query, result, rerender } = setUp({ queryKey: ["people", "a"] });
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    rerender({ queryKey: ["people", "b"] });
+    await waitFor(() => expect(query).toHaveBeenCalledTimes(2));
+    expect(lastParams(query).pageIndex).toBe(0);
+    expect(result.current.table.getState().pagination.pageIndex).toBe(0);
+  });
+
+  it("moves to the last page without a sort when the page it is on no longer exists", async () => {
+    let rows = people(60);
+    const query = vi.fn((params: PageParams) => Promise.resolve(pageOf(rows, params)));
+    const { result } = setUp({ query, initialSort: undefined });
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    act(() => result.current.table.setPageIndex(2));
+    await waitFor(() => expect(result.current.page?.pagination.pageIndex).toBe(2));
+
+    rows = people(30);
+    await act(() => result.current.refetch());
+
+    await waitFor(() => expect(result.current.table.getState().pagination.pageIndex).toBe(1));
+    expect(result.current.table.getState().sorting).toEqual([]);
+    expect(lastParams(query)).toEqual({ pageIndex: 1, pageSize: 25 });
+  });
+
+  it("can leave the first page after a query key change from a later one", async () => {
+    const { query, result, rerender } = setUp({ queryKey: ["people", "a"] });
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    act(() => result.current.table.setPageIndex(2));
+    await waitFor(() => expect(result.current.page?.pagination.pageIndex).toBe(2));
+    rerender({ queryKey: ["people", "b"] });
+    await waitFor(() => expect(result.current.table.getState().pagination.pageIndex).toBe(0));
+
+    act(() => result.current.table.setPageIndex(1));
+
+    await waitFor(() => expect(lastParams(query).pageIndex).toBe(1));
+    expect(result.current.table.getState().pagination.pageIndex).toBe(1);
+  });
+
+  it("keeps the page size when the sort changes", async () => {
+    const { result } = setUp();
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    act(() => result.current.table.setPageSize(10));
+    act(() => result.current.table.getColumn("EMAIL")?.toggleSorting(false));
+    expect(result.current.table.getState().pagination).toEqual({ pageIndex: 0, pageSize: 10 });
+  });
+
+  it("sorts one column at a time, and always by a column", async () => {
+    const { result } = setUp();
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    act(() => result.current.table.getColumn("EMAIL")?.toggleSorting(false, true));
+    expect(result.current.table.getState().sorting).toEqual([{ id: "EMAIL", desc: false }]);
+    act(() => result.current.table.getColumn("EMAIL")?.toggleSorting(true));
+    act(() => result.current.table.getColumn("EMAIL")?.toggleSorting(undefined));
+    expect(result.current.table.getState().sorting).toEqual([{ id: "EMAIL", desc: false }]);
   });
 });
 
@@ -230,5 +289,105 @@ describe("useQueryTable with params kept by the caller", () => {
     const { onParamsChange, query } = controlled({ pageIndex: 9 }, people(30));
     await waitFor(() => expect(onParamsChange).toHaveBeenCalledWith(expect.objectContaining({ pageIndex: 1 })));
     expect(query.mock.calls.map(([params]) => params.pageIndex)).toEqual([9]);
+  });
+
+  it("reports a page change without a sort when there is none", async () => {
+    const onParamsChange = vi.fn<(next: TableParams) => void>();
+    const { result } = setUp({ params: {}, onParamsChange, initialSort: undefined });
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    act(() => result.current.table.setPageIndex(1));
+    expect(onParamsChange).toHaveBeenLastCalledWith({ pageIndex: 1, pageSize: 25 });
+  });
+
+  it("falls back to the default size and first page for numbers that are not finite", async () => {
+    const { query, result } = controlled({ pageIndex: Number.NaN, pageSize: Number.NaN });
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    expect(lastParams(query)).toMatchObject({ pageIndex: 0, pageSize: 25 });
+  });
+
+  it("keeps the page it is given when the query key changes", async () => {
+    const { query, result, rerender } = controlled({ pageIndex: 1 });
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    rerender({ queryKey: ["people", "other"] });
+    await waitFor(() => expect(query).toHaveBeenCalledTimes(2));
+    expect(lastParams(query).pageIndex).toBe(1);
+  });
+
+  it("starts the sort the initial sort's way when nothing else says", async () => {
+    const { result } = setUp({ params: {}, initialSort: { id: "NAME", desc: true } });
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    expect(result.current.table.getState().sorting).toEqual([{ id: "NAME", desc: true }]);
+  });
+
+  it("lets a direction given override the initial sort's", async () => {
+    const { result } = setUp({ params: { sortDirection: "ASC" }, initialSort: { id: "NAME", desc: true } });
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    expect(result.current.table.getState().sorting).toEqual([{ id: "NAME", desc: false }]);
+  });
+
+  it("sorts a column given without a direction ascending, whatever the initial sort's direction", async () => {
+    const { result } = setUp({ params: { sortBy: "EMAIL" }, initialSort: { id: "NAME", desc: true } });
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    expect(result.current.table.getState().sorting).toEqual([{ id: "EMAIL", desc: false }]);
+  });
+
+  it("does not sort when there is no column to sort by", async () => {
+    const { query, result } = setUp({ params: { sortDirection: "DESC" }, initialSort: undefined });
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    expect(result.current.table.getState().sorting).toEqual([]);
+    expect(lastParams(query)).toEqual({ pageIndex: 0, pageSize: 25 });
+  });
+
+  it("changes nothing when no one listens for changes", async () => {
+    const { result } = setUp({ params: { pageIndex: 1 } });
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    act(() => result.current.table.setPageIndex(2));
+    expect(result.current.table.getState().pagination.pageIndex).toBe(1);
+  });
+
+  it("does not throw when the page it is given does not exist and no one listens", async () => {
+    const { query, result } = setUp({ params: { pageIndex: 9 } }, people(30));
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports to the listener it was last given", async () => {
+    const first = vi.fn<(next: TableParams) => void>();
+    const second = vi.fn<(next: TableParams) => void>();
+    const { result, rerender } = setUp({ params: {}, onParamsChange: first });
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    rerender({ onParamsChange: second });
+    act(() => result.current.table.setPageIndex(1));
+    expect(second).toHaveBeenCalledTimes(1);
+    expect(first).not.toHaveBeenCalled();
+  });
+
+  it("keeps the sort, its direction and the size when it reports the last page", async () => {
+    const { onParamsChange } = controlled(
+      { pageIndex: 9, pageSize: 10, sortBy: "EMAIL", sortDirection: "DESC" },
+      people(30),
+    );
+    await waitFor(() =>
+      expect(onParamsChange).toHaveBeenCalledWith({ pageIndex: 2, pageSize: 10, sortBy: "EMAIL", sortDirection: "DESC" }),
+    );
+  });
+
+  it("reports the first page when there are no rows at all", async () => {
+    const { onParamsChange } = controlled({ pageIndex: 2 }, []);
+    await waitFor(() =>
+      expect(onParamsChange).toHaveBeenCalledWith({ pageIndex: 0, pageSize: 25, sortBy: "NAME", sortDirection: "ASC" }),
+    );
+  });
+
+  it("reports nothing when the first page is empty", async () => {
+    const { onParamsChange, result } = controlled({}, []);
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    expect(onParamsChange).not.toHaveBeenCalled();
+  });
+
+  it("reports the last page without a sort when there is none", async () => {
+    const onParamsChange = vi.fn<(next: TableParams) => void>();
+    setUp({ params: { pageIndex: 9 }, onParamsChange, initialSort: undefined }, people(30));
+    await waitFor(() => expect(onParamsChange).toHaveBeenCalledWith({ pageIndex: 1, pageSize: 25 }));
   });
 });

@@ -8,7 +8,7 @@ export function TablePagination<T>({ table }: { table: Table<T> }) {
   const pageIndex = table.getState().pagination.pageIndex;
 
   function goTo(pageNumber: number) {
-    if (Number.isFinite(pageNumber) && pageCount > 0) {
+    if (Number.isFinite(pageNumber)) {
       table.setPageIndex(Math.min(Math.max(Math.floor(pageNumber), 1), pageCount) - 1);
     }
   }

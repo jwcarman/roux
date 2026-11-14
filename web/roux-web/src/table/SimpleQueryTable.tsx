@@ -25,7 +25,7 @@ export type SimpleQueryTableProps<T> = Omit<TanstackTableProps<T>, "table" | "is
   errorText?: string;
 };
 
-const NO_ROWS: never[] = [];
+const EMPTY: never[] = [];
 
 /** A table over a list fetched whole and sorted in the browser: no paging, no refetch to sort. */
 export function SimpleQueryTable<T>({
@@ -38,11 +38,11 @@ export function SimpleQueryTable<T>({
   errorText = "Could not load the rows.",
   ...props
 }: SimpleQueryTableProps<T>) {
-  const [sorting, setSorting] = useState<SortingState>(initialSort ? [initialSort] : []);
+  const [sorting, setSorting] = useState<SortingState>(initialSort ? [initialSort] : EMPTY);
   const { data, isLoading, isError } = useQuery({ queryKey, queryFn: query, enabled });
 
   const table = useReactTable<T>({
-    data: data ?? NO_ROWS,
+    data: data ?? EMPTY,
     columns,
     getRowId,
     state: { sorting },
