@@ -1,0 +1,40 @@
+{
+  "name": "@jwcarman/roux-web",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "Apache-2.0",
+  "sideEffects": false,
+  "files": ["dist"],
+  "exports": {
+    "./problem": { "types": "./dist/problem/index.d.ts", "import": "./dist/problem/index.js" },
+    "./api": { "types": "./dist/api/index.d.ts", "import": "./dist/api/index.js" },
+    "./paging": { "types": "./dist/paging/index.d.ts", "import": "./dist/paging/index.js" }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --emitDeclarationOnly && vite build",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "mutate": "stryker run"
+  },
+  "peerDependencies": {},
+  "devDependencies": {
+    "@stryker-mutator/core": "10.1.1",
+    "@stryker-mutator/vitest-runner": "10.1.1",
+    "@tanstack/react-query": "5.107.1",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitest/coverage-v8": "5.1.0",
+    "jsdom": "31.0.0",
+    "msw": "3.0.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.6",
+    "vitest": "5.1.0"
+  }
+}
