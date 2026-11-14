@@ -28,6 +28,8 @@ import java.util.Locale;
  */
 public class InvariantViolationException extends RuntimeException {
 
+  private static final long serialVersionUID = 1L;
+
   /**
    * Creates the exception.
    *

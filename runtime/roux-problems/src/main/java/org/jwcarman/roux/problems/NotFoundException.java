@@ -18,6 +18,8 @@ package org.jwcarman.roux.problems;
 /** Something the request names does not exist: answered 404 with this message as the detail. */
 public class NotFoundException extends RuntimeException {
 
+  private static final long serialVersionUID = 1L;
+
   /**
    * Creates the exception.
    *
