@@ -58,7 +58,13 @@ export default tseslint.config(
   { ignores: ["dist", "coverage", "reports", ".stryker-tmp"] },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
-  reactHooks.configs.flat.recommended,
+  {
+    plugins: { "react-hooks": reactHooks },
+    rules: {
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "error",
+    },
+  },
   {
     files: ["**/*.{ts,tsx,mts,cts}"],
     plugins: { react, "jsx-a11y": jsxA11y },
