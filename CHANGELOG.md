@@ -6,6 +6,11 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-14
+
+Forms that are easy to write: Zod schemas with the server's wording, mutations declared once per
+endpoint, and `useSchemaForm` doing the rest.
+
 ### Breaking changes
 
 - `showProblem` and `showServerErrors` are removed, and with them the `fieldNames` mapping. Use
@@ -69,5 +74,6 @@ First release: the contracts every roux application shares, on both the Java and
 - Java 25 and Spring Boot 4.1.
 - React, Chakra UI and the TanStack libraries are peer dependencies of `@jwcarman/roux-web`.
 
-[Unreleased]: https://github.com/jwcarman/roux/compare/0.1.0...HEAD
+[Unreleased]: https://github.com/jwcarman/roux/compare/0.2.0...HEAD
+[0.2.0]: https://github.com/jwcarman/roux/releases/tag/0.2.0
 [0.1.0]: https://github.com/jwcarman/roux/releases/tag/0.1.0
