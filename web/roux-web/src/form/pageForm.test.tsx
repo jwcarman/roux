@@ -278,6 +278,32 @@ describe("a form on a page", () => {
     ]);
   });
 
+  it("after a 409 for a change the form does not show, sends the kept draft at the new version", async () => {
+    const { bodies, saveElsewhere } = serveSettings();
+    const client = createQueryClient();
+    const user = await showPage(undefined, undefined, undefined, client);
+
+    await rename(user, "Mine");
+    // Someone else changes something the form does not show: the version moves, the name does not.
+    saveElsewhere("Roux");
+    await act(() => client.invalidateQueries({ queryKey: ["settings"] }));
+    await user.click(saveButton());
+
+    expect(await screen.findByText("This record changed since you loaded it")).toBeInTheDocument();
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    expect(appName()).toHaveValue("Mine");
+    await user.click(saveButton());
+
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies).toEqual([
+      { appName: "Mine", version: 3 },
+      { appName: "Mine", version: 4 },
+    ]);
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    expect(appName()).toHaveValue("Mine");
+    expect(resetButton()).toBeDisabled();
+  });
+
   it.each([
     ["renders after the refusal", undefined],
     ["renders before the refusal", 50],

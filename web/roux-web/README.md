@@ -13,7 +13,8 @@ once. It is ESM-only and has one subpath per concern.
 - `@jwcarman/roux-web/form`: Zod rule helpers (`text`, `email`, `oneOf`, ...), `useSchemaForm`, fields and `FormDialog`.
   A save carries the version its draft started from, so it cannot undo someone else's save: the server answers 409,
   and the form starts over from the record when it differs from the one the draft started from (a 409 that brings
-  no changed record, such as a duplicate on create, keeps what was typed).
+  no change the form shows, such as a duplicate on create, keeps what was typed, and the next save goes at the latest
+  version).
 
 ## Peer dependencies
 

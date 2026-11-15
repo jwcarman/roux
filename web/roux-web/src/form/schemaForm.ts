@@ -90,8 +90,9 @@ interface Start<S extends FormSchema, TData> {
  * at), even when a refetch has brought a newer record while it was being edited: the server then
  * answers 409 rather than the draft quietly undoing whoever saved first. A 409 starts the form over
  * from the caller's record when it differs from the one the draft started from (the refreshes, or
- * that earlier refetch, brought theirs); a 409 that changes nothing (a create refused as a
- * duplicate) keeps what was typed.
+ * that earlier refetch, brought theirs); a 409 that changes nothing the form shows (a create
+ * refused as a duplicate, or someone else's change to a field it does not show) keeps what was
+ * typed, and the next save is sent with the caller's latest mutation.
  */
 export function useSchemaForm<S extends FormSchema, TData>(options: SchemaFormOptions<S, TData>): SchemaForm<S> {
   const { schema, defaultValues, mutation, onSuccess, failure = "Could not save" } = options;
@@ -128,7 +129,14 @@ export function useSchemaForm<S extends FormSchema, TData>(options: SchemaFormOp
   // the draft keeps its start until a save or `restart` puts the form back to untouched, which
   // renders this hook again (it watches `isTouched`) and so starts the next draft.
   const started = useRef(given);
+  // The draft a conflict (409) refused; see the conflict check below.
+  const refused = useRef<unknown>(undefined);
   if (!useSelector(form.store, (state) => state.isTouched)) {
+    started.current = given;
+  } else if (form.state.values === refused.current && evaluate(defaultValues, started.current.defaults)) {
+    // Refused, but the record the form shows is unchanged (someone else changed only what it does
+    // not show, or nothing): the draft is kept, and moves on to the caller's latest mutation, so its
+    // next save is at the new version rather than refused again.
     started.current = given;
   }
   const { mutateAsync } = useMutation(started.current.mutation);
@@ -144,7 +152,6 @@ export function useSchemaForm<S extends FormSchema, TData>(options: SchemaFormOp
   // after the refusal), the form starts over from it. The note is spent by an edit (a new values
   // object, never the refused one again) or by the next submit, so a record that changes later (a
   // refetch on focus) never wipes work done since the refusal.
-  const refused = useRef<unknown>(undefined);
   // Checked after every render: the mutation's move to `error` renders this hook once the conflict
   // is noted, whether the refreshed record rendered before or arrives later.
   useEffect(() => {

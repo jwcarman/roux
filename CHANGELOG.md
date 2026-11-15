@@ -31,7 +31,8 @@ All notable changes to this project are documented in this file. The format foll
   handles refusals. A save always carries the mutation (so the version) its draft started from, even
   when a refetch brought a newer record meanwhile, so it cannot quietly undo whoever saved first: the
   server answers 409. A 409 starts the form over from the caller's record when it differs from the
-  one the draft started from; a 409 that changes nothing (a duplicate on create) keeps what was typed.
+  one the draft started from; a 409 that changes nothing the form shows (a duplicate on create, or a
+  change to a field it does not show) keeps what was typed, and the next save goes at the latest version.
 - Fields take `required` and `maxLength` from the schema; `SelectField` takes typed options (values
   with `labels`, or `{ value, label }` with number or boolean values).
 - `/api`: `sendJson` (an answer without a body, such as a 204 or a 201 with only a `Location`,
