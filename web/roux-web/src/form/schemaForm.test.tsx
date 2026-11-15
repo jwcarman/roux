@@ -226,6 +226,30 @@ describe("useSchemaForm", () => {
     expect(alert).toHaveTextContent("Already active");
   });
 
+  it("toasts a 400 whose field errors are empty (a class-level constraint) by its detail", async () => {
+    answerCreate(
+      () =>
+        new Response(
+          JSON.stringify({
+            type: "about:blank",
+            title: "Bad Request",
+            status: 400,
+            detail: "The request has invalid fields",
+            errors: [],
+          }),
+          { status: 400, headers: { "Content-Type": "application/problem+json" } },
+        ),
+    );
+    const user = show();
+
+    await fill(user, { name: "Ann", email: "ann@example.com" });
+    await user.click(save());
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Could not save");
+    expect(alert).toHaveTextContent("The request has invalid fields");
+  });
+
   it("toasts a refusal that is not a 400 as a refusal, even when it names fields", async () => {
     answerCreate(
       () =>
