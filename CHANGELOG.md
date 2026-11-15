@@ -35,8 +35,9 @@ All notable changes to this project are documented in this file. The format foll
 - Fields take `required` and `maxLength` from the schema; `SelectField` takes typed options (values
   with `labels`, or `{ value, label }` with number or boolean values).
 - `/api`: `sendJson` (an answer without a body, such as a 204 or a 201 with only a `Location`,
-  resolves `undefined`), `{ params, signal }` on `get` and `getJson`, `PATCH`, the `path` tagged
-  template, and `baseUrl` in `configureApi` (default `/api`; a path without a leading slash goes under it).
+  resolves `undefined`), `{ params, signal }` on `get` and `getJson` (`params` takes any object,
+  an interface such as `PageParams` too), `PATCH`, the `path` tagged template, and `baseUrl` in
+  `configureApi` (default `/api`; a path without a leading slash goes under it).
 - `/api`: `createQueryClient`, which refetches a mutation's `meta.refreshes` after every answer;
   `shouldRetry`; `useClearQueriesOnIdentityChange`.
 - Moved into roux: `SearchInput` and `DebouncedSearchInput` (`/table`), `InfiniteList` and

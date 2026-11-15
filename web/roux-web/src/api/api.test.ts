@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
+import type { PageParams } from "../paging/paging";
 import { ApiError, getJson, isSessionLost, onSessionLost, send, sendJson } from "./client";
+import type { QueryParams } from "./url";
 import { server } from "../testing/server";
 
 /** Every request, whatever its method or path, answers `status`. */
@@ -175,6 +177,22 @@ describe("api", () => {
     await getJson("customers", { params: { q: "ann" } });
 
     expect(search).toBe("?q=ann");
+  });
+
+  it("takes an interface, such as PageParams, as a read's params", async () => {
+    let search = "";
+    server.use(
+      http.get("/api/customers", ({ request }) => {
+        search = new URL(request.url).search;
+        return HttpResponse.json({});
+      }),
+    );
+    const params: PageParams & { status?: string } = { pageIndex: 2, sortDirection: "DESC", status: "LEAD" };
+
+    await getJson<unknown>("customers", { params });
+
+    expectTypeOf<PageParams>().toExtend<QueryParams>();
+    expect(search).toBe("?pageIndex=2&sortDirection=DESC&status=LEAD");
   });
 
   it("sendJson resolves the parsed body", async () => {

@@ -1,10 +1,14 @@
 import { apiSettings } from "./config";
 
-/** Query parameters: `null` and `undefined` are left out, an array repeats its key. */
-export type QueryParams = Record<
-  string,
-  string | number | boolean | null | undefined | readonly (string | number | boolean)[]
->;
+/** A query parameter's value: `null` and `undefined` are left out, an array repeats its key. */
+type QueryParamValue = string | number | boolean | null | undefined | readonly (string | number | boolean)[];
+
+/**
+ * Query parameters: an object whose values are strings, numbers, booleans or arrays of them
+ * (`null` and `undefined` are left out, an array repeats its key). Any object type will do, an
+ * interface such as `PageParams` too, so it can be passed as it is.
+ */
+export type QueryParams = object;
 
 /**
  * Tagged template that URL-encodes every value it inserts:
@@ -16,7 +20,7 @@ export function path(strings: TemplateStringsArray, ...values: (string | number)
 
 function queryString(params: QueryParams): string {
   const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
+  for (const [key, value] of Object.entries(params) as [string, QueryParamValue][]) {
     if (value === null || value === undefined) {
       continue;
     }
