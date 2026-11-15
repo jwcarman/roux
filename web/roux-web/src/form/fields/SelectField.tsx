@@ -11,6 +11,7 @@ export interface Option<V extends SelectValue = string> {
   label: string;
 }
 
+/** What SelectField takes: the field's label and hint, its options, their labels and a placeholder. */
 export type SelectFieldProps<V extends SelectValue = string> = Omit<FormFieldProps, "children"> & {
   /** Bare values (labelled by `labels` or humanized), or values with their labels. */
   options: readonly V[] | readonly Option<V>[];

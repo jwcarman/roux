@@ -17,6 +17,7 @@ export interface ServerActionOptions<TData, TVariables> {
   onSuccess?: (data: TData, variables: TVariables) => void | Promise<void>;
 }
 
+/** What `useServerAction` returns: the action to run and whether it is out. */
 export interface ServerAction<Variables> {
   /** Sends the request; true when it succeeded. A refusal has already been shown to the user. */
   run: (variables: Variables) => Promise<boolean>;

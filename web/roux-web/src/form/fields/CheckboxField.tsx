@@ -2,6 +2,7 @@ import { Checkbox } from "@chakra-ui/react";
 import { useFieldContext } from "../formContext";
 import { FormField, type FormFieldProps } from "./FormField";
 
+/** What CheckboxField takes: the field's label, hint and required indicator. */
 export type CheckboxFieldProps = Omit<FormFieldProps, "children" | "controlLabelled">;
 
 /** A checkbox for a boolean field, named by its own label. */

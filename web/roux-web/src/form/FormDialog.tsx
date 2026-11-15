@@ -17,9 +17,11 @@ export interface DialogForm {
   onSaved?: (listener: () => void) => () => void;
 }
 
+/** What FormDialog takes: the form, its title and trigger, and optionally its open state. */
 export interface FormDialogProps {
   /** The form, usually `useSchemaForm`'s: the dialog closes after it saves. */
   form: DialogForm;
+  /** The dialog's title, which also names it for assistive technology. */
   title: string;
   /** The button that opens the dialog; focus returns to it when the dialog closes. */
   trigger: ReactElement;

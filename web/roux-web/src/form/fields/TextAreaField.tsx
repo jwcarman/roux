@@ -3,6 +3,7 @@ import { useFieldContext } from "../formContext";
 import { rulesOfField } from "./fieldRules";
 import { FormField, type FormFieldProps } from "./FormField";
 
+/** What TextAreaField takes: the field's label and hint, and any Chakra `Textarea` props but its value's. */
 export type TextAreaFieldProps = Omit<TextareaProps, "value" | "onChange" | "onBlur" | "name" | "required"> &
   Omit<FormFieldProps, "children">;
 

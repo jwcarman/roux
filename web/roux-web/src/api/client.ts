@@ -2,7 +2,12 @@ import { problemOf, type Problem } from "../problem/problem";
 import { apiSettings } from "./config";
 import { resolveUrl, type QueryParams } from "./url";
 
+/** A refused API call: the answer's status and the Problem Detail it carried (or one built from the status). */
 export class ApiError extends Error {
+  /**
+   * @param status the answer's HTTP status
+   * @param problem the server's Problem Detail; without one, a blank problem with `status`
+   */
   constructor(
     public readonly status: number,
     public readonly problem: Problem = { type: "about:blank", title: "", status },

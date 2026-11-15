@@ -5,7 +5,9 @@ import { errorMessages } from "../errors";
 import { useFieldContext } from "../formContext";
 import { rulesOfField } from "./fieldRules";
 
+/** What every field takes: its label, a hint, whether it is required, and the control it frames. */
 export interface FormFieldProps {
+  /** The field's label, which also names its control. */
   label: ReactNode;
   /** A hint under the field, replaced by its errors when it has any. */
   helperText?: ReactNode;
@@ -16,6 +18,7 @@ export interface FormFieldProps {
    * `<label>` of its own.
    */
   controlLabelled?: boolean;
+  /** The control the frame holds. */
   children: ReactNode;
 }
 

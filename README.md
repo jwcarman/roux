@@ -108,7 +108,10 @@ resets itself:
 export function CustomerFormDialog({ customer, trigger }: { customer?: CustomerDetail; trigger: ReactElement }) {
   const form = useSchemaForm({
     schema: customerRequestSchema,
-    defaultValues: customer ?? { name: "", email: "", company: "", status: "LEAD" },
+    // The record's nullable company becomes the input's "" (the schema's parse turns "" back into null).
+    defaultValues: customer
+      ? { name: customer.name, email: customer.email, company: inputOf(customer.company), status: customer.status }
+      : { name: "", email: "", company: "", status: "LEAD" },
     mutation: customer ? updateCustomer(customer.id, customer.version) : createCustomer,
     onSuccess: (saved) => notify.success(`${saved.name} was saved`),
   });

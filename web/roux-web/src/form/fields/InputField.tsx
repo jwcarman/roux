@@ -3,6 +3,7 @@ import { useFieldContext } from "../formContext";
 import { rulesOfField } from "./fieldRules";
 import { FormField, type FormFieldProps } from "./FormField";
 
+/** What InputField takes: the field's label and hint, and any Chakra `Input` props but its value's. */
 export type InputFieldProps = Omit<InputProps, "value" | "onChange" | "onBlur" | "name" | "required"> &
   Omit<FormFieldProps, "children">;
 
