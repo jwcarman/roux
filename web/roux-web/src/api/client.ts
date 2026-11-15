@@ -96,7 +96,10 @@ export async function getJson<T>(path: string, options?: RequestOptions): Promis
   return (await response.json()) as T;
 }
 
-/** Sends a write and parses the JSON answer (a 204 resolves `undefined`); rejects with an {@link ApiError} on a non-2xx answer. */
+/**
+ * Sends a write and parses the JSON answer; an answer without a body (a 204, a 201 with only a
+ * `Location`, a bare 200) resolves `undefined`. Rejects with an {@link ApiError} on a non-2xx answer.
+ */
 export async function sendJson<T>(
   method: "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
@@ -106,8 +109,6 @@ export async function sendJson<T>(
   if (!response.ok) {
     throw new ApiError(response.status, await problemOf(response));
   }
-  if (response.status === 204) {
-    return undefined as T;
-  }
-  return (await response.json()) as T;
+  const text = await response.text();
+  return (text === "" ? undefined : JSON.parse(text)) as T;
 }

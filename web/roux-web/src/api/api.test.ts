@@ -189,6 +189,23 @@ describe("api", () => {
     await expect(sendJson("DELETE", "customers/1")).resolves.toBeUndefined();
   });
 
+  it("sendJson resolves undefined for a 201 that has only a Location", async () => {
+    server.use(
+      http.post(
+        "/api/customers",
+        () => new HttpResponse(null, { status: 201, headers: { Location: "/api/customers/1" } }),
+      ),
+    );
+
+    await expect(sendJson("POST", "customers", { name: "Ann" })).resolves.toBeUndefined();
+  });
+
+  it("sendJson resolves undefined for a 200 without a body", async () => {
+    server.use(http.put("/api/customers/1", () => new HttpResponse(null, { status: 200 })));
+
+    await expect(sendJson("PUT", "customers/1", { name: "Ann" })).resolves.toBeUndefined();
+  });
+
   it("sendJson rejects with the problem the server answered", async () => {
     server.use(
       http.post("/api/customers", () =>
