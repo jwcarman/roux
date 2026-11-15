@@ -71,15 +71,21 @@ function SettingsForm({
   settings,
   settleMs,
   offline,
+  onSuccessMs,
 }: {
   settings: AppSettings;
   settleMs?: number;
   offline?: boolean;
+  onSuccessMs?: number;
 }) {
   const form = useSchemaForm({
     schema: appSchema,
     defaultValues: { appName: settings.name },
     mutation: offline ? failingSave : updateSettings(settings, settleMs),
+    // Taking a while lets the refreshed record render while the saved draft is still touched.
+    ...(onSuccessMs === undefined
+      ? {}
+      : { onSuccess: () => new Promise((resolve) => setTimeout(resolve, onSuccessMs)) }),
   });
   return (
     <form.AppForm>
@@ -92,12 +98,22 @@ function SettingsForm({
   );
 }
 
-function SettingsPage({ settleMs, offline }: { settleMs?: number; offline?: boolean }) {
+function SettingsPage({
+  settleMs,
+  offline,
+  onSuccessMs,
+}: {
+  settleMs?: number;
+  offline?: boolean;
+  onSuccessMs?: number;
+}) {
   const query = useQuery({
     queryKey: ["settings", "1"],
     queryFn: () => fetch("/api/settings/1").then((response) => response.json() as Promise<AppSettings>),
   });
-  return query.data ? <SettingsForm settings={query.data} settleMs={settleMs} offline={offline} /> : null;
+  return query.data ? (
+    <SettingsForm settings={query.data} settleMs={settleMs} offline={offline} onSuccessMs={onSuccessMs} />
+  ) : null;
 }
 
 const loadSettings = () => fetch("/api/settings/1").then((response) => response.json() as Promise<AppSettings>);
@@ -141,13 +157,13 @@ function StateForm({ settings, reload }: { settings: AppSettings; reload: () => 
   );
 }
 
-async function showPage(settleMs?: number, offline?: boolean) {
+async function showPage(settleMs?: number, offline?: boolean, onSuccessMs?: number, client = createQueryClient()) {
   renderWithProviders(
     <>
-      <SettingsPage settleMs={settleMs} offline={offline} />
+      <SettingsPage settleMs={settleMs} offline={offline} onSuccessMs={onSuccessMs} />
       <Toaster />
     </>,
-    createQueryClient(),
+    client,
   );
   const user = userEvent.setup();
   await screen.findByRole("textbox", { name: "App name" });
@@ -218,6 +234,47 @@ describe("a form on a page", () => {
     expect(bodies).toEqual([
       { appName: "Noir", version: 3 },
       { appName: "Noir 2", version: 4 },
+    ]);
+  });
+
+  it("sends the next save at the refreshed version though onSuccess outlasts the refresh", async () => {
+    const { bodies } = serveSettings();
+    const user = await showPage(undefined, undefined, 50);
+
+    await rename(user, "Noir");
+    await user.click(saveButton());
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+
+    await rename(user, "Noir 2");
+    await user.click(saveButton());
+
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies[1]).toEqual({ appName: "Noir 2", version: 4 });
+  });
+
+  it("sends a draft at the version it was read at though a refetch brought someone else's save, then starts over", async () => {
+    const { bodies, saveElsewhere } = serveSettings();
+    const client = createQueryClient();
+    const user = await showPage(undefined, undefined, undefined, client);
+
+    await rename(user, "Mine");
+    // Someone else saves, and a refetch (the window regaining focus) brings it while the draft is edited.
+    saveElsewhere("Theirs");
+    await act(() => client.invalidateQueries({ queryKey: ["settings"] }));
+    expect(appName()).toHaveValue("Mine");
+    await user.click(saveButton());
+
+    expect(await screen.findByText("This record changed since you loaded it")).toBeInTheDocument();
+    await waitFor(() => expect(appName()).toHaveValue("Theirs"));
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    await rename(user, "Mine, on theirs");
+    await user.click(saveButton());
+
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies).toEqual([
+      { appName: "Mine", version: 3 },
+      { appName: "Mine, on theirs", version: 4 },
     ]);
   });
 

@@ -17,3 +17,14 @@ export function invariantViolation(detail: string): Response {
   const body = { type: "about:blank", title: "Bad Request", status: 400, detail };
   return new Response(JSON.stringify(body), { status: 400, headers: PROBLEM_JSON });
 }
+
+/** A 409 Problem Detail for a save at a version that is no longer the latest. */
+export function stale(): Response {
+  const body = {
+    type: "about:blank",
+    title: "Conflict",
+    status: 409,
+    detail: "This record changed since you loaded it",
+  };
+  return new Response(JSON.stringify(body), { status: 409, headers: PROBLEM_JSON });
+}

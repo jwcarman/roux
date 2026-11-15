@@ -11,8 +11,9 @@ once. It is ESM-only and has one subpath per concern.
 - `@jwcarman/roux-web/table`: a TanStack Table wrapper driven by a query, and `SearchInput`.
 - `@jwcarman/roux-web/feedback`: toasts, confirmation dialogs, error messages, `NotFoundPage`, `ErrorPage` and `removal`.
 - `@jwcarman/roux-web/form`: Zod rule helpers (`text`, `email`, `oneOf`, ...), `useSchemaForm`, fields and `FormDialog`.
-  A conflict (409) starts the form over from the refreshed record, so a second save cannot undo someone else's
-  (a 409 that brings no changed record, such as a duplicate on create, keeps what was typed).
+  A save carries the version its draft started from, so it cannot undo someone else's save: the server answers 409,
+  and the form starts over from the record when it differs from the one the draft started from (a 409 that brings
+  no changed record, such as a duplicate on create, keeps what was typed).
 
 ## Peer dependencies
 

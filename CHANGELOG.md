@@ -28,9 +28,10 @@ All notable changes to this project are documented in this file. The format foll
 - `/form`: rule helpers `text`, `email`, `url`, `phone`, `date`, `number`, `integer`, `oneOf` and
   `fieldRules`, with the server's validation messages.
 - `useSchemaForm`: validates with a Zod schema, submits the parsed output through a mutation, and
-  handles refusals. A conflict (409) starts the form over from the refreshed record once the
-  mutation's `meta.refreshes` bring a changed one, so the next save cannot quietly undo whoever saved
-  first; a 409 that changes nothing (a duplicate on create) keeps what was typed.
+  handles refusals. A save always carries the mutation (so the version) its draft started from, even
+  when a refetch brought a newer record meanwhile, so it cannot quietly undo whoever saved first: the
+  server answers 409. A 409 starts the form over from the caller's record when it differs from the
+  one the draft started from; a 409 that changes nothing (a duplicate on create) keeps what was typed.
 - Fields take `required` and `maxLength` from the schema; `SelectField` takes typed options (values
   with `labels`, or `{ value, label }` with number or boolean values).
 - `/api`: `sendJson`, `{ params, signal }` on `get` and `getJson`, `PATCH`, the `path` tagged template,

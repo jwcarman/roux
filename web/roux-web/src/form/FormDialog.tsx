@@ -43,9 +43,9 @@ export interface FormDialogProps {
  *
  * Its trigger opens it; a save (the form's `onSaved`, after `onSuccess`) closes it, and so do
  * Escape, Cancel and the close button. Refusals keep it open; a conflict (409) starts the form over
- * from the refreshed record, when the refresh brings a changed one. Once closed the form goes back to its
- * defaults (`restart`, or `reset`): a create opens empty, an edit opens at the latest record. Pass
- * `open` and `onOpenChange` to open it from code instead.
+ * from the latest record when it differs from the one the draft started from. Once closed the form
+ * goes back to its defaults (`restart`, or `reset`): a create opens empty, an edit opens at the latest
+ * record. Pass `open` and `onOpenChange` to open it from code instead.
  */
 export function FormDialog({
   form,

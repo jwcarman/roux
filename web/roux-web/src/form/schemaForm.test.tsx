@@ -10,7 +10,7 @@ import { z } from "zod";
 import { sendJson } from "../api/client";
 import { createQueryClient } from "../api/queryClient";
 import { Toaster, toaster } from "../feedback/toaster";
-import { invalidFields, invariantViolation } from "../testing/problems";
+import { invalidFields, invariantViolation, stale } from "../testing/problems";
 import { renderHookWithProviders, renderWithProviders, testQueryClient } from "../testing/render";
 import { server } from "../testing/server";
 import { FormDialog } from "./FormDialog";
@@ -446,22 +446,75 @@ describe("useSchemaForm", () => {
     expect(field("Name")).toHaveValue("Ada");
   });
 
-  it("sends with the mutation given at the latest render", async () => {
-    const { versions } = answerCreate();
-    function Versioned() {
-      const [version, setVersion] = useState(1);
+  it("keeps the saved values after a save, though the defaults changed since it first rendered", async () => {
+    answerCreate();
+    function Switching() {
+      const [defaults, setDefaults] = useState(EMPTY);
       return (
         <>
-          <Button onClick={() => setVersion(2)}>Bump</Button>
-          <Harness options={{ mutation: createCustomer(version) }} />
+          <Button onClick={() => setDefaults({ name: "Ada", email: "ada@example.com", company: "" })}>Load</Button>
+          <Harness options={{ defaultValues: defaults }} />
         </>
       );
     }
-    renderWithProviders(<Versioned />, createQueryClient());
+    renderWithProviders(<Switching />, createQueryClient());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Load" }));
+    await waitFor(() => expect(field("Name")).toHaveValue("Ada"));
+
+    await user.clear(field("Name"));
+    await user.type(field("Name"), "Bo");
+    await user.click(save());
+    await waitFor(() => expect(current?.state.isSubmitSuccessful).toBe(true));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+
+    expect(field("Name")).toHaveValue("Bo");
+    expect(current?.state.isDirty).toBe(false);
+  });
+
+  /** A form whose caller moves to `version` 2 (and, with `record`, to that record) on "Bump". */
+  function Versioned({ record }: { record?: typeof EMPTY }) {
+    const [version, setVersion] = useState(1);
+    const defaults = version === 2 && record !== undefined ? record : EMPTY;
+    return (
+      <>
+        <Button onClick={() => setVersion(2)}>Bump</Button>
+        <Harness options={{ defaultValues: defaults, mutation: createCustomer(version) }} />
+        <Toaster />
+      </>
+    );
+  }
+
+  it("sends a touched draft at the version it started from, and starts over at the caller's record after the 409", async () => {
+    const { bodies, versions } = answerCreate(() =>
+      versions.length === 1 ? stale() : Response.json({ id: "7", name: "Tess" }),
+    );
+    const theirs = { name: "Tess", email: "tess@example.com", company: "" };
+    renderWithProviders(<Versioned record={theirs} />, createQueryClient());
     const user = userEvent.setup();
 
     await fill(user, { name: "Ann", email: "ann@example.com" });
+    // Someone else saved: a refetch brings their record, at a new version, while the draft is edited.
     await user.click(screen.getByRole("button", { name: "Bump" }));
+    expect(field("Name")).toHaveValue("Ann");
+    await user.click(save());
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("This record changed since you loaded it");
+    expect(versions).toEqual(["1"]);
+    await waitFor(() => expect(field("Name")).toHaveValue("Tess"));
+    await waitFor(() => expect(save()).toBeEnabled());
+    await user.click(save());
+    await waitFor(() => expect(versions).toEqual(["1", "2"]));
+    expect(bodies[1]).toEqual({ name: "Tess", email: "tess@example.com", company: null });
+  });
+
+  it("sends an untouched form's save with the latest mutation given", async () => {
+    const { versions } = answerCreate();
+    renderWithProviders(<Versioned />, createQueryClient());
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Bump" }));
+    await fill(user, { name: "Ann", email: "ann@example.com" });
     await user.click(save());
 
     await waitFor(() => expect(versions).toEqual(["2"]));
