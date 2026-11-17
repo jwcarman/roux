@@ -21,11 +21,19 @@ import org.junit.jupiter.api.Test;
 import org.jwcarman.jpa.spring.web.PagingWebAutoConfiguration;
 import org.jwcarman.roux.problems.PagingProblemsAdvice;
 import org.jwcarman.roux.problems.ProblemsAdvice;
+import org.jwcarman.roux.problems.WhoProblemsAdvice;
+import org.jwcarman.who.autoconfigure.WhoWebSecurityAutoConfiguration;
+import org.jwcarman.who.core.service.WhoService;
+import org.jwcarman.who.emaillink.EmailLinkLoginMethod;
+import org.jwcarman.who.passkey.PasskeyLoginMethod;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 
-/** The starter alone brings the whole contract: roux's advices and jpa-utils' paging. */
+/**
+ * The starter alone brings the whole contract: roux's advices, jpa-utils' paging, and who with its
+ * two sign-in methods (email links and passkeys) and its own security chain.
+ */
 @SpringBootTest(classes = ContractTestApplication.class)
 class StarterTest {
 
@@ -36,5 +44,14 @@ class StarterTest {
     assertThat(context.getBeanNamesForType(ProblemsAdvice.class)).hasSize(1);
     assertThat(context.getBeanNamesForType(PagingProblemsAdvice.class)).hasSize(1);
     assertThat(context.getBeanNamesForType(PagingWebAutoConfiguration.class)).hasSize(1);
+  }
+
+  @Test
+  void starterBringsWho() {
+    assertThat(context.getBeanNamesForType(WhoService.class)).hasSize(1);
+    assertThat(context.getBeanNamesForType(WhoWebSecurityAutoConfiguration.class)).hasSize(1);
+    assertThat(context.getBeanNamesForType(EmailLinkLoginMethod.class)).hasSize(1);
+    assertThat(context.getBeanNamesForType(PasskeyLoginMethod.class)).hasSize(1);
+    assertThat(context.getBeanNamesForType(WhoProblemsAdvice.class)).hasSize(1);
   }
 }

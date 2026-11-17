@@ -17,7 +17,6 @@ package org.jwcarman.roux.contracts;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -29,7 +28,6 @@ import org.jwcarman.jpa.spring.web.PageParams;
 import org.jwcarman.roux.problems.ConflictException;
 import org.jwcarman.roux.problems.InvariantViolationException;
 import org.jwcarman.roux.problems.NotFoundException;
-import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -39,14 +37,6 @@ import org.springframework.web.bind.annotation.RestController;
 /** The endpoints that raise, or return, what the contract fixtures describe. */
 @RestController
 class ContractTestController {
-
-  /** The sign-in bootstrap path: public, and the first response sets the CSRF cookie. */
-  @GetMapping("/who/me")
-  String me(CsrfToken token) {
-    // reading the token makes Spring Security write the XSRF-TOKEN cookie
-    Objects.requireNonNull(token.getToken());
-    return "{}";
-  }
 
   record Row(String id, String name) {}
 

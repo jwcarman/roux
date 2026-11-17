@@ -32,7 +32,7 @@
     <artifactId>roux-spring-boot-starter</artifactId>
 
     <name>Roux - Spring Boot Starter</name>
-    <description>Convenience starter that pulls in Roux's libraries and their auto-configuration</description>
+    <description>Convenience starter that pulls in Roux, who, jpa-utils and their auto-configuration</description>
 
     <dependencies>
         <dependency>
@@ -44,6 +44,19 @@
             <groupId>org.jwcarman.roux</groupId>
             <artifactId>roux-problems</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jwcarman.who</groupId>
+            <artifactId>who-spring-boot-starter</artifactId>
+        </dependency>
+        <!-- a roux app signs in with email links (and typed codes) and passkeys -->
+        <dependency>
+            <groupId>org.jwcarman.who</groupId>
+            <artifactId>who-email-link</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jwcarman.who</groupId>
+            <artifactId>who-passkey</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jwcarman.jpa</groupId>

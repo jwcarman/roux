@@ -6,6 +6,21 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+
+- `roux-spring-boot-starter` brings who (`who-spring-boot-starter`): every roux app uses who for
+  identity. Drop your own who starter dependency, or keep it without a version.
+- The starter also brings who's two sign-in methods, `who-email-link` (email links and typed codes)
+  and `who-passkey`. Each fails startup without its required settings
+  (`who.email-link.link-base-url`, `who.email-link.code-secret`, a way to send email, and
+  `who.passkey.rp-id`); see who's configuration guide.
+- who is upgraded from 0.15.0 to 0.19.0. Its endpoints move under `/who` (for example
+  `/ott/generate` is now `/who/email/send` and `/logout` is `/who/logout`; `/who/me` is
+  unchanged), it adds a `who_session` table, and an app with no `SecurityFilterChain` of its own
+  gets who's chain. Read who's
+  [upgrading guide](https://github.com/jwcarman/who/blob/0.19.0/docs/guides/upgrading.md) for
+  0.16.0 through 0.19.0.
+
 ## [0.2.0] - 2026-11-14
 
 Forms that are easy to write: Zod schemas with the server's wording, mutations declared once per

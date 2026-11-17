@@ -19,12 +19,16 @@ import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Import;
 
+/**
+ * An application as roux's starter makes it: who's own security chain, on PostgreSQL. No security
+ * configuration of its own.
+ */
 @SpringBootConfiguration
-@Import({ContractTestController.class, StandInSecurity.class})
+@Import({ContractTestController.class, TestDatabase.class})
 @EnableAutoConfiguration(
-    excludeName = {
-      "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration",
-      "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration",
-      "org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration"
-    })
+    // who 0.19.0 signs in without a UserDetailsService but publishes no bean that makes Spring
+    // Boot's in-memory user back off, so Boot would log a generated password. Nothing signs in
+    // with it; the exclusion keeps the log clean.
+    excludeName =
+        "org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration")
 class ContractTestApplication {}
