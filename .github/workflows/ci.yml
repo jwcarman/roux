@@ -31,7 +31,24 @@ jobs:
           java-version: '25'
           distribution: 'liberica'
           cache: maven
-      - run: ./mvnw -B verify
+      # The dojo's Playwright suite (E2eIT) runs on pushes to main only. Its Chromium needs system
+      # libraries the runner does not have; the build installs the browser itself.
+      - name: Install Chromium system libraries
+        if: github.event_name == 'push'
+        run: sudo npx -y "playwright@$(node -p "require('./examples/dojo/e2e/package.json').devDependencies['@playwright/test'].replace(/^[^0-9]*/, '')")" install-deps chromium
+      # roux's modules, then the dojo: its Java tests, Vitest and, on pushes, E2eIT.
+      - run: ./mvnw -B verify ${{ github.event_name != 'push' && '-DskipITs' || '' }}
+      - name: Upload the dojo's test logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dojo-logs
+          path: |
+            examples/dojo/target/playwright.log
+            examples/dojo/target/app.log
+            examples/dojo/target/surefire-reports/
+            examples/dojo/target/failsafe-reports/
+          if-no-files-found: ignore
       # Analyses the build above (classes and JaCoCo reports). Pull requests from forks get no
       # secrets, so they skip it rather than fail.
       - name: SonarCloud analysis
