@@ -214,3 +214,13 @@ What building the dojo showed about roux: one entry per finding, in the order fo
 - roux could: say in the paging guide's read-model section to cast view columns to the types the entity
   maps and to drop and create the view when a column changes.
 - Outcome: fixed in 10f84aa (guide).
+
+## A search still pending when a row is clicked takes the user back to the list
+- Where: `StudentsPage` (`DebouncedSearchInput`'s `onSearchChange`), `e2e/tests/school.spec.ts`
+- What was clunky: typing a search and clicking a student row within the 300 ms debounce lost the
+  click. The router started the navigation, the list stayed mounted while the next route resolved,
+  then the debounce fired and `navigate({ search, replace: true })` took the user back to the list.
+  CI failed on it.
+- roux could: report the pending term when the field loses focus (blur comes on mousedown, before
+  the click's navigation, so the navigation lands last).
+- Outcome: fixed in 42e0c2e.
