@@ -1,10 +1,10 @@
 schema_version: "1.1"
-name: ranks-page
+name: locations-page
 expected_outcome: |
-  The owner keeps the school's belt ranks on a Ranks page: a table of the ranks (name and colour)
+  The owner keeps the school's training locations on a Locations page: a table of the locations (name and kind)
   and a dialog to add and edit one. A name is required, at most 40 characters and unique; a
   duplicate is refused by the server as an error on the name field and shown under it in the
-  dialog. Anyone but the owner is refused (403) by the ranks API. The code compiles and the frontend tests pass; the full build, with the Java tests, is checked after the run.
+  dialog. Anyone but the owner is refused (403) by the locations API. The code compiles and the frontend tests pass; the full build, with the Java tests, is checked after the run.
   The graders named NN-roux-* judge roux's way (roux-web's client and forms, roux's rule
   messages and exceptions, no roux internals) and apply to the roux arms only; the plain-stack arm
   is scored on the others.
