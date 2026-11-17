@@ -95,14 +95,17 @@ describe the roux code beside it.
 A skill can read well and change nothing, and it costs context every time it loads. So it is measured,
 as noir measured its generators: with the skill against without it.
 
-- **Two arms.** Each eval runs with the roux plugin and without it. Without it, the agent has only
-  what any app has: roux in its dependencies (the jars, `node_modules`, doc comments).
+- **Three arms.** Each eval runs on the dojo with the roux plugin, on the dojo without it (the agent
+  has only what any app has: roux in its dependencies, the jars, `node_modules`, doc comments), and
+  on the same stack with no roux (the template before roux, `noir-app-template` at `27095cb`). The
+  first two say whether the skill helps; the first and third say whether roux helps an agent at all.
 - **Three runs per arm**, since one run varies by about ±30% (noir's generator A/B). The
   `skill-creator` skill's benchmark runs the arms, grades them and aggregates mean and spread.
 - **What is compared:** correctness (build and tests pass); doing it roux's way, checked by script
   where it can be (uses `useSchemaForm` and the rule helpers, no retyped server messages, no
   hand-rolled `fetch`, nothing internal imported from roux); and cost (turns, tokens, time).
-- **The bar:** the skill earns its place if the with-skill arm passes more often, or as often for less.
+- **The bar:** roux earns its place if the with-skill arm beats the plain stack, passing more often
+  or as often for less. The skill earns its place if it beats roux without it in the same way.
   A guide section that moves neither is cut; a failure that recurs gets a guide fix and a re-run.
 - **When:** when the plugin is first done, after each dojo round, and whenever the skill or guides
   change. Results are kept in `plugins/roux/evals/results/<date>/` (`benchmark.md`), so the numbers

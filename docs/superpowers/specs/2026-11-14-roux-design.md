@@ -30,6 +30,24 @@ exactly to its conventions, it also ships the rules as an opt-in **strict mode**
 roux is its own product. noir is its first and largest user, but roux stands on its own for a developer
 at a terminal: whatever noir's agents can do with it, a developer can do with the same commands.
 
+### Built for agents
+
+roux's users are agents: noir's builders, and Claude Code at a developer's terminal. It is a library
+for agents first, and it is judged by how well agents build with it:
+
+- **Easy to use:** an agent gets it right the first time, cheaply. Measured by evals (pass rate, turns,
+  tokens, time), which are to usability what roux's tests are to correctness.
+- **Proven:** against the alternative. Each benchmark runs the same tasks on roux with its skill, on
+  roux without it, and on the same stack with no roux.
+- **Stable:** the guidance travels with the version. roux's Claude Code plugin carries the guides of its
+  own release; a breaking change ships with a guide note, and later a migration recipe.
+- **Reusable:** it leans on what models already know (Spring, TanStack, Zod) and departs only where
+  measurement says it pays.
+
+Rules that follow: one way to do each thing; mistakes caught by the compiler, not at run time; errors
+that say how to fix them; known gaps written where an agent will read them (the guides), not only in
+the changelog.
+
 ### Success
 
 The measure of roux is the applications built with it. **Every app noir builds is a roux app:** its

@@ -3,7 +3,8 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship a Claude Code plugin for roux whose `roux` skill reads roux's own guides, give it a real
-app to be tried in (`examples/dojo`, the copied template shell), and measure with and without it.
+app to be tried in (`examples/dojo`, the copied template shell), and measure three arms: roux with the
+skill, roux without it, and the same stack with no roux at all.
 
 **Architecture:** Guides in `docs/guides/` are the source; a sync script copies them into the skill's
 `references/`, and a check script fails CI when a public roux name is missing from the guides or the
@@ -275,7 +276,13 @@ Content:
   `Must be a valid email address`, as string literals in `frontend/src`), `no-exception-handler` (no
   `@ExceptionHandler` or `ResponseStatusException` in `src/main/java`), `schema-form` (each new form
   component uses `useSchemaForm` or `FormDialog`).
-- `place-dojo.sh` (the case's scaffold script) copies `$ROUX_EVAL_FIXTURE` into the run directory.
+- Produces: `plugins/roux/scripts/plain-fixture.sh <dir>` writes the plain-stack arm's app: `git archive`
+  of `noir-app-template` at `27095cb` (its `main` before roux: same stack, same members, invitations,
+  appearance and settings, its own copies of the error, client, table and form code), the `noir-gen`
+  markers and `.noir/` removed, `git init` and one commit. The template's repository is read from
+  `https://github.com/jwcarman/noir-app-template` (or `$TEMPLATE_REPO` when set).
+- `place-dojo.sh` (the case's scaffold script) copies `$ROUX_EVAL_FIXTURE` into the run directory; the
+  plain arm sets it to the plain fixture.
 
 Cases (prompts exactly as a user would type them; first confirm each feature is absent in the
 fixture):
@@ -287,14 +294,18 @@ fixture):
 - `duplicate-invite`: "When the owner invites an email address that already belongs to a member, don't
   send anything; show 'Already a member' under the email field."
 
-Graders per case: `01-builds.md` ("`./mvnw -B verify -DskipITs` succeeds in the result"), one per
-`check-roux-way` check that applies, and two or three task-specific statements (for `ranks-page`: a
+Prompts name no library, so the same prompt runs in all three arms. Graders per case: `01-builds.md` ("`./mvnw -B verify -DskipITs` succeeds in the result"), one per
+`check-roux-way` check that applies (roux arms only: the plain arm is scored on the build and the
+task-specific statements), and two or three task-specific statements (for `ranks-page`: a
 duplicate name is refused with a message under the name field; a non-owner gets 403 from the API; the
 table and dialog exist).
 
 - [ ] **Step 1:** Write `eval-fixture.sh`; run it for `HEAD` into the scratchpad. Expected: the copy
   builds (`./mvnw -B verify -DskipITs`), `grep -r "IdeaProjects/roux" <dir>` finds nothing, `find <dir>
   -type l -not -path '*/node_modules/*'` finds nothing.
+- [ ] **Step 1b:** Write `plain-fixture.sh`; run it into the scratchpad. Expected: `./mvnw -B verify
+  -DskipITs` succeeds in the copy, and `grep -r "roux" <dir> --include=*.java --include=*.ts
+  --include=*.tsx --include=pom.xml --include=package.json` finds nothing.
 - [ ] **Step 2:** Write `check-roux-way.sh`; run it on the untouched fixture. Expected: every line
   `PASS`. Plant a `fetch(` in a copy and run again. Expected: `FAIL no-fetch`.
 - [ ] **Step 3:** Write the three cases in skill-creator's format (`references/schemas.md`, "Test
@@ -305,19 +316,22 @@ table and dialog exist).
 
 ### Task 8: First benchmark (controller, with the user's go-ahead)
 
-This task spends model time (3 cases × 2 arms × 3 runs = 18 runs); ask the user before starting it.
+This task spends model time (3 cases × 3 arms × 3 runs = 27 runs); ask the user before starting it.
+The three arms: `with_skill` (dojo fixture, roux plugin), `without_skill` (dojo fixture, no plugin),
+`plain` (plain fixture, no plugin).
 
-- [ ] **Step 1:** Build the fixture: `plugins/roux/scripts/eval-fixture.sh <Task 7's commit>
-  <scratchpad>/dojo-fixture`.
+- [ ] **Step 1:** Build the fixtures: `plugins/roux/scripts/eval-fixture.sh <Task 7's commit>
+  <scratchpad>/dojo-fixture` and `plugins/roux/scripts/plain-fixture.sh <scratchpad>/plain-fixture`.
 - [ ] **Step 2:** Follow skill-creator's "Running and evaluating test cases" with three runs per
-  configuration (`with_skill/run-1..3`, `without_skill/run-1..3`), each run in its own copy of the
-  fixture. The baseline gets the same prompt with no skill path. Workspace:
+  configuration (`with_skill/run-1..3`, `without_skill/run-1..3`, `plain/run-1..3`), each run in its
+  own copy of its fixture. The two baselines get the same prompt with no skill path. Workspace:
   `<scratchpad>/roux-workspace/iteration-1`.
 - [ ] **Step 3:** Grade: run `check-roux-way.sh` on each result for the mechanical graders, judge the
   rest from the diff and transcript; write `grading.json`; run `aggregate_benchmark`; do the analyst
   pass (non-discriminating assertions, variance, cost).
 - [ ] **Step 4:** Copy `benchmark.md` and `benchmark.json` to
-  `plugins/roux/evals/results/<YYYY-MM-DD>/`, with `analysis.md`: what the skill changed, which guide
+  `plugins/roux/evals/results/<YYYY-MM-DD>/`, with `analysis.md`: whether roux with the skill beats the plain stack (pass rate,
+  turns, tokens, time) and by how much, what the skill changed against roux without it, which guide
   sections made no difference, which failures recurred and the guide fixes they call for (listed, not
   made: fixes are the next iteration).
 - [ ] **Step 5:** Commit: `test(plugin): first benchmark of the roux skill`.
