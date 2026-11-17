@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { z } from "zod";
 import { date, email, fieldRules, id, integer, number, oneOf, phone, text, url } from "./rules";
 
@@ -135,6 +135,11 @@ describe("rules", () => {
       expect(date().safeParse("2026-11-14")).toEqual({ success: true, data: "2026-11-14" });
     });
 
+    it("takes a date in the future unless told not to", () => {
+      expect(date().safeParse("2999-01-01")).toEqual({ success: true, data: "2999-01-01" });
+      expect(date().optional().safeParse("2999-01-01")).toEqual({ success: true, data: "2999-01-01" });
+    });
+
     it("refuses empty", () => {
       expect(messagesOf(date().safeParse(""))).toEqual(["Must not be empty"]);
       expect(fieldRules.get(date())).toEqual({ required: true });
@@ -165,6 +170,78 @@ describe("rules", () => {
       const optional = date().optional();
       expectTypeOf<z.input<typeof optional>>().toEqualTypeOf<string>();
       expectTypeOf(optional.parse).returns.toEqualTypeOf<string | null>();
+    });
+  });
+
+  describe("date().notInFuture()", () => {
+    // Local time: the browser's own today is the 5th of January, 2026, though UTC may already be the 6th.
+    const at = (year: number, month: number, day: number, hours: number) =>
+      vi.setSystemTime(new Date(year, month - 1, day, hours, 30));
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("accepts the browser's today and every earlier day", () => {
+      vi.useFakeTimers();
+      at(2026, 1, 5, 23);
+      for (const value of ["2026-01-05", "2026-01-04", "2025-12-31", "1990-02-03"]) {
+        expect(date().notInFuture().safeParse(value)).toEqual({ success: true, data: value });
+      }
+    });
+
+    it("refuses tomorrow and later, as the server's words say", () => {
+      vi.useFakeTimers();
+      at(2026, 1, 5, 0);
+      for (const value of ["2026-01-06", "2026-02-01", "2027-01-01"]) {
+        expect(messagesOf(date().notInFuture().safeParse(value))).toEqual(["Must not be in the future"]);
+      }
+    });
+
+    it("reads today when it parses, not when the rule was built", () => {
+      vi.useFakeTimers();
+      at(2026, 1, 5, 12);
+      const rule = date().notInFuture();
+      at(2026, 1, 6, 12);
+      expect(rule.safeParse("2026-01-06").success).toBe(true);
+    });
+
+    it("pads a month and a day to two digits", () => {
+      vi.useFakeTimers();
+      at(2026, 3, 7, 12);
+      expect(date().notInFuture().safeParse("2026-03-07").success).toBe(true);
+      expect(date().notInFuture().safeParse("2026-03-08").success).toBe(false);
+    });
+
+    it("reports a value that is not a date only as that, and empty only as empty", () => {
+      expect(messagesOf(date().notInFuture().safeParse("2026-13-01"))).toEqual(["Is not in the expected format"]);
+      expect(messagesOf(date().notInFuture().safeParse(""))).toEqual(["Must not be empty"]);
+    });
+
+    it("lets an optional one be empty, in either order", () => {
+      expect(date().notInFuture().optional().parse("")).toBeNull();
+      expect(date().optional().notInFuture().parse("")).toBeNull();
+      expect(date().optional().notInFuture().parse("2000-01-01")).toBe("2000-01-01");
+      expect(messagesOf(date().optional().notInFuture().safeParse("2999-01-01"))).toEqual([
+        "Must not be in the future",
+      ]);
+      expect(messagesOf(date().notInFuture().optional().safeParse("2999-01-01"))).toEqual([
+        "Must not be in the future",
+      ]);
+    });
+
+    it("keeps the field's rule", () => {
+      expect(fieldRules.get(date().notInFuture())).toEqual({ required: true });
+      expect(fieldRules.get(date().notInFuture().optional())).toEqual({ required: false });
+      expect(fieldRules.get(date().notInFuture().notInFuture())).toEqual({ required: true });
+    });
+
+    it("keeps its types", () => {
+      const required = date().notInFuture();
+      expectTypeOf(required.parse).returns.toEqualTypeOf<string>();
+      const optional = date().notInFuture().optional();
+      expectTypeOf(optional.parse).returns.toEqualTypeOf<string | null>();
+      expectTypeOf(date().optional().notInFuture().parse).returns.toEqualTypeOf<string | null>();
     });
   });
 

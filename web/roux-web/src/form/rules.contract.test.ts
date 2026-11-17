@@ -22,6 +22,7 @@ describe("rules say what the server says", () => {
     ["a number under its minimum", () => number().min(5).safeParse(4), "Min", { value: 5 }],
     ["a number over its maximum", () => number().max(5).safeParse(6), "Max", { value: 5 }],
     ["a malformed phone number", () => phone().safeParse("call me"), "Pattern", {}],
+    ["a date in the future", () => date().notInFuture().safeParse("2999-01-01"), "NotInFuture", {}],
     ["a malformed web address", () => url().safeParse("example"), "URL", {}],
   ] as const)("%s", (_, parse, constraint, args) => {
     expect(messageOf(parse())).toBe(validationMessage(constraint, args));

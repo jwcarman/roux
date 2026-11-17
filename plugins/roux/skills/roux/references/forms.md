@@ -98,8 +98,18 @@ Their methods:
 | `.max(n)` | `text`, `email`, `url`, `phone` | at most `n` characters once trimmed; the input gets `maxLength={n}` | `Must be between 0 and {n} characters` | `@Size(max = n)` |
 | `.min(n)` | `number`, `integer` | at least `n` | `Must be at least {n}` | `@Min(n)` |
 | `.max(n)` | `number`, `integer` | at most `n` | `Must be at most {n}` | `@Max(n)` |
-| `.optional()` | all but `oneOf` | may be left empty; empty gives `null` | none | no `@NotBlank`/`@NotNull` |
+| `.notInFuture()` | `date` | not after the browser's today | `Must not be in the future` | `@NotInFuture` (roux-problems) |
+| `.optional()` | all but `oneOf`, `id` | may be left empty; empty gives `null` | none | no `@NotBlank`/`@NotNull` |
 
+- **A date that may not be in the future** is `date().notInFuture()` in the browser and `@NotInFuture`
+  on the server's `LocalDate`, with the one message `Must not be in the future`. Use them, never
+  `@PastOrPresent`: that compares with the server's exact today in the server's zone, and a browser in
+  another zone (up to UTC+14, ahead of the server) is refused for choosing its own today.
+  `@NotInFuture` reads the application's `Clock` bean (the system clock when there is none) and
+  allows one day past the server's today, so what `notInFuture()` accepts is never refused. Neither
+  needs wiring: annotate the request's field (`@NotNull @NotInFuture LocalDate birthDate`; `null` is
+  left to `@NotNull`). A test that sets the `Clock` bean sets the rule's today. (`NotInFutureValidator` is the constraint's
+  validator; you never reference it.)
 - Text is trimmed before it is checked and sent. An optional text left blank (or only spaces) is sent
   as `null`; so is an optional date left empty, and an optional number left empty.
 - A blank required value reports only `Must not be blank`; the format check and any `.refine` do not

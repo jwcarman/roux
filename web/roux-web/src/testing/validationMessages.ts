@@ -33,15 +33,23 @@ function messages(): Map<string, string> {
   return new Map(entries);
 }
 
+/** The bundle key of `constraint`: Jakarta's, Hibernate's `URL`, or one of roux's own (`NotInFuture`). */
+function keyOf(constraint: string): string {
+  if (constraint === "URL") {
+    return "org.hibernate.validator.constraints.URL.message";
+  }
+  if (constraint === "NotInFuture") {
+    return `org.jwcarman.roux.problems.constraints.${constraint}.message`;
+  }
+  return `jakarta.validation.constraints.${constraint}.message`;
+}
+
 /**
  * The server's message for `constraint` (its short name: `"NotBlank"`, `"Size"`, `"URL"`, ...), with
  * its `{name}` placeholders filled from `args`.
  */
 export function validationMessage(constraint: string, args: Record<string, string | number> = {}): string {
-  const key =
-    constraint === "URL"
-      ? "org.hibernate.validator.constraints.URL.message"
-      : `jakarta.validation.constraints.${constraint}.message`;
+  const key = keyOf(constraint);
   const message = messages().get(key);
   if (message === undefined) {
     throw new Error(`${key} is not in ${bundle}`);

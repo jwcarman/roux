@@ -15,6 +15,7 @@
  */
 package org.jwcarman.roux.problems;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,6 +23,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+import org.jwcarman.roux.problems.constraints.NotInFuture;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -48,6 +50,13 @@ class ProblemsTestController {
   record Short(@Size(max = 5) String text) {}
 
   record Note(String note) {}
+
+  record Booking(@NotInFuture LocalDate day) {}
+
+  @PostMapping("/booking")
+  String booking(@Valid @RequestBody Booking body) {
+    return body.day().toString();
+  }
 
   record Feeling(Mood mood) {}
 

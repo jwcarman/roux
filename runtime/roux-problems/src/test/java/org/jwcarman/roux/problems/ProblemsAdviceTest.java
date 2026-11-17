@@ -155,6 +155,19 @@ class ProblemsAdviceTest {
   }
 
   @Test
+  void aDateOneDayPastTheServersTodayIsAllowedForAFarEasternBrowser() throws Exception {
+    postJson("/booking", "{\"day\":\"2026-06-16\"}").andExpect(status().isOk());
+  }
+
+  @Test
+  void aDateBeyondThatIsNotInTheFuture() throws Exception {
+    isProblem(postJson("/booking", "{\"day\":\"2026-06-17\"}"), 400, "Bad Request")
+        .andExpect(jsonPath("$.errors.length()").value(1))
+        .andExpect(jsonPath("$.errors[0].field").value("day"))
+        .andExpect(jsonPath("$.errors[0].message").value("Must not be in the future"));
+  }
+
+  @Test
   void anInvariantViolationIs400WithItsMessageAndNoFields() throws Exception {
     isProblem(fetch("/invariant"), 400, "Bad Request")
         .andExpect(jsonPath("$.detail").value("A class meets at most 7 times a week"))

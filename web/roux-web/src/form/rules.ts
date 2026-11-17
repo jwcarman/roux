@@ -20,6 +20,7 @@ const NOT_EXPECTED_FORMAT = "Is not in the expected format";
 const NOT_EMAIL = "Must be a valid email address";
 const NOT_WEB_ADDRESS = "Must be a valid web address";
 const NOT_WHOLE = "Must be a whole number";
+const NOT_IN_FUTURE = "Must not be in the future";
 
 /** What a field's schema says about the field, for the field to show (an asterisk, a `maxLength`). */
 export interface FieldRule {
@@ -146,31 +147,68 @@ export function phone(): TextRule {
 
 // --- date -----------------------------------------------------------------------------------------
 
+interface DateState {
+  required: boolean;
+  notInFuture: boolean;
+}
+
 /** A date input's value (`YYYY-MM-DD`): `string`, or `string | null` once optional. */
 export type DateRule<Out extends string | null = string> = Rule<
   Out,
   string,
   {
+    /**
+     * Not after the browser's today: `Must not be in the future`. The server's `@NotInFuture`
+     * allows one day more (a browser can be ahead of the server's zone), so a date this accepts is
+     * never refused there.
+     */
+    notInFuture(): DateRule<Out>;
     /** May be left empty, which gives `null`. */
     optional(): DateRule<string | null>;
   }
 >;
 
-/** A date input's value, or `""` when not `required`. */
-function dateSchema(required: boolean): z.ZodString {
-  return (required ? z.string().min(1, { error: NOT_EMPTY, abort: true }) : z.string()).refine(
-    (value) => value === "" || z.regexes.date.test(value),
-    { error: NOT_EXPECTED_FORMAT },
+/** Today in the browser's time zone, as a date input writes it. */
+function localToday(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+/** The checks on a date input's value that `state` asks for; `""` passes unless `required`. */
+function dateSchema(state: DateState): z.ZodString {
+  let schema = state.required ? z.string().min(1, { error: NOT_EMPTY, abort: true }) : z.string();
+  // `abort`: a value that is not a date reports only that, not also that it is in the future.
+  schema = schema.refine((value) => value === "" || z.regexes.date.test(value), {
+    error: NOT_EXPECTED_FORMAT,
+    abort: true,
+  });
+  if (state.notInFuture) {
+    schema = schema.refine((value) => value <= localToday(), { error: NOT_IN_FUTURE });
+  }
+  return schema;
+}
+
+function requiredDate(notInFuture: boolean): DateRule<string> {
+  return rule(
+    dateSchema({ required: true, notInFuture }),
+    { required: true },
+    { notInFuture: () => requiredDate(true), optional: () => optionalDate(notInFuture) },
   );
 }
 
-function optionalDate(): DateRule<string | null> {
-  return rule(emptyAsNull(dateSchema(false)), { required: false }, { optional: optionalDate });
+function optionalDate(notInFuture: boolean): DateRule<string | null> {
+  return rule(
+    emptyAsNull(dateSchema({ required: false, notInFuture })),
+    { required: false },
+    { notInFuture: () => optionalDate(true), optional: () => optionalDate(notInFuture) },
+  );
 }
 
 /** A required date, from `<input type="date">`: `Must not be empty`. */
 export function date(): DateRule {
-  return rule(dateSchema(true), { required: true }, { optional: optionalDate });
+  return requiredDate(false);
 }
 
 // --- number ---------------------------------------------------------------------------------------

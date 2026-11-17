@@ -15,6 +15,10 @@
  */
 package org.jwcarman.roux.problems;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -51,6 +55,12 @@ class ProblemsTestApplication {
   @Bean
   ProblemsAdvice problemsAdvice(@Value("${roux.problems.api-path-prefix:/api/}") String prefix) {
     return new ProblemsAdvice(prefix);
+  }
+
+  /** The application's clock, which {@code @NotInFuture} reads: the 15th of June, 2026. */
+  @Bean
+  Clock clock() {
+    return Clock.fixed(Instant.parse("2026-06-15T12:00:00Z"), ZoneOffset.UTC);
   }
 
   @Bean
