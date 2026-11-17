@@ -16,9 +16,8 @@
 package org.jwcarman.roux.autoconfigure.auditing;
 
 import java.time.Clock;
-import java.util.Optional;
 
-import org.jwcarman.roux.jpa.Versions;
+import org.jwcarman.roux.jpa.ClockDateTimeProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -35,13 +34,13 @@ import org.springframework.data.auditing.DateTimeProvider;
  * application's own, this does nothing. Only with roux-jpa on the class path.
  */
 @AutoConfiguration
-@ConditionalOnClass({DateTimeProvider.class, Versions.class})
+@ConditionalOnClass({DateTimeProvider.class, ClockDateTimeProvider.class})
 public class RouxAuditingAutoConfiguration {
 
   @Bean
   @ConditionalOnBean(Clock.class)
   @ConditionalOnMissingBean(DateTimeProvider.class)
   DateTimeProvider auditingDateTimeProvider(Clock clock) {
-    return () -> Optional.of(clock.instant());
+    return new ClockDateTimeProvider(clock);
   }
 }

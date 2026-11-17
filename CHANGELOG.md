@@ -8,14 +8,14 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
-- roux-autoconfigure serves a single-page app's shell for any page URL, so a route is written once,
+- roux-spa serves a single-page app's shell for any page URL, so a route is written once,
   in the frontend. With `static/index.html` on the classpath, a GET or HEAD that accepts `text/html`,
   has no file extension and is not under `/api`, `/who`, `/assets`, `/actuator`, `/.well-known` or
   `/error` (or a path in `roux.spa.excluded-paths`) is presented to the app as a request for
   `/index.html`, ahead of Spring Security, so the app's own shell handler and headers still apply.
   `/assets/**` is cached for a year, and with who on the classpath `/index.html` and `/assets/**`
-  are added to who's public paths, so no page is listed in `who.security.public-paths`. Off with
-  `roux.spa.enabled=false`.
+  are added to who's public paths, so no page is listed in `who.security.public-paths`. Switched on
+  by the roux-spa jar (auto-configured from roux-autoconfigure); removing the jar turns it off.
 
 ### Breaking changes
 
@@ -31,7 +31,7 @@ All notable changes to this project are documented in this file. The format foll
     jar is the off switch. `roux.spa.excluded-paths` stays.
   - New `roux-jpa` (`org.jwcarman.roux.jpa`): `Versions`, moved from `org.jwcarman.roux.problems`.
     roux-problems drops spring-orm; `RouxAuditingAutoConfiguration` now needs roux-jpa on the class
-    path.
+    path, and `ClockDateTimeProvider` is there.
 - who 0.21.0 (was 0.20.0), in the parent POM and roux-bom. who's endpoints are REST-shaped: the
   person's own things moved under `/who/me` (`/who/me/sessions`, `/who/me/passkeys` for listing and
   registering, `/who/me/email-addresses`, `/who/me/accounts`, `/who/me/api-keys`; a passkey is
@@ -87,10 +87,10 @@ All notable changes to this project are documented in this file. The format foll
 - `idSearchOf(raw)` in `@jwcarman/roux-web/paging`, beside `enumSearchOf`, for a URL filter whose values are ids loaded at run time: it keeps a UUID-shaped string and drops anything else to `undefined`.
 - `FilterChips` takes `defaultValue`: the chip shown chosen while the URL has no value, reported as `undefined` when chosen, so the default stays out of the URL. It excludes `allLabel` (a type error to pass both).
 - `id()` in `@jwcarman/roux-web/form`: a required select over ids loaded at run time (`""` for the placeholder), with the server's `Must not be empty`, replacing `z.string().min(1, ...).register(fieldRules, ...)` with the message retyped.
-- roux-problems: `@NotInFuture` for a `LocalDate` a person picks in a browser (`Must not be in the future`). It compares with today by the application's `Clock` bean (the system clock without one) and allows one day past the server's today, because a browser up to UTC+14 is ahead of the server's zone and `@PastOrPresent` refused its valid "today". Spring Boot's validation builds it, so apps only annotate. roux-web: `date().notInFuture()` says the same words, comparing with the browser's own today.
-- roux-problems: `@Phone`, the browser's `phone()` rule as a Bean Validation constraint with the same pattern (`Phone.PATTERN`) and message (`Is not in the expected format`; a blank value is left to `@NotBlank`). `contracts/phone.json` holds both sides to one pattern and to the same accepted and refused examples (`PhoneContractTest`, `rules.contract.test.ts`).
-- roux-problems: `Versions.require(entity, request.version())`, the stale-version check every edit makes: no version is an `InvalidFieldException` on `version` (`Must not be empty`), a version that is not the entity's current one is the `ObjectOptimisticLockingFailureException` answered as the 409. It replaces the copy each service wrote. roux-problems now has `spring-orm` as an optional dependency, as it has jpa-utils.
-- roux-autoconfigure: JPA auditing stamps `@CreatedDate` and `@LastModifiedDate` from the application's `Clock` bean. With `@EnableJpaAuditing(auditorAwareRef = ...)` and a `Clock` bean, a `DateTimeProvider` over the clock is registered (Spring Data's auditing handler takes it by type), so an app needs no `DateTimeProvider` bean or `dateTimeProviderRef` of its own. With no `Clock` bean, or a `DateTimeProvider` of the app's own, nothing changes.
+- roux-validation: `@NotInFuture` for a `LocalDate` a person picks in a browser (`Must not be in the future`). It compares with today by the application's `Clock` bean (the system clock without one) and allows one day past the server's today, because a browser up to UTC+14 is ahead of the server's zone and `@PastOrPresent` refused its valid "today". Spring Boot's validation builds it, so apps only annotate. roux-web: `date().notInFuture()` says the same words, comparing with the browser's own today.
+- roux-validation: `@Phone`, the browser's `phone()` rule as a Bean Validation constraint with the same pattern (`Phone.PATTERN`) and message (`Is not in the expected format`; a blank value is left to `@NotBlank`). `contracts/phone.json` holds both sides to one pattern and to the same accepted and refused examples (`PhoneContractTest`, `rules.contract.test.ts`).
+- roux-jpa: `Versions.require(entity, request.version())`, the stale-version check every edit makes: no version is an `InvalidFieldException` on `version` (`Must not be empty`), a version that is not the entity's current one is the `ObjectOptimisticLockingFailureException` answered as the 409. It replaces the copy each service wrote. roux-jpa has `spring-orm` and jpa-utils.
+- roux-jpa: JPA auditing stamps `@CreatedDate` and `@LastModifiedDate` from the application's `Clock` bean. With `@EnableJpaAuditing(auditorAwareRef = ...)` and a `Clock` bean, roux-jpa's `ClockDateTimeProvider` over the clock is registered (Spring Data's auditing handler takes it by type), so an app needs no `DateTimeProvider` bean or `dateTimeProviderRef` of its own. With no `Clock` bean, or a `DateTimeProvider` of the app's own, nothing changes.
 
 ## [0.2.0] - 2026-11-14
 
