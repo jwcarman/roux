@@ -89,6 +89,7 @@ server caught the mistake ([Errors](errors.md#what-else-is-answered-for-you)).
 | `number()` | a `NumberField`'s `number \| undefined` | `number` | `Must not be empty` | `@NotNull` |
 | `integer()` | a `NumberField`'s `number \| undefined` | `number` | `Must not be empty`, `Must be a whole number` (browser only) | `@NotNull` on an `int`/`Integer`/`long` |
 | `oneOf(values)` | a `SelectField`'s value, `""` for its placeholder | one of `values` | `Must not be empty` | `@NotNull` on an enum |
+| `id()` | a select's value over ids loaded at run time, `""` for its placeholder | `string` | `Must not be empty` | `@NotNull UUID` |
 
 Their methods:
 
@@ -122,16 +123,22 @@ export const termSchema = z
 
 ### Write a rule the helpers lack
 
-There is no helper for a boolean, a date-time, or a choice among values known only at run time (ids
-from a query). Write the Zod schema yourself, in the server's words, and register it in `fieldRules`
-so its field shows the required indicator:
+A choice among ids loaded at run time (a select of ranks from a query) is `id()`: `rankId: id()`. There
+is no helper for a boolean, a date-time or a text with a format of your own. Write the Zod schema
+yourself, in the server's words, and register it in `fieldRules` so its field shows the required
+indicator:
 
 ```ts
 import { fieldRules } from "@jwcarman/roux-web/form";
 import { z } from "zod";
 
-/** A required choice among ids loaded at run time (a select of ranks): `@NotNull UUID rankId`. */
-export const rankId = z.string().min(1, { error: "Must not be empty" }).register(fieldRules, { required: true });
+/** A required code of three capitals: `@NotBlank @Pattern("[A-Z]{3}") code`. */
+export const code = z
+  .string()
+  .trim()
+  .min(1, { error: "Must not be blank", abort: true })
+  .regex(/^[A-Z]{3}$/, { error: "Is not in the expected format" })
+  .register(fieldRules, { required: true });
 
 /** A checkbox: no rule to register, an unchecked box is `false`. */
 export const open = z.boolean();
@@ -466,14 +473,14 @@ Every field type in one form, a grading for a rank. The schema, in `src/gradings
 `gradingsApi` and `createGrading` beside it, as in the ranks module):
 
 ```ts
-import { date, fieldRules, integer, number, oneOf, text } from "@jwcarman/roux-web/form";
+import { date, id, integer, number, oneOf, text } from "@jwcarman/roux-web/form";
 import { z } from "zod";
 
 export const SESSIONS = ["MORNING", "EVENING"] as const;
 
 /** GradingRequest's rules, in the server's words. */
 export const gradingRequestSchema = z.object({
-  rankId: z.string().min(1, { error: "Must not be empty" }).register(fieldRules, { required: true }),
+  rankId: id(),
   heldOn: date(),
   session: oneOf(SESSIONS),
   places: integer().min(1).max(40),

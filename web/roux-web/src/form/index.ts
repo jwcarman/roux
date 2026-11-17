@@ -7,6 +7,7 @@ export {
   date,
   email,
   fieldRules,
+  id,
   integer,
   number,
   oneOf,

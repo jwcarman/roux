@@ -263,3 +263,13 @@ export function oneOf<const V extends readonly [string, ...string[]]>(values: V)
     .pipe(choice)
     .register(fieldRules, { required: true });
 }
+
+// --- id -------------------------------------------------------------------------------------------
+
+/**
+ * A required choice among ids known only at run time (a select of ranks fetched from the server),
+ * `""` for the select's placeholder: `Must not be empty`.
+ */
+export function id() {
+  return z.string({ error: NOT_EMPTY }).min(1).register(fieldRules, { required: true });
+}

@@ -43,6 +43,7 @@ All notable changes to this project are documented in this file. The format foll
 
 - `idSearchOf(raw)` in `@jwcarman/roux-web/paging`, beside `enumSearchOf`, for a URL filter whose values are ids loaded at run time: it keeps a UUID-shaped string and drops anything else to `undefined`.
 - `FilterChips` takes `defaultValue`: the chip shown chosen while the URL has no value, reported as `undefined` when chosen, so the default stays out of the URL. It excludes `allLabel` (a type error to pass both).
+- `id()` in `@jwcarman/roux-web/form`: a required select over ids loaded at run time (`""` for the placeholder), with the server's `Must not be empty`, replacing `z.string().min(1, ...).register(fieldRules, ...)` with the message retyped.
 
 ## [0.2.0] - 2026-11-14
 

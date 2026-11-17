@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
-import { date, email, fieldRules, integer, number, oneOf, phone, text, url } from "./rules";
+import { date, email, fieldRules, id, integer, number, oneOf, phone, text, url } from "./rules";
 
 /** The messages a failed parse reports, in order. */
 function messagesOf(result: { success: boolean; error?: z.ZodError }): string[] {
@@ -240,6 +240,29 @@ describe("rules", () => {
     it("takes a select's placeholder as input", () => {
       expectTypeOf<z.input<ReturnType<typeof oneOf<typeof statuses>>>>().toEqualTypeOf<"LEAD" | "ACTIVE" | "">();
       expectTypeOf<z.output<ReturnType<typeof oneOf<typeof statuses>>>>().toEqualTypeOf<"LEAD" | "ACTIVE">();
+    });
+  });
+
+  describe("id", () => {
+    it("accepts a chosen id", () => {
+      expect(id().safeParse("0b9f6c0e-4d3a-4f6e-9a57-1c2d3e4f5a6b")).toEqual({
+        success: true,
+        data: "0b9f6c0e-4d3a-4f6e-9a57-1c2d3e4f5a6b",
+      });
+    });
+
+    it.each(["", undefined])("refuses %s as no choice made", (value) => {
+      expect(messagesOf(id().safeParse(value))).toEqual(["Must not be empty"]);
+    });
+
+    it("is required, and registered as the shape's entry", () => {
+      const schema = z.object({ rankId: id() });
+      expect(fieldRules.get(schema.shape.rankId)).toStrictEqual({ required: true });
+    });
+
+    it("takes a select's placeholder as input", () => {
+      expectTypeOf<z.input<ReturnType<typeof id>>>().toEqualTypeOf<string>();
+      expectTypeOf<z.output<ReturnType<typeof id>>>().toEqualTypeOf<string>();
     });
   });
 });
