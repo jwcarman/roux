@@ -1,0 +1,13 @@
+schema_version: "1.1"
+name: ranks-page
+expected_outcome: |
+  The app gains ranks, kept by the owner: a Ranks page in the sidebar, for the owner only, with the
+  ranks in a table (name and colour) and a dialog to add and edit one. A name is required, at most 40
+  characters and unique: a duplicate is refused by the server as an error on the name field, shown
+  under it in the dialog. The ranks API answers 403 to anyone but the owner. Ranks are stored
+  through a new Liquibase changelog, and `./mvnw -B verify -DskipITs` passes with tests for all of it.
+  In the roux arms, the work is done roux's way: roux-web's client, forms and rules, roux's
+  exceptions, no roux internals (graders marked "roux arms only"; the plain-stack arm is scored on
+  the others).
+context:
+  scaffold_script: place-dojo.sh

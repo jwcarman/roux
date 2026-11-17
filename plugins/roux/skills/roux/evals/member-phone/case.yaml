@@ -1,0 +1,11 @@
+schema_version: "1.1"
+name: member-phone
+expected_outcome: |
+  A member's profile gains an optional phone number of at most 30 characters: stored in a new
+  column through a Liquibase changeset, edited in the member's own profile form, refused over 30
+  characters with a message under the field, and shown in the member directory. `./mvnw -B verify
+  -DskipITs` passes with tests for it. In the roux arms, the work is done roux's way: roux-web's
+  client, forms and rules, roux's exceptions, no roux internals (graders marked "roux arms only";
+  the plain-stack arm is scored on the others).
+context:
+  scaffold_script: place-dojo.sh
