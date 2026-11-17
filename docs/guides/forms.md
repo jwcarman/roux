@@ -16,18 +16,42 @@ The form never calls the API, catches an error, or keeps its own submitting stat
 
 ## Write the schema
 
-The schema mirrors the request record's Bean Validation annotations (without the `version`). For a
-rank, the server's request is:
+The schema mirrors the request record's Bean Validation annotations. For a rank, the server's request
+is (the template's `CustomerRequest` shape):
 
 ```java
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-public record RankRequest(@NotBlank @Size(max = 40) String name, @NotNull BeltColour colour) {}
+/** A new rank, or new values for one. {@code version} is the version being edited, and is ignored when creating. */
+public record RankRequest(@NotBlank @Size(max = 40) String name, @NotNull BeltColour colour, Long version) {}
 ```
 
-and the browser's, in `src/ranks/ranks.ts`:
+`version` is a nullable `Long` with no annotation: a create sends none and the service ignores it. The
+update checks it before changing anything (`InvalidFieldException` from `org.jwcarman.roux.problems`,
+`ObjectOptimisticLockingFailureException` from `org.springframework.orm`):
+
+```java
+public Rank update(UUID id, RankRequest request) {
+  if (request.version() == null) {
+    throw new InvalidFieldException("version", "Must not be empty");
+  }
+  RankEntity rank = find(id);
+  if (!rank.getVersion().equals(request.version())) {
+    throw new ObjectOptimisticLockingFailureException(RankEntity.class, id);
+  }
+  rank.change(request.name(), request.colour());
+  return Rank.of(ranks.saveAndFlush(rank));
+}
+```
+
+Without `version` in the record, Jackson drops the one the client sends and a stale save is never
+refused. See [Errors](errors.md#refuse-a-stale-save-optimistic-locking).
+
+The browser's schema, in `src/ranks/ranks.ts`, leaves `version` out: it is not a field the user edits.
+`updateRank(id, version)` adds it to the request (`{ ...request, version }`), and `createRank` sends
+none:
 
 ```ts
 import { oneOf, text } from "@jwcarman/roux-web/form";
@@ -279,7 +303,7 @@ opens at the latest record. The footer holds Cancel and the submit button; the f
 import { Button } from "@chakra-ui/react";
 import { useState } from "react";
 import { FormDialog, useSchemaForm } from "@jwcarman/roux-web/form";
-import { createRank, rankRequestSchema } from "./ranks";
+import { BELT_COLOURS, createRank, rankRequestSchema } from "./ranks";
 
 /** Opens the new-rank dialog when the page has no ranks yet, as well as from its button. */
 export function FirstRankDialog({ empty }: { empty: boolean }) {
@@ -288,10 +312,16 @@ export function FirstRankDialog({ empty }: { empty: boolean }) {
   return (
     <FormDialog form={form} title="New rank" trigger={<Button>New rank</Button>} open={open} onOpenChange={setOpen}>
       <form.AppField name="name">{(f) => <f.InputField label="Name" />}</form.AppField>
+      <form.AppField name="colour">
+        {(f) => <f.SelectField label="Colour" options={BELT_COLOURS} placeholder="Choose a colour" />}
+      </form.AppField>
     </FormDialog>
   );
 }
 ```
+
+Render a field for every key of the schema. The schema validates the whole form, so a required key
+with no field refuses every submit, and its message has nowhere to show.
 
 `onOpenChange` is told every change: `true` when the trigger is pressed, `false` on Escape, Cancel,
 close, and after a save, so the page closes it by passing that on. It is called in self-managed mode
