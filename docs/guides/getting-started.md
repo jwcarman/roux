@@ -315,7 +315,8 @@ for the package or tree-shake it away.
   outside `who.security.public-paths`. Defining any `SecurityFilterChain` makes who's back off; the
   app's own chain must then mount who with `WhoSecurity.all()` (see who's getting-started guide).
 - **Audit dates follow the app's `Clock`.** With `@EnableJpaAuditing(auditorAwareRef = ...)` and a
-  `Clock` bean, `@CreatedDate` and `@LastModifiedDate` are stamped from that clock, so a test that
+  `Clock` bean, `@CreatedDate` and `@LastModifiedDate` are stamped from that clock (roux-jpa's
+  `ClockDateTimeProvider`, registered for you), so a test that
   sets the clock sets them (an ordering by `created_date` can be tested without waiting). Write no
   `DateTimeProvider` and no `dateTimeProviderRef`; with no `Clock` bean the system clock is used.
   The same `Clock` is the one `@NotInFuture` reads ([Forms](forms.md#the-rule-helpers)).
