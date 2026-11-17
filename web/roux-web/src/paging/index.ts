@@ -1,6 +1,7 @@
 export {
   enumSearchOf,
   fetchAllPages,
+  idSearchOf,
   MAX_PAGE_SIZE,
   MAX_PAGES,
   nextPageIndex,

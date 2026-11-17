@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   enumSearchOf,
+  idSearchOf,
   tableSearchOf,
   fetchAllPages,
   nextPageIndex,
@@ -242,6 +243,21 @@ describe("enumSearchOf", () => {
   it("drops anything else", () => {
     for (const raw of ["ASLEEP", "deactivated", "", undefined, 3, null]) {
       expect(enumSearchOf(raw, STATUSES)).toBeUndefined();
+    }
+  });
+});
+
+describe("idSearchOf", () => {
+  const ID = "0b9f6c0e-4d3a-4f6e-9a57-1c2d3e4f5a6b";
+
+  it("keeps a UUID, in either case", () => {
+    expect(idSearchOf(ID)).toBe(ID);
+    expect(idSearchOf(ID.toUpperCase())).toBe(ID.toUpperCase());
+  });
+
+  it("drops anything else", () => {
+    for (const raw of ["", "ACTIVE", ` ${ID}`, `${ID} `, `x${ID}`, `${ID}0`, ID.replace("-", ""), undefined, 3, null]) {
+      expect(idSearchOf(raw)).toBeUndefined();
     }
   });
 });

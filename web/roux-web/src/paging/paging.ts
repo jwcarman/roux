@@ -174,3 +174,14 @@ export function tableSearchOf<S extends string>(raw: Record<string, unknown>, so
 export function enumSearchOf<T extends string>(raw: unknown, values: readonly T[]): T | undefined {
   return values.find((value) => value === raw);
 }
+
+const ID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * A filter's value from a URL when its values are ids loaded at run time (a route's
+ * `validateSearch`): the value if it is shaped like a UUID, else absent, so a typed or stale URL
+ * never sends the server an id it would refuse.
+ */
+export function idSearchOf(raw: unknown): string | undefined {
+  return typeof raw === "string" && ID_SHAPE.test(raw) ? raw : undefined;
+}

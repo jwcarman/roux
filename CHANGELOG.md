@@ -39,6 +39,10 @@ All notable changes to this project are documented in this file. The format foll
   0.16.0 through 0.20.0.
 - roux-problems answers an enum value in a JSON body that is outside its set (`"role": "OWNER"`) as a field error on that field, `Must be one of MEMBER, INSTRUCTOR` (`items[1].role` inside a list), as it already did for a query parameter. It was the generic 400 with no field. Other unreadable bodies are unchanged.
 
+### Added
+
+- `idSearchOf(raw)` in `@jwcarman/roux-web/paging`, beside `enumSearchOf`, for a URL filter whose values are ids loaded at run time: it keeps a UUID-shaped string and drops anything else to `undefined`.
+
 ## [0.2.0] - 2026-11-14
 
 Forms that are easy to write: Zod schemas with the server's wording, mutations declared once per
