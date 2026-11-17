@@ -43,7 +43,8 @@ export const queryKeys = {
   students: {
     all: ["students"] as const,
     lists: () => [...queryKeys.students.all, "list"] as const,
-    list: (filters: { search?: string; rankId?: string }) => [...queryKeys.students.lists(), filters] as const,
+    list: (filters: { search?: string; status?: string; rankId?: string }) =>
+      [...queryKeys.students.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.students.all, "detail", id] as const,
   },
 };

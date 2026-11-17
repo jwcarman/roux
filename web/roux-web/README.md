@@ -1,20 +1,23 @@
 # @jwcarman/roux-web
 
 The web half of [roux](https://github.com/jwcarman/roux): the React plumbing a roux application needs, written
-once. It is ESM-only and has one subpath per concern.
+once. It is ESM-only and has one subpath per concern; each has a guide.
 
 ## Subpaths
 
-- `@jwcarman/roux-web/problem`: types and helpers for RFC 9457 Problem Details.
-- `@jwcarman/roux-web/api`: the fetch client (`getJson`, `sendJson`, `path`, `baseUrl`), `createQueryClient` (mutations' `meta.refreshes`), and `useServerAction`.
-- `@jwcarman/roux-web/paging`: paging types, `InfiniteList` and `InfiniteSelect`.
-- `@jwcarman/roux-web/table`: a TanStack Table wrapper driven by a query, and `SearchInput`.
-- `@jwcarman/roux-web/feedback`: toasts, confirmation dialogs, error messages, `NotFoundPage`, `ErrorPage` and `removal`.
-- `@jwcarman/roux-web/form`: Zod rule helpers (`text`, `email`, `oneOf`, ...), `useSchemaForm`, fields and `FormDialog`.
-  A save carries the version its draft started from, so it cannot undo someone else's save: the server answers 409,
-  and the form starts over from the record when it differs from the one the draft started from (a 409 that brings
-  no change the form shows, such as a duplicate on create, keeps what was typed, and the next save goes at the latest
-  version).
+- `@jwcarman/roux-web/problem`: the `Problem` type and `problemOf`. [Errors](https://github.com/jwcarman/roux/blob/main/docs/guides/errors.md)
+- `@jwcarman/roux-web/api`: the fetch client, `configureApi`, `createQueryClient` and `useServerAction`.
+  [API client](https://github.com/jwcarman/roux/blob/main/docs/guides/api-client.md), [Queries and mutations](https://github.com/jwcarman/roux/blob/main/docs/guides/queries-and-mutations.md)
+- `@jwcarman/roux-web/paging`: paging types, `InfiniteList`, `InfiniteSelect` and URL helpers.
+  [Tables and paging](https://github.com/jwcarman/roux/blob/main/docs/guides/tables-and-paging.md)
+- `@jwcarman/roux-web/table`: `QueryTable` and its parts, search inputs and filter chips.
+  [Tables and paging](https://github.com/jwcarman/roux/blob/main/docs/guides/tables-and-paging.md)
+- `@jwcarman/roux-web/feedback`: toasts, confirmations, error messages, `NotFoundPage` and `ErrorPage`.
+  [Feedback](https://github.com/jwcarman/roux/blob/main/docs/guides/feedback.md)
+- `@jwcarman/roux-web/form`: Zod rule helpers, `useSchemaForm`, fields and `FormDialog`. [Forms](https://github.com/jwcarman/roux/blob/main/docs/guides/forms.md)
+
+Start with [Getting started](https://github.com/jwcarman/roux/blob/main/docs/guides/getting-started.md); [Testing](https://github.com/jwcarman/roux/blob/main/docs/guides/testing.md) covers Vitest with MSW and
+Playwright.
 
 ## Peer dependencies
 
@@ -23,8 +26,5 @@ The app supplies `@chakra-ui/react`, `@emotion/react`, `@tanstack/react-form`, `
 
 `/form` calls `z.config({ jitless: true })` when it loads, so Zod never probes `eval` and a Content-Security-Policy
 without `unsafe-eval` stays quiet. `package.json` lists that file in `sideEffects`; a bundler must keep it.
-
-See the [repository README](https://github.com/jwcarman/roux#readme) for the Java modules and a schema, API module,
-mutation and form worked through.
 
 Licensed under the Apache License 2.0.

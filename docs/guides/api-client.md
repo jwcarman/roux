@@ -17,7 +17,7 @@ import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
 import type { PageDto, PageParams } from "@jwcarman/roux-web/paging";
 
 /** The student list's filters, as `/api/students` takes them. */
-export type StudentFilters = { search?: string; rankId?: string };
+export type StudentFilters = { search?: string; status?: StudentStatus; rankId?: string };
 
 /** `/api/students`: one function per endpoint. */
 export const studentsApi = {

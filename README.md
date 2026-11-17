@@ -20,115 +20,26 @@ Web, published to npm as `@jwcarman/roux-web` (`web/roux-web`), with one subpath
 
 ## Using roux
 
-In Maven, import the BOM and depend on the starter:
+Every roux app is a Spring Boot app with a React SPA on one origin, who for sign-in, and PostgreSQL.
+The guides in [`docs/guides/`](docs/guides/README.md) say how to build one, one concern each:
 
-```xml
-<dependencyManagement>
-  <dependencies>
-    <dependency>
-      <groupId>org.jwcarman.roux</groupId>
-      <artifactId>roux-bom</artifactId>
-      <version>${roux.version}</version>
-      <type>pom</type>
-      <scope>import</scope>
-    </dependency>
-  </dependencies>
-</dependencyManagement>
+- [Getting started](docs/guides/getting-started.md): the Maven and npm dependencies, who's required
+  settings, the app root, one origin.
+- [Errors](docs/guides/errors.md): throwing errors on the server as Problem Details, and showing them
+  in the browser.
+- [API client](docs/guides/api-client.md): one typed API module per resource.
+- [Queries and mutations](docs/guides/queries-and-mutations.md): `createQueryClient`, query keys,
+  `meta.refreshes`, `useServerAction`.
+- [Forms](docs/guides/forms.md): Zod schemas in the server's words, `useSchemaForm`, fields,
+  `FormDialog`, versions and 409.
+- [Tables and paging](docs/guides/tables-and-paging.md): paged endpoints with jpa-utils, `QueryTable`,
+  search and filters in the URL, infinite lists and selects.
+- [Feedback](docs/guides/feedback.md): toasts, confirmations, error and not-found pages.
+- [Testing](docs/guides/testing.md): Java tests on real who and PostgreSQL, Vitest with MSW,
+  Playwright.
 
-<dependency>
-  <groupId>org.jwcarman.roux</groupId>
-  <artifactId>roux-spring-boot-starter</artifactId>
-</dependency>
-```
-
-In the web app:
-
-```
-npm install @jwcarman/roux-web
-```
-
-```ts
-import { ... } from "@jwcarman/roux-web/problem";
-```
-
-The React, Chakra UI, TanStack and Zod libraries are peer dependencies; the app supplies them.
-
-### A resource, end to end
-
-A Zod schema built from roux's rules (their messages are the server's, word for word):
-
-```ts
-import { z } from "zod";
-import { email, oneOf, text } from "@jwcarman/roux-web/form";
-
-export const CUSTOMER_STATUSES = ["LEAD", "ACTIVE", "CHURNED"] as const;
-
-export const customerRequestSchema = z.object({
-  name: text().max(100),
-  email: email(),
-  company: text().optional(),
-  status: oneOf(CUSTOMER_STATUSES),
-});
-```
-
-An API module, one typed function per endpoint. A path without a leading slash goes under `baseUrl`
-(`/api` by default); one with it (`/who/me`) is used as it is:
-
-```ts
-import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
-
-export const customersApi = {
-  get: (id: string, signal?: AbortSignal) => getJson<CustomerDetail>(path`customers/${id}`, { signal }),
-  list: (params: CustomerListParams, signal?: AbortSignal) =>
-    getJson<PageDto<Customer>>("customers", { params, signal }),
-  create: (request: CustomerRequest) => sendJson<CustomerDetail>("POST", "customers", request),
-  update: (id: string, request: CustomerRequest & { version: number }) =>
-    sendJson<CustomerDetail>("PUT", path`customers/${id}`, request),
-};
-```
-
-A mutation, declared once. Build the app's query client with `createQueryClient()`, and the queries named
-in `meta.refreshes` are refetched after every answer, a refusal included:
-
-```ts
-import { mutationOptions } from "@tanstack/react-query";
-
-export const updateCustomer = (id: string, version: number) =>
-  mutationOptions({
-    mutationFn: (request: CustomerRequest) => customersApi.update(id, { ...request, version }),
-    meta: { refreshes: [queryKeys.customers.detail(id), queryKeys.customers.lists()] },
-  });
-```
-
-And the form. `useSchemaForm` validates with the schema, submits its parsed output through the mutation,
-puts a 400's field errors under their fields and toasts any other refusal; the dialog opens, closes and
-resets itself:
-
-```tsx
-export function CustomerFormDialog({ customer, trigger }: { customer?: CustomerDetail; trigger: ReactElement }) {
-  const form = useSchemaForm({
-    schema: customerRequestSchema,
-    // The record's nullable company becomes the input's "" (the schema's parse turns "" back into null).
-    defaultValues: customer
-      ? { name: customer.name, email: customer.email, company: inputOf(customer.company), status: customer.status }
-      : { name: "", email: "", company: "", status: "LEAD" },
-    mutation: customer ? updateCustomer(customer.id, customer.version) : createCustomer,
-    onSuccess: (saved) => notify.success(`${saved.name} was saved`),
-  });
-
-  return (
-    <FormDialog form={form} title={customer ? `Edit ${customer.name}` : "New customer"} trigger={trigger}>
-      <form.AppField name="name">{(f) => <f.InputField label="Name" />}</form.AppField>
-      <form.AppField name="email">{(f) => <f.InputField label="Email" type="email" />}</form.AppField>
-      <form.AppField name="company">{(f) => <f.InputField label="Company" />}</form.AppField>
-      <form.AppField name="status">{(f) => <f.SelectField label="Status" options={CUSTOMER_STATUSES} />}</form.AppField>
-    </FormDialog>
-  );
-}
-```
-
-`required` and `maxLength` come from the schema. A button that calls the server uses
-`useServerAction(archiveCustomer(id))`.
+The guides are also the references of roux's Claude Code plugin (`plugins/roux`), so an agent
+building a roux app reads the same pages.
 
 ## Building
 
