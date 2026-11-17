@@ -1,5 +1,5 @@
-import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
-import { inboxSnapshot, nextSignInLink, openDialog, openLink, ownerEmail, signInByLink } from "./helpers";
+import { expect, test, type Page } from "@playwright/test";
+import { invite, openDialog, ownerEmail, signInByLink, signedInThrough } from "./helpers";
 
 // One school for the whole file: the tests run in order and each builds on the last.
 test.describe.configure({ mode: "serial" });
@@ -10,35 +10,6 @@ const student = { first: "Ada", last: `Lovelace ${tag}` };
 const studentName = `${student.first} ${student.last}`;
 const instructorEmail = `ivy.${tag}@dojo.test`;
 const memberEmail = `mo.${tag}@dojo.test`;
-
-/** The owner, signed in on `page`, invites `name` and returns the sign-in link the invitation sent. */
-async function invite(
-  page: Page,
-  request: APIRequestContext,
-  name: string,
-  email: string,
-  role: "Member" | "Instructor",
-): Promise<string> {
-  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Members" }).click();
-  const seen = await inboxSnapshot(request, email);
-  const dialog = await openDialog(page, "Invite member", "Invite a member");
-  await dialog.getByLabel("Name").fill(name);
-  await dialog.getByLabel("Email").fill(email);
-  await dialog.getByLabel("Role").selectOption({ label: role });
-  await dialog.getByRole("button", { name: "Send invitation" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Invitation sent" })).toBeVisible();
-  await expect(dialog).toBeHidden();
-  return nextSignInLink(request, email, seen);
-}
-
-/** A browser of its own, signed in through `link`, on the home page. */
-async function signedInThrough(browser: Browser, link: string) {
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  await openLink(page, link);
-  await expect(page.getByRole("heading", { name: "Home", level: 2 })).toBeVisible();
-  return { context, page };
-}
 
 /** The names of this file's ranks in the ladder, top to bottom. */
 async function ladder(page: Page): Promise<string[]> {
@@ -161,7 +132,7 @@ test("a member sees the ranks and students, read-only", async ({ browser, page, 
 
 test("signed out, a reload of a school page lands on sign-in, not a 401 page", async ({ browser, page, request }) => {
   await page.goto("/students");
-  await signInByLink(page, request, ownerEmail);
+  await signInByLink(page, request, ownerEmail, { name: "Students", level: 2 });
   await page.goto("/students");
   await page.getByRole("link", { name: /./ }).first().waitFor();
   const id = await page.evaluate(async () => {

@@ -2,10 +2,10 @@ import { expect, test } from "@playwright/test";
 import { openDialog, ownerEmail, signInByLink } from "./helpers";
 
 test("the members table keeps its page, sort and search in the URL", async ({ page, request }) => {
-  // Signed out, the route sends the visitor to sign in.
+  // Signed out, the route sends the visitor to sign in, and signing in goes back to the page.
   await page.goto("/members");
   await expect(page).toHaveURL(/\/signin$/);
-  await signInByLink(page, request, ownerEmail);
+  await signInByLink(page, request, ownerEmail, { name: "Members", level: 2 });
 
   // Enough members for three pages of one, named with a tag only this run uses.
   const tag = `url${Date.now().toString(36)}`;

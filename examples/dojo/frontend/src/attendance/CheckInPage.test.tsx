@@ -171,6 +171,19 @@ describe("CheckInPage", () => {
     expect(marks.get("s1")).toBe(false);
   });
 
+  it("two taps in the same instant, before the screen has shown the first, still undo each other", async () => {
+    const { marks, sent } = school();
+    renderRoute("/classes/c1/check-in", STAFF);
+    const ada = await toggle("Ada Lovelace");
+
+    fireEvent.click(ada);
+    fireEvent.click(ada);
+
+    await waitFor(() => expect(sent.map((request) => request.present)).toEqual([true, false]));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ada Lovelace" })).toHaveAttribute("aria-pressed", "false"));
+    expect(marks.get("s1")).toBe(false);
+  });
+
   it("three taps in a row end present, whatever the server was slow about", async () => {
     const { marks } = school();
     server.use(

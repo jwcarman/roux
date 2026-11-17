@@ -1,5 +1,6 @@
 import { redirect } from "@tanstack/react-router";
 import type { Me } from "../api";
+import { rememberReturn } from "./returnTo";
 
 /**
  * Route guards, for `beforeLoad`. Each throws a redirect when the caller may not see the route;
@@ -7,9 +8,15 @@ import type { Me } from "../api";
  * cannot use.
  */
 
-/** The signed-in caller; a signed-out visitor goes to sign in. */
-export function requireSignedIn(me: Me | null | undefined): Me {
+/**
+ * The signed-in caller; a signed-out visitor goes to sign in, and signing in sends them on to
+ * `returnTo` (the page they asked for, with its search) when it is given.
+ */
+export function requireSignedIn(me: Me | null | undefined, returnTo?: string): Me {
   if (!me) {
+    if (returnTo !== undefined) {
+      rememberReturn(returnTo);
+    }
     throw redirect({ to: "/signin" });
   }
   return me;

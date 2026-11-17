@@ -1,4 +1,11 @@
-import { expect, type APIRequestContext, type CDPSession, type Locator, type Page } from "@playwright/test";
+import {
+  expect,
+  type APIRequestContext,
+  type Browser,
+  type CDPSession,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 
 export const mailpit = process.env.E2E_MAILPIT_URL ?? "http://localhost:8025";
 export const ownerEmail = process.env.E2E_OWNER_EMAIL ?? "owner@dojo.test";
@@ -97,9 +104,15 @@ export async function openLink(page: Page, link: string) {
 
 /**
  * Asks for a sign-in link on the sign-in page (already open), reads it from Mailpit and opens it
- * in the same tab.
+ * in the same tab. Signing in lands on Home, unless the visitor was sent to sign in from a page of
+ * their own: then `landsOn` is that page's heading.
  */
-export async function signInByLink(page: Page, request: APIRequestContext, address: string) {
+export async function signInByLink(
+  page: Page,
+  request: APIRequestContext,
+  address: string,
+  landsOn: { name: string; level: number } = { name: "Home", level: 2 },
+) {
   await expect(page.getByRole("heading", { name: "Sign in", level: 2 })).toBeVisible();
   const seen = await inboxSnapshot(request, address);
   await page.getByLabel("Email").fill(address);
@@ -116,7 +129,7 @@ export async function signInByLink(page: Page, request: APIRequestContext, addre
     link = await nextSignInLink(request, address, seen);
   }
   await openLink(page, link);
-  await expect(page.getByRole("heading", { name: "Home", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: landsOn.name, level: landsOn.level })).toBeVisible();
 }
 
 /** Chrome's virtual authenticator, standing in for Touch ID: it creates and uses real passkeys. */
@@ -197,4 +210,33 @@ export async function openDialog(page: Page, button: string, dialogName: string)
   await expect(page.getByRole("dialog")).toHaveCount(1);
   await dialog.evaluate((element) => Promise.all(element.getAnimations({ subtree: true }).map((a) => a.finished)));
   return dialog;
+}
+
+/** The owner, signed in on `page`, invites `name` and returns the sign-in link the invitation sent. */
+export async function invite(
+  page: Page,
+  request: APIRequestContext,
+  name: string,
+  email: string,
+  role: "Member" | "Instructor",
+): Promise<string> {
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Members" }).click();
+  const seen = await inboxSnapshot(request, email);
+  const dialog = await openDialog(page, "Invite member", "Invite a member");
+  await dialog.getByLabel("Name").fill(name);
+  await dialog.getByLabel("Email").fill(email);
+  await dialog.getByLabel("Role").selectOption({ label: role });
+  await dialog.getByRole("button", { name: "Send invitation" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Invitation sent" })).toBeVisible();
+  await expect(dialog).toBeHidden();
+  return nextSignInLink(request, email, seen);
+}
+
+/** A browser of its own, signed in through `link`, on the home page. */
+export async function signedInThrough(browser: Browser, link: string) {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await openLink(page, link);
+  await expect(page.getByRole("heading", { name: "Home", level: 2 })).toBeVisible();
+  return { context, page };
 }

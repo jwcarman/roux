@@ -1,10 +1,11 @@
 import { Button, Heading, Stack, Text } from "@chakra-ui/react";
-import { useNavigate } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { send } from "@jwcarman/roux-web/api";
 import { email, useAppForm } from "@jwcarman/roux-web/form";
 import { z } from "zod";
 import { signInWithPasskey } from "../members/passkeys";
+import { takeReturn } from "./returnTo";
 import { useSession } from "./session";
 
 /** The address to email a sign-in link to, in roux's words. */
@@ -12,7 +13,7 @@ const linkRequestSchema = z.object({ email: email() });
 
 export function SignIn() {
   const { refresh } = useSession();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +36,12 @@ export function SignIn() {
     try {
       if (await signInWithPasskey()) {
         await refresh();
-        await navigate({ to: "/" });
+        const returnTo = takeReturn();
+        if (returnTo === undefined) {
+          await router.navigate({ to: "/" });
+        } else {
+          router.history.push(returnTo);
+        }
       } else {
         setError("Passkey sign-in failed.");
       }

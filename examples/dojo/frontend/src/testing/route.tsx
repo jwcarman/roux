@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
+import { createBrowserHistory, createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { render } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { ColorModeProvider } from "../shell/colorMode";
@@ -14,9 +14,14 @@ import { server } from "./server";
 /**
  * Opens `path` in the whole app, as TanStack's file-based routing guide tests routes: a router
  * built from the generated route tree, in memory, signed in with `permissions` (or signed out with
- * `null`). Returns the router, so a test can check where it ended up.
+ * `null`). Returns the router, so a test can check where it ended up. `browserHistory` uses the
+ * window's own address bar instead of memory, for what only the browser's history does (a page that
+ * rewrites the address itself, as the sign-in link's does).
  */
-export function renderRoute(path: string, { permissions }: { permissions: string[] | null }) {
+export function renderRoute(
+  path: string,
+  { permissions, browserHistory = false }: { permissions: string[] | null; browserHistory?: boolean },
+) {
   server.use(
     http.get("/who/me", () =>
       permissions === null
@@ -25,9 +30,12 @@ export function renderRoute(path: string, { permissions }: { permissions: string
     ),
   );
   const client = testQueryClient();
+  if (browserHistory) {
+    window.history.replaceState({}, "", path);
+  }
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: [path] }),
+    history: browserHistory ? createBrowserHistory() : createMemoryHistory({ initialEntries: [path] }),
     context: { queryClient: client, session: undefined! },
   });
 

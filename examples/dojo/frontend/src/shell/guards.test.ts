@@ -1,8 +1,10 @@
+// @vitest-environment jsdom
 import { isRedirect } from "@tanstack/react-router";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { Me } from "../api";
 import { MEMBERS_READ } from "../api";
 import { requirePermission, requireSignedIn, requireSignedOut } from "./guards";
+import { takeReturn } from "./returnTo";
 
 const member: Me = { identityId: "ada", permissions: [MEMBERS_READ] };
 const outsider: Me = { identityId: "eve", permissions: [] };
@@ -18,8 +20,24 @@ function redirectOf(guard: () => unknown): string | undefined {
 }
 
 describe("guards", () => {
+  afterEach(() => {
+    localStorage.clear();
+  });
+
   it("sends a signed-out visitor to sign in", () => {
     expect(redirectOf(() => requireSignedIn(null))).toBe("/signin");
+  });
+
+  it("remembers the page a signed-out visitor asked for, so signing in can go back to it", () => {
+    expect(redirectOf(() => requireSignedIn(null, "/classes/c1/check-in?date=2026-03-10"))).toBe("/signin");
+
+    expect(takeReturn()).toBe("/classes/c1/check-in?date=2026-03-10");
+  });
+
+  it("remembers nothing for a caller who is signed in", () => {
+    requireSignedIn(member, "/students");
+
+    expect(takeReturn()).toBeUndefined();
   });
 
   it("lets a signed-in caller through, and returns who it is", () => {

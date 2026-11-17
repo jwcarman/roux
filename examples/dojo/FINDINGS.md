@@ -285,6 +285,10 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   while a queued second tap is still waiting, and the row flickers back. The queries guide's "never
   refresh by hand" leaves no room for the usual `onSettled` check ("only the last pending mutation
   invalidates").
+  Also: a queue of taps is lost if the user leaves the page before it drains (each waits for the one
+  before to be answered and refetched), and a double tap is handled before React shows the first,
+  so the handler cannot read the rendered value (a ref holds what was last asked); both only showed
+  in a real browser (Playwright's `dblclick`), not in Testing Library's awaited clicks.
 - roux could: a short "An optimistic toggle" section in queries-and-mutations.md with this recipe
   (scope, wanted-state variable, `useMutationState`), or `useServerAction` returning the pending
   variables.
@@ -333,3 +337,27 @@ What building the dojo showed about roux: one entry per finding, in the order fo
 - roux could: say in the guide how an endpoint pins its order (the `PageSpec` wrapper), or a
   `cfg.defaultDirection(DESC)` in jpa-utils.
 - Outcome: deferred (guide note; the paginator is jpa-utils').
+
+## Going back to the page after sign-in is the app's to write, in four places
+- Where: `shell/returnTo.ts`, `routes/_signedIn.tsx`, `shell/guards.ts`, `shell/LinkLanding.tsx`, `shell/SignIn.tsx`
+- What was clunky: a signed-out reload of a deep link (`/classes/<id>/check-in?date=...`) is served the
+  shell and sent to sign-in, but signing in always landed on Home, so the visitor lost the page and its
+  date. Nothing in roux or the guides covers it. The emailed link opens in a new tab, so the place
+  cannot live in the URL or in session storage: it is kept in local storage by the guard and taken by
+  the link's landing page and the passkey button, with a check that only an in-app path is ever
+  returned to (an open redirect otherwise), and with storage failures swallowed.
+  The link's landing page (from the template) also strips the token with
+  `history.replaceState(null, "", window.location.pathname)`, and React re-ran that effect as the page
+  was left, which rewrote the next page's address without its search: found only by Playwright, then
+  reproduced in Vitest with the browser's own history (`renderRoute(..., { browserHistory: true })`).
+- roux could: say how in the getting-started guide's sign-in section, or ship `rememberReturn` /
+  `takeReturn` with the session provider (who owns the sign-in pages, so possibly who's).
+- Outcome: deferred (the user decides whether it is roux's or who's).
+
+## The app's CLAUDE.md taught `invalidateQueries`
+- Where: `examples/dojo/CLAUDE.md` ("Rules that are easy to miss")
+- What was clunky: it still said to refresh what a change affects with `invalidateQueries`, which the
+  skill and the queries guide forbid (`meta.refreshes` only works on roux's client and covers refusals).
+  An agent following the app's own notes would have written the wrong form, as in the README finding.
+- roux could: nothing more than the README finding's answer: an app's notes point at the guides.
+- Outcome: fixed in this commit.
