@@ -32,7 +32,7 @@ spring:
       cache:
         cachecontrol:
           # The SPA's shell (index.html) and other unhashed files: revalidate on every load, so a
-          # deploy is picked up at once. Hashed /assets/** are cached for a year (SpaController).
+          # deploy is picked up at once. roux caches the hashed /assets/** for a year.
           no-cache: true
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
@@ -53,22 +53,10 @@ who:
   # Liquibase creates who's tables (db.changelog-master.xml includes who's changelog).
   initialize-schema: never
   security:
-    # What a signed-out browser may load: the SPA's shell, every client route (SpaController.ROUTES,
-    # so a deep link opens signed out and the app sends the visitor to sign in) and the files they
-    # load. who's own sign-in endpoints are open already; everything else answers 401.
+    # What a signed-out browser may load besides what roux opens (the shell, /index.html, which
+    # roux's SPA filter serves for every client route, and /assets/**): the icons at the root.
+    # who's own sign-in endpoints are open already; everything else answers 401.
     public-paths:
-      - /
-      - /index.html
-      - /settings
-      - /appearance
-      - /members
-      - /members/*
-      - /ranks
-      - /students
-      - /students/*
-      - /signin
-      - /signin/link
-      - /assets/**
       - /favicon.ico
       - /favicon.svg
   email-link:

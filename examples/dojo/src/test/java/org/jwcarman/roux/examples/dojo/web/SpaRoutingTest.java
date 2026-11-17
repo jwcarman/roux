@@ -31,16 +31,27 @@ class SpaRoutingTest {
   private static final String SAMPLE_ID = "0190c1de-0000-7000-8000-000000000000";
 
   /**
-   * Every client route, as a signed-out browser opens it: a route missing from {@code
-   * who.security.public-paths} answers 401 here instead of the shell.
+   * The app's pages, as a signed-out browser opens them. The server has no list of them (roux's SPA
+   * filter serves the shell for any page URL), so this is only what the test opens.
    */
-  static Stream<String> routes() {
-    return Stream.of(SpaController.ROUTES).map(route -> route.replace("*", SAMPLE_ID));
+  static Stream<String> pages() {
+    return Stream.of(
+        "/",
+        "/settings",
+        "/appearance",
+        "/members",
+        "/members/" + SAMPLE_ID,
+        "/ranks",
+        "/students",
+        "/students/" + SAMPLE_ID,
+        "/signin",
+        "/signin/link",
+        "/a/page/no/route/file/names");
   }
 
   @ParameterizedTest
-  @MethodSource("routes")
-  void spaRoutesServeIndex(String path) {
+  @MethodSource("pages")
+  void aDeepLinkServesTheShellSignedOut(String path) {
     ResponseEntity<String> response = get(path);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -60,12 +71,25 @@ class SpaRoutingTest {
   }
 
   @Test
-  void unknownPathsNeedASignedInCaller() {
-    ResponseEntity<String> response = get("/reports/export");
+  void unknownApiPathsNeedASignedInCaller() {
+    ResponseEntity<String> response = get("/api/reports/export");
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     assertThat(response.getHeaders().getLocation()).isNull();
-    assertThat(get("/admin").getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+  }
+
+  @Test
+  void aFetchForAPageUrlIsNotTheShell() {
+    ResponseEntity<String> response =
+        LocalClient.to(port)
+            .get()
+            .uri("/reports/export")
+            .accept(MediaType.APPLICATION_JSON)
+            .retrieve()
+            .onStatus(status -> true, (request, r) -> {})
+            .toEntity(String.class);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
   }
 
   @Test
@@ -205,6 +229,7 @@ class SpaRoutingTest {
     return LocalClient.to(port)
         .head()
         .uri(path)
+        .accept(MediaType.TEXT_HTML)
         .retrieve()
         .onStatus(status -> true, (request, response) -> {})
         .toBodilessEntity();

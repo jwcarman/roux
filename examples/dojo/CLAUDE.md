@@ -22,8 +22,7 @@ feature" section is the full worked example (member profiles); read the part you
   `description` an owner would understand (add its icon to `ICONS` in `shell/nav.ts` if it is new). When a request decides which page the app opens on,
   move `"start": true` to it and remove Home (`/`) from `nav.json`; exactly one place has it. A
   place's `permission` in `nav.json` is the same one its route's `requirePermission` checks. A new
-  URL is also added to `SpaController.ROUTES` and to `who.security.public-paths` in
-  `application.yml`.
+  URL needs nothing on the server: roux serves the shell for any page URL.
 
 ## Rules that are easy to miss
 

@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 test("hashed assets are cached for a year and the shell is never stored", async ({
   request,
 }) => {
-  const shell = await request.get("/");
+  const shell = await request.get("/", { headers: { Accept: "text/html" } });
   expect(shell.ok()).toBe(true);
   // Each copy carries its own Content-Security-Policy nonce, so none may be reused.
   expect(shell.headers()["cache-control"]).toContain("no-store");

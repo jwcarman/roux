@@ -36,7 +36,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   path, but only after the fact.
 - roux could: serve the shell for any GET that accepts HTML and is not under `/api` or `/who`
   (a `roux-spa` module), so the route file is the only place.
-- Outcome: deferred (the roux-spa proposal at the end of round 1).
+- Outcome: fixed in 47474e9.
 
 ## The guides have no ordered list
 - Where: `ranks/` (move up, move down, positions)

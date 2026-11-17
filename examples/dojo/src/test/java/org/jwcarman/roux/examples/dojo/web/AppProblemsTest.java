@@ -57,10 +57,11 @@ class AppProblemsTest {
   }
 
   @Test
-  void aMissingPageGoesOnToTheErrorPage() throws Exception {
-    // the error page renders the app, which says "Page not found"; a problem would be raw JSON
+  void aMissingFileGoesOnToTheErrorPage() throws Exception {
+    // A page URL gets the shell (roux's SPA filter); a missing file, which has an extension,
+    // reaches the error page, which renders the app, which says "Page not found"
     browser
-        .perform(get("/no-such-page").accept(MediaType.TEXT_HTML))
+        .perform(get("/no-such-page.html").accept(MediaType.TEXT_HTML))
         .andExpect(status().isNotFound())
         .andExpect(header().doesNotExist("Content-Type"));
   }

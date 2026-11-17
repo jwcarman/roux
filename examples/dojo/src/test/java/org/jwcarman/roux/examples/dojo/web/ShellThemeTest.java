@@ -11,6 +11,7 @@ import org.jwcarman.roux.examples.dojo.theme.AppTheme.Settings;
 import org.jwcarman.roux.examples.dojo.theme.ThemeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.web.util.HtmlUtils;
 
 import tools.jackson.databind.json.JsonMapper;
@@ -79,7 +80,7 @@ class ShellThemeTest {
   private String signedOutPage() throws Exception {
     return members
         .anonymous()
-        .perform(get("/signin"))
+        .perform(get("/signin").accept(MediaType.TEXT_HTML))
         .andReturn()
         .getResponse()
         .getContentAsString();

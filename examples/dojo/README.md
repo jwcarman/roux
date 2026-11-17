@@ -13,8 +13,8 @@ It builds in roux's reactor (`./mvnw verify` from the repository's root) and is 
 - **who** (passwordless sign-in), through `roux-spring-boot-starter`: email links (with typed
   codes), passkeys (P-256 and Ed25519), roles (`OWNER`, `MEMBER`), invitations, and passkey
   revocation. who's own security chain is the app's: a signed-out request gets `401` unless its path
-  is in `who.security.public-paths` (application.yml), which lists the SPA's shell, its client
-  routes and its files.
+  is in `who.security.public-paths` (application.yml), which lists the icons at the root; roux opens
+  the SPA's shell and assets.
 - **PostgreSQL** with a **Liquibase XML** schema (who's changelog first, then the app's), and
   **Spring Data JPA** with [jpa-utils](https://github.com/jwcarman/jpa-utils) for the app's own
   tables (Hibernate validates its mappings against the schema at startup).
@@ -84,9 +84,8 @@ are the worked example. Copy their shape:
 - **Routes are TanStack Router files** (`frontend/src/routes`, file-based; the Vite plugin
   generates `routeTree.gen.ts`, which is committed as TanStack recommends). A route's `beforeLoad`
   guards it with `shell/guards.ts` (`requireSignedIn`, `requirePermission`); pages under
-  `_signedIn/` need a signed-in caller. A new route's URL is also added to `SpaController.ROUTES`
-  (which serves the page for it) and to `who.security.public-paths` in `application.yml` (so a
-  signed-out deep link opens the app, which sends the visitor to sign in).
+  `_signedIn/` need a signed-in caller. A new route is the route file alone: roux's SPA
+  filter serves the shell for any page URL, signed out too, and the app sends the visitor to sign in.
 - **List state lives in the URL.** The members route declares its search params with
   `validateSearch: (raw) => tableSearchOf(raw, MEMBER_SORTS)` (unknown sorts and bad pages are
   dropped) and leaves defaults out of the URL with `stripSearchParams`; the page hands them to

@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.util.stream.Stream;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -34,12 +33,14 @@ import org.springframework.web.util.HtmlUtils;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Serves the single-page app's page, {@code index.html} as Vite built it, for each client route
- * ({@link SpaController#ROUTES}) and for {@code /index.html} itself. Vite marks every script and
- * style tag with {@link #NONCE_PLACEHOLDER} ({@code html.cspNonce} in {@code vite.config.ts}); each
- * response replaces it with that request's nonce, the one its Content-Security-Policy allows. Each
- * response also carries the owner's theme ({@link #THEME_PLACEHOLDER}) and the app's name as the
- * page title ({@link #APP_NAME_PLACEHOLDER}), read when the page is rendered.
+ * Serves the single-page app's page, {@code index.html} as Vite built it. roux's SPA filter
+ * presents every page URL (any client route) to the app as a request for {@code /index.html}, so
+ * this is the one route, and the frontend's route files are the only list of pages. Vite marks
+ * every script and style tag with {@link #NONCE_PLACEHOLDER} ({@code html.cspNonce} in {@code
+ * vite.config.ts}); each response replaces it with that request's nonce, the one its
+ * Content-Security-Policy allows. Each response also carries the owner's theme ({@link
+ * #THEME_PLACEHOLDER}) and the app's name as the page title ({@link #APP_NAME_PLACEHOLDER}), read
+ * when the page is rendered.
  *
  * <p>{@link PageTheme} is written with Jackson, so a native image needs its record components.
  */
@@ -72,10 +73,7 @@ public class ShellController {
 
   @Bean
   RouterFunction<ServerResponse> shellRoutes() {
-    RouterFunctions.Builder routes = RouterFunctions.route();
-    Stream.concat(Stream.of(SpaController.ROUTES), Stream.of("/index.html"))
-        .forEach(path -> routes.route(GET(path).or(HEAD(path)), this::render));
-    return routes.build();
+    return RouterFunctions.route(GET("/index.html").or(HEAD("/index.html")), this::render);
   }
 
   /**
