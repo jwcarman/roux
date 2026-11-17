@@ -70,6 +70,7 @@ describe("StudentsPage", () => {
     const table = await screen.findByRole("table", { name: "Students" });
     expect(await within(table).findByRole("row", { name: /Ada Lovelace/ })).toHaveTextContent("Yellow");
     expect(within(table).getByRole("row", { name: /Alan Turing/ })).toHaveTextContent("—");
+    expect(within(table).getByRole("link", { name: "Ada Lovelace" })).toHaveAttribute("href", "/students/s1");
     expect(screen.queryByRole("button", { name: "New student" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Edit/ })).not.toBeInTheDocument();
   });

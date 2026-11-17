@@ -128,3 +128,32 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   in its example, so each service copies them.
 - roux could: `Versions.require(entity, requestVersion)` in roux-problems.
 - Outcome: deferred.
+
+## A read-model view does not see unflushed writes
+- Where: `students/PromotionService`, `StudentService.detail`
+- What was clunky: Hibernate flushes pending changes before a query only when the query touches
+  the changed tables, and a query over `student_list` (a view) names no table the promotion
+  touched. A promotion saved without `flush` was missing from the detail read straight after it.
+  Every write that answers with the read model has to `saveAndFlush` or `flush` by hand; nothing
+  says so in the guides, and a missing flush fails only in the answer, not at compile time.
+- roux could: say it where the paging guide shows a list over a view, or give the pattern a
+  helper (a `@Transactional` read that flushes first).
+- Outcome: deferred (guide work).
+
+## A select over ids loaded at run time retypes the server's message
+- Where: `students/students.ts` (`promotionRequestSchema.rankId`)
+- What was clunky: there is no helper for a required choice among ids known only at run time, so
+  the schema is `z.string().min(1, { error: "Must not be empty" }).register(fieldRules, ...)`, which
+  retypes the server's `@NotNull` words, as the forms guide itself shows. The skill says never to.
+- roux could: a `choice()` (or `id()`) rule beside `oneOf`, with `Must not be empty`.
+- Outcome: deferred.
+
+## Referring features need a hook into a rank's removal that roux does not offer
+- Where: `ranks/RankRemovalCheck`, `students/PromotionRankRemovalCheck`
+- What was clunky: "a rank a student holds may not be removed" belongs to the feature that refers
+  to ranks, so the dojo made its own `RankRemovalCheck` interface that `RankService` collects. The
+  guides' only answer to "refuse because of what else exists" is a service checking its own
+  repository, which would make `ranks` depend on `students`.
+- roux could: leave it to the app (it is plain Spring), but say so: the errors guide could show
+  this inversion for a `ConflictException` that depends on another feature.
+- Outcome: deferred (guide note).

@@ -1,6 +1,6 @@
-import { mutationOptions } from "@tanstack/react-query";
+import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
-import { date, email, phone, text } from "@jwcarman/roux-web/form";
+import { date, email, fieldRules, phone, text } from "@jwcarman/roux-web/form";
 import { pageQuery, type PageDto, type PageParams } from "@jwcarman/roux-web/paging";
 import { z } from "zod";
 import { queryKeys } from "../queryKeys";
@@ -29,8 +29,17 @@ export interface Student {
   version: number;
 }
 
-/** A student as their own page shows them. */
-export type StudentDetail = Student;
+/** A promotion as `/api/students/{id}` lists it. */
+export interface Promotion {
+  id: string;
+  rank: Rank;
+  date: string;
+}
+
+/** A student as their own page shows them: the promotions are newest first. */
+export interface StudentDetail extends Student {
+  promotions: Promotion[];
+}
 
 /** The list's filters, as `/api/students` takes them (`rankId` is the current rank's). */
 export interface StudentFilters {
@@ -54,6 +63,16 @@ export const studentRequestSchema = z.object({
 /** What a student form sends: trimmed, a blank email, phone or birth date as null. */
 export type StudentRequest = z.output<typeof studentRequestSchema>;
 
+/** PromotionRequest's rules, in the server's words. */
+export const promotionRequestSchema = z.object({
+  // The ranks are loaded at run time, so no helper: `@NotNull UUID rankId`.
+  rankId: z.string().min(1, { error: "Must not be empty" }).register(fieldRules, { required: true }),
+  date: date().refine(notInTheFuture, { error: NOT_IN_THE_FUTURE }),
+});
+
+/** What the promotion form sends. */
+export type PromotionRequest = z.output<typeof promotionRequestSchema>;
+
 /** What a manager can do to a student's status: the endpoint under `/api/students/{id}/`. */
 export type StudentStatusAction = "deactivate" | "reactivate";
 
@@ -61,12 +80,25 @@ export type StudentStatusAction = "deactivate" | "reactivate";
 export const studentsApi = {
   list: (params: PageParams & StudentFilters, signal?: AbortSignal) =>
     getJson<PageDto<Student>>("students", { params, signal }),
+  get: (id: string, signal?: AbortSignal) => getJson<StudentDetail>(path`students/${id}`, { signal }),
   create: (request: StudentRequest) => sendJson<StudentDetail>("POST", "students", request),
   update: (id: string, request: StudentRequest & { version: number }) =>
     sendJson<StudentDetail>("PUT", path`students/${id}`, request),
   changeStatus: (id: string, action: StudentStatusAction) =>
     sendJson<StudentDetail>("POST", path`students/${id}/${action}`),
+  promote: (id: string, request: PromotionRequest) =>
+    sendJson<StudentDetail>("POST", path`students/${id}/promotions`, request),
+  removePromotion: (id: string, promotionId: string) =>
+    sendJson<StudentDetail>("DELETE", path`students/${id}/promotions/${promotionId}`),
 };
+
+/** A student, for a detail page's loader (`ensureQueryData`) and the page (`useSuspenseQuery`). */
+export function studentQuery(id: string) {
+  return queryOptions({
+    queryKey: queryKeys.students.detail(id),
+    queryFn: ({ signal }) => studentsApi.get(id, signal),
+  });
+}
 
 /** The student list under `filters`, as a QueryTable takes it: its key and how to fetch a page. */
 export function studentsPage(filters: StudentFilters) {
@@ -93,4 +125,18 @@ export const changeStudentStatus = (id: string) =>
   mutationOptions({
     mutationFn: ({ action }: { action: StudentStatusAction }) => studentsApi.changeStatus(id, action),
     meta: { refreshes: [queryKeys.students.detail(id), queryKeys.students.lists()] },
+  });
+
+/** Promotes the student `id`; their page and the list (the current rank) refresh. */
+export const promoteStudent = (id: string) =>
+  mutationOptions({
+    mutationFn: (request: PromotionRequest) => studentsApi.promote(id, request),
+    meta: { refreshes: [queryKeys.students.detail(id), queryKeys.students.lists()] },
+  });
+
+/** Takes a promotion of the student `studentId` back; the current rank is recomputed. */
+export const removePromotion = (studentId: string) =>
+  mutationOptions({
+    mutationFn: (promotionId: string) => studentsApi.removePromotion(studentId, promotionId),
+    meta: { refreshes: [queryKeys.students.detail(studentId), queryKeys.students.lists()] },
   });

@@ -32,10 +32,13 @@ public class StudentService {
 
   private final StudentRepository students;
   private final StudentListRepository list;
+  private final PromotionRepository promotions;
 
-  public StudentService(StudentRepository students, StudentListRepository list) {
+  public StudentService(
+      StudentRepository students, StudentListRepository list, PromotionRepository promotions) {
     this.students = students;
     this.list = list;
+    this.promotions = promotions;
   }
 
   /**
@@ -105,7 +108,12 @@ public class StudentService {
    */
   @Transactional(readOnly = true)
   public StudentDetail detail(UUID id) {
-    return StudentDetail.of(list.findById(id).orElseThrow(() -> new StudentNotFoundException(id)));
+    StudentListEntry entry = list.findById(id).orElseThrow(() -> new StudentNotFoundException(id));
+    return StudentDetail.of(
+        entry,
+        promotions.findByStudentIdOrderByPromotedOnDescCreatedDateDesc(id).stream()
+            .map(Promotion::of)
+            .toList());
   }
 
   private StudentDetail setStatus(UUID id, StudentStatus status, String refusal) {

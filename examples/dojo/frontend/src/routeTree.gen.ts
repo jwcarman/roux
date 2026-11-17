@@ -19,6 +19,7 @@ import { Route as SigninLinkRouteImport } from './routes/signin/link'
 import { Route as SignedInMembersIndexRouteImport } from './routes/_signedIn/members/index'
 import { Route as SignedInMembersMemberIdRouteImport } from './routes/_signedIn/members/$memberId'
 import { Route as SignedInStudentsIndexRouteImport } from './routes/_signedIn/students/index'
+import { Route as SignedInStudentsStudentIdRouteImport } from './routes/_signedIn/students/$studentId'
 
 const SignedInRoute = SignedInRouteImport.update({
   id: '/_signedIn',
@@ -69,6 +70,12 @@ const SignedInStudentsIndexRoute = SignedInStudentsIndexRouteImport.update({
   path: '/students/',
   getParentRoute: () => SignedInRoute,
 } as any)
+const SignedInStudentsStudentIdRoute =
+  SignedInStudentsStudentIdRouteImport.update({
+    id: '/students/$studentId',
+    path: '/students/$studentId',
+    getParentRoute: () => SignedInRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof SignedInIndexRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/signin/link': typeof SigninLinkRoute
   '/signin/': typeof SigninIndexRoute
   '/members/$memberId': typeof SignedInMembersMemberIdRoute
+  '/students/$studentId': typeof SignedInStudentsStudentIdRoute
   '/members/': typeof SignedInMembersIndexRoute
   '/students/': typeof SignedInStudentsIndexRoute
 }
@@ -89,6 +97,7 @@ export interface FileRoutesByTo {
   '/': typeof SignedInIndexRoute
   '/signin': typeof SigninIndexRoute
   '/members/$memberId': typeof SignedInMembersMemberIdRoute
+  '/students/$studentId': typeof SignedInStudentsStudentIdRoute
   '/members': typeof SignedInMembersIndexRoute
   '/students': typeof SignedInStudentsIndexRoute
 }
@@ -102,6 +111,7 @@ export interface FileRoutesById {
   '/_signedIn/': typeof SignedInIndexRoute
   '/signin/': typeof SigninIndexRoute
   '/_signedIn/members/$memberId': typeof SignedInMembersMemberIdRoute
+  '/_signedIn/students/$studentId': typeof SignedInStudentsStudentIdRoute
   '/_signedIn/members/': typeof SignedInMembersIndexRoute
   '/_signedIn/students/': typeof SignedInStudentsIndexRoute
 }
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/signin/link'
     | '/signin/'
     | '/members/$memberId'
+    | '/students/$studentId'
     | '/members/'
     | '/students/'
   fileRoutesByTo: FileRoutesByTo
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/'
     | '/signin'
     | '/members/$memberId'
+    | '/students/$studentId'
     | '/members'
     | '/students'
   id:
@@ -138,6 +150,7 @@ export interface FileRouteTypes {
     | '/_signedIn/'
     | '/signin/'
     | '/_signedIn/members/$memberId'
+    | '/_signedIn/students/$studentId'
     | '/_signedIn/members/'
     | '/_signedIn/students/'
   fileRoutesById: FileRoutesById
@@ -220,6 +233,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignedInStudentsIndexRouteImport
       parentRoute: typeof SignedInRoute
     }
+    '/_signedIn/students/$studentId': {
+      id: '/_signedIn/students/$studentId'
+      path: '/students/$studentId'
+      fullPath: '/students/$studentId'
+      preLoaderRoute: typeof SignedInStudentsStudentIdRouteImport
+      parentRoute: typeof SignedInRoute
+    }
   }
 }
 
@@ -229,6 +249,7 @@ interface SignedInRouteChildren {
   SignedInSettingsRoute: typeof SignedInSettingsRoute
   SignedInIndexRoute: typeof SignedInIndexRoute
   SignedInMembersMemberIdRoute: typeof SignedInMembersMemberIdRoute
+  SignedInStudentsStudentIdRoute: typeof SignedInStudentsStudentIdRoute
   SignedInMembersIndexRoute: typeof SignedInMembersIndexRoute
   SignedInStudentsIndexRoute: typeof SignedInStudentsIndexRoute
 }
@@ -239,6 +260,7 @@ const SignedInRouteChildren: SignedInRouteChildren = {
   SignedInSettingsRoute: SignedInSettingsRoute,
   SignedInIndexRoute: SignedInIndexRoute,
   SignedInMembersMemberIdRoute: SignedInMembersMemberIdRoute,
+  SignedInStudentsStudentIdRoute: SignedInStudentsStudentIdRoute,
   SignedInMembersIndexRoute: SignedInMembersIndexRoute,
   SignedInStudentsIndexRoute: SignedInStudentsIndexRoute,
 }

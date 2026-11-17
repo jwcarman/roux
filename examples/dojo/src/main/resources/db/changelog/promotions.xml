@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <!-- A student's promotion to a rank on a date. A rank cannot be removed while any promotion
+       uses it (the foreign key is the last line of defence; RankRemovalCheck says why). -->
+  <changeSet id="promotion" author="dojo">
+    <createTable tableName="promotion">
+      <column name="id" type="uuid"><constraints primaryKey="true" nullable="false"/></column>
+      <column name="version" type="bigint"><constraints nullable="false"/></column>
+      <column name="student_id" type="uuid">
+        <constraints nullable="false" foreignKeyName="fk_promotion_student" references="student(id)"/>
+      </column>
+      <column name="rank_id" type="uuid">
+        <constraints nullable="false" foreignKeyName="fk_promotion_rank" references="rank(id)"/>
+      </column>
+      <column name="promoted_on" type="date"><constraints nullable="false"/></column>
+      <column name="created_date" type="timestamptz"/>
+      <column name="modified_date" type="timestamptz"/>
+      <column name="created_by" type="varchar(64)"/>
+      <column name="modified_by" type="varchar(64)"/>
+    </createTable>
+    <createIndex tableName="promotion" indexName="promotion_student_idx">
+      <column name="student_id"/>
+    </createIndex>
+    <createIndex tableName="promotion" indexName="promotion_rank_idx">
+      <column name="rank_id"/>
+    </createIndex>
+  </changeSet>
+
+  <!-- Each student's current rank: the promotion with the latest date, the latest created when
+       two share a date. A student with no promotion has no row. -->
+  <changeSet id="student-current-rank" author="dojo">
+    <createView viewName="student_current_rank">
+      select distinct on (p.student_id) p.student_id, p.rank_id
+      from promotion p
+      order by p.student_id, p.promoted_on desc, p.created_date desc nulls last
+    </createView>
+  </changeSet>
+
+  <!-- The student list now carries the current rank (students.xml's version had none). -->
+  <changeSet id="student-list-with-rank" author="dojo">
+    <dropView viewName="student_list"/>
+    <createView viewName="student_list">
+      select s.id, s.version, s.first_name, s.last_name, s.email, s.phone, s.birth_date,
+             s.start_date, s.status,
+             lower(s.last_name) || ' ' || lower(s.first_name) as name_key,
+             r.id as rank_id, r.name::varchar as rank_name, r.colour::varchar as rank_colour,
+             r.position as rank_position, r.version as rank_version
+      from student s
+      left join student_current_rank c on c.student_id = s.id
+      left join rank r on r.id = c.rank_id
+    </createView>
+  </changeSet>
+</databaseChangeLog>

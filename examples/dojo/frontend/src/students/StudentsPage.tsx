@@ -1,12 +1,13 @@
-import { Button, Flex, HStack, Heading, Stack, Text, VisuallyHidden } from "@chakra-ui/react";
+import { Button, Flex, HStack, Heading, Link, Stack, Text, VisuallyHidden } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
-import { getRouteApi } from "@tanstack/react-router";
+import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import type { TableSearch } from "@jwcarman/roux-web/paging";
 import { DEFAULT_PAGE_SIZE, DebouncedSearchInput, FilterChips, QueryTable } from "@jwcarman/roux-web/table";
 import { STUDENTS_MANAGE } from "../api";
 import { RankSwatch } from "../ranks/RankSwatch";
 import { ranksQuery } from "../ranks/ranks";
+import { formatDate } from "../shell/format";
 import { useSession } from "../shell/session";
 import { StudentActions } from "./StudentActions";
 import { StudentDialog } from "./StudentDialog";
@@ -34,6 +35,13 @@ const READ_COLUMNS: ColumnDef<Student, unknown>[] = [
   column.accessor((student) => `${student.firstName} ${student.lastName}`, {
     id: "NAME" satisfies StudentSort,
     header: "Name",
+    cell: (info) => (
+      <Link asChild>
+        <RouterLink to="/students/$studentId" params={{ studentId: info.row.original.id }}>
+          {info.getValue()}
+        </RouterLink>
+      </Link>
+    ),
   }),
   column.accessor((student) => student.currentRank?.name ?? null, {
     id: "RANK" satisfies StudentSort,
@@ -50,7 +58,11 @@ const READ_COLUMNS: ColumnDef<Student, unknown>[] = [
       );
     },
   }),
-  column.accessor("startDate", { id: "START_DATE" satisfies StudentSort, header: "Started" }),
+  column.accessor("startDate", {
+    id: "START_DATE" satisfies StudentSort,
+    header: "Started",
+    cell: (info) => formatDate(info.getValue()),
+  }),
   column.accessor("email", { header: "Email", enableSorting: false, cell: (info) => info.getValue() ?? "—" }),
 ];
 

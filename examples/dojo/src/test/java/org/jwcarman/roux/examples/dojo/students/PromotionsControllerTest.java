@@ -1,0 +1,360 @@
+package org.jwcarman.roux.examples.dojo.students;
+
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.time.LocalDate;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.jwcarman.roux.examples.dojo.AppTest;
+import org.jwcarman.roux.examples.dojo.TestMember;
+import org.jwcarman.roux.examples.dojo.TestMembers;
+import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+
+@AppTest
+class PromotionsControllerTest {
+
+  private static final String STUDENTS = "/api/students";
+  private static final String RANKS = "/api/ranks";
+
+  @Autowired TestMembers members;
+  @Autowired ObjectMapper json;
+
+  private TestMember owner;
+  private String white;
+  private String yellow;
+  private String green;
+
+  @BeforeEach
+  void cleanSlate() throws Exception {
+    members.reset("promotion", "student", "rank");
+    owner = members.owner();
+    white = rank("White", "WHITE");
+    yellow = rank("Yellow", "YELLOW");
+    green = rank("Green", "GREEN");
+  }
+
+  @Test
+  void aStudentsPageShowsTheirDetailAndNoRankUntilPromoted() throws Exception {
+    String ada = student("Ada", "Lovelace");
+
+    owner
+        .perform(get(STUDENTS + "/" + ada))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.firstName").value("Ada"))
+        .andExpect(jsonPath("$.currentRank").value(nullValue()))
+        .andExpect(jsonPath("$.promotions", hasSize(0)));
+  }
+
+  @Test
+  void aPromotionSetsTheCurrentRankAndIsListedNewestFirst() throws Exception {
+    String ada = student("Ada", "Lovelace");
+
+    promote(ada, white, "2026-01-10");
+    owner
+        .perform(promotion(ada, yellow, "2026-03-10"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.currentRank.name").value("Yellow"))
+        .andExpect(jsonPath("$.promotions[*].rank.name", contains("Yellow", "White")))
+        .andExpect(jsonPath("$.promotions[*].date", contains("2026-03-10", "2026-01-10")));
+  }
+
+  @Test
+  void aPromotionDatedBeforeAnExistingOneDoesNotChangeTheCurrentRank() throws Exception {
+    String ada = student("Ada", "Lovelace");
+    promote(ada, yellow, "2026-03-10");
+
+    owner
+        .perform(promotion(ada, white, "2025-12-01"))
+        .andExpect(jsonPath("$.currentRank.name").value("Yellow"))
+        .andExpect(jsonPath("$.promotions[*].rank.name", contains("Yellow", "White")));
+  }
+
+  @Test
+  void whenTwoPromotionsShareADateTheLatestRecordedIsCurrent() throws Exception {
+    String ada = student("Ada", "Lovelace");
+    promote(ada, white, "2026-03-10");
+
+    owner
+        .perform(promotion(ada, yellow, "2026-03-10"))
+        .andExpect(jsonPath("$.currentRank.name").value("Yellow"))
+        .andExpect(jsonPath("$.promotions[*].rank.name", contains("Yellow", "White")));
+  }
+
+  @Test
+  void twoStudentsPromotedOnTheSameDayEachHoldTheirOwnRank() throws Exception {
+    String ada = student("Ada", "Lovelace");
+    String alan = student("Alan", "Turing");
+
+    promote(ada, white, "2026-03-10");
+    promote(alan, yellow, "2026-03-10");
+
+    owner
+        .perform(get(STUDENTS + "/" + ada))
+        .andExpect(jsonPath("$.currentRank.name").value("White"));
+    owner
+        .perform(get(STUDENTS + "/" + alan))
+        .andExpect(jsonPath("$.currentRank.name").value("Yellow"));
+  }
+
+  @Test
+  void removingAPromotionRecomputesTheCurrentRank() throws Exception {
+    String ada = student("Ada", "Lovelace");
+    promote(ada, white, "2026-01-10");
+    JsonNode promoted = promote(ada, yellow, "2026-03-10");
+    String yellowPromotion = promoted.get("promotions").get(0).get("id").asString();
+
+    owner
+        .perform(delete(STUDENTS + "/" + ada + "/promotions/" + yellowPromotion))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.currentRank.name").value("White"))
+        .andExpect(jsonPath("$.promotions", hasSize(1)));
+
+    String whitePromotion =
+        json.readTree(
+                owner
+                    .perform(get(STUDENTS + "/" + ada))
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString())
+            .get("promotions")
+            .get(0)
+            .get("id")
+            .asString();
+    owner
+        .perform(delete(STUDENTS + "/" + ada + "/promotions/" + whitePromotion))
+        .andExpect(jsonPath("$.currentRank").value(nullValue()));
+  }
+
+  @Test
+  void theListSortsByCurrentRankWithUnpromotedStudentsLastEitherWay() throws Exception {
+    String ada = student("Ada", "Lovelace");
+    String alan = student("Alan", "Turing");
+    student("Grace", "Hopper");
+    promote(ada, green, "2026-03-10");
+    promote(alan, white, "2026-03-10");
+
+    assertNames("RANK", "ASC", "Alan", "Ada", "Grace");
+    assertNames("RANK", "DESC", "Ada", "Alan", "Grace");
+  }
+
+  @Test
+  void theListFiltersByCurrentRankNotByRanksHeldBefore() throws Exception {
+    String ada = student("Ada", "Lovelace");
+    String alan = student("Alan", "Turing");
+    promote(ada, white, "2026-01-10");
+    promote(ada, yellow, "2026-03-10");
+    promote(alan, white, "2026-03-10");
+
+    owner
+        .perform(get(STUDENTS).param("rankId", white))
+        .andExpect(jsonPath("$.data[*].firstName", contains("Alan")));
+    owner
+        .perform(get(STUDENTS).param("rankId", yellow))
+        .andExpect(jsonPath("$.data[*].firstName", contains("Ada")))
+        .andExpect(jsonPath("$.data[0].currentRank.name").value("Yellow"));
+  }
+
+  @Test
+  void aRankAStudentHoldsOrHasHeldCannotBeRemoved() throws Exception {
+    String ada = student("Ada", "Lovelace");
+    promote(ada, white, "2026-01-10");
+    JsonNode promoted = promote(ada, yellow, "2026-03-10");
+
+    owner
+        .perform(delete(RANKS + "/" + white))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.detail").value("Students hold or have held White"));
+    owner
+        .perform(get(RANKS))
+        .andExpect(jsonPath("$[*].name", contains("White", "Yellow", "Green")));
+
+    // taking the promotion back frees the rank
+    owner
+        .perform(
+            delete(
+                STUDENTS
+                    + "/"
+                    + ada
+                    + "/promotions/"
+                    + promoted.get("promotions").get(1).get("id").asString()))
+        .andExpect(status().isOk());
+    owner.perform(delete(RANKS + "/" + white)).andExpect(status().isNoContent());
+  }
+
+  @Test
+  void aRankNoStudentHoldsCanBeRemoved() throws Exception {
+    owner.perform(delete(RANKS + "/" + green)).andExpect(status().isNoContent());
+  }
+
+  @Test
+  void anUnknownStudentIs404() throws Exception {
+    UUID missing = UUID.randomUUID();
+
+    owner
+        .perform(get(STUDENTS + "/" + missing))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.detail").value("No student " + missing));
+    owner
+        .perform(promotion(missing.toString(), white, "2026-01-10"))
+        .andExpect(status().isNotFound());
+    owner
+        .perform(delete(STUDENTS + "/" + missing + "/promotions/" + UUID.randomUUID()))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void aPromotionOfAnotherStudentIs404() throws Exception {
+    String ada = student("Ada", "Lovelace");
+    String alan = student("Alan", "Turing");
+    JsonNode promoted = promote(ada, white, "2026-01-10");
+    String id = promoted.get("promotions").get(0).get("id").asString();
+
+    owner
+        .perform(delete(STUDENTS + "/" + alan + "/promotions/" + id))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.detail").value("No promotion " + id));
+    owner.perform(get(STUDENTS + "/" + ada)).andExpect(jsonPath("$.promotions", hasSize(1)));
+  }
+
+  @Test
+  void aPromotionToAnUnknownRankIs400OnRankId() throws Exception {
+    String ada = student("Ada", "Lovelace");
+
+    owner
+        .perform(promotion(ada, UUID.randomUUID().toString(), "2026-01-10"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("rankId"))
+        .andExpect(jsonPath("$.errors[0].message").value("No such rank"));
+  }
+
+  @Test
+  void aFutureDateIs400OnDateButTodayIsFine() throws Exception {
+    String ada = student("Ada", "Lovelace");
+
+    owner
+        .perform(promotion(ada, white, LocalDate.now().plusDays(1).toString()))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("date"))
+        .andExpect(jsonPath("$.errors[0].message").value("Must not be in the future"));
+    owner
+        .perform(promotion(ada, white, LocalDate.now().toString()))
+        .andExpect(status().isCreated());
+  }
+
+  @Test
+  void aMissingRankOrDateIs400() throws Exception {
+    String ada = student("Ada", "Lovelace");
+    Map<String, Object> body = new LinkedHashMap<>();
+
+    owner
+        .perform(
+            post(STUDENTS + "/" + ada + "/promotions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(body)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors", hasSize(2)))
+        .andExpect(jsonPath("$.errors[?(@.field == 'rankId')].message").value("Must not be empty"))
+        .andExpect(jsonPath("$.errors[?(@.field == 'date')].message").value("Must not be empty"));
+  }
+
+  @Test
+  void aMemberReadsAStudentButCannotPromote() throws Exception {
+    String ada = student("Ada", "Lovelace");
+    JsonNode promoted = promote(ada, white, "2026-01-10");
+    String id = promoted.get("promotions").get(0).get("id").asString();
+    TestMember grace = members.signedIn("Grace", "grace@example.org", AppRole.MEMBER);
+
+    grace.perform(get(STUDENTS + "/" + ada)).andExpect(status().isOk());
+    for (MockHttpServletRequestBuilder write :
+        List.of(
+            promotion(ada, yellow, "2026-02-01"),
+            delete(STUDENTS + "/" + ada + "/promotions/" + id))) {
+      grace.perform(write).andExpect(status().isForbidden());
+    }
+  }
+
+  @Test
+  void signedOutIs401() throws Exception {
+    members
+        .anonymous()
+        .perform(get(STUDENTS + "/" + UUID.randomUUID()))
+        .andExpect(status().isUnauthorized());
+  }
+
+  private void assertNames(String sortBy, String direction, String... names) throws Exception {
+    owner
+        .perform(get(STUDENTS).param("sortBy", sortBy).param("sortDirection", direction))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data[*].firstName", contains((Object[]) names)));
+  }
+
+  private String rank(String name, String colour) throws Exception {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("name", name);
+    body.put("colour", colour);
+    return idOf(
+        owner
+            .perform(
+                post(RANKS)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json.writeValueAsString(body)))
+            .andExpect(status().isCreated())
+            .andReturn());
+  }
+
+  private String student(String firstName, String lastName) throws Exception {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("firstName", firstName);
+    body.put("lastName", lastName);
+    body.put("startDate", "2026-01-01");
+    return idOf(
+        owner
+            .perform(
+                post(STUDENTS)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json.writeValueAsString(body)))
+            .andExpect(status().isCreated())
+            .andReturn());
+  }
+
+  private JsonNode promote(String studentId, String rankId, String date) throws Exception {
+    MvcResult result =
+        owner
+            .perform(promotion(studentId, rankId, date))
+            .andExpect(status().isCreated())
+            .andReturn();
+    return json.readTree(result.getResponse().getContentAsString());
+  }
+
+  private MockHttpServletRequestBuilder promotion(String studentId, String rankId, String date) {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("rankId", rankId);
+    body.put("date", date);
+    return post(STUDENTS + "/" + studentId + "/promotions")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(json.writeValueAsString(body));
+  }
+
+  private String idOf(MvcResult result) throws Exception {
+    return json.readTree(result.getResponse().getContentAsString()).get("id").asString();
+  }
+}

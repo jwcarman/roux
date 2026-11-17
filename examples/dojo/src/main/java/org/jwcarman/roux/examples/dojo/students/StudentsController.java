@@ -41,6 +41,12 @@ public class StudentsController {
     return students.list(params, search, status, rankId);
   }
 
+  @GetMapping("/{id}")
+  @RequiresPermission(AppRoles.STUDENTS_READ)
+  public StudentDetail detail(@PathVariable UUID id) {
+    return students.detail(id);
+  }
+
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
   @RequiresPermission(AppRoles.STUDENTS_MANAGE)
