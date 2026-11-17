@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.hibernate.exception.ConstraintViolationException;
 import org.jwcarman.roux.problems.ConflictException;
 import org.jwcarman.roux.problems.InvalidFieldException;
+import org.jwcarman.roux.problems.Versions;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
@@ -55,13 +56,8 @@ public class RankService {
    * @throws ObjectOptimisticLockingFailureException if the rank changed since it was read
    */
   public Rank update(UUID id, RankRequest request) {
-    if (request.version() == null) {
-      throw new InvalidFieldException("version", "Must not be empty");
-    }
     RankEntity rank = find(id);
-    if (!rank.getVersion().equals(request.version())) {
-      throw new ObjectOptimisticLockingFailureException(RankEntity.class, id);
-    }
+    Versions.require(rank, request.version());
     requireUniqueName(request.name(), id);
     rank.change(request.name(), request.colour());
     return Rank.of(saveAndFlush(rank));

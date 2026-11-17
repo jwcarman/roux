@@ -107,16 +107,9 @@ export function StudentsPage() {
         <FilterChips
           label="Status"
           options={STATUS_CHIPS}
-          value={search.status ?? "ACTIVE"}
-          onChange={(status) =>
-            navigate({
-              search: (previous) => ({
-                ...previous,
-                status: status === "ACTIVE" ? undefined : status,
-                pageIndex: undefined,
-              }),
-            })
-          }
+          value={search.status}
+          defaultValue="ACTIVE"
+          onChange={(status) => navigate({ search: (previous) => ({ ...previous, status, pageIndex: undefined }) })}
         />
         <FilterChips
           label="Rank"

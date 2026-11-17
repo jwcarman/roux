@@ -45,7 +45,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   out from scratch.
 - roux could: a short "An ordered list" section in tables-and-paging.md, with the ranks as the
   example.
-- Outcome: deferred (guide work at the end of round 1, from the code as built).
+- Outcome: fixed in 10f84aa (guide).
 
 ## The app's test helpers are the app's to keep
 - Where: `src/testing/route.tsx` (no `Toaster`, unlike `main.tsx`), `src/testing/problems.ts`
@@ -69,7 +69,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
 - roux could: `date().notInFuture()` in the browser and a `@NotInFuture` constraint (or a
   `FutureDates.require(clock, field, date)`) on the server, both with the one-day tolerance and the
   app's `Clock`, so the zone problem is solved once.
-- Outcome: deferred (a roux rule on each side).
+- Outcome: fixed in 339a715.
 
 ## A rule the browser has, the server rewrites: `phone()`
 - Where: `students/StudentRequest` (`phone`)
@@ -78,7 +78,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   (`^(?=(?:\D*\d){7})[\d\s+\-().]+$`) was derived from `rules.ts`; if either side changes, they drift.
 - roux could: ship the pattern as a constant (or a `@Phone` constraint) that both sides use, and say
   what it is in the forms guide.
-- Outcome: deferred.
+- Outcome: fixed in a9c0eff.
 
 ## A filter whose values are not a fixed set has no URL helper
 - Where: `routes/_signedIn/students/index.tsx` (`rankId`)
@@ -87,7 +87,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   by hand. The tables guide only shows the enum case.
 - roux could: a `stringSearchOf(raw)` (non-blank text or undefined), or say in the guide that this is
   the way.
-- Outcome: deferred.
+- Outcome: fixed in d8c25a8.
 
 ## A filter with a default is wired by hand on every page
 - Where: `students/StudentsPage.tsx` (status chips), as in `members/MembersPage.tsx`
@@ -97,7 +97,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   "all" chip instead.
 - roux could: `FilterChips defaultValue` (shown selected when the value is undefined, reported as
   undefined when chosen again).
-- Outcome: deferred.
+- Outcome: fixed in b87924f.
 
 ## Sorting by a computed value needs a view and a second entity
 - Where: `students/StudentListEntry`, `student_list` view in `students.xml`
@@ -106,7 +106,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   entity beside the writable one. The paging guide shows only sorts by plain columns.
 - roux could: a section in the paging guide on the read-model view (the members directory is the
   example), or sort constants that name more than one property.
-- Outcome: deferred (guide work).
+- Outcome: fixed in 10f84aa (guide).
 
 ## Paginator cannot put nulls last
 - Where: `students/StudentService.nullsLast`
@@ -114,7 +114,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   `Pageable` a `Paginator` builds has no null handling (descending puts nulls first). The service
   rebuilds the `Pageable`'s `Sort` with `Order::nullsLast` inside the query callback.
 - roux could: `cfg.nullsLast()` or a per-constant null handling on the sort enum.
-- Outcome: deferred.
+- Outcome: deferred (not on the approved round-1 list; the guide notes the workaround).
 
 ## Cells that hold a dialog close when the columns are rebuilt
 - Where: `students/StudentsPage.tsx`, `ranks/RanksPage.tsx` (`MANAGE_COLUMNS`)
@@ -125,7 +125,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   each render.
 - roux could: say in the tables guide that columns are fixed (module-level, one set per permission)
   unless they must read state, and that a cell holding a dialog must not be rebuilt.
-- Outcome: fixed in the dojo (columns are module constants); guide note deferred.
+- Outcome: fixed in 10f84aa (guide; the dojo's columns were already constants).
 
 ## The stale-version check is written in every service
 - Where: `students/StudentVersions`, `ranks/RankService.update`
@@ -133,7 +133,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   on `version`; mismatch, `ObjectOptimisticLockingFailureException`). The forms guide has them inline
   in its example, so each service copies them.
 - roux could: `Versions.require(entity, requestVersion)` in roux-problems.
-- Outcome: deferred.
+- Outcome: fixed in 55c6bef.
 
 ## A read-model view does not see unflushed writes
 - Where: `students/PromotionService`, `StudentService.detail`
@@ -144,7 +144,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   says so in the guides, and a missing flush fails only in the answer, not at compile time.
 - roux could: say it where the paging guide shows a list over a view, or give the pattern a
   helper (a `@Transactional` read that flushes first).
-- Outcome: deferred (guide work).
+- Outcome: fixed in 10f84aa (guide).
 
 ## A select over ids loaded at run time retypes the server's message
 - Where: `students/students.ts` (`promotionRequestSchema.rankId`)
@@ -152,7 +152,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   the schema is `z.string().min(1, { error: "Must not be empty" }).register(fieldRules, ...)`, which
   retypes the server's `@NotNull` words, as the forms guide itself shows. The skill says never to.
 - roux could: a `choice()` (or `id()`) rule beside `oneOf`, with `Must not be empty`.
-- Outcome: deferred.
+- Outcome: fixed in 97c8967.
 
 ## Referring features need a hook into a rank's removal that roux does not offer
 - Where: `ranks/RankRemovalCheck`, `students/PromotionRankRemovalCheck`
@@ -162,7 +162,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   repository, which would make `ranks` depend on `students`.
 - roux could: leave it to the app (it is plain Spring), but say so: the errors guide could show
   this inversion for a `ConflictException` that depends on another feature.
-- Outcome: deferred (guide note).
+- Outcome: fixed in 10f84aa (guide).
 
 ## A new role is written in six files, eight lists
 - Where: `AppRoles.AppRole`, `members.xml` (the directory view's role and rank), `InvitableRole`,
@@ -174,7 +174,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   fails at run time, as an unlisted role shown as Member).
 - roux could: a guide section on roles (who's RBAC plus the app's enum), saying which lists a role
   appears in; or a `GET /api/roles` the browser reads instead of a union type.
-- Outcome: deferred.
+- Outcome: deferred (not on the approved round-1 list).
 
 ## A request enum outside its set is not a field error
 - Where: `members/InvitationsController.Invitation` (`role`)
@@ -184,7 +184,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   cannot send it, but an API caller gets no field name.
 - roux could: answer an unknown enum constant in a body as a field error (`Must be one of
   MEMBER, INSTRUCTOR`), as it already does for a query parameter.
-- Outcome: deferred.
+- Outcome: fixed in d1a5270.
 
 ## Signing in as a role in Playwright means inviting through the UI each time
 - Where: `e2e/tests/school.spec.ts` (`invite`), `member.spec.ts`, `members-lifecycle.spec.ts`
@@ -194,7 +194,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   database, also have to be serial and tag their data to stay apart from other specs.
 - roux could: ship `invite(page, request, ...)` and `signedInThrough(browser, link)` helpers in the
   guide's helpers.ts, and say how specs share one database.
-- Outcome: deferred (guide work).
+- Outcome: deferred (not on the approved round-1 list).
 
 ## Auditing ignores the app's Clock
 - Where: `persistence/PersistenceConfig` (`auditingDateTimeProvider`)
@@ -202,7 +202,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   `Clock` bean, so a test that set the clock still got real time, and ordering by `created_date`
   (a promotion tie) could only be tested by waiting. The dojo adds a `DateTimeProvider` over `Clock`.
 - roux could: wire auditing to the `Clock` bean in the starter, so every app's audit dates follow it.
-- Outcome: deferred.
+- Outcome: fixed in 0e5ed85.
 
 ## A read-model view's column types must match Hibernate's
 - Where: `students.xml` (`student_list`: `null::uuid`, `null::varchar`), `promotions.xml`
@@ -213,4 +213,4 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   the view each have their own idea of a column's type; a mismatch shows only at startup or in a query.
 - roux could: say in the paging guide's read-model section to cast view columns to the types the entity
   maps and to drop and create the view when a column changes.
-- Outcome: deferred (guide note).
+- Outcome: fixed in 10f84aa (guide).

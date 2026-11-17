@@ -5,8 +5,10 @@ import java.util.UUID;
 
 import jakarta.validation.constraints.NotNull;
 
+import org.jwcarman.roux.problems.constraints.NotInFuture;
+
 /**
  * A promotion to record: the rank, and the day, which may not be in the future ({@link
- * FutureDates}, checked by the service).
+ * NotInFuture}).
  */
-public record PromotionRequest(@NotNull UUID rankId, @NotNull LocalDate date) {}
+public record PromotionRequest(@NotNull UUID rankId, @NotNull @NotInFuture LocalDate date) {}

@@ -1,6 +1,5 @@
 package org.jwcarman.roux.examples.dojo.students;
 
-import java.time.Clock;
 import java.util.UUID;
 
 import org.jwcarman.roux.examples.dojo.ranks.RankEntity;
@@ -19,15 +18,12 @@ public class PromotionService {
   private final StudentRepository students;
   private final RankRepository ranks;
   private final StudentService studentService;
-  private final Clock clock;
 
   public PromotionService(
       PromotionRepository promotions,
       StudentRepository students,
       RankRepository ranks,
-      StudentService studentService,
-      Clock clock) {
-    this.clock = clock;
+      StudentService studentService) {
     this.promotions = promotions;
     this.students = students;
     this.ranks = ranks;
@@ -40,12 +36,10 @@ public class PromotionService {
    *
    * @return the student after the promotion
    * @throws StudentNotFoundException if there is no such student
-   * @throws InvalidFieldException on {@code rankId} if there is no such rank, or on {@code date} if
-   *     it is in the future
+   * @throws InvalidFieldException on {@code rankId} if there is no such rank
    * @throws ConflictException if the student already has a promotion to that rank on that date
    */
   public StudentDetail promote(UUID studentId, PromotionRequest request) {
-    FutureDates.requireNotInTheFuture(clock, "date", request.date());
     StudentEntity student = find(studentId);
     RankEntity rank =
         ranks

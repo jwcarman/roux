@@ -1,10 +1,9 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
-import { date, email, fieldRules, phone, text } from "@jwcarman/roux-web/form";
+import { date, email, id, phone, text } from "@jwcarman/roux-web/form";
 import { pageQuery, type PageDto, type PageParams } from "@jwcarman/roux-web/paging";
 import { z } from "zod";
 import { queryKeys } from "../queryKeys";
-import { NOT_IN_THE_FUTURE, notInTheFuture } from "../shell/dates";
 import type { Rank } from "../ranks/ranks";
 
 /** The statuses a student can have: the server's StudentStatus enum. */
@@ -54,9 +53,7 @@ export const studentRequestSchema = z.object({
   lastName: text().max(80),
   email: email().max(320).optional(),
   phone: phone().max(30).optional(),
-  birthDate: date()
-    .optional()
-    .refine(notInTheFuture, { error: NOT_IN_THE_FUTURE }),
+  birthDate: date().notInFuture().optional(),
   startDate: date(),
 });
 
@@ -65,9 +62,8 @@ export type StudentRequest = z.output<typeof studentRequestSchema>;
 
 /** PromotionRequest's rules, in the server's words. */
 export const promotionRequestSchema = z.object({
-  // The ranks are loaded at run time, so no helper: `@NotNull UUID rankId`.
-  rankId: z.string().min(1, { error: "Must not be empty" }).register(fieldRules, { required: true }),
-  date: date().refine(notInTheFuture, { error: NOT_IN_THE_FUTURE }),
+  rankId: id(),
+  date: date().notInFuture(),
 });
 
 /** What the promotion form sends. */

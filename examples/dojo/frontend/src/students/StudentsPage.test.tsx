@@ -13,8 +13,8 @@ import { server } from "../testing/server";
 import { todayIso } from "../shell/dates";
 import type { Student } from "./students";
 
-const WHITE: Rank = { id: "r1", name: "White", colour: "WHITE", position: 1, version: 0 };
-const YELLOW: Rank = { id: "r2", name: "Yellow", colour: "YELLOW", position: 2, version: 0 };
+const WHITE: Rank = { id: "00000000-0000-4000-8000-000000000001", name: "White", colour: "WHITE", position: 1, version: 0 };
+const YELLOW: Rank = { id: "00000000-0000-4000-8000-000000000002", name: "Yellow", colour: "YELLOW", position: 2, version: 0 };
 
 const ADA: Student = {
   id: "s1",
@@ -98,8 +98,8 @@ describe("StudentsPage", () => {
     expect(router.state.location.search).toMatchObject({ status: "INACTIVE" });
 
     await user.click(screen.getByRole("button", { name: "Yellow", pressed: false }));
-    await waitFor(() => expect(queries.at(-1)).toContain("rankId=r2"));
-    expect(router.state.location.search).toMatchObject({ status: "INACTIVE", rankId: "r2" });
+    await waitFor(() => expect(queries.at(-1)).toContain("rankId=00000000-0000-4000-8000-000000000002"));
+    expect(router.state.location.search).toMatchObject({ status: "INACTIVE", rankId: "00000000-0000-4000-8000-000000000002" });
   });
 
   it("sorts by rank from the header", async () => {

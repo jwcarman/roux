@@ -43,7 +43,7 @@
     <createView viewName="student_current_rank">
       select distinct on (p.student_id) p.student_id, p.rank_id
       from promotion p
-      order by p.student_id, p.promoted_on desc, p.created_date desc
+      order by p.student_id, p.promoted_on desc, p.created_date desc nulls last
     </createView>
   </changeSet>
 
@@ -59,6 +59,18 @@
       from student s
       left join student_current_rank c on c.student_id = s.id
       left join rank r on r.id = c.rank_id
+    </createView>
+  </changeSet>
+
+  <!-- A promotion always has a created date (auditing stamps it), so the tie-break needs no
+       "nulls last". A new changeSet: the one above has run on existing databases, and editing it
+       would break its checksum. The student list view depends on this one, and its columns do not
+       change, so it is replaced in place. -->
+  <changeSet id="student-current-rank-no-nulls-last" author="dojo">
+    <createView viewName="student_current_rank" replaceIfExists="true">
+      select distinct on (p.student_id) p.student_id, p.rank_id
+      from promotion p
+      order by p.student_id, p.promoted_on desc, p.created_date desc
     </createView>
   </changeSet>
 </databaseChangeLog>

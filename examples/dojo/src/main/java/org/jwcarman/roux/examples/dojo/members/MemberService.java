@@ -18,6 +18,7 @@ import org.jwcarman.roux.examples.dojo.activity.ActivityLog;
 import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
 import org.jwcarman.roux.examples.dojo.web.ExportTooLargeException;
 import org.jwcarman.roux.problems.InvariantViolationException;
+import org.jwcarman.roux.problems.Versions;
 import org.jwcarman.who.core.service.WhoService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -113,9 +114,7 @@ public class MemberService {
       @NotBlank @Size(max = MemberProfile.MAX_NAME) String displayName,
       long version) {
     MemberProfile profile = find(identityId);
-    if (profile.getVersion() != version) {
-      throw new ObjectOptimisticLockingFailureException(MemberProfile.class, profile.getId());
-    }
+    Versions.require(profile, version);
     String before = profile.getDisplayName();
     profile.rename(displayName);
     if (!profile.getDisplayName().equals(before)) {
