@@ -1,5 +1,7 @@
 # Production: run with SPRING_PROFILES_ACTIVE=prod and set every variable below. None has a default,
-# so a missing one fails startup instead of falling back to a development value.
+# and a missing one fails startup instead of falling back to a development value, except
+# PASSKEY_RP_ID: who only checks that the rp-id has text, so an unset one starts the app with the
+# literal ${PASSKEY_RP_ID} as the rp-id, and passkeys silently fail.
 #
 # The database comes from Spring Boot's own variables: SPRING_DATASOURCE_URL,
 # SPRING_DATASOURCE_USERNAME and SPRING_DATASOURCE_PASSWORD.

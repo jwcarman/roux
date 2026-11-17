@@ -8,9 +8,11 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.jwcarman.roux.examples.dojo.AppTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -25,17 +27,19 @@ class SpaRoutingTest {
 
   @LocalServerPort int port;
 
+  /** A record id for a route's {@code *} segment. */
+  private static final String SAMPLE_ID = "0190c1de-0000-7000-8000-000000000000";
+
+  /**
+   * Every client route, as a signed-out browser opens it: a route missing from {@code
+   * who.security.public-paths} answers 401 here instead of the shell.
+   */
+  static Stream<String> routes() {
+    return Stream.of(SpaController.ROUTES).map(route -> route.replace("*", SAMPLE_ID));
+  }
+
   @ParameterizedTest
-  @ValueSource(
-      strings = {
-        "/",
-        "/settings",
-        "/appearance",
-        "/members",
-        "/members/0190c1de-0000-7000-8000-000000000000",
-        "/signin",
-        "/signin/link",
-      })
+  @MethodSource("routes")
   void spaRoutesServeIndex(String path) {
     ResponseEntity<String> response = get(path);
 
