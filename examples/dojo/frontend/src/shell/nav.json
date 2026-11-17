@@ -1,5 +1,11 @@
 [
-  { "label": "Home", "to": "/", "icon": "house", "description": "A welcome page.", "start": true },
+  {
+    "label": "Home",
+    "to": "/",
+    "icon": "house",
+    "description": "A welcome page.",
+    "start": true
+  },
   {
     "label": "Members",
     "to": "/members",
@@ -8,11 +14,23 @@
     "description": "Who can use the app and what they may do."
   },
   {
+    "label": "Ranks",
+    "to": "/ranks",
+    "icon": "award",
+    "permission": "ranks.read",
+    "description": "The school's belt ladder, lowest first."
+  },
+  {
     "label": "Appearance",
     "to": "/appearance",
     "icon": "palette",
     "permission": "theme.manage",
     "description": "The app's colours, corners and font."
   },
-  { "label": "Settings", "to": "/settings", "icon": "settings", "description": "Your own account settings." }
+  {
+    "label": "Settings",
+    "to": "/settings",
+    "icon": "settings",
+    "description": "Your own account settings."
+  }
 ]

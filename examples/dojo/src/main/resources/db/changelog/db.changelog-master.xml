@@ -10,4 +10,5 @@
   <include file="classpath:db/changelog/members.xml"/>
   <include file="classpath:db/changelog/activity.xml"/>
   <include file="classpath:db/changelog/theme.xml"/>
+  <include file="classpath:db/changelog/ranks.xml"/>
 </databaseChangeLog>

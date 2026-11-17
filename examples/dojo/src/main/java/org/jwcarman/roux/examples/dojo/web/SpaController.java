@@ -18,7 +18,7 @@ public class SpaController implements WebMvcConfigurer {
 
   /** The client-side routes: the URLs of the route files in {@code frontend/src/routes}. */
   public static final String[] ROUTES = {
-    "/", "/settings", "/appearance", "/members", "/members/*", "/signin", "/signin/link",
+    "/", "/settings", "/appearance", "/members", "/members/*", "/ranks", "/signin", "/signin/link",
   };
 
   /**

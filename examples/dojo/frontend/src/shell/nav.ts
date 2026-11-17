@@ -1,5 +1,6 @@
 import type { IconType } from "react-icons";
 import {
+  LuAward,
   LuCalendar,
   LuChartBar,
   LuCheck,
@@ -44,6 +45,7 @@ export const ICONS: Readonly<Record<string, IconType>> = {
   star: LuStar,
   clipboard: LuClipboard,
   chart: LuChartBar,
+  award: LuAward,
 };
 
 /** One place as `nav.json` writes it. */

@@ -1,6 +1,6 @@
 /**
- * The app's query keys, built in one place so related queries share a prefix and one
- * `invalidateQueries({ queryKey: queryKeys.members.lists() })` refreshes them all.
+ * The app's query keys, built in one place so related queries share a prefix: a mutation's
+ * `meta.refreshes: [queryKeys.members.lists()]` refreshes every members list.
  * See https://tkdodo.eu/blog/effective-react-query-keys#use-query-key-factories
  */
 export const queryKeys = {
@@ -11,6 +11,10 @@ export const queryKeys = {
       [...queryKeys.members.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.members.all, "detail", id] as const,
     activities: (id: string) => [...queryKeys.members.all, "activities", id] as const,
+  },
+  ranks: {
+    all: ["ranks"] as const,
+    lists: () => [...queryKeys.ranks.all, "list"] as const,
   },
   theme: ["theme"] as const,
 };

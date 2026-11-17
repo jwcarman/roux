@@ -3,7 +3,7 @@ import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/rea
 import { render } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { ColorModeProvider } from "../shell/colorMode";
-import { ConfirmProvider } from "@jwcarman/roux-web/feedback";
+import { ConfirmProvider, Toaster } from "@jwcarman/roux-web/feedback";
 import { routeTree } from "../routeTree.gen";
 import { SessionProvider, useSession } from "../shell/session";
 import { DEFAULT_THEME } from "../shell/theme";
@@ -43,6 +43,7 @@ export function renderRoute(path: string, { permissions }: { permissions: string
           <ConfirmProvider>
             <SessionProvider>
               <Routes />
+              <Toaster />
             </SessionProvider>
           </ConfirmProvider>
         </ColorModeProvider>

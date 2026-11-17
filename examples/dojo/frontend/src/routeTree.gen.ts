@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignedInRouteImport } from './routes/_signedIn'
 import { Route as SignedInIndexRouteImport } from './routes/_signedIn/index'
 import { Route as SignedInAppearanceRouteImport } from './routes/_signedIn/appearance'
+import { Route as SignedInRanksRouteImport } from './routes/_signedIn/ranks'
 import { Route as SignedInSettingsRouteImport } from './routes/_signedIn/settings'
 import { Route as SigninIndexRouteImport } from './routes/signin/index'
 import { Route as SigninLinkRouteImport } from './routes/signin/link'
@@ -30,6 +31,11 @@ const SignedInIndexRoute = SignedInIndexRouteImport.update({
 const SignedInAppearanceRoute = SignedInAppearanceRouteImport.update({
   id: '/appearance',
   path: '/appearance',
+  getParentRoute: () => SignedInRoute,
+} as any)
+const SignedInRanksRoute = SignedInRanksRouteImport.update({
+  id: '/ranks',
+  path: '/ranks',
   getParentRoute: () => SignedInRoute,
 } as any)
 const SignedInSettingsRoute = SignedInSettingsRouteImport.update({
@@ -61,6 +67,7 @@ const SignedInMembersMemberIdRoute = SignedInMembersMemberIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof SignedInIndexRoute
   '/appearance': typeof SignedInAppearanceRoute
+  '/ranks': typeof SignedInRanksRoute
   '/settings': typeof SignedInSettingsRoute
   '/signin/link': typeof SigninLinkRoute
   '/signin/': typeof SigninIndexRoute
@@ -69,6 +76,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/appearance': typeof SignedInAppearanceRoute
+  '/ranks': typeof SignedInRanksRoute
   '/settings': typeof SignedInSettingsRoute
   '/signin/link': typeof SigninLinkRoute
   '/': typeof SignedInIndexRoute
@@ -80,6 +88,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_signedIn': typeof SignedInRouteWithChildren
   '/_signedIn/appearance': typeof SignedInAppearanceRoute
+  '/_signedIn/ranks': typeof SignedInRanksRoute
   '/_signedIn/settings': typeof SignedInSettingsRoute
   '/signin/link': typeof SigninLinkRoute
   '/_signedIn/': typeof SignedInIndexRoute
@@ -92,6 +101,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/appearance'
+    | '/ranks'
     | '/settings'
     | '/signin/link'
     | '/signin/'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/appearance'
+    | '/ranks'
     | '/settings'
     | '/signin/link'
     | '/'
@@ -110,6 +121,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_signedIn'
     | '/_signedIn/appearance'
+    | '/_signedIn/ranks'
     | '/_signedIn/settings'
     | '/signin/link'
     | '/_signedIn/'
@@ -145,6 +157,13 @@ declare module '@tanstack/react-router' {
       path: '/appearance'
       fullPath: '/appearance'
       preLoaderRoute: typeof SignedInAppearanceRouteImport
+      parentRoute: typeof SignedInRoute
+    }
+    '/_signedIn/ranks': {
+      id: '/_signedIn/ranks'
+      path: '/ranks'
+      fullPath: '/ranks'
+      preLoaderRoute: typeof SignedInRanksRouteImport
       parentRoute: typeof SignedInRoute
     }
     '/_signedIn/settings': {
@@ -187,6 +206,7 @@ declare module '@tanstack/react-router' {
 
 interface SignedInRouteChildren {
   SignedInAppearanceRoute: typeof SignedInAppearanceRoute
+  SignedInRanksRoute: typeof SignedInRanksRoute
   SignedInSettingsRoute: typeof SignedInSettingsRoute
   SignedInIndexRoute: typeof SignedInIndexRoute
   SignedInMembersMemberIdRoute: typeof SignedInMembersMemberIdRoute
@@ -195,6 +215,7 @@ interface SignedInRouteChildren {
 
 const SignedInRouteChildren: SignedInRouteChildren = {
   SignedInAppearanceRoute: SignedInAppearanceRoute,
+  SignedInRanksRoute: SignedInRanksRoute,
   SignedInSettingsRoute: SignedInSettingsRoute,
   SignedInIndexRoute: SignedInIndexRoute,
   SignedInMembersMemberIdRoute: SignedInMembersMemberIdRoute,

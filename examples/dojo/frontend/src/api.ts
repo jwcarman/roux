@@ -26,6 +26,8 @@ export const MEMBERS_READ = "members.read";
 export const MEMBERS_PROFILE = "members.profile";
 export const MEMBERS_MANAGE = "members.manage";
 export const THEME_MANAGE = "theme.manage";
+export const RANKS_READ = "ranks.read";
+export const RANKS_MANAGE = "ranks.manage";
 
 /** The signed-in member's own profile; `version` goes back with a rename. */
 export interface Profile {

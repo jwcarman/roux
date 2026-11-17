@@ -67,9 +67,15 @@ class OwnerBootstrapTest {
 
     assertThat(permissionsOf("OWNER"))
         .containsExactlyInAnyOrder(
-            "members.invite", "members.read", "members.profile", "members.manage", "theme.manage");
+            "members.invite",
+            "members.read",
+            "members.profile",
+            "members.manage",
+            "theme.manage",
+            "ranks.read",
+            "ranks.manage");
     assertThat(permissionsOf("MEMBER"))
-        .containsExactlyInAnyOrder("members.read", "members.profile");
+        .containsExactlyInAnyOrder("members.read", "members.profile", "ranks.read");
   }
 
   @Test
