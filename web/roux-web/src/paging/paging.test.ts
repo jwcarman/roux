@@ -260,6 +260,11 @@ describe("idSearchOf", () => {
       expect(idSearchOf(raw)).toBeUndefined();
     }
   });
+
+  it("drops a non-string that only prints as a UUID", () => {
+    expect(idSearchOf([ID])).toBeUndefined();
+    expect(idSearchOf({ toString: () => ID })).toBeUndefined();
+  });
 });
 
 describe("queryStringOf with filters", () => {
