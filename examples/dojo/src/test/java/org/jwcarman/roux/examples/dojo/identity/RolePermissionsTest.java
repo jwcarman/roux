@@ -93,7 +93,13 @@ class RolePermissionsTest {
         new Endpoint(
             "mark attendance",
             json(put(CLASSES + "/" + ID + "/attendance"), ATTENDANCE_BODY),
-            STAFF));
+            STAFF),
+        new Endpoint(
+            "GET a student's attendance", get(STUDENTS + "/" + ID + "/attendance"), EVERYONE),
+        new Endpoint(
+            "GET classes since promotion",
+            get(STUDENTS + "/" + ID + "/attendance/since-promotion"),
+            EVERYONE));
   }
 
   @ParameterizedTest(name = "{0}")

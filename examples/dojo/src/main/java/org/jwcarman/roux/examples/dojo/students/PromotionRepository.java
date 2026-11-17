@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 /** Students' promotions. */
 public interface PromotionRepository extends JpaRepository<PromotionEntity, UUID> {
@@ -19,6 +20,10 @@ public interface PromotionRepository extends JpaRepository<PromotionEntity, UUID
   /** Whether the student already has a promotion to the rank on that date. */
   boolean existsByStudentIdAndRankIdAndPromotedOn(
       UUID studentId, UUID rankId, LocalDate promotedOn);
+
+  /** The date of the student's latest promotion, if they have been promoted. */
+  @Query("select max(p.promotedOn) from PromotionEntity p where p.studentId = :studentId")
+  Optional<LocalDate> latestPromotedOn(UUID studentId);
 
   /** Whether any student was ever promoted to the rank {@code rankId}. */
   boolean existsByRankId(UUID rankId);

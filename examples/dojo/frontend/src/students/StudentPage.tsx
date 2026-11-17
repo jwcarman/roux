@@ -4,7 +4,8 @@ import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { LuArrowLeft, LuAward } from "react-icons/lu";
 import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, removal, useConfirm } from "@jwcarman/roux-web/feedback";
-import { PROMOTIONS_MANAGE, STUDENTS_MANAGE } from "../api";
+import { ATTENDANCE_READ, PROMOTIONS_MANAGE, STUDENTS_MANAGE } from "../api";
+import { ClassesSincePromotion, StudentAttendanceList } from "../attendance/StudentAttendanceList";
 import { RankSwatch } from "../ranks/RankSwatch";
 import { formatDate } from "../shell/format";
 import { useSession } from "../shell/session";
@@ -23,6 +24,7 @@ export function StudentPage() {
   const name = `${student.firstName} ${student.lastName}`;
   const manages = me?.permissions.includes(STUDENTS_MANAGE) ?? false;
   const promotes = me?.permissions.includes(PROMOTIONS_MANAGE) ?? false;
+  const readsAttendance = me?.permissions.includes(ATTENDANCE_READ) ?? false;
 
   return (
     <Stack gap="6">
@@ -50,6 +52,7 @@ export function StudentPage() {
             )}
           </DataList.ItemValue>
         </DataList.Item>
+        {readsAttendance && <ClassesSincePromotion studentId={student.id} />}
         <DataList.Item>
           <DataList.ItemLabel>Status</DataList.ItemLabel>
           <DataList.ItemValue>
@@ -92,6 +95,7 @@ export function StudentPage() {
         )}
       </Flex>
       <PromotionHistory student={student} canRemove={promotes} />
+      {readsAttendance && <StudentAttendanceList studentId={student.id} />}
     </Stack>
   );
 }

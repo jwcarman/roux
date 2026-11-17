@@ -320,3 +320,16 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   `?date=2026-02-30` reached the server as a 400 until the route checked it by hand.
 - roux could: `dateSearchOf(raw)` (a real `YYYY-MM-DD` or undefined) in `/paging`.
 - Outcome: deferred (small roux addition: the user decides).
+
+## A list in a fixed order has no way to say so
+- Where: `attendance/StudentAttendanceService` (`NewestFirst`), `attendance/attendance.ts` (`attendancePage`)
+- What was clunky: a student's attendance is newest first, always, and the client never sends a sort
+  (`InfiniteList` passes only `pageIndex`). A `Paginator`'s default sort has no direction and the
+  request's absent `sortDirection` means ascending, so the first try listed the oldest class first.
+  The fix is a private `PageSpec` record that forces `sortBy=DATE` and `DESC` over the request's page
+  and size, plus a sort enum with one constant that nothing can choose, and `tiebreaker("createdDate", "id")`
+  to order two classes of one day. The paging guide's InfiniteList example assumes "the order the
+  endpoint gives" without showing an endpoint that gives one.
+- roux could: say in the guide how an endpoint pins its order (the `PageSpec` wrapper), or a
+  `cfg.defaultDirection(DESC)` in jpa-utils.
+- Outcome: deferred (guide note; the paginator is jpa-utils').

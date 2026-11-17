@@ -4,6 +4,9 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -24,6 +27,16 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, UU
 
   /** Whether anyone ever attended the class. */
   boolean existsBySchoolClassId(UUID classId);
+
+  /** A page of the student's attendance, as {@code pageable} sorts it. */
+  @EntityGraph(attributePaths = "schoolClass")
+  Page<AttendanceEntity> findByStudentId(UUID studentId, Pageable pageable);
+
+  /** How many classes the student attended, in all. */
+  long countByStudentId(UUID studentId);
+
+  /** How many classes the student attended on a date after {@code date}. */
+  long countByStudentIdAndAttendedOnAfter(UUID studentId, LocalDate date);
 
   /** Takes the student's attendance back; nothing happens if there is none. */
   @Transactional
