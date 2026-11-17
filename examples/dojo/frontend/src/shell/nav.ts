@@ -6,6 +6,7 @@ import {
   LuCheck,
   LuClipboard,
   LuFolder,
+  LuGraduationCap,
   LuHouse,
   LuInbox,
   LuList,
@@ -46,6 +47,7 @@ export const ICONS: Readonly<Record<string, IconType>> = {
   clipboard: LuClipboard,
   chart: LuChartBar,
   award: LuAward,
+  "graduation-cap": LuGraduationCap,
 };
 
 /** One place as `nav.json` writes it. */

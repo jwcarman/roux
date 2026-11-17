@@ -21,6 +21,13 @@
     "description": "The school's belt ladder, lowest first."
   },
   {
+    "label": "Students",
+    "to": "/students",
+    "icon": "graduation-cap",
+    "permission": "students.read",
+    "description": "Who trains at the school and the rank each holds."
+  },
+  {
     "label": "Appearance",
     "to": "/appearance",
     "icon": "palette",

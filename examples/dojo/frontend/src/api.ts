@@ -28,6 +28,9 @@ export const MEMBERS_MANAGE = "members.manage";
 export const THEME_MANAGE = "theme.manage";
 export const RANKS_READ = "ranks.read";
 export const RANKS_MANAGE = "ranks.manage";
+export const STUDENTS_READ = "students.read";
+export const STUDENTS_MANAGE = "students.manage";
+export const PROMOTIONS_MANAGE = "promotions.manage";
 
 /** The signed-in member's own profile; `version` goes back with a rename. */
 export interface Profile {

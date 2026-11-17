@@ -12,6 +12,9 @@ public final class AppRoles {
   public static final String THEME_MANAGE = "theme.manage";
   public static final String RANKS_READ = "ranks.read";
   public static final String RANKS_MANAGE = "ranks.manage";
+  public static final String STUDENTS_READ = "students.read";
+  public static final String STUDENTS_MANAGE = "students.manage";
+  public static final String PROMOTIONS_MANAGE = "promotions.manage";
 
   private AppRoles() {}
 
@@ -23,8 +26,11 @@ public final class AppRoles {
         MEMBERS_MANAGE,
         THEME_MANAGE,
         RANKS_READ,
-        RANKS_MANAGE),
-    MEMBER(MEMBERS_READ, MEMBERS_PROFILE, RANKS_READ);
+        RANKS_MANAGE,
+        STUDENTS_READ,
+        STUDENTS_MANAGE,
+        PROMOTIONS_MANAGE),
+    MEMBER(MEMBERS_READ, MEMBERS_PROFILE, RANKS_READ, STUDENTS_READ);
 
     private final List<String> permissions;
 

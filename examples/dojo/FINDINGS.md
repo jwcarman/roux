@@ -54,3 +54,77 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   answers.
 - roux could: ship the problem fixtures (and a route harness) for tests, e.g. a test entry point.
 - Outcome: route harness fixed in the app (this commit); fixtures deferred (a roux-test proposal).
+
+## No rule for a date that may not be in the future
+- Where: `students/students.ts` (`birthDate`), `shell/dates.ts`, `StudentRequest` (`@PastOrPresent`)
+- What was clunky: the server's `@PastOrPresent` answers `Must not be in the future` (roux's
+  ContributorValidationMessages), but `date()` has no counterpart. The schema adds
+  `.refine(notInTheFuture, { error: NOT_IN_THE_FUTURE })` with the server's text retyped in the app,
+  which the skill says never to do, and a `todayIso()` that reads the browser's clock and zone (the
+  server's clock may be on another day near midnight).
+- roux could: `date().notInFuture()` (and `.notInPast()`), with the server's words, beside `.min`/`.max`.
+- Outcome: deferred (a roux rule helper; the dojo's promotion date needs it too).
+
+## A rule the browser has, the server rewrites: `phone()`
+- Where: `students/StudentRequest` (`phone`)
+- What was clunky: `phone()` is "digits, spaces and `+ - ( ) .`, at least 7 digits", and the guide
+  maps it to "`@NotBlank @Pattern(...)`" without giving the pattern. The server's regex
+  (`^(?=(?:\D*\d){7})[\d\s+\-().]+$`) was derived from `rules.ts`; if either side changes, they drift.
+- roux could: ship the pattern as a constant (or a `@Phone` constraint) that both sides use, and say
+  what it is in the forms guide.
+- Outcome: deferred.
+
+## A filter whose values are not a fixed set has no URL helper
+- Where: `routes/_signedIn/students/index.tsx` (`rankId`)
+- What was clunky: `enumSearchOf` keeps a filter value only if it is in a fixed list, but the rank
+  filter's values are ids loaded at run time, so the route checks `typeof raw.rankId === "string"`
+  by hand. The tables guide only shows the enum case.
+- roux could: a `stringSearchOf(raw)` (non-blank text or undefined), or say in the guide that this is
+  the way.
+- Outcome: deferred.
+
+## A filter with a default is wired by hand on every page
+- Where: `students/StudentsPage.tsx` (status chips), as in `members/MembersPage.tsx`
+- What was clunky: the list shows active students unless asked, so the chips need
+  `value={search.status ?? "ACTIVE"}` and `status === "ACTIVE" ? undefined : status` to keep the
+  default out of the URL. `FilterChips` has no notion of a default, and the guide's example has an
+  "all" chip instead.
+- roux could: `FilterChips defaultValue` (shown selected when the value is undefined, reported as
+  undefined when chosen again).
+- Outcome: deferred.
+
+## Sorting by a computed value needs a view and a second entity
+- Where: `students/StudentListEntry`, `student_list` view in `students.xml`
+- What was clunky: a `Paginator` sorts by one property of the entity, so "by name" (last then first,
+  case-insensitively) and "by current rank's position" had to become view columns, with a read-only
+  entity beside the writable one. The paging guide shows only sorts by plain columns.
+- roux could: a section in the paging guide on the read-model view (the members directory is the
+  example), or sort constants that name more than one property.
+- Outcome: deferred (guide work).
+
+## Paginator cannot put nulls last
+- Where: `students/StudentService.nullsLast`
+- What was clunky: students with no rank must sort last by RANK in both directions, but the
+  `Pageable` a `Paginator` builds has no null handling (descending puts nulls first). The service
+  rebuilds the `Pageable`'s `Sort` with `Order::nullsLast` inside the query callback.
+- roux could: `cfg.nullsLast()` or a per-constant null handling on the sort enum.
+- Outcome: deferred.
+
+## Cells that hold a dialog close when the columns are rebuilt
+- Where: `students/StudentsPage.tsx`, `ranks/RanksPage.tsx` (`MANAGE_COLUMNS`)
+- What was clunky: the page built its columns inside the component (to add the actions column for
+  managers). Every re-render made new cell components, which remounted the row's dialog and closed
+  it; it showed up as a test that passed alone and failed after another (the rank chips arrived
+  while the dialog was opening). The guide even says to build `createSelectColumn`'s columns on
+  each render.
+- roux could: say in the tables guide that columns are fixed (module-level, one set per permission)
+  unless they must read state, and that a cell holding a dialog must not be rebuilt.
+- Outcome: fixed in the dojo (columns are module constants); guide note deferred.
+
+## The stale-version check is written in every service
+- Where: `students/StudentVersions`, `ranks/RankService.update`
+- What was clunky: every edit begins with the same three lines (no version, `InvalidFieldException`
+  on `version`; mismatch, `ObjectOptimisticLockingFailureException`). The forms guide has them inline
+  in its example, so each service copies them.
+- roux could: `Versions.require(entity, requestVersion)` in roux-problems.
+- Outcome: deferred.

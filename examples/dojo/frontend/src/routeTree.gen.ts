@@ -18,6 +18,7 @@ import { Route as SigninIndexRouteImport } from './routes/signin/index'
 import { Route as SigninLinkRouteImport } from './routes/signin/link'
 import { Route as SignedInMembersIndexRouteImport } from './routes/_signedIn/members/index'
 import { Route as SignedInMembersMemberIdRouteImport } from './routes/_signedIn/members/$memberId'
+import { Route as SignedInStudentsIndexRouteImport } from './routes/_signedIn/students/index'
 
 const SignedInRoute = SignedInRouteImport.update({
   id: '/_signedIn',
@@ -63,6 +64,11 @@ const SignedInMembersMemberIdRoute = SignedInMembersMemberIdRouteImport.update({
   path: '/members/$memberId',
   getParentRoute: () => SignedInRoute,
 } as any)
+const SignedInStudentsIndexRoute = SignedInStudentsIndexRouteImport.update({
+  id: '/students/',
+  path: '/students/',
+  getParentRoute: () => SignedInRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof SignedInIndexRoute
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/signin/': typeof SigninIndexRoute
   '/members/$memberId': typeof SignedInMembersMemberIdRoute
   '/members/': typeof SignedInMembersIndexRoute
+  '/students/': typeof SignedInStudentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/appearance': typeof SignedInAppearanceRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/signin': typeof SigninIndexRoute
   '/members/$memberId': typeof SignedInMembersMemberIdRoute
   '/members': typeof SignedInMembersIndexRoute
+  '/students': typeof SignedInStudentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/signin/': typeof SigninIndexRoute
   '/_signedIn/members/$memberId': typeof SignedInMembersMemberIdRoute
   '/_signedIn/members/': typeof SignedInMembersIndexRoute
+  '/_signedIn/students/': typeof SignedInStudentsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/signin/'
     | '/members/$memberId'
     | '/members/'
+    | '/students/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/appearance'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/members/$memberId'
     | '/members'
+    | '/students'
   id:
     | '__root__'
     | '/_signedIn'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/signin/'
     | '/_signedIn/members/$memberId'
     | '/_signedIn/members/'
+    | '/_signedIn/students/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -201,6 +213,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignedInMembersMemberIdRouteImport
       parentRoute: typeof SignedInRoute
     }
+    '/_signedIn/students/': {
+      id: '/_signedIn/students/'
+      path: '/students'
+      fullPath: '/students/'
+      preLoaderRoute: typeof SignedInStudentsIndexRouteImport
+      parentRoute: typeof SignedInRoute
+    }
   }
 }
 
@@ -211,6 +230,7 @@ interface SignedInRouteChildren {
   SignedInIndexRoute: typeof SignedInIndexRoute
   SignedInMembersMemberIdRoute: typeof SignedInMembersMemberIdRoute
   SignedInMembersIndexRoute: typeof SignedInMembersIndexRoute
+  SignedInStudentsIndexRoute: typeof SignedInStudentsIndexRoute
 }
 
 const SignedInRouteChildren: SignedInRouteChildren = {
@@ -220,6 +240,7 @@ const SignedInRouteChildren: SignedInRouteChildren = {
   SignedInIndexRoute: SignedInIndexRoute,
   SignedInMembersMemberIdRoute: SignedInMembersMemberIdRoute,
   SignedInMembersIndexRoute: SignedInMembersIndexRoute,
+  SignedInStudentsIndexRoute: SignedInStudentsIndexRoute,
 }
 
 const SignedInRouteWithChildren = SignedInRoute._addFileChildren(

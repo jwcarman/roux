@@ -16,5 +16,12 @@ export const queryKeys = {
     all: ["ranks"] as const,
     lists: () => [...queryKeys.ranks.all, "list"] as const,
   },
+  students: {
+    all: ["students"] as const,
+    lists: () => [...queryKeys.students.all, "list"] as const,
+    list: (filters: { search?: string; status?: string; rankId?: string }) =>
+      [...queryKeys.students.lists(), filters] as const,
+    detail: (id: string) => [...queryKeys.students.all, "detail", id] as const,
+  },
   theme: ["theme"] as const,
 };

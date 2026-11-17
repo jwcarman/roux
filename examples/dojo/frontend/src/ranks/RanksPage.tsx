@@ -1,11 +1,12 @@
-import { Box, Button, Flex, HStack, Heading, Stack, Text, VisuallyHidden } from "@chakra-ui/react";
+import { Button, Flex, HStack, Heading, Stack, Text, VisuallyHidden } from "@chakra-ui/react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { SimpleQueryTable } from "@jwcarman/roux-web/table";
 import { RANKS_MANAGE } from "../api";
 import { useSession } from "../shell/session";
 import { RankActions } from "./RankActions";
 import { RankFormDialog } from "./RankFormDialog";
-import { BELT_SWATCHES, ranksQuery, type Rank } from "./ranks";
+import { ranksQuery, type Rank } from "./ranks";
+import { RankSwatch } from "./RankSwatch";
 
 const column = createColumnHelper<Rank>();
 
@@ -16,17 +17,26 @@ const LADDER: ColumnDef<Rank, unknown>[] = [
     enableSorting: false,
     cell: (info) => (
       <HStack gap="2">
-        <Box
-          aria-hidden
-          width="4"
-          height="4"
-          borderRadius="l1"
-          borderWidth="1px"
-          borderColor="border.emphasized"
-          style={{ background: BELT_SWATCHES[info.row.original.colour] }}
-        />
+        <RankSwatch colour={info.row.original.colour} />
         <Text>{info.getValue<string>()}</Text>
       </HStack>
+    ),
+  }),
+];
+
+/** The owner's columns. Fixed, not built on each render: a new cell component would remount the
+ * row's dialog and close it whenever the page re-renders. */
+const MANAGE_COLUMNS: ColumnDef<Rank, unknown>[] = [
+  ...LADDER,
+  column.display({
+    id: "actions",
+    header: () => <VisuallyHidden>Actions</VisuallyHidden>,
+    cell: ({ row, table }) => (
+      <RankActions
+        rank={row.original}
+        first={row.index === 0}
+        last={row.index === table.getRowModel().rows.length - 1}
+      />
     ),
   }),
 ];
@@ -35,23 +45,6 @@ const LADDER: ColumnDef<Rank, unknown>[] = [
 export function RanksPage() {
   const { me } = useSession();
   const manages = me?.permissions.includes(RANKS_MANAGE) ?? false;
-  const columns: ColumnDef<Rank, unknown>[] = manages
-    ? [
-        ...LADDER,
-        column.display({
-          id: "actions",
-          header: () => <VisuallyHidden>Actions</VisuallyHidden>,
-          cell: ({ row, table }) => (
-            <RankActions
-              rank={row.original}
-              first={row.index === 0}
-              last={row.index === table.getRowModel().rows.length - 1}
-            />
-          ),
-        }),
-      ]
-    : LADDER;
-
   return (
     <Stack gap="6">
       <Flex justify="space-between" align="center" gap="3" wrap="wrap">
@@ -61,7 +54,7 @@ export function RanksPage() {
       <SimpleQueryTable
         aria-label="Ranks"
         query={ranksQuery}
-        columns={columns}
+        columns={manages ? MANAGE_COLUMNS : LADDER}
         getRowId={(rank) => rank.id}
         emptyText="No ranks yet."
         errorText="The ranks could not be loaded."
