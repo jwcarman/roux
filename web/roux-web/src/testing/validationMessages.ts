@@ -2,7 +2,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const bundle = join("runtime", "roux-problems", "src", "main", "resources", "ContributorValidationMessages.properties");
+const bundle = join(
+  "runtime",
+  "roux-validation",
+  "src",
+  "main",
+  "resources",
+  "ContributorValidationMessages.properties",
+);
 
 /**
  * The server's message bundle. Found by walking up from here, so the tests read it from a copy of
@@ -39,7 +46,7 @@ function keyOf(constraint: string): string {
     return "org.hibernate.validator.constraints.URL.message";
   }
   if (constraint === "Phone" || constraint === "NotInFuture") {
-    return `org.jwcarman.roux.problems.constraints.${constraint}.message`;
+    return `org.jwcarman.roux.validation.${constraint}.message`;
   }
   return `jakarta.validation.constraints.${constraint}.message`;
 }
