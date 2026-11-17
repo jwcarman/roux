@@ -145,6 +145,9 @@ A copy of the template's `customers-trial` branch (at 003ce74), then:
   docs. The template's design docs stay behind.
 - Renamed: package `org.jwcarman.roux.examples.dojo`, application class `DojoApplication`, app name
   "Dojo".
+- Reorganized: the frontend by feature (`src/shell/`, `src/members/`, `src/activity/`, later
+  `src/students/`), mirroring the Java packages, with thin route files. This is the layout `roux new`
+  will write, so the dojo, the guides and the evals teach it.
 - Kept: sign-in (who, passkeys), members and invitations, Appearance, Settings, activity, the SPA
   shell, Docker Compose, the E2E and CSP tests.
 

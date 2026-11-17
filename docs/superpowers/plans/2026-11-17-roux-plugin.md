@@ -230,6 +230,14 @@ Content:
   every `noir-gen` marker, `.noir/`, `scripts/trace.sh`, `.github/` (roux's CI runs it),
   `docs/superpowers/` and `docs/native-findings.md`, noir wording in `CLAUDE.md` and `README.md`.
   Rename to the package, class and app name in Global Constraints.
+- [ ] **Step 1b:** Reorganize `frontend/src` by feature, mirroring the Java packages (the layout `roux
+  new` will write): `src/shell/` (Layout, Logo, nav, session, guards, colour mode, theme, looks, fonts,
+  csp, appearance and settings pages), `src/members/` (members.ts, passkeys, member pages and
+  dialogs), `src/activity/` (the activity list and its helpers), each feature's tests beside its code;
+  `src/routes/` stays (TanStack file routes) but each route file only imports its feature's page;
+  `main.tsx`, `api.ts`, `queryKeys.ts` and `testing/` stay at the top. Moves only: no behaviour
+  changes, imports updated. Do not add `.claude/settings.json` (it would give the eval baseline the
+  plugin).
 - [ ] **Step 2:** Make `examples/dojo/pom.xml` a child of `roux-parent` (`relativePath ../../pom.xml`,
   version inherited), import `roux-bom` at `${project.version}`, and bring over from
   `spring-boot-starter-parent` only the plugin management the template's build uses (Spring Boot
