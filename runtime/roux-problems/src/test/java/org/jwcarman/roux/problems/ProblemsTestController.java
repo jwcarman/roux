@@ -24,6 +24,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 import org.jwcarman.roux.problems.constraints.NotInFuture;
+import org.jwcarman.roux.problems.constraints.Phone;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -51,11 +52,11 @@ class ProblemsTestController {
 
   record Note(String note) {}
 
-  record Booking(@NotInFuture LocalDate day) {}
+  record Booking(@NotInFuture LocalDate day, @Phone String phone) {}
 
   @PostMapping("/booking")
   String booking(@Valid @RequestBody Booking body) {
-    return body.day().toString();
+    return body.phone();
   }
 
   record Feeling(Mood mood) {}

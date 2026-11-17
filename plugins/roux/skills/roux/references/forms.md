@@ -84,7 +84,7 @@ server caught the mistake ([Errors](errors.md#what-else-is-answered-for-you)).
 | `text()` | an input's string, trimmed | `string` | `Must not be blank` | `@NotBlank` |
 | `email()` | an input's string, trimmed | `string` | `Must not be blank`, `Must be a valid email address` | `@NotBlank @Email` |
 | `url()` | an input's string, trimmed; `http` or `https` only | `string` | `Must not be blank`, `Must be a valid web address` | `@NotBlank @URL` |
-| `phone()` | an input's string, trimmed: digits, spaces and `+ - ( ) .`, at least 7 digits | `string` | `Must not be blank`, `Is not in the expected format` | `@NotBlank @Pattern(...)` |
+| `phone()` | an input's string, trimmed: digits, spaces and `+ - ( ) .`, at least 7 digits | `string` | `Must not be blank`, `Is not in the expected format` | `@NotBlank @Phone` (roux-problems; the same pattern) |
 | `date()` | a `type="date"` input's `YYYY-MM-DD` | `string` (unchanged) | `Must not be empty`, `Is not in the expected format` | `@NotNull LocalDate` |
 | `number()` | a `NumberField`'s `number \| undefined` | `number` | `Must not be empty` | `@NotNull` |
 | `integer()` | a `NumberField`'s `number \| undefined` | `number` | `Must not be empty`, `Must be a whole number` (browser only) | `@NotNull` on an `int`/`Integer`/`long` |
@@ -108,8 +108,11 @@ Their methods:
   `@NotInFuture` reads the application's `Clock` bean (the system clock when there is none) and
   allows one day past the server's today, so what `notInFuture()` accepts is never refused. Neither
   needs wiring: annotate the request's field (`@NotNull @NotInFuture LocalDate birthDate`; `null` is
-  left to `@NotNull`). A test that sets the `Clock` bean sets the rule's today. (`NotInFutureValidator` is the constraint's
-  validator; you never reference it.)
+  left to `@NotNull`). A test that sets the `Clock` bean sets the rule's today. (`NotInFutureValidator` and `PhoneValidator`
+  are the constraints' validators; you never reference them.)
+- **A phone number** is `phone()` and `@Phone` (`@NotBlank @Phone String phone`): one pattern,
+  `Phone.PATTERN`, with `contracts/phone.json` and a contract test on each side keeping them
+  identical. A blank value is left to `@NotBlank`, as on the browser.
 - Text is trimmed before it is checked and sent. An optional text left blank (or only spaces) is sent
   as `null`; so is an optional date left empty, and an optional number left empty.
 - A blank required value reports only `Must not be blank`; the format check and any `.refine` do not

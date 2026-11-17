@@ -38,6 +38,8 @@ All notable changes to this project are documented in this file. The format foll
   [upgrading guide](https://github.com/jwcarman/who/blob/0.20.0/docs/guides/upgrading.md) for
   0.16.0 through 0.20.0.
 - roux-problems answers an enum value in a JSON body that is outside its set (`"role": "OWNER"`) as a field error on that field, `Must be one of MEMBER, INSTRUCTOR` (`items[1].role` inside a list), as it already did for a query parameter. It was the generic 400 with no field. Other unreadable bodies are unchanged.
+- `phone()` is now one pattern, `^(?=(?:\D*\d){7})[\d +\-().]+$`: only spaces (not tabs or other whitespace) are allowed between digits, as its description always said.
+
 
 ### Added
 
@@ -45,6 +47,7 @@ All notable changes to this project are documented in this file. The format foll
 - `FilterChips` takes `defaultValue`: the chip shown chosen while the URL has no value, reported as `undefined` when chosen, so the default stays out of the URL. It excludes `allLabel` (a type error to pass both).
 - `id()` in `@jwcarman/roux-web/form`: a required select over ids loaded at run time (`""` for the placeholder), with the server's `Must not be empty`, replacing `z.string().min(1, ...).register(fieldRules, ...)` with the message retyped.
 - roux-problems: `@NotInFuture` for a `LocalDate` a person picks in a browser (`Must not be in the future`). It compares with today by the application's `Clock` bean (the system clock without one) and allows one day past the server's today, because a browser up to UTC+14 is ahead of the server's zone and `@PastOrPresent` refused its valid "today". Spring Boot's validation builds it, so apps only annotate. roux-web: `date().notInFuture()` says the same words, comparing with the browser's own today.
+- roux-problems: `@Phone`, the browser's `phone()` rule as a Bean Validation constraint with the same pattern (`Phone.PATTERN`) and message (`Is not in the expected format`; a blank value is left to `@NotBlank`). `contracts/phone.json` holds both sides to one pattern and to the same accepted and refused examples (`PhoneContractTest`, `rules.contract.test.ts`).
 
 ## [0.2.0] - 2026-11-14
 

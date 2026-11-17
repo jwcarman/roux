@@ -156,15 +156,21 @@ class ProblemsAdviceTest {
 
   @Test
   void aDateOneDayPastTheServersTodayIsAllowedForAFarEasternBrowser() throws Exception {
-    postJson("/booking", "{\"day\":\"2026-06-16\"}").andExpect(status().isOk());
+    postJson("/booking", "{\"day\":\"2026-06-16\",\"phone\":\"+1 (555) 123-4567\"}")
+        .andExpect(status().isOk());
   }
 
   @Test
-  void aDateBeyondThatIsNotInTheFuture() throws Exception {
-    isProblem(postJson("/booking", "{\"day\":\"2026-06-17\"}"), 400, "Bad Request")
-        .andExpect(jsonPath("$.errors.length()").value(1))
+  void aDateBeyondThatIsNotInTheFutureAndAMalformedPhoneAreFieldErrors() throws Exception {
+    isProblem(
+            postJson("/booking", "{\"day\":\"2026-06-17\",\"phone\":\"call me\"}"),
+            400,
+            "Bad Request")
+        .andExpect(jsonPath("$.errors.length()").value(2))
         .andExpect(jsonPath("$.errors[0].field").value("day"))
-        .andExpect(jsonPath("$.errors[0].message").value("Must not be in the future"));
+        .andExpect(jsonPath("$.errors[0].message").value("Must not be in the future"))
+        .andExpect(jsonPath("$.errors[1].field").value("phone"))
+        .andExpect(jsonPath("$.errors[1].message").value("Is not in the expected format"));
   }
 
   @Test

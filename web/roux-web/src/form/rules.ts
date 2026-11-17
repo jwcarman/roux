@@ -132,17 +132,16 @@ export function url(): TextRule {
   });
 }
 
-const PHONE_CHARACTERS = /^[\d\s+\-().]+$/;
-const PHONE_MIN_DIGITS = 7;
+/**
+ * What a phone number looks like: digits, spaces and `+ - ( ) .`, at least 7 digits. The server's
+ * `@Phone` carries the same string (`Phone.PATTERN`), and `contracts/phone.json` holds the two together.
+ */
+export const PHONE_PATTERN = "^(?=(?:\\D*\\d){7})[\\d +\\-().]+$";
+const PHONE = new RegExp(PHONE_PATTERN);
 
 /** Required phone number: digits, spaces and `+ - ( ) .`, at least 7 digits: `Is not in the expected format`. */
 export function phone(): TextRule {
-  return requiredText({
-    format: {
-      test: (value) => PHONE_CHARACTERS.test(value) && value.replace(/\D/g, "").length >= PHONE_MIN_DIGITS,
-      message: NOT_EXPECTED_FORMAT,
-    },
-  });
+  return requiredText({ format: { test: (value) => PHONE.test(value), message: NOT_EXPECTED_FORMAT } });
 }
 
 // --- date -----------------------------------------------------------------------------------------
