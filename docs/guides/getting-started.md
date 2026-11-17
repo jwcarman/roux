@@ -68,7 +68,7 @@ The starter brings `roux-problems`, `roux-autoconfigure`, who (`who-spring-boot-
 email-link sign-in, `who-email-link`, and passkeys, `who-passkey`), jpa-utils
 (`org.jwcarman.jpa:jpa-utils`), `spring-boot-starter-validation` and `spring-boot-starter-webmvc`.
 Do not add who's starter yourself, and do not declare versions for any of them, for who's other
-modules (`who-test`), or for jpa-utils: `roux-bom` pins who 0.19.0 and jpa-utils 0.2.0. The test
+modules (`who-test`), or for jpa-utils: `roux-bom` pins who 0.20.0 and jpa-utils 0.2.0. The test
 dependencies are in [Testing](testing.md#dependencies).
 
 Errors are answered as Problem Details from the first request; see [Errors](errors.md). roux's own
@@ -123,7 +123,7 @@ databaseChangeLog:
 ```
 
 The full list of who's settings is in who's configuration guide
-(`docs/guides/configuration.md` in who's repository, at tag `0.19.0`).
+(`docs/guides/configuration.md` in who's repository, at tag `0.20.0`).
 
 ## Add the web side
 

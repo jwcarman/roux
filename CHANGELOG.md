@@ -14,12 +14,12 @@ All notable changes to this project are documented in this file. The format foll
   and `who-passkey`. Each fails startup without its required settings
   (`who.email-link.link-base-url`, `who.email-link.code-secret`, a way to send email, and
   `who.passkey.rp-id`); see who's configuration guide.
-- who is upgraded from 0.15.0 to 0.19.0. Its endpoints move under `/who` (for example
+- who is upgraded from 0.15.0 to 0.20.0. Its endpoints move under `/who` (for example
   `/ott/generate` is now `/who/email/send` and `/logout` is `/who/logout`; `/who/me` is
   unchanged), it adds a `who_session` table, and an app with no `SecurityFilterChain` of its own
   gets who's chain. Read who's
-  [upgrading guide](https://github.com/jwcarman/who/blob/0.19.0/docs/guides/upgrading.md) for
-  0.16.0 through 0.19.0.
+  [upgrading guide](https://github.com/jwcarman/who/blob/0.20.0/docs/guides/upgrading.md) for
+  0.16.0 through 0.20.0.
 
 ## [0.2.0] - 2026-11-14
 
