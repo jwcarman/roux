@@ -3,7 +3,7 @@ name: duplicate-name-invite
 expected_outcome: |
   Inviting someone whose name an existing member already has is refused before anything is
   created or sent: the server answers with an error on the name field reading "A member already
-  has that name", and the invite dialog shows it under the Name field. The build and tests pass.
+  has that name", and the invite dialog shows it under the Name field. The code compiles and the frontend tests pass; the full build, with the Java tests, is checked after the run.
   The graders named NN-roux-* judge roux's way (roux's exceptions, useSchemaForm) and apply to the
   roux arms only; the plain-stack arm is scored on the others.
 context:

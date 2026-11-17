@@ -273,7 +273,7 @@ Content:
 
 **Files:**
 - Create: `plugins/roux/scripts/eval-fixture.sh`, `plugins/roux/scripts/check-roux-way.sh`,
-  `plugins/roux/skills/roux/evals/<case>/{prompt.md,case.yaml,graders/*.md,place-dojo.sh}` for three
+  `plugins/roux/evals/<case>/{prompt.md,case.yaml,graders/*.md,place-dojo.sh}` for three
   cases
 
 **Interfaces:**

@@ -4,9 +4,10 @@
 #   - roux's Maven modules at <commit> installed into the fixture's own local repository,
 #     <dir>/.m2repo, so the pom's parent (roux-parent) and the starter resolve from there, and a later
 #     `./mvnw install` in the checkout cannot change a fixture made earlier. .mvn/jvm.config points
-#     every ./mvnw in the fixture (from any directory) at it, with ~/.m2/repository as a read-only
-#     tail for third-party artifacts, so the fixture holds only roux's (about 1 MB); an artifact in
-#     neither is downloaded into .m2repo;
+#     every ./mvnw in the fixture (from any directory) at it. It also holds every third-party
+#     artifact a build needs, since an eval's sandbox has no network and no ~/.m2;
+#   - its own Maven (.mvn/maven, run by ./mvnw) and npm cache (frontend/.npm-cache), filled by one
+#     full build without the end-to-end suite (needs Docker), so the sandbox can compile and test;
 #   - roux-web at <commit> built and packed into <dir>/vendor/, and the frontend depending on that
 #     tgz rather than linking roux's source;
 #   - git init and one commit, so a run's changes show as a diff (check-roux-way.sh judges those).
@@ -44,11 +45,12 @@ trap 'rm -rf "$work"' EXIT
 mkdir "$work/roux"
 git -C "$root" archive "$commit" | tar -x -C "$work/roux"
 
-# Maven reads the tail as a second, read-only local repository (Maven 3.9 or later).
-tail_repo="$HOME/.m2/repository"
+# An eval's sandbox has no network and no ~/.m2, so the fixture carries everything a build needs:
+# its own local repository, its own Maven and an npm cache. Its own Maven is downloaded under a
+# private MAVEN_USER_HOME, so the wrapper's copy in ~/.m2 is never touched.
 echo "installing roux's Maven modules at ${commit:0:7} into $dir/.m2repo" >&2
-(cd "$work/roux" && ./mvnw -B -q install -DskipTests -P '!examples' \
-  "-Dmaven.repo.local=$dir/.m2repo" "-Dmaven.repo.local.tail=$tail_repo") >&2
+(cd "$work/roux" && MAVEN_USER_HOME="$work/mvnhome" ./mvnw -B -q install -DskipTests -P '!examples' \
+  "-Dmaven.repo.local=$dir/.m2repo") >&2
 
 echo "building and packing roux-web at ${commit:0:7}" >&2
 mkdir "$dir/vendor"
@@ -59,11 +61,26 @@ tgz="$(cd "$work/roux/web/roux-web" && npm pack --silent --pack-destination "$di
 # The dojo and the Maven wrapper beside it.
 cp -R "$work/roux/examples/dojo/." "$dir/"
 cp -R "$work/roux/mvnw" "$work/roux/mvnw.cmd" "$work/roux/.mvn" "$dir/"
+# FINDINGS.md is roux's log of its own gaps, not part of the app; it would tell a run it is graded.
+rm -f "$dir/FINDINGS.md"
 # Maven's launcher puts the fixture's own directory in for ${MAVEN_PROJECTBASEDIR}, so the local
 # repository is the copy's own wherever the copy is (place-dojo.sh copies .m2repo with it).
 [ ! -e "$dir/.mvn/jvm.config" ] || { echo "eval-fixture: .mvn/jvm.config exists already" >&2; exit 1; }
-printf '%s\n' "-Dmaven.repo.local=\${MAVEN_PROJECTBASEDIR}/.m2repo" \
-  "-Dmaven.repo.local.tail=$tail_repo" >"$dir/.mvn/jvm.config"
+printf '%s\n' "-Dmaven.repo.local=\${MAVEN_PROJECTBASEDIR}/.m2repo" >"$dir/.mvn/jvm.config"
+# The wrapper would download Maven into ~/.m2/wrapper, which the sandbox cannot reach; mvnw runs the
+# copy's own instead.
+maven_home="$(dirname "$(dirname "$(find "$work/mvnhome/wrapper/dists" -type f -path '*/bin/mvn' | head -n 1)")")"
+[ -x "$maven_home/bin/mvn" ] || { echo "eval-fixture: no Maven under $work/mvnhome" >&2; exit 1; }
+cp -R "$maven_home" "$dir/.mvn/maven"
+rm -f "$dir/mvnw.cmd"
+cat >"$dir/mvnw" <<'MVNW'
+#!/bin/sh
+# Maven, bundled with this copy of the app so it builds without a download.
+exec "$(cd "$(dirname "$0")" && pwd)/.mvn/maven/bin/mvn" "$@"
+MVNW
+chmod +x "$dir/mvnw"
+# npm reads a relative cache against the folder holding .npmrc, so the cache travels with the copy.
+printf '%s\n' 'cache=.npm-cache' 'prefer-offline=true' 'audit=false' 'fund=false' >"$dir/frontend/.npmrc"
 printf '\n# roux, installed for this copy (eval-fixture.sh)\n.m2repo/\n' >>"$dir/.gitignore"
 
 # Rewrites one file with a Perl substitution and fails when the pattern is not there, so a change
@@ -116,6 +133,12 @@ fi
 # The lock, for the tgz in place of the link.
 echo "regenerating the frontend's lock" >&2
 (cd "$dir/frontend" && npm install --package-lock-only --ignore-scripts --no-audit --no-fund) >&2
+
+# One full build fills the local repository (every plugin, test provider and Node) and the npm cache.
+# Tests need Docker; the end-to-end suite is left out.
+echo "building the fixture once, to fill its repository and caches" >&2
+(cd "$dir" && ./mvnw -B -q verify -DskipITs) >&2
+printf '%s\n' '.m2repo/' '.mvn/maven/' 'frontend/.npm-cache/' >>"$dir/.gitignore"
 
 git -C "$dir" init -q -b main
 git -C "$dir" add -A

@@ -82,7 +82,7 @@ Shaped like who's (`jwcarman/who`, `plugins/who`):
   conflicts), tables and paging (`PageDto`, sort, search, filter chips, infinite lists), feedback
   (toasts, not-found and error pages, confirm on remove), testing (contract fixtures, MSW, the
   template's test helpers). The two READMEs shrink to an overview that links them.
-- `plugins/roux/skills/roux/evals/`: evals in the format the `skill-creator` skill uses (and
+- `plugins/roux/evals/`: evals in the format the `skill-creator` skill uses (and
   `claude plugin eval` reads), each a task an agent
   does in the dojo (for example "add a notes field to students, editable in the dialog"), run in a
   fresh copy of `examples/dojo` at the commit the eval names.
