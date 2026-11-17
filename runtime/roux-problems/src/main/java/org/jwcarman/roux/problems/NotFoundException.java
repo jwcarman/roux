@@ -15,7 +15,16 @@
  */
 package org.jwcarman.roux.problems;
 
-/** Something the request names does not exist: answered 404 with this message as the detail. */
+import java.util.Locale;
+
+/**
+ * Something the request names does not exist: answered 404 with this message as the detail.
+ *
+ * <p>The message is formatted as {@link InvariantViolationException}'s is: {@code
+ * String.format(Locale.ROOT, pattern, args)}, so it reads the same whatever the server's locale.
+ * Without arguments the pattern is the message as it stands, so a {@code %} in it needs no
+ * escaping.
+ */
 public class NotFoundException extends RuntimeException {
 
   private static final long serialVersionUID = 1L;
@@ -23,9 +32,11 @@ public class NotFoundException extends RuntimeException {
   /**
    * Creates the exception.
    *
-   * @param detail what is missing, for the user, such as {@code "No such student"}
+   * @param pattern what is missing, for the user, as a {@link String#format} pattern, such as
+   *     {@code "No student %s"}
+   * @param args the pattern's arguments
    */
-  public NotFoundException(String detail) {
-    super(detail);
+  public NotFoundException(String pattern, Object... args) {
+    super(args.length == 0 ? pattern : String.format(Locale.ROOT, pattern, args));
   }
 }

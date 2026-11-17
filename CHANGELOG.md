@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- `NotFoundException` takes a format pattern and its arguments, as `ConflictException`,
+  `InvariantViolationException` and `InvalidFieldException` do:
+  `new NotFoundException("No student %s", id)`. A call with a plain message compiles and reads as
+  before; code compiled against 0.2.0 must be recompiled.
 - `roux-spring-boot-starter` brings who (`who-spring-boot-starter`): every roux app uses who for
   identity. Drop your own who starter dependency, or keep it without a version.
 - The starter also brings who's two sign-in methods, `who-email-link` (email links and typed codes)

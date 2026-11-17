@@ -46,7 +46,7 @@ import org.jwcarman.roux.problems.NotFoundException;
 
 public class StudentNotFoundException extends NotFoundException {
   public StudentNotFoundException(UUID id) {
-    super("No student " + id);
+    super("No student %s", id);
   }
 }
 ```
@@ -59,7 +59,9 @@ private StudentEntity find(UUID id) {
 
 Answer: `404`, `detail` = the message (`contracts/problem-not-found.json`).
 
-`NotFoundException(String detail)` takes the message as is; it is not a format pattern.
+The constructor is `NotFoundException(String pattern, Object... args)`, formatted as
+`InvariantViolationException` is (below): with arguments, `String.format(Locale.ROOT, pattern, args)`;
+without, the pattern as it stands.
 
 A path variable that does not convert (`GET /api/students/not-a-uuid` for a `@PathVariable UUID id`)
 is answered `404` too, without a `detail`. Do not catch the conversion error yourself.
