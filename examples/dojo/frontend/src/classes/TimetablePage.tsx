@@ -1,7 +1,9 @@
-import { Box, Button, Card, Flex, Heading, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Card, Flex, HStack, Heading, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
+import { Link as RouterLink } from "@tanstack/react-router";
+import { LuListChecks } from "react-icons/lu";
 import { ErrorMessage } from "@jwcarman/roux-web/feedback";
-import { CLASSES_MANAGE } from "../api";
+import { ATTENDANCE_RECORD, CLASSES_MANAGE } from "../api";
 import { formatTime } from "../shell/format";
 import { useSession } from "../shell/session";
 import { ClassActions } from "./ClassActions";
@@ -12,6 +14,7 @@ import { classesQuery, WEEKDAYS, WEEKDAY_LABELS, type SchoolClass } from "./clas
 export function TimetablePage() {
   const { me } = useSession();
   const manages = me?.permissions.includes(CLASSES_MANAGE) ?? false;
+  const checksIn = me?.permissions.includes(ATTENDANCE_RECORD) ?? false;
   const classes = useQuery(classesQuery);
 
   return (
@@ -31,7 +34,7 @@ export function TimetablePage() {
               {(classes.data ?? [])
                 .filter((schoolClass) => schoolClass.weekday === weekday)
                 .map((schoolClass) => (
-                  <ClassCard key={schoolClass.id} schoolClass={schoolClass} manages={manages} />
+                  <ClassCard key={schoolClass.id} schoolClass={schoolClass} manages={manages} checksIn={checksIn} />
                 ))}
             </Stack>
           </Box>
@@ -42,7 +45,7 @@ export function TimetablePage() {
   );
 }
 
-function ClassCard({ schoolClass, manages }: { schoolClass: SchoolClass; manages: boolean }) {
+function ClassCard({ schoolClass, manages, checksIn }: { schoolClass: SchoolClass; manages: boolean; checksIn: boolean }) {
   return (
     <Card.Root size="sm" variant="outline">
       <Card.Body gap="1">
@@ -56,9 +59,19 @@ function ClassCard({ schoolClass, manages }: { schoolClass: SchoolClass; manages
           </Text>
         )}
       </Card.Body>
-      {manages && (
+      {(manages || checksIn) && (
         <Card.Footer>
-          <ClassActions schoolClass={schoolClass} />
+          <HStack gap="2" wrap="wrap">
+            {checksIn && (
+              <Button asChild size="xs" aria-label={`Check in ${schoolClass.name}`}>
+                <RouterLink to="/classes/$classId/check-in" params={{ classId: schoolClass.id }}>
+                  <LuListChecks aria-hidden />
+                  Check in
+                </RouterLink>
+              </Button>
+            )}
+            {manages && <ClassActions schoolClass={schoolClass} />}
+          </HStack>
         </Card.Footer>
       )}
     </Card.Root>

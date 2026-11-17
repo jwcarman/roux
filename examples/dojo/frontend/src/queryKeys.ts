@@ -4,6 +4,12 @@
  * See https://tkdodo.eu/blog/effective-react-query-keys#use-query-key-factories
  */
 export const queryKeys = {
+  attendance: {
+    all: ["attendance"] as const,
+    checkIn: (classId: string, date: string) => [...queryKeys.attendance.all, "check-in", classId, date] as const,
+    mark: (classId: string, date: string, studentId: string) =>
+      [...queryKeys.attendance.all, "mark", classId, date, studentId] as const,
+  },
   classes: {
     all: ["classes"] as const,
     lists: () => [...queryKeys.classes.all, "list"] as const,

@@ -42,11 +42,15 @@ public class StudentEntity extends AuditableEntity {
   /** A new, active student with the details of {@code request}. */
   public StudentEntity(StudentRequest request) {
     this.status = StudentStatus.ACTIVE;
-    change(request);
+    apply(request);
   }
 
   /** Replaces the student's details with those of {@code request}. */
   public void change(StudentRequest request) {
+    apply(request);
+  }
+
+  private void apply(StudentRequest request) {
     this.firstName = request.firstName();
     this.lastName = request.lastName();
     this.email = request.email();

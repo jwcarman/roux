@@ -42,11 +42,15 @@ public class ClassEntity extends AuditableEntity {
 
   /** A new class with the details of {@code request}, already checked by {@link ClassService}. */
   public ClassEntity(ClassRequest request) {
-    change(request);
+    apply(request);
   }
 
   /** Replaces the class's details with those of {@code request}; times are kept to the minute. */
   public void change(ClassRequest request) {
+    apply(request);
+  }
+
+  private void apply(ClassRequest request) {
     this.name = request.name();
     this.weekday = request.weekday();
     this.startsAt = request.startsAt().truncatedTo(ChronoUnit.MINUTES);

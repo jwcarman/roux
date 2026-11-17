@@ -14,4 +14,5 @@
   <include file="classpath:db/changelog/students.xml"/>
   <include file="classpath:db/changelog/promotions.xml"/>
   <include file="classpath:db/changelog/classes.xml"/>
+  <include file="classpath:db/changelog/attendance.xml"/>
 </databaseChangeLog>

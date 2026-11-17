@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isoDate, todayIso } from "./dates";
+import { isoDate, isoDateOf, todayIso } from "./dates";
 
 describe("dates", () => {
   afterEach(() => {
@@ -15,5 +15,14 @@ describe("dates", () => {
     vi.setSystemTime(new Date(2026, 10, 17, 12));
 
     expect(todayIso()).toBe("2026-11-17");
+  });
+
+  it("takes a date from the URL only when it is a real one", () => {
+    expect(isoDateOf("2026-03-10")).toBe("2026-03-10");
+    expect(isoDateOf("2026-02-30")).toBeUndefined();
+    expect(isoDateOf("2026-3-10")).toBeUndefined();
+    expect(isoDateOf("tuesday")).toBeUndefined();
+    expect(isoDateOf(20260310)).toBeUndefined();
+    expect(isoDateOf(undefined)).toBeUndefined();
   });
 });

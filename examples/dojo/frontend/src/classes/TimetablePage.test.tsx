@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { toaster } from "@jwcarman/roux-web/feedback";
-import { CLASSES_MANAGE, CLASSES_READ } from "../api";
+import { ATTENDANCE_RECORD, CLASSES_MANAGE, CLASSES_READ } from "../api";
 import { formatTime } from "../shell/format";
 import { invalidFields, stale } from "../testing/problems";
 import { renderRoute } from "../testing/route";
@@ -87,6 +87,23 @@ describe("TimetablePage", () => {
     await screen.findByText("Kids Karate");
     expect(screen.queryByRole("button", { name: "New class" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^(Edit|Remove)/ })).not.toBeInTheDocument();
+  });
+
+  it("links each class to its check-in only for whoever records attendance", async () => {
+    serve(KIDS);
+    renderRoute("/timetable", { permissions: [CLASSES_READ, ATTENDANCE_RECORD] });
+
+    const link = await screen.findByRole("link", { name: "Check in Kids Karate" });
+    expect(link).toHaveAttribute("href", "/classes/c2/check-in");
+    expect(screen.queryByRole("button", { name: /^(Edit|Remove)/ })).not.toBeInTheDocument();
+  });
+
+  it("offers no check-in to a read-only member", async () => {
+    serve(KIDS);
+    renderRoute("/timetable", READ);
+
+    await screen.findByText("Kids Karate");
+    expect(screen.queryByRole("link", { name: /^Check in/ })).not.toBeInTheDocument();
   });
 
   it("says so when there are no classes", async () => {
@@ -283,7 +300,7 @@ describe("TimetablePage", () => {
         "/api/classes/c2",
         () =>
           new HttpResponse(
-            JSON.stringify({ type: "about:blank", title: "Conflict", status: 409, detail: "Kids Karate has attendance" }),
+            JSON.stringify({ type: "about:blank", title: "Conflict", status: 409, detail: "Students have attended Kids Karate" }),
             { status: 409, headers: { "Content-Type": "application/problem+json" } },
           ),
       ),
@@ -294,7 +311,7 @@ describe("TimetablePage", () => {
     await user.click(await screen.findByRole("button", { name: "Remove Kids Karate" }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Remove" }));
 
-    expect(await screen.findByText("Kids Karate has attendance")).toBeInTheDocument();
+    expect(await screen.findByText("Students have attended Kids Karate")).toBeInTheDocument();
     expect(screen.getByText("Kids Karate")).toBeInTheDocument();
   });
 });

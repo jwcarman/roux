@@ -272,3 +272,51 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   names `ErrorMessage` for the failure; a `weekdays` constant (names, labels, Monday first) would be
   small but is probably the app's.
 - Outcome: deferred (guide note only).
+
+## An optimistic toggle is built from TanStack's parts; the guides do not mention it
+- Where: `attendance/attendance.ts` (`markAttendance`, `usePendingPresence`), `attendance/AttendeeToggle.tsx`
+- What was clunky: a check-in tap should show at once, and two quick taps must reach the server in
+  order. Nothing in roux or the guides covers either. The working shape is a mutation `scope` per
+  student (taps queue), the wanted state sent as the variable (`present: boolean`, not a toggle), and
+  `useMutationState` over the mutation key to show the last pending variable until the server
+  answers. Two traps: `useServerAction` exposes `pending` but not the variables, so the page cannot
+  use it to show what was asked; and `meta.refreshes` refetches after every settle, so the
+  `onMutate` + `setQueryData` form (the usual recipe) is overwritten by the first answer's refetch
+  while a queued second tap is still waiting, and the row flickers back. The queries guide's "never
+  refresh by hand" leaves no room for the usual `onSettled` check ("only the last pending mutation
+  invalidates").
+- roux could: a short "An optimistic toggle" section in queries-and-mutations.md with this recipe
+  (scope, wanted-state variable, `useMutationState`), or `useServerAction` returning the pending
+  variables.
+- Outcome: deferred (a guide section, maybe a hook: the user decides).
+
+## A unique constraint that means "already done" needs a service without a transaction
+- Where: `attendance/AttendanceService.markPresent`
+- What was clunky: a repeated or racing "present" must be success, not an error. The service finds no
+  mark, inserts, and loses the race to the unique constraint, which has to read as "already there".
+  But a violation inside a Spring transaction marks it rollback-only, so catching it in the usual
+  `@Transactional` service (the ranks service catches it only to rethrow) answers 500 on commit. The
+  fix is to make that one service non-transactional so each repository call is its own, with a
+  comment saying why, and to prove it with a test that fires twelve threads. The errors guide covers
+  a violation as a 409 or a field error, never as success.
+- roux could: say so in the errors guide ("a violation you will swallow cannot be caught inside the
+  transaction that caused it"), with this shape.
+- Outcome: deferred (guide note).
+
+## A client-side filter is written by hand each time
+- Where: `attendance/CheckInPage.tsx` (`matches`)
+- What was clunky: the tables guide's `SearchInput` example filters with one `includes`, which does
+  not match "lovelace ada" against "Ada Lovelace". The check-in list needs every word of the term
+  in the whole name, ignoring case, so the page has its own `matches`; the same logic is
+  `searchFor` on the server side for paged lists.
+- roux could: `matchesWords(text, term)` beside `searchTermOf` in `/paging`, with the server's
+  semantics, and use it in the guide's example.
+- Outcome: deferred (small roux addition: the user decides).
+
+## A date in the URL has no search helper
+- Where: `routes/_signedIn/classes/$classId/check-in.tsx` (`date`), `shell/dates.ts` (`isoDateOf`)
+- What was clunky: the check-in page's date is URL state (a reload and a deep link must keep it), and
+  `tableSearchOf`, `enumSearchOf` and `idSearchOf` cover everything but a date. A made-up
+  `?date=2026-02-30` reached the server as a 400 until the route checked it by hand.
+- roux could: `dateSearchOf(raw)` (a real `YYYY-MM-DD` or undefined) in `/paging`.
+- Outcome: deferred (small roux addition: the user decides).

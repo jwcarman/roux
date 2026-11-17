@@ -23,9 +23,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
- * Who may call each ranks, students, promotions and classes endpoint: a 403 for a role without the
- * permission, anything else (a 2xx, or a 400 or 404 for the made-up ids) for a role with it.
- * Authorization comes before the controller, so no endpoint's data matters here.
+ * Who may call each ranks, students, promotions, classes and attendance endpoint: a 403 for a role
+ * without the permission, anything else (a 2xx, or a 400 or 404 for the made-up ids) for a role
+ * with it. Authorization comes before the controller, so no endpoint's data matters here.
  */
 @AppTest
 class RolePermissionsTest {
@@ -41,6 +41,8 @@ class RolePermissionsTest {
   private static final String CLASSES = "/api/classes";
   private static final String CLASS_BODY =
       "{\"name\":\"Kids\",\"weekday\":\"MONDAY\",\"startsAt\":\"16:00\",\"endsAt\":\"17:00\"}";
+  private static final String ATTENDANCE_BODY =
+      "{\"studentId\":\"" + ID + "\",\"date\":\"2026-01-06\",\"present\":true}";
   private static final String RANK_BODY = "{\"name\":\"White\",\"colour\":\"WHITE\"}";
   private static final String STUDENT_BODY =
       "{\"firstName\":\"Ada\",\"lastName\":\"Lovelace\",\"startDate\":\"2026-01-01\"}";
@@ -59,7 +61,7 @@ class RolePermissionsTest {
 
   @BeforeEach
   void cleanSlate() {
-    members.reset("promotion", "student", "rank", "school_class");
+    members.reset("attendance", "promotion", "student", "rank", "school_class");
   }
 
   static Stream<Endpoint> endpoints() {
@@ -83,7 +85,15 @@ class RolePermissionsTest {
         new Endpoint("GET instructors", get(CLASSES + "/instructors"), OWNER_ONLY),
         new Endpoint("POST classes", json(post(CLASSES), CLASS_BODY), OWNER_ONLY),
         new Endpoint("PUT class", json(put(CLASSES + "/" + ID), CLASS_BODY), OWNER_ONLY),
-        new Endpoint("DELETE class", delete(CLASSES + "/" + ID), OWNER_ONLY));
+        new Endpoint("DELETE class", delete(CLASSES + "/" + ID), OWNER_ONLY),
+        new Endpoint(
+            "GET check-in",
+            get(CLASSES + "/" + ID + "/check-in").param("date", "2026-01-06"),
+            STAFF),
+        new Endpoint(
+            "mark attendance",
+            json(put(CLASSES + "/" + ID + "/attendance"), ATTENDANCE_BODY),
+            STAFF));
   }
 
   @ParameterizedTest(name = "{0}")

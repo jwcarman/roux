@@ -21,6 +21,7 @@ import { Route as SignedInMembersIndexRouteImport } from './routes/_signedIn/mem
 import { Route as SignedInMembersMemberIdRouteImport } from './routes/_signedIn/members/$memberId'
 import { Route as SignedInStudentsIndexRouteImport } from './routes/_signedIn/students/index'
 import { Route as SignedInStudentsStudentIdRouteImport } from './routes/_signedIn/students/$studentId'
+import { Route as SignedInClassesClassIdCheckInRouteImport } from './routes/_signedIn/classes/$classId/check-in'
 
 const SignedInRoute = SignedInRouteImport.update({
   id: '/_signedIn',
@@ -82,6 +83,12 @@ const SignedInStudentsStudentIdRoute =
     path: '/students/$studentId',
     getParentRoute: () => SignedInRoute,
   } as any)
+const SignedInClassesClassIdCheckInRoute =
+  SignedInClassesClassIdCheckInRouteImport.update({
+    id: '/classes/$classId/check-in',
+    path: '/classes/$classId/check-in',
+    getParentRoute: () => SignedInRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof SignedInIndexRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/students/$studentId': typeof SignedInStudentsStudentIdRoute
   '/members/': typeof SignedInMembersIndexRoute
   '/students/': typeof SignedInStudentsIndexRoute
+  '/classes/$classId/check-in': typeof SignedInClassesClassIdCheckInRoute
 }
 export interface FileRoutesByTo {
   '/appearance': typeof SignedInAppearanceRoute
@@ -108,6 +116,7 @@ export interface FileRoutesByTo {
   '/students/$studentId': typeof SignedInStudentsStudentIdRoute
   '/members': typeof SignedInMembersIndexRoute
   '/students': typeof SignedInStudentsIndexRoute
+  '/classes/$classId/check-in': typeof SignedInClassesClassIdCheckInRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -123,6 +132,7 @@ export interface FileRoutesById {
   '/_signedIn/students/$studentId': typeof SignedInStudentsStudentIdRoute
   '/_signedIn/members/': typeof SignedInMembersIndexRoute
   '/_signedIn/students/': typeof SignedInStudentsIndexRoute
+  '/_signedIn/classes/$classId/check-in': typeof SignedInClassesClassIdCheckInRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -138,6 +148,7 @@ export interface FileRouteTypes {
     | '/students/$studentId'
     | '/members/'
     | '/students/'
+    | '/classes/$classId/check-in'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/appearance'
@@ -151,6 +162,7 @@ export interface FileRouteTypes {
     | '/students/$studentId'
     | '/members'
     | '/students'
+    | '/classes/$classId/check-in'
   id:
     | '__root__'
     | '/_signedIn'
@@ -165,6 +177,7 @@ export interface FileRouteTypes {
     | '/_signedIn/students/$studentId'
     | '/_signedIn/members/'
     | '/_signedIn/students/'
+    | '/_signedIn/classes/$classId/check-in'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignedInStudentsStudentIdRouteImport
       parentRoute: typeof SignedInRoute
     }
+    '/_signedIn/classes/$classId/check-in': {
+      id: '/_signedIn/classes/$classId/check-in'
+      path: '/classes/$classId/check-in'
+      fullPath: '/classes/$classId/check-in'
+      preLoaderRoute: typeof SignedInClassesClassIdCheckInRouteImport
+      parentRoute: typeof SignedInRoute
+    }
   }
 }
 
@@ -272,6 +292,7 @@ interface SignedInRouteChildren {
   SignedInStudentsStudentIdRoute: typeof SignedInStudentsStudentIdRoute
   SignedInMembersIndexRoute: typeof SignedInMembersIndexRoute
   SignedInStudentsIndexRoute: typeof SignedInStudentsIndexRoute
+  SignedInClassesClassIdCheckInRoute: typeof SignedInClassesClassIdCheckInRoute
 }
 
 const SignedInRouteChildren: SignedInRouteChildren = {
@@ -284,6 +305,7 @@ const SignedInRouteChildren: SignedInRouteChildren = {
   SignedInStudentsStudentIdRoute: SignedInStudentsStudentIdRoute,
   SignedInMembersIndexRoute: SignedInMembersIndexRoute,
   SignedInStudentsIndexRoute: SignedInStudentsIndexRoute,
+  SignedInClassesClassIdCheckInRoute: SignedInClassesClassIdCheckInRoute,
 }
 
 const SignedInRouteWithChildren = SignedInRoute._addFileChildren(

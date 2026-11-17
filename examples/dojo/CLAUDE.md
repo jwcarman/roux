@@ -34,7 +34,8 @@ feature" section is the full worked example (member profiles); read the part you
 - Time comes from the injected `Clock` (UTC). Never call `now()` without it.
 - A record the client edits carries its `version`; a stale one is a 409.
 - Changes worth a history go through `ActivityLog.record` in the same transaction.
-- After a change, refresh what it affects with `invalidateQueries` on its `queryKeys` entry.
+- A mutation names what it changes in `meta: { refreshes: [queryKeys...] }`; never `invalidateQueries`
+  by hand.
 - Icons come only from `react-icons/lu`.
 
 ## Tests

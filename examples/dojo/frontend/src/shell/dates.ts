@@ -9,3 +9,13 @@ export function isoDate(date: Date): string {
 export function todayIso(): string {
   return isoDate(new Date());
 }
+
+/** `value` when it is a real calendar date written `YYYY-MM-DD`, else undefined: a date from the URL. */
+export function isoDateOf(value: unknown): string | undefined {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return undefined;
+  }
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return isoDate(date) === value ? value : undefined;
+}
