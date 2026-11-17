@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.AppTest;
+import org.jwcarman.roux.examples.dojo.TestClock;
 import org.jwcarman.roux.examples.dojo.TestMember;
 import org.jwcarman.roux.examples.dojo.TestMembers;
 import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
@@ -36,6 +38,7 @@ class PromotionsControllerTest {
   private static final String RANKS = "/api/ranks";
 
   @Autowired TestMembers members;
+  @Autowired TestClock clock;
   @Autowired ObjectMapper json;
 
   private TestMember owner;
@@ -91,7 +94,9 @@ class PromotionsControllerTest {
   @Test
   void whenTwoPromotionsShareADateTheLatestRecordedIsCurrent() throws Exception {
     String ada = student("Ada", "Lovelace");
+    clock.set("2026-03-10T10:00:00Z");
     promote(ada, white, "2026-03-10");
+    clock.advance(Duration.ofMinutes(1));
 
     owner
         .perform(promotion(ada, yellow, "2026-03-10"))
