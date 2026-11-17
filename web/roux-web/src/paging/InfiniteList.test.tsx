@@ -3,20 +3,26 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { PageDto } from "./paging";
+import { pageQuery, type PageDto, type PageQuery } from "./paging";
 import { pageOf, people, type Person } from "../testing/fakeServer";
 import { renderWithProviders } from "../testing/render";
 import { InfiniteList, type InfiniteListProps } from "./InfiniteList";
 
 const everyone = people(25);
 
-function show(props: Partial<InfiniteListProps<Person>> = {}) {
-  const fetchPage = vi.fn((pageIndex: number) => Promise.resolve(pageOf(everyone, { pageIndex, pageSize: 10 })));
+type ShowProps = Partial<Omit<InfiniteListProps<Person>, "query">> & {
+  /** What the list's query fetches with; ten people a page unless given. */
+  fetchPage?: PageQuery<Person>["fetch"];
+};
+
+function show({ fetchPage: given, ...props }: ShowProps = {}) {
+  const fetchPage = vi.fn<PageQuery<Person>["fetch"]>(
+    given ?? (({ pageIndex = 0 }) => Promise.resolve(pageOf(everyone, { pageIndex, pageSize: 10 }))),
+  );
   const view = renderWithProviders(
     <InfiniteList
       aria-label="People"
-      queryKey={["people", "infinite"]}
-      fetchPage={fetchPage}
+      query={pageQuery(["people", "infinite"], fetchPage)}
       getItemKey={(person) => person.id}
       renderItem={(person) => <span>{person.name}</span>}
       emptyText="Nobody here."
@@ -117,7 +123,11 @@ describe("InfiniteList", () => {
     await screen.findByText("Person 025");
     expect(items()).toHaveLength(25);
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
-    expect(fetchPage.mock.calls.map(([pageIndex]) => pageIndex)).toEqual([0, 1, 2]);
+    expect(fetchPage.mock.calls.map(([params]) => params)).toEqual([
+      { pageIndex: 0 },
+      { pageIndex: 1 },
+      { pageIndex: 2 },
+    ]);
   });
 
   it("loads more by itself when scrolled to the end, in auto mode", async () => {
@@ -143,6 +153,32 @@ describe("InfiniteList", () => {
     show({ loadMode: "auto" });
     await screen.findByText("Person 001");
     expect(screen.getByRole("button", { name: "Load more" })).toBeInTheDocument();
+  });
+
+  it("fetches each page with the abort signal", async () => {
+    const { fetchPage } = show();
+    await screen.findByText("Person 001");
+    expect(fetchPage.mock.calls[0][1]).toBeInstanceOf(AbortSignal);
+  });
+
+  it("keys the list by the query's key", async () => {
+    const view = renderWithProviders(
+      <InfiniteList
+        aria-label="People"
+        query={pageQuery(["people", { status: "ACTIVE" }], ({ pageIndex = 0 }) =>
+          Promise.resolve(pageOf(everyone, { pageIndex, pageSize: 10 })),
+        )}
+        getItemKey={(person) => person.id}
+        renderItem={(person) => <span>{person.name}</span>}
+      />,
+    );
+    await screen.findByText("Person 001");
+    expect(
+      view.client
+        .getQueryCache()
+        .getAll()
+        .map((cached) => cached.queryKey),
+    ).toEqual([["people", { status: "ACTIVE" }]]);
   });
 
   it("says when there is nothing to list", async () => {
@@ -219,7 +255,7 @@ describe("InfiniteList", () => {
   it("does not ask for a page while one is on its way", async () => {
     const { scrollToEnd } = observeIntersections();
     const second = deferred();
-    const fetchPage = vi.fn((pageIndex: number) =>
+    const fetchPage = vi.fn<PageQuery<Person>["fetch"]>(({ pageIndex }) =>
       pageIndex === 0 ? Promise.resolve(pageOf(everyone, { pageIndex, pageSize: 10 })) : second.promise,
     );
     show({ loadMode: "auto", fetchPage });
@@ -248,7 +284,7 @@ describe("InfiniteList", () => {
   it("shows a spinner only while more is loading", async () => {
     const second = deferred();
     const { user } = show({
-      fetchPage: (pageIndex) =>
+      fetchPage: ({ pageIndex }) =>
         pageIndex === 0 ? Promise.resolve(pageOf(everyone, { pageIndex, pageSize: 10 })) : second.promise,
     });
     await screen.findByText("Person 001");

@@ -1,8 +1,8 @@
 import { Box, Button, Center, Spinner, Stack, Text, type BoxProps } from "@chakra-ui/react";
-import { useInfiniteQuery, type QueryKey } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { ErrorMessage } from "../feedback/ErrorMessage";
-import { nextPageIndex, type PageDto } from "./paging";
+import { nextPageIndex, type PageDto, type PageQuery } from "./paging";
 
 /** When an {@link InfiniteList} loads its next page. */
 export type LoadMode = "manual" | "auto" | "hybrid";
@@ -11,8 +11,8 @@ export type LoadMode = "manual" | "auto" | "hybrid";
 export interface InfiniteListProps<T> {
   /** The list's accessible name. */
   "aria-label": string;
-  queryKey: QueryKey;
-  fetchPage: (pageIndex: number) => Promise<PageDto<T>>;
+  /** The list's query, from its resource module; the list asks it for one page at a time. */
+  query: PageQuery<T>;
   /** A stable key per item, such as its id. */
   getItemKey: (item: T) => string;
   renderItem: (item: T, index: number) => ReactNode;
@@ -32,8 +32,7 @@ export interface InfiniteListProps<T> {
 /** A list that grows a page at a time from a jpa-utils paged endpoint. */
 export function InfiniteList<T>({
   "aria-label": label,
-  queryKey,
-  fetchPage,
+  query,
   getItemKey,
   renderItem,
   loadMode = "manual",
@@ -49,8 +48,8 @@ export function InfiniteList<T>({
   const showsButton = !observes || loadMode === "hybrid";
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } = useInfiniteQuery({
-    queryKey,
-    queryFn: ({ pageParam }) => fetchPage(pageParam),
+    queryKey: query.queryKey,
+    queryFn: ({ pageParam, signal }) => query.fetch({ pageIndex: pageParam }, signal),
     initialPageParam: 0,
     getNextPageParam: (lastPage: PageDto<T>) => nextPageIndex(lastPage),
   });

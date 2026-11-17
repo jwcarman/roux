@@ -74,6 +74,8 @@ Before changing anything, find out what is there:
 - **Long lists are paged by the server** (`Paginator`, `PageParams`, a sort enum whose constants match
   the column ids) and shown with `QueryTable`, its state kept in the URL with `tableSearchOf`. Never
   page, sort or filter a long list in the browser, or hand-write a pager.
+  A list's key and fetch live in its resource module as `pageQuery(queryKeys..., (params, signal) => ...)`
+  and the page passes it as `query={...}`: never build a list's key or call its API in the page.
 - **Import roux-web only from its six subpaths**: `@jwcarman/roux-web/problem`, `/api`, `/paging`,
   `/table`, `/feedback`, `/form`. There is no root import, and anything else (roux's source, its
   internal test helpers) is not API and breaks on upgrade.

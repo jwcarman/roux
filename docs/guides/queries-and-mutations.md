@@ -140,8 +140,10 @@ The rules this module follows:
   version)`). Its `mutationFn` takes the schema's output (`RankRequest`), which is what
   `useSchemaForm` submits.
 - Every mutation that changes what a query shows names that query in `meta.refreshes`.
-- A paged list (a `QueryTable`'s query) has the shape `{ queryKey, query }`; see
-  [Tables and paging](tables-and-paging.md).
+- A paged list (for `QueryTable`, `InfiniteList` or `InfiniteSelect`) is a function of its filters
+  that returns `pageQuery(queryKeys.students.list(filters), (params, signal) => ...)`: its key and
+  how to fetch one page, passing `signal` on. A short list for `SimpleQueryTable` is a plain
+  `queryOptions(...)` constant. See [Tables and paging](tables-and-paging.md).
 
 ## Read data in a page
 

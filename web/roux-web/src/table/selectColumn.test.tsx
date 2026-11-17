@@ -4,7 +4,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
-import type { PageParams } from "../paging/paging";
+import { pageQuery, type PageParams } from "../paging/paging";
 import { fakeEndpoint, people, type Person } from "../testing/fakeServer";
 import { renderWithProviders } from "../testing/render";
 import { QueryTable } from "./QueryTable";
@@ -38,8 +38,7 @@ function Harness({ onPicked }: { onPicked: (next: ReadonlyMap<string, Person>) =
   return (
     <QueryTable
       aria-label="People"
-      queryKey={["people"]}
-      query={query}
+      query={pageQuery(["people"], query)}
       columns={columns}
       initialSort={{ id: "NAME", desc: false }}
       initialPageSize={10}
@@ -117,8 +116,7 @@ describe("createSelectColumn", () => {
     renderWithProviders(
       <QueryTable
         aria-label="People"
-        queryKey={["nobody"]}
-        query={fakeEndpoint([])}
+        query={pageQuery(["nobody"], fakeEndpoint([]))}
         columns={[
           createSelectColumn<Person>({
             selected: picked.selection,

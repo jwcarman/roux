@@ -1,5 +1,7 @@
 /** How the client talks to jpa-utils' paged endpoints: `PageParams` in, `PageDto` out. */
 
+import type { QueryKey } from "@tanstack/react-query";
+
 export type SortDirection = "ASC" | "DESC";
 
 /** jpa-utils' page of results: one page of `data` and where it sits in the whole. */
@@ -26,11 +28,24 @@ export interface PageParams {
   search?: string;
 }
 
+/** A paged list's query, as a resource module defines it: its key, and how to fetch one page. */
+export interface PageQuery<T> {
+  /** Names the list, filters included (a key from the app's `queryKeys`); the component appends the page it asks for. */
+  queryKey: QueryKey;
+  /** Fetches one page; the component supplies the page, size, sort or search, and the signal. */
+  fetch: (params: PageParams, signal: AbortSignal) => Promise<PageDto<T>>;
+}
+
+/** A paged list's query: `pageQuery(queryKeys.students.list(filters), (params, signal) => studentsApi.list({ ...filters, ...params }, signal))`. */
+export function pageQuery<T>(queryKey: QueryKey, fetch: PageQuery<T>["fetch"]): PageQuery<T> {
+  return { queryKey, fetch };
+}
+
 /** The most rows a jpa-utils `Paginator` returns per page by default. */
 export const MAX_PAGE_SIZE = 100;
 
 /** The query string for `params`: `""` when there is nothing to send, else `"?a=b&c=d"`. */
-export function pageQuery(params: PageParams & Record<string, string | number | undefined>): string {
+export function queryStringOf(params: PageParams & Record<string, string | number | undefined>): string {
   const query = new URLSearchParams();
   for (const [name, value] of Object.entries(params)) {
     if (value !== undefined && String(value).trim() !== "") {

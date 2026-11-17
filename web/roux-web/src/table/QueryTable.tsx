@@ -10,11 +10,10 @@ export type QueryTableProps<T> = UseQueryTableOptions<T> &
   };
 
 /**
- * A paged, sortable table over a jpa-utils endpoint. Put any search or filter in `queryKey`
- * (and use it in `query`); a change returns the table to its first page.
+ * A paged, sortable table over a jpa-utils endpoint. Put any search or filter in `query`
+ * (its key and its fetch); a change returns the table to its first page.
  */
 export function QueryTable<T>({
-  queryKey,
   query,
   columns,
   initialSort,
@@ -26,7 +25,6 @@ export function QueryTable<T>({
   ...props
 }: QueryTableProps<T>) {
   const { table, isLoading, isError } = useQueryTable({
-    queryKey,
     query,
     columns,
     initialSort,

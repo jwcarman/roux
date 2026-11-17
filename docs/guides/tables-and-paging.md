@@ -213,10 +213,10 @@ What the pieces do:
 
 ## The list's query
 
-A table takes `{ queryKey, query }`, where `query` fetches one page for the parameters the table
-supplies. Put it in the resource module, `src/students/students.ts`, beside `studentsApi`
-([API client](api-client.md#write-an-api-module-for-a-resource)), as a function of the list's
-filters, with the list's row type, statuses and sorts (the module already imports `PageParams` and
+A table, a growing list or a select takes the list's query: `pageQuery(queryKey, fetch)`, the list's
+key and how to fetch one page. Put it in the resource module, `src/students/students.ts`, beside
+`studentsApi` ([API client](api-client.md#write-an-api-module-for-a-resource)), as a function of the
+list's filters, with the list's row type, statuses and sorts (the module already imports
 `queryKeys`):
 
 ```ts
@@ -237,18 +237,30 @@ export interface Student {
   status: StudentStatus;
 }
 
-/** The student list under `filters`, as a QueryTable takes it: its key and the page query. */
-export function studentsQuery(filters: StudentFilters) {
-  return {
-    queryKey: queryKeys.students.list(filters),
-    query: (params: PageParams) => studentsApi.list({ ...params, ...filters }),
-  };
+/** The student list under `filters`, as a QueryTable takes it: its key and how to fetch a page. */
+export function studentsPage(filters: StudentFilters) {
+  return pageQuery(queryKeys.students.list(filters), (params, signal) =>
+    studentsApi.list({ ...params, ...filters }, signal),
+  );
 }
 ```
 
-The filters go in the key and in the query, so a different search or status is a different list (and
-starts on its first page). `query` receives the page, page size and sort; the spread puts the filters
-after them.
+The filters go in the key and in the fetch, so a different search or status is a different list (and
+starts on its first page). `fetch` receives the page, page size and sort, and the abort signal: pass
+it on, so a page no longer needed is cancelled. The spread puts the filters after the table's
+parameters. The component adds the page it asks for to the key (`[...queryKey, params]`), which is
+why the key must come from `queryKeys`: a key outside its prefixes is not refreshed by a mutation's
+`meta.refreshes`.
+
+```ts
+interface PageQuery<T> {
+  queryKey: QueryKey;
+  fetch: (params: PageParams, signal: AbortSignal) => Promise<PageDto<T>>;
+}
+function pageQuery<T>(queryKey: QueryKey, fetch: PageQuery<T>["fetch"]): PageQuery<T>;
+```
+
+The page never calls `studentsApi` or builds a key: it passes `query={studentsPage(filters)}`.
 
 ## A paged table
 
@@ -263,7 +275,7 @@ import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import type { TableSearch } from "@jwcarman/roux-web/paging";
 import { DEFAULT_PAGE_SIZE, DebouncedSearchInput, FilterChips, QueryTable } from "@jwcarman/roux-web/table";
-import { STUDENT_SORTS, studentsQuery, type Student, type StudentSort, type StudentStatus } from "./students";
+import { STUDENT_SORTS, studentsPage, type Student, type StudentSort, type StudentStatus } from "./students";
 
 /** The list's URL: page, sort and search, plus the status filter (all optional). */
 export type StudentsSearch = TableSearch<StudentSort> & { status?: StudentStatus };
@@ -337,7 +349,7 @@ export function StudentsPage() {
       />
       <QueryTable
         aria-label="Students"
-        {...studentsQuery({ search: search.search, status: search.status })}
+        query={studentsPage({ search: search.search, status: search.status })}
         columns={COLUMNS}
         initialSort={{ id: STUDENTS_SEARCH_DEFAULTS.sortBy, desc: false }}
         params={search}
@@ -386,7 +398,7 @@ How it fits together:
   sortable, and clicking it would ask for a sort the server refuses.
 - **One sort at a time.** A sortable header is a button with `aria-sort`; the first click sorts
   ascending, the next descending. Changing the sort returns to the first page.
-- **A filter change starts on page 1.** Uncontrolled, the table does it when `queryKey` changes.
+- **A filter change starts on page 1.** Uncontrolled, the table does it when the query's key changes.
   Controlled by `params` (as here), the page's `navigate` does it: set `pageIndex: undefined` in the
   same update that changes the search or a filter.
 - **`params` and `onParamsChange`.** With `params` the table shows the page and sort it is given
@@ -407,8 +419,7 @@ How it fits together:
 
 | Prop | Type | Meaning |
 | --- | --- | --- |
-| `queryKey` | `QueryKey` | Names the list, filters included. |
-| `query` | `(params: PageParams) => Promise<PageDto<T>>` | Fetches one page. |
+| `query` | `PageQuery<T>` | The list's query from its module (`studentsPage(filters)`): its key, filters included, and how to fetch one page. |
 | `columns` | `ColumnDef<T, unknown>[]` | TanStack Table columns; sortable ids are sort names. |
 | `initialSort` | `ColumnSort` (`{ id, desc }`) | The sort when the URL or state has none. Give the server's default, so the header shows it. |
 | `initialPageSize` | `number` | Rows per page when none is given; at most 100. |
@@ -494,7 +505,7 @@ import {
   TanstackTable,
   useQueryTable,
 } from "@jwcarman/roux-web/table";
-import { studentsQuery, type Student } from "./students";
+import { studentsPage, type Student } from "./students";
 
 const column = createColumnHelper<Student>();
 
@@ -506,7 +517,7 @@ const COLUMNS: ColumnDef<Student, unknown>[] = [
 /** The active students, with the row count and page size above the table and the pager below. */
 export function ActiveStudentsTable() {
   const { table, isLoading, isError } = useQueryTable({
-    ...studentsQuery({ status: "ACTIVE" }),
+    query: studentsPage({ status: "ACTIVE" }),
     columns: COLUMNS,
     initialSort: { id: "JOINED_ON", desc: true },
     initialPageSize: 10,
@@ -534,7 +545,7 @@ export function ActiveStudentsTable() {
 ```
 
 - `useQueryTable(options: UseQueryTableOptions<T>): UseQueryTableResult<T>`. The options are
-  `QueryTable`'s first eight props (`queryKey`, `query`, `columns`, `initialSort`, `initialPageSize`,
+  `QueryTable`'s first seven props (`query`, `columns`, `initialSort`, `initialPageSize`,
   `getRowId`, `params`, `onParamsChange`). The result is `{ table, page, isLoading, isError, refetch
   }`: the TanStack `table`, the `PageDto` on screen (the last one loaded while the next loads),
   `isLoading` while the first page loads, `isError` when a page failed.
@@ -562,7 +573,7 @@ import { Button, Stack } from "@chakra-ui/react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
 import { createSelectColumn, QueryTable } from "@jwcarman/roux-web/table";
-import { studentsQuery, type Student } from "./students";
+import { studentsPage, type Student } from "./students";
 
 const column = createColumnHelper<Student>();
 
@@ -588,7 +599,7 @@ export function ChooseStudents({ onChosen }: { onChosen: (students: Student[]) =
     <Stack gap="4">
       <QueryTable
         aria-label="Active students"
-        {...studentsQuery({ status: "ACTIVE" })}
+        query={studentsPage({ status: "ACTIVE" })}
         columns={columns}
         initialSort={{ id: "NAME", desc: false }}
         getRowId={(student) => student.id}
@@ -616,7 +627,7 @@ A list that is never long (the school's ranks) is fetched whole and sorted in th
 ```tsx
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { SimpleQueryTable } from "@jwcarman/roux-web/table";
-import { ranksApi, ranksQuery, type Rank } from "./ranks";
+import { ranksQuery, type Rank } from "./ranks";
 
 const column = createColumnHelper<Rank>();
 
@@ -630,8 +641,7 @@ export function RanksTable() {
   return (
     <SimpleQueryTable
       aria-label="Ranks"
-      queryKey={ranksQuery.queryKey}
-      query={() => ranksApi.list()}
+      query={ranksQuery}
       columns={COLUMNS}
       initialSort={{ id: "name", desc: false }}
       getRowId={(rank) => rank.id}
@@ -641,7 +651,8 @@ export function RanksTable() {
 }
 ```
 
-`SimpleQueryTableProps<T>`: `queryKey`, `query: () => Promise<T[]>`, `columns`, `initialSort?`,
+`SimpleQueryTableProps<T>`: `query` (the module's `queryOptions({ ... })` for the whole list, as
+`ranksQuery` is in [Queries and mutations](queries-and-mutations.md)), `columns`, `initialSort?`,
 `enabled?` (false holds the fetch, for example until a filter it needs is chosen), `getRowId?`,
 `emptyText?`, `errorText?`, and Chakra `Table.Root` props. Its column ids are the accessor keys
 (`name`), not sort names: the browser sorts.
@@ -679,31 +690,15 @@ in whatever order the endpoint gives. A student's rank history:
 
 ```tsx
 import { Box, Text } from "@chakra-ui/react";
-import { getJson, path } from "@jwcarman/roux-web/api";
-import { InfiniteList, type PageDto } from "@jwcarman/roux-web/paging";
-import { queryKeys } from "../queryKeys";
-
-/** A promotion as `/api/students/{id}/promotions` answers it, newest first. */
-export interface Promotion {
-  id: string;
-  rankName: string;
-  promotedOn: string;
-}
-
-/** `GET /api/students/{id}/promotions`: one page of a student's rank history. */
-export function promotionsPage(studentId: string, pageIndex: number) {
-  return getJson<PageDto<Promotion>>(path`students/${studentId}/promotions`, {
-    params: { pageIndex, pageSize: 20 },
-  });
-}
+import { InfiniteList } from "@jwcarman/roux-web/paging";
+import { promotionsPage } from "./students";
 
 /** A student's rank history, a page at a time. */
 export function RankHistory({ studentId }: { studentId: string }) {
   return (
     <InfiniteList
       aria-label="Rank history"
-      queryKey={queryKeys.students.promotions(studentId)}
-      fetchPage={(pageIndex) => promotionsPage(studentId, pageIndex)}
+      query={promotionsPage(studentId)}
       getItemKey={(promotion) => promotion.id}
       loadMode="hybrid"
       emptyText="No promotions yet."
@@ -721,8 +716,28 @@ export function RankHistory({ studentId }: { studentId: string }) {
 }
 ```
 
-with the key added to the factory in `src/queryKeys.ts`, under the student, so refreshing
-`queryKeys.students.detail(id)` after a promotion refreshes the history too:
+with the query in the resource module, `src/students/students.ts`, and its key added to the factory
+in `src/queryKeys.ts`, under the student, so refreshing `queryKeys.students.detail(id)` after a
+promotion refreshes the history too:
+
+```ts
+/** A promotion as `/api/students/{id}/promotions` answers it, newest first. */
+export interface Promotion {
+  id: string;
+  rankName: string;
+  promotedOn: string;
+}
+
+/** A student's rank history: its key and how to fetch a page of it, 20 promotions at a time. */
+export function promotionsPage(studentId: string) {
+  return pageQuery(queryKeys.students.promotions(studentId), ({ pageIndex }, signal) =>
+    getJson<PageDto<Promotion>>(path`students/${studentId}/promotions`, {
+      params: { pageIndex, pageSize: 20 },
+      signal,
+    }),
+  );
+}
+```
 
 ```ts
 promotions: (id: string) => [...queryKeys.students.detail(id), "promotions"] as const,
@@ -733,8 +748,7 @@ promotions: (id: string) => [...queryKeys.students.detail(id), "promotions"] as 
 | Prop | Meaning |
 | --- | --- |
 | `aria-label` | The list's name (required). |
-| `queryKey` | The list's key. |
-| `fetchPage` | `(pageIndex: number) => Promise<PageDto<T>>`; the page size is the endpoint's business. |
+| `query` | `PageQuery<T>`: the list's query from its module. The list passes `{ pageIndex }` and the signal to `fetch`; the page size is the endpoint's business. |
 | `getItemKey`, `renderItem` | A stable key per item; what each item shows (`(item, index) => ReactNode`). |
 | `loadMode` | `LoadMode`: `"manual"` (default: a `loadMoreText` button), `"auto"` (when the end scrolls within `threshold` pixels, default 100), `"hybrid"` (both). Where the browser cannot observe scrolling, the button shows in every mode. |
 | `loadMoreText`, `emptyText`, `errorText` | `Load more`, `Nothing to show.`, `Could not load the list.` by default. |
@@ -751,8 +765,7 @@ loads more as the options scroll. It fetches nothing until it is opened.
 
 ```tsx
 import { InfiniteSelect } from "@jwcarman/roux-web/paging";
-import { queryKeys } from "../queryKeys";
-import { studentsApi, type Student } from "./students";
+import { studentsPage, type Student } from "./students";
 
 /** Picks one active student, searching the server as the user types. */
 export function StudentPicker({
@@ -767,10 +780,7 @@ export function StudentPicker({
       label="Student"
       value={studentId}
       onChange={onChange}
-      queryKey={queryKeys.students.list({ status: "ACTIVE" })}
-      queryFn={({ search, pageIndex, pageSize }) =>
-        studentsApi.list({ search, pageIndex, pageSize, status: "ACTIVE" })
-      }
+      query={studentsPage({ status: "ACTIVE" })}
       getItemId={(student) => student.id}
       getItemLabel={(student) => student.name}
       getItemSubtext={(student) => student.email ?? ""}
@@ -787,8 +797,7 @@ export function StudentPicker({
 | --- | --- |
 | `label` | The field's label. |
 | `value`, `onChange` | The chosen item's id (controlled); `onChange(undefined)` when cleared. |
-| `queryKey` | The list's key; the select adds its search and page size to it. |
-| `queryFn` | `(query: InfiniteSelectQuery) => Promise<PageDto<T>>`, where `InfiniteSelectQuery` is `{ search: string \| undefined; pageIndex: number; pageSize: number }`. |
+| `query` | `PageQuery<T>`: the options' query from its module. The select adds `{ search, pageSize }` to its key, and passes `{ search, pageIndex, pageSize }` and the signal to `fetch`. |
 | `getItemId`, `getItemLabel`, `getItemSubtext?` | The item's id, its text, and a muted second line. |
 | `initialItem` | The item `value` names, so the field can show its label before any page loads (an edit form's current choice). |
 | `placeholder`, `minSearchLength` | Below `minSearchLength` characters (0 by default) it does not search and says `Type at least <n> characters to search`. |
@@ -800,17 +809,17 @@ options.` for a failed one.
 
 ## A link that exports the list
 
-`pageQuery(params)` is a query string for a plain link (`""` when there is nothing to send, else
+`queryStringOf(params)` is a query string for a plain link (`""` when there is nothing to send, else
 `?a=b`): undefined and blank values are left out. Use it for a download whose URL carries the list's
 search and filters:
 
 ```ts
-import { pageQuery } from "@jwcarman/roux-web/paging";
+import { queryStringOf } from "@jwcarman/roux-web/paging";
 import type { StudentStatus } from "./students";
 
 /** The CSV of the students the list shows (its search and status), every page of it. */
 export function studentsExportHref(search: string | undefined, status: StudentStatus | undefined): string {
-  return `/api/students/export.csv${pageQuery({ search, status })}`;
+  return `/api/students/export.csv${queryStringOf({ search, status })}`;
 }
 ```
 
@@ -818,14 +827,12 @@ export function studentsExportHref(search: string | undefined, status: StudentSt
 
 Gaps in 0.2.0 that a builder hits:
 
-- **Page requests are not cancelled.** `QueryTable`'s `query`, `InfiniteList`'s `fetchPage` and
-  `InfiniteSelect`'s `queryFn` receive no `AbortSignal`, so a page no longer needed still completes.
 - **`InfiniteSelect` is not a form field.** It draws its own label and shows no error message. In a
   schema form, render it inside `form.AppField` and wire it by hand (`value={field.state.value ||
   undefined}`, `onChange={(id) => field.handleChange(id ?? "")}`, `invalid={!field.state.meta.isValid}`);
   the field's message does not appear under it. A `SelectField` over a short list has none of these
   limits ([Forms](forms.md#the-fields)).
-- **`pageQuery` takes strings and numbers only.** Unlike `getJson`'s `params`, it has no arrays and
+- **`queryStringOf` takes strings and numbers only.** Unlike `getJson`'s `params`, it has no arrays and
   no booleans.
 - **A selection outlives a filter change.** `createSelectColumn`'s `selected` is the page's state;
   rows filtered out of view stay selected until the page clears it.
@@ -839,5 +846,8 @@ Gaps in 0.2.0 that a builder hits:
 - Don't use sort enum constant names that differ from the column ids, or leave `enableSorting` on a
   column the server cannot sort.
 - Don't read a table's state from the URL without `tableSearchOf` and `enumSearchOf`.
+- Don't build a list's key or call its API in the page; define its query in the module with
+  `pageQuery` and pass it as `query`. A key built in the page can miss the `queryKeys` prefix, and
+  `meta.refreshes` then stops refreshing the list.
 - Don't build a page's query string by hand; pass the filters to the API function as `params`.
 - Don't write a pager, a page-size select or a "Showing x to y" line; use the `/table` parts.

@@ -3,10 +3,10 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { PageDto } from "./paging";
+import { pageQuery, type PageDto, type PageQuery } from "./paging";
 import { fakeEndpoint, people, type Person } from "../testing/fakeServer";
 import { renderWithProviders } from "../testing/render";
-import { InfiniteSelect, type InfiniteSelectProps, type InfiniteSelectQuery } from "./InfiniteSelect";
+import { InfiniteSelect, type InfiniteSelectProps } from "./InfiniteSelect";
 
 const everyone = people(45);
 
@@ -20,6 +20,11 @@ function deferred() {
 }
 const endpoint = fakeEndpoint(everyone);
 
+type ShowProps = Partial<Omit<InfiniteSelectProps<Person>, "query">> & {
+  /** What the options' query fetches with; the endpoint over everyone unless given. */
+  queryFn?: PageQuery<Person>["fetch"];
+};
+
 describe("InfiniteSelect", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -30,9 +35,10 @@ describe("InfiniteSelect", () => {
     onlineManager.setOnline(true);
   });
 
-  function show(props: Partial<InfiniteSelectProps<Person>> = {}) {
-    const queryFn = vi.fn((params: InfiniteSelectQuery) =>
-      endpoint({ search: params.search, pageIndex: params.pageIndex, pageSize: params.pageSize }),
+  function show({ queryFn: given, ...props }: ShowProps = {}) {
+    const queryFn = vi.fn<PageQuery<Person>["fetch"]>(
+      given ??
+        ((params) => endpoint({ search: params.search, pageIndex: params.pageIndex, pageSize: params.pageSize })),
     );
     const onChange = vi.fn<(id: string | undefined) => void>();
     const element = (value: string | undefined) => (
@@ -40,8 +46,7 @@ describe("InfiniteSelect", () => {
         label="Owner"
         value={value}
         onChange={onChange}
-        queryKey={["people", "select"]}
-        queryFn={queryFn}
+        query={pageQuery(["people", "select"], queryFn)}
         getItemId={(person) => person.id}
         getItemLabel={(person) => person.name}
         getItemSubtext={(person) => person.email}
@@ -51,7 +56,13 @@ describe("InfiniteSelect", () => {
     );
     const view = renderWithProviders(element(props.value));
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    return { queryFn, onChange, user, rerender: (value: string | undefined) => view.rerender(element(value)) };
+    return {
+      queryFn,
+      onChange,
+      user,
+      client: view.client,
+      rerender: (value: string | undefined) => view.rerender(element(value)),
+    };
   }
 
   function input() {
@@ -76,7 +87,10 @@ describe("InfiniteSelect", () => {
     await user.click(input());
     expect(await screen.findByRole("option", { name: /Person 001/ })).toBeInTheDocument();
     expect(screen.getAllByRole("option")).toHaveLength(20);
-    expect(queryFn).toHaveBeenLastCalledWith({ search: undefined, pageIndex: 0, pageSize: 20 });
+    expect(queryFn).toHaveBeenLastCalledWith(
+      { search: undefined, pageIndex: 0, pageSize: 20 },
+      expect.any(AbortSignal),
+    );
   });
 
   it("chooses with the arrow keys and Enter, starting from the first option", async () => {
@@ -112,7 +126,10 @@ describe("InfiniteSelect", () => {
     await typeAndPause(user, "person 04");
     expect(await screen.findByRole("option", { name: /Person 045/ })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /Person 001/ })).toBeNull();
-    expect(queryFn).toHaveBeenLastCalledWith({ search: "person 04", pageIndex: 0, pageSize: 20 });
+    expect(queryFn).toHaveBeenLastCalledWith(
+      { search: "person 04", pageIndex: 0, pageSize: 20 },
+      expect.any(AbortSignal),
+    );
 
     await user.click(screen.getByRole("option", { name: /Person 045/ }));
     act(() => {
@@ -140,6 +157,18 @@ describe("InfiniteSelect", () => {
     await screen.findByRole("option", { name: /Person 020/ });
     fireEvent.scroll(screen.getByRole("listbox"));
     expect(await screen.findByRole("option", { name: /Person 021/ })).toBeInTheDocument();
+  });
+
+  it("keys the options by the query's key, the search and the page size", async () => {
+    const { user, client } = show();
+    await user.click(input());
+    await screen.findByRole("option", { name: /Person 001/ });
+    expect(
+      client
+        .getQueryCache()
+        .getAll()
+        .map((cached) => cached.queryKey),
+    ).toEqual([["people", "select", { search: undefined, pageSize: 20 }]]);
   });
 
   it("says when nothing matches", async () => {
@@ -182,7 +211,7 @@ describe("InfiniteSelect", () => {
     fireEvent.scroll(listbox);
   }
 
-  async function opened(props: Partial<InfiniteSelectProps<Person>> = {}) {
+  async function opened(props: ShowProps = {}) {
     const shown = show(props);
     await shown.user.click(input());
     await screen.findByRole("option", { name: /Person 001/ });
@@ -284,7 +313,7 @@ describe("InfiniteSelect", () => {
 
   it("does not load a page while one is on its way", async () => {
     const second = deferred();
-    const queryFn = vi.fn((query: InfiniteSelectQuery) =>
+    const queryFn = vi.fn<PageQuery<Person>["fetch"]>((query) =>
       query.pageIndex === 1 ? second.promise : endpoint({ ...query }),
     );
     const { listbox } = await opened({ queryFn });
@@ -298,7 +327,7 @@ describe("InfiniteSelect", () => {
   });
 
   it("does not load a page after the last", async () => {
-    const queryFn = vi.fn((query: InfiniteSelectQuery) => endpoint({ ...query }));
+    const queryFn = vi.fn<PageQuery<Person>["fetch"]>((query) => endpoint({ ...query }));
     const { listbox } = await opened({ queryFn });
     const near = { scrollHeight: 100, scrollTop: 0, clientHeight: 100 };
     scrollTo(listbox, near);

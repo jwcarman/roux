@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
+import { queryOptions, type QueryFunction } from "@tanstack/react-query";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -14,7 +15,7 @@ const columns: ColumnDef<Person, unknown>[] = [
 ];
 
 function show(
-  query: () => Promise<Person[]>,
+  query: QueryFunction<Person[]>,
   enabled = true,
   initialSort: { id: string; desc: boolean } | null = { id: "NAME", desc: false },
 ) {
@@ -22,8 +23,7 @@ function show(
   renderWithProviders(
     <SimpleQueryTable
       aria-label="People"
-      queryKey={["people", "all"]}
-      query={spy}
+      query={queryOptions({ queryKey: ["people", "all"], queryFn: spy })}
       columns={columns}
       initialSort={initialSort ?? undefined}
       getRowId={(row) => row.id}
@@ -73,6 +73,13 @@ describe("SimpleQueryTable", () => {
     expect(screen.queryByText("Nobody here.")).toBeNull();
   });
 
+  it("fetches with the query it is given, and its signal", async () => {
+    const { query } = show(() => Promise.resolve(people(3)));
+    await screen.findByText("Person 001");
+    expect(query).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ["people", "all"] }));
+    expect(query.mock.calls[0][0].signal).toBeInstanceOf(AbortSignal);
+  });
+
   it("does not fetch until enabled", async () => {
     const { query } = show(() => Promise.resolve(people(3)), false);
     await screen.findByRole("table", { name: "People" });
@@ -89,8 +96,7 @@ describe("SimpleQueryTable", () => {
     renderWithProviders(
       <SimpleQueryTable
         aria-label="People"
-        queryKey={["people", "bare"]}
-        query={() => Promise.resolve(people(3))}
+        query={queryOptions({ queryKey: ["people", "bare"], queryFn: () => Promise.resolve(people(3)) })}
         columns={columns}
         initialSort={{ id: "NAME", desc: false }}
       />,
@@ -123,8 +129,10 @@ describe("SimpleQueryTable", () => {
     renderWithProviders(
       <SimpleQueryTable
         aria-label="People"
-        queryKey={["people", "failing"]}
-        query={() => Promise.reject(new Error("down"))}
+        query={queryOptions({
+          queryKey: ["people", "failing"],
+          queryFn: () => Promise.reject<Person[]>(new Error("down")),
+        })}
         columns={columns}
       />,
     );

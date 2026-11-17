@@ -1,16 +1,9 @@
 import { Center, Combobox, createListCollection, Field, Spinner, Stack, Text } from "@chakra-ui/react";
-import { useInfiniteQuery, type QueryKey } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo, useState, type UIEvent } from "react";
 import { ErrorMessage } from "../feedback/ErrorMessage";
-import { MAX_PAGE_SIZE, nextPageIndex, searchTermOf, type PageDto } from "./paging";
+import { MAX_PAGE_SIZE, nextPageIndex, searchTermOf, type PageDto, type PageQuery } from "./paging";
 import { useDebounce } from "../table/useDebounce";
-
-/** What an {@link InfiniteSelect} asks its endpoint for. */
-export interface InfiniteSelectQuery {
-  search: string | undefined;
-  pageIndex: number;
-  pageSize: number;
-}
 
 /** What {@link InfiniteSelect} takes. */
 export interface InfiniteSelectProps<T> {
@@ -19,8 +12,8 @@ export interface InfiniteSelectProps<T> {
   value?: string;
   /** Called with the chosen item's id, or `undefined` when the choice is cleared. */
   onChange: (id: string | undefined) => void;
-  queryKey: QueryKey;
-  queryFn: (query: InfiniteSelectQuery) => Promise<PageDto<T>>;
+  /** The options' query, from its resource module; the select adds the search and page size to its key. */
+  query: PageQuery<T>;
   getItemId: (item: T) => string;
   getItemLabel: (item: T) => string;
   getItemSubtext?: (item: T) => string;
@@ -48,8 +41,7 @@ export function InfiniteSelect<T>({
   label,
   value,
   onChange,
-  queryKey,
-  queryFn,
+  query,
   getItemId,
   getItemLabel,
   getItemSubtext,
@@ -68,8 +60,8 @@ export function InfiniteSelect<T>({
   const [known, setKnown] = useState<T | undefined>(initialItem);
 
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: [...queryKey, { search, pageSize: size }],
-    queryFn: ({ pageParam }) => queryFn({ search, pageIndex: pageParam, pageSize: size }),
+    queryKey: [...query.queryKey, { search, pageSize: size }],
+    queryFn: ({ pageParam, signal }) => query.fetch({ search, pageIndex: pageParam, pageSize: size }, signal),
     initialPageParam: 0,
     getNextPageParam: (lastPage: PageDto<T>) => nextPageIndex(lastPage),
     enabled: open,

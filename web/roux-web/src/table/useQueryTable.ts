@@ -1,4 +1,4 @@
-import { hashKey, keepPreviousData, useQuery, type QueryKey } from "@tanstack/react-query";
+import { hashKey, keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   functionalUpdate,
   getCoreRowModel,
@@ -15,7 +15,7 @@ import {
   MAX_PAGE_SIZE,
   pageParamsOf,
   type PageDto,
-  type PageParams,
+  type PageQuery,
   type SortDirection,
   type TableSearch,
 } from "../paging/paging";
@@ -24,12 +24,11 @@ export const DEFAULT_PAGE_SIZE = 25;
 
 export interface UseQueryTableOptions<T> {
   /**
-   * Names the list, including any search or filter the page applies (`query` closes over the
-   * same values). A different key is a different list, which starts on its first page.
+   * The list's query, from its resource module. Its key names the list, filters included: a
+   * different key is a different list, which starts on its first page. The table appends the page
+   * it asks for, and supplies the page, page size, sort and the abort signal to `fetch`.
    */
-  queryKey: QueryKey;
-  /** Fetches one page; the table supplies the page, page size and sort. */
-  query: (params: PageParams) => Promise<PageDto<T>>;
+  query: PageQuery<T>;
   /** Column ids of sortable columns are the endpoint's sort names (its sort enum's values). */
   columns: ColumnDef<T, unknown>[];
   initialSort?: ColumnSort;
@@ -40,7 +39,7 @@ export interface UseQueryTableOptions<T> {
   /**
    * The page and sort, when the caller keeps them (in the URL, say): the table shows these, with
    * the defaults above for what is absent, and reports every change to {@link onParamsChange}
-   * instead of keeping its own. Its `search` is ignored; put the search in `queryKey` and `query`,
+   * instead of keeping its own. Its `search` is ignored; put the search in `query`,
    * and set `pageIndex` back to 0 in the same update that changes it.
    */
   params?: TableSearch;
@@ -118,7 +117,6 @@ function pageIndexOf(index: number): number {
  * caller that keeps them ({@link UseQueryTableOptions.params}).
  */
 export function useQueryTable<T>({
-  queryKey,
   query,
   columns,
   initialSort,
@@ -151,7 +149,7 @@ export function useQueryTable<T>({
   // A new key (another search or filter) starts on the first page. This is adjusted while
   // rendering, not in an effect, so the old page is never requested under the new key. A caller
   // keeping the params resets the page itself, in the same update that changes the key.
-  const keyHash = hashKey(queryKey);
+  const keyHash = hashKey(query.queryKey);
   const [listedKey, setListedKey] = useState(keyHash);
   if (listedKey !== keyHash) {
     setListedKey(keyHash);
@@ -161,8 +159,8 @@ export function useQueryTable<T>({
 
   const request = pageParamsOf(current, state.sorting);
   const result = useQuery({
-    queryKey: [...queryKey, request],
-    queryFn: () => query(request),
+    queryKey: [...query.queryKey, request],
+    queryFn: ({ signal }) => query.fetch(request, signal),
     placeholderData: keepPreviousData,
   });
   const page = result.data;

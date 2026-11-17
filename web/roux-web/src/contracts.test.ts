@@ -3,7 +3,14 @@ import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { onSessionLost, send } from "./api/client";
 import { apiSettings } from "./api/config";
-import { nextPageIndex, pageQuery, rowRange, type PageDto, type PageParams, type SortDirection } from "./paging/paging";
+import {
+  nextPageIndex,
+  queryStringOf,
+  rowRange,
+  type PageDto,
+  type PageParams,
+  type SortDirection,
+} from "./paging/paging";
 import { problemOf, type Problem } from "./problem/problem";
 import { contract, contractNames } from "./testing/contracts";
 import { server } from "./testing/server";
@@ -61,14 +68,14 @@ describe("the shared contracts", () => {
     expect(rowRange(page.pagination, 2)).toEqual({ first: 1, last: 2, total: 3 });
   });
 
-  it.each(pageParams)("pageQuery sends %s", (query, entry) => {
+  it.each(pageParams)("queryStringOf sends %s", (query, entry) => {
     const params: PageParams & Record<string, string | number | undefined> = {};
     if (entry.pageIndex !== null) params.pageIndex = entry.pageIndex;
     if (entry.pageSize !== null) params.pageSize = entry.pageSize;
     if (entry.sortBy !== null) params.sortBy = entry.sortBy;
     if (entry.sortDirection !== null) params.sortDirection = entry.sortDirection;
 
-    expect(pageQuery(params)).toBe(query);
+    expect(queryStringOf(params)).toBe(query);
   });
 
   it("session.json matches the client", async () => {

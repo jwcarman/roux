@@ -6,6 +6,19 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Breaking changes
+
+- roux-web's list components take the resource module's query, not a key plus a fetch function.
+  `QueryTable` and `useQueryTable` take `query: PageQuery<T>` (replacing `queryKey` and `query`),
+  `InfiniteList` takes `query: PageQuery<T>` (replacing `queryKey` and `fetchPage`), `InfiniteSelect`
+  takes `query: PageQuery<T>` (replacing `queryKey` and `queryFn`; `InfiniteSelectQuery` is gone, its
+  parameters are `PageParams`), and `SimpleQueryTable` takes `query` as the list's TanStack query
+  options (replacing `queryKey` and `query`; pass the module's `queryOptions(...)`). Every page
+  fetch now receives the `AbortSignal`, so a page no longer needed is cancelled.
+- `pageQuery` now builds a paged list's query: `pageQuery(queryKey, (params, signal) => ...)`
+  returns a `PageQuery<T>` (also new, with `queryKey` and `fetch`). The old `pageQuery(params)`, a URL
+  query string for an export link, is renamed `queryStringOf(params)`.
+
 ### Changed
 
 - `NotFoundException` takes a format pattern and its arguments, as `ConflictException`,

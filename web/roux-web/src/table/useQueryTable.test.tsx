@@ -2,7 +2,8 @@
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { act, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { PageDto, PageParams, TableSearch } from "../paging/paging";
+import type { QueryKey } from "@tanstack/react-query";
+import { pageQuery, type PageDto, type PageParams, type PageQuery, type TableSearch } from "../paging/paging";
 import { fakeEndpoint, pageOf, people, type Person } from "../testing/fakeServer";
 import { renderHookWithProviders } from "../testing/render";
 import { useQueryTable, type TableParams, type UseQueryTableOptions } from "./useQueryTable";
@@ -13,18 +14,24 @@ const columns: ColumnDef<Person, unknown>[] = [
   column.accessor("email", { id: "EMAIL", header: "Email" }),
 ];
 
-function setUp(options: Partial<UseQueryTableOptions<Person>> = {}, rows = people(60)) {
+type SetUpOptions = Partial<Omit<UseQueryTableOptions<Person>, "query">> & {
+  queryKey?: QueryKey;
+  /** What the list's query fetches with; the endpoint over the rows unless given. */
+  query?: PageQuery<Person>["fetch"];
+};
+
+function setUp(options: SetUpOptions = {}, rows = people(60)) {
   const query = vi.fn(fakeEndpoint(rows));
   const rendered = renderHookWithProviders(
-    (props: Partial<UseQueryTableOptions<Person>>) =>
-      useQueryTable({
-        queryKey: ["people"],
-        query,
+    (props: SetUpOptions) => {
+      const { queryKey, query: fetch, ...rest } = { ...options, ...props };
+      return useQueryTable({
+        query: pageQuery(queryKey ?? ["people"], fetch ?? query),
         columns,
         initialSort: { id: "NAME", desc: false },
-        ...options,
-        ...props,
-      }),
+        ...rest,
+      });
+    },
     undefined,
     {},
   );
@@ -41,6 +48,30 @@ describe("useQueryTable", () => {
     await waitFor(() => expect(result.current.page).toBeDefined());
     expect(query).toHaveBeenCalledTimes(1);
     expect(lastParams(query)).toEqual({ pageIndex: 0, pageSize: 25, sortBy: "NAME", sortDirection: "ASC" });
+  });
+
+  it("keys the list's query by its key and the page it asks for", async () => {
+    const { client, result } = setUp({ queryKey: ["people", { status: "ACTIVE" }] });
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    expect(
+      client
+        .getQueryCache()
+        .getAll()
+        .map((cached) => cached.queryKey),
+    ).toEqual([["people", { status: "ACTIVE" }, { pageIndex: 0, pageSize: 25, sortBy: "NAME", sortDirection: "ASC" }]]);
+  });
+
+  it("hands the abort signal to the query's fetch", async () => {
+    const signals: AbortSignal[] = [];
+    const { result } = setUp({
+      query: (params, signal) => {
+        signals.push(signal);
+        return fakeEndpoint(people(60))(params);
+      },
+    });
+    await waitFor(() => expect(result.current.page).toBeDefined());
+    expect(signals).toHaveLength(1);
+    expect(signals[0]).toBeInstanceOf(AbortSignal);
   });
 
   it("shows the page's rows, counted by the server", async () => {
@@ -94,7 +125,7 @@ describe("useQueryTable", () => {
     };
     const { result, rerender } = renderHookWithProviders(
       (props: { search: string | undefined }) =>
-        useQueryTable({ queryKey: ["people", { search: props.search }], query, columns }),
+        useQueryTable({ query: pageQuery(["people", { search: props.search }], query), columns }),
       undefined,
       { search: undefined as string | undefined },
     );

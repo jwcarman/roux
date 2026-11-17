@@ -3,7 +3,7 @@ import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { PageDto, PageParams } from "../paging/paging";
+import { pageQuery, type PageDto, type PageQuery } from "../paging/paging";
 import { fakeEndpoint, people, type Person } from "../testing/fakeServer";
 import { renderWithProviders } from "../testing/render";
 import { QueryTable } from "./QueryTable";
@@ -15,13 +15,12 @@ const columns: ColumnDef<Person, unknown>[] = [
   column.display({ id: "actions", header: "Actions", cell: () => "…", enableSorting: false }),
 ];
 
-function show(query: (params: PageParams) => Promise<PageDto<Person>> = fakeEndpoint(people(60))) {
+function show(query: PageQuery<Person>["fetch"] = fakeEndpoint(people(60))) {
   const spy = vi.fn(query);
   renderWithProviders(
     <QueryTable
       aria-label="People"
-      queryKey={["people"]}
-      query={spy}
+      query={pageQuery(["people"], spy)}
       columns={columns}
       initialSort={{ id: "NAME", desc: false }}
       getRowId={(row) => row.id}
@@ -48,6 +47,13 @@ describe("QueryTable", () => {
     show();
     await waitFor(() => expect(firstNames()).toEqual(["Person 001", "Person 002"]));
     expect(within(table()).getAllByRole("row")).toHaveLength(26);
+  });
+
+  it("fetches a page with the abort signal", async () => {
+    const { query } = show();
+    await screen.findByText("Person 001");
+    expect(query.mock.calls[0][0]).toEqual({ pageIndex: 0, pageSize: 25, sortBy: "NAME", sortDirection: "ASC" });
+    expect(query.mock.calls[0][1]).toBeInstanceOf(AbortSignal);
   });
 
   it("marks the sorted column for assistive technology", async () => {
@@ -197,8 +203,7 @@ describe("QueryTable", () => {
     renderWithProviders(
       <QueryTable
         aria-label="People"
-        queryKey={["people"]}
-        query={() => Promise.reject(new Error("down"))}
+        query={pageQuery<Person>(["people"], () => Promise.reject(new Error("down")))}
         columns={columns}
       />,
     );

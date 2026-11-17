@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   enumSearchOf,
   tableSearchOf,
@@ -6,6 +6,7 @@ import {
   nextPageIndex,
   pageParamsOf,
   pageQuery,
+  queryStringOf,
   rowRange,
   searchTermOf,
   type PageDto,
@@ -28,22 +29,35 @@ function pageOf<T>(data: T[], pageIndex: number, pageSize: number, totalElementC
 }
 
 describe("pageQuery", () => {
+  it("pairs a list's key with how it fetches a page", async () => {
+    const fetch = vi.fn((params: PageParams) =>
+      Promise.resolve(pageOf([params.pageIndex], params.pageIndex ?? 0, 10, 1)),
+    );
+    const query = pageQuery(["people", { status: "ACTIVE" }], fetch);
+    const signal = new AbortController().signal;
+    expect(query.queryKey).toEqual(["people", { status: "ACTIVE" }]);
+    await query.fetch({ pageIndex: 3 }, signal);
+    expect(fetch).toHaveBeenCalledWith({ pageIndex: 3 }, signal);
+  });
+});
+
+describe("queryStringOf", () => {
   it("is empty without parameters", () => {
-    expect(pageQuery({})).toBe("");
+    expect(queryStringOf({})).toBe("");
   });
 
   it("names each given parameter", () => {
-    expect(pageQuery({ pageIndex: 2, sortBy: "NAME", sortDirection: "DESC" })).toBe(
+    expect(queryStringOf({ pageIndex: 2, sortBy: "NAME", sortDirection: "DESC" })).toBe(
       "?pageIndex=2&sortBy=NAME&sortDirection=DESC",
     );
   });
 
   it("encodes values", () => {
-    expect(pageQuery({ search: "a&b" })).toBe("?search=a%26b");
+    expect(queryStringOf({ search: "a&b" })).toBe("?search=a%26b");
   });
 
   it("drops a blank search", () => {
-    expect(pageQuery({ search: "  " })).toBe("");
+    expect(queryStringOf({ search: "  " })).toBe("");
   });
 });
 
@@ -232,9 +246,9 @@ describe("enumSearchOf", () => {
   });
 });
 
-describe("pageQuery with filters", () => {
+describe("queryStringOf with filters", () => {
   it("carries extra parameters such as filters", () => {
-    expect(pageQuery({ pageIndex: 1, role: "OWNER", status: undefined })).toBe("?pageIndex=1&role=OWNER");
+    expect(queryStringOf({ pageIndex: 1, role: "OWNER", status: undefined })).toBe("?pageIndex=1&role=OWNER");
   });
 
   describe("tableSearchOf, at the edges", () => {
