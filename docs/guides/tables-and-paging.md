@@ -451,7 +451,8 @@ function DebouncedSearchInput(props: DebouncedSearchInputProps): JSX.Element;
 
 function FilterChips<T extends string>(props: FilterChipsProps<T>): JSX.Element;
 // FilterChipsProps<T>: label, options: readonly FilterOption<T>[] ({ value, label }),
-//   value: T | undefined, onChange: (value: T | undefined) => void, allLabel?: string
+//   value: T | undefined, onChange: (value: T | undefined) => void,
+//   allLabel?: string  |  defaultValue?: T   (one or the other, never both)
 ```
 
 - `DebouncedSearchInput` (`DebouncedSearchInputProps`) reports the trimmed term once typing pauses, only when it changes, and
@@ -461,7 +462,11 @@ function FilterChips<T extends string>(props: FilterChipsProps<T>): JSX.Element;
   navigation so Back skips the keystrokes.
 - `FilterChips` (`FilterChipsProps<T>`, options of `FilterOption<T>`) is one filter as a row of toggle buttons (`aria-pressed`), one chosen at a time;
   `allLabel` adds a first chip that clears it (`undefined`). `label` names the group for screen
-  readers.
+  readers. When the list has its own default (the school's students show the active ones unless
+  asked), pass `defaultValue` instead of `allLabel`: that chip shows chosen while `value` is
+  `undefined`, and choosing it reports `undefined`, so the default stays out of the URL and the page
+  needs no `value ?? DEFAULT` or `x === DEFAULT ? undefined : x` of its own. The two props exclude
+  each other; with a default there is no "no filter" to offer.
 - `SearchInput` (`SearchInputProps`: `value`, `onChange`, `label`, `placeholder?`, `width?`,
   `size?`) is the same field without the debounce, for a filter in the browser;
   `useDebounce(value, delayMs)` gives the value once it has stopped changing:

@@ -81,4 +81,63 @@ describe("FilterChips", () => {
     const other = getComputedStyle(screen.getByRole("button", { name: "Members" }));
     expect(chosen.backgroundColor).not.toBe(other.backgroundColor);
   });
+
+  describe("with a default value", () => {
+    it("shows the default chip chosen while the URL has no value", () => {
+      renderWithProviders(
+        <FilterChips label="Role" options={ROLES} value={undefined} defaultValue="MEMBER" onChange={vi.fn()} />,
+      );
+      expect(screen.getByRole("button", { name: "Members" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: "Owners" })).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("shows the value chosen when the URL has one", () => {
+      renderWithProviders(
+        <FilterChips label="Role" options={ROLES} value="OWNER" defaultValue="MEMBER" onChange={vi.fn()} />,
+      );
+      expect(screen.getByRole("button", { name: "Owners" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: "Members" })).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("reports undefined for the default chip and the value for any other", async () => {
+      const onChange = vi.fn();
+      renderWithProviders(
+        <FilterChips label="Role" options={ROLES} value="OWNER" defaultValue="MEMBER" onChange={onChange} />,
+      );
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: "Members" }));
+      expect(onChange).toHaveBeenLastCalledWith(undefined);
+      await user.click(screen.getByRole("button", { name: "Owners" }));
+      expect(onChange).toHaveBeenLastCalledWith("OWNER");
+    });
+
+    it("cannot also offer an All chip", () => {
+      const both = (
+        // @ts-expect-error a default and an "All" chip are two answers to "nothing chosen"
+        <FilterChips
+          label="Role"
+          options={ROLES}
+          value={undefined}
+          defaultValue="MEMBER"
+          allLabel="All"
+          onChange={vi.fn()}
+        />
+      );
+      expect(both).toBeDefined();
+    });
+
+    it("only takes one of the options' values as its default", () => {
+      const unknown = (
+        <FilterChips
+          label="Role"
+          options={ROLES}
+          value={undefined}
+          // @ts-expect-error "VISITOR" is not one of the chips
+          defaultValue="VISITOR"
+          onChange={vi.fn()}
+        />
+      );
+      expect(unknown).toBeDefined();
+    });
+  });
 });
