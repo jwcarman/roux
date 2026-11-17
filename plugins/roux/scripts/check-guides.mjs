@@ -13,7 +13,7 @@ const referencesDir = join(root, "plugins/roux/skills/roux/references");
 const webEntries = ["problem", "api", "paging", "table", "feedback", "form"];
 
 // Public but not API: wiring that users never reference by name.
-const excludedJava = new Set(["ProblemsRuntimeHints", "RouxProblemsAutoConfiguration", "RouxAuditingAutoConfiguration"]);
+const excludedJava = new Set(["ProblemsRuntimeHints", "RouxProblemsAutoConfiguration", "RouxAuditingAutoConfiguration", "RouxSpaAutoConfiguration"]);
 
 const problems = [];
 const rel = (file) => relative(root, file);

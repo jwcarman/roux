@@ -89,11 +89,8 @@ spring:
 who:
   initialize-schema: never   # Liquibase creates who's tables (below)
   security:
-    public-paths:            # what a signed-out browser may load
-      - /
-      - /index.html
-      - /signin/**
-      - /assets/**
+    public-paths:            # what a signed-out browser may load besides the shell and /assets/**
+      - /favicon.svg
   email-link:
     link-base-url: http://localhost:8080/signin/link
     code-secret: development-only-code-secret-not-for-production
@@ -111,7 +108,7 @@ who:
 | `who.email-link.from` | The sender of sign-in emails. Required when they go out through `JavaMailSender`. |
 | `who.passkey.rp-id` | The app's own host (`localhost` in development, `app.example.com` in production). Required. |
 | `who.passkey.allowed-origins` | The origins passkey sign-in may come from. Defaults to `https://<rp-id>`, which does not match `http://localhost:8080`, so set it in development. |
-| `who.security.public-paths` | Paths of the app open to signed-out requests. who's sign-in endpoints are open already; list the SPA's shell (`/`, `/index.html`), the sign-in pages (including the one `link-base-url` names) and the files they load (`/assets/**`, and any icon at the root). Anything else answers `401` to a signed-out request. |
+| `who.security.public-paths` | Paths of the app open to signed-out requests besides who's sign-in endpoints and what roux opens (the shell, `/index.html`, and `/assets/**`, with a built frontend). Every page URL reaches the shell, so no page is listed; list only the files a signed-out browser loads from elsewhere, such as an icon at the root. Anything else answers `401` to a signed-out request. |
 | `who.initialize-schema` | `never` with Liquibase, which then creates who's tables. |
 
 Include who's changelog first in the app's Liquibase master changelog:
@@ -260,8 +257,21 @@ roux requires the SPA and the API to be served from one origin: the client calls
 (`/api/...`), the session is a cookie, and CSRF reads a cookie the page can see. Two deployments are
 supported:
 
-1. **One jar (the default).** Spring Boot serves the built SPA from its static resources. In the
-   template this is app code (`SpaController` and `ShellController`), not part of roux.
+1. **One jar (the default).** Spring Boot serves the built SPA from its static resources, and roux
+   (with `static/index.html` on the classpath) answers any page URL with the shell: a GET or HEAD
+   that accepts `text/html`, has no file extension and is not under `/api`, `/who`, `/assets`,
+   `/actuator`, `/.well-known` or `/error`. Adding a page is adding its route file; the server has
+   no list of pages, and an unknown URL gets the shell, whose not-found route answers it. The shell
+   is open to signed-out visitors (with `/assets/**`, which roux also caches for a year), so a
+   reload or a deep link opens the app, which sends the visitor to sign in. A fetch for JSON, an
+   API path (a missing one is still a `404` problem) and a request for a file never get the shell.
+   The filter is `SpaFallbackFilter`, configured by `RouxSpaProperties` under `roux.spa`: turn it
+   off with `roux.spa.enabled=false`; add paths it must leave alone (a server-rendered page) to
+   `roux.spa.excluded-paths`. An app that serves the shell itself (to render the theme or
+   a nonce into it, say) keeps doing that: roux presents the page URL to it as a request for
+   `/index.html`, so its own `/index.html` handler and headers apply. An app with its own
+   `SecurityFilterChain` must permit `/index.html` and `/assets/**`, which roux adds to who's
+   `WhoPublicPaths` (the same bean the chain reads).
 2. **Edge routing.** Static hosting or a CDN serves the SPA, and a proxy on the same domain routes
    `/api` and `/who` to the app.
 
@@ -302,10 +312,6 @@ for the package or tree-shake it away.
   every sign-in method mounted, CSRF for the SPA, and `401` (no redirect) for a signed-out request
   outside `who.security.public-paths`. Defining any `SecurityFilterChain` makes who's back off; the
   app's own chain must then mount who with `WhoSecurity.all()` (see who's getting-started guide).
-- **A signed-out reload of a deep link answers `401`.** In a one-jar app, the SPA's routes
-  (`/students`, `/ranks/...`) serve the shell only to a signed-in caller unless listed in
-  `who.security.public-paths`; a signed-out visitor starts from `/`. List a route there if a
-  signed-out visitor must be able to open it directly.
 - **Audit dates follow the app's `Clock`.** With `@EnableJpaAuditing(auditorAwareRef = ...)` and a
   `Clock` bean, `@CreatedDate` and `@LastModifiedDate` are stamped from that clock, so a test that
   sets the clock sets them (an ordering by `created_date` can be tested without waiting). Write no

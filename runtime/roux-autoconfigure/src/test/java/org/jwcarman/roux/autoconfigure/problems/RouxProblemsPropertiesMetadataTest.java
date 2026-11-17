@@ -78,7 +78,8 @@ class RouxProblemsPropertiesMetadataTest {
           "roux.problems." + kebabCase(components[i].getName()), List.of(javaType, defaultValue));
     }
 
-    List<String> names = JsonPath.read(json, "$.properties[*].name");
+    List<String> names =
+        JsonPath.read(json, "$.properties[?(@.name =~ /roux\\.problems\\..*/)].name");
     assertThat(names).containsExactlyInAnyOrderElementsOf(expected.keySet());
     expected.forEach(
         (name, typeAndDefault) -> {

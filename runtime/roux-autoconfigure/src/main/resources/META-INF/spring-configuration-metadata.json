@@ -4,6 +4,11 @@
       "name": "roux.problems",
       "type": "org.jwcarman.roux.autoconfigure.problems.RouxProblemsProperties",
       "sourceType": "org.jwcarman.roux.autoconfigure.problems.RouxProblemsProperties"
+    },
+    {
+      "name": "roux.spa",
+      "type": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties",
+      "sourceType": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties"
     }
   ],
   "properties": [
@@ -20,6 +25,19 @@
       "description": "Where the API's paths begin: a path under it that matches nothing is a problem, and any other is a page the error page renders.",
       "sourceType": "org.jwcarman.roux.autoconfigure.problems.RouxProblemsProperties",
       "defaultValue": "/api/"
+    },
+    {
+      "name": "roux.spa.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether roux serves the app's shell (static/index.html) for page URLs at all.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties",
+      "defaultValue": true
+    },
+    {
+      "name": "roux.spa.excluded-paths",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Path patterns, besides /api/**, /who/**, /assets/**, /actuator/**, /.well-known/** and /error, that are never answered with the shell.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties"
     }
   ]
 }

@@ -6,6 +6,17 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- roux-autoconfigure serves a single-page app's shell for any page URL, so a route is written once,
+  in the frontend. With `static/index.html` on the classpath, a GET or HEAD that accepts `text/html`,
+  has no file extension and is not under `/api`, `/who`, `/assets`, `/actuator`, `/.well-known` or
+  `/error` (or a path in `roux.spa.excluded-paths`) is presented to the app as a request for
+  `/index.html`, ahead of Spring Security, so the app's own shell handler and headers still apply.
+  `/assets/**` is cached for a year, and with who on the classpath `/index.html` and `/assets/**`
+  are added to who's public paths, so no page is listed in `who.security.public-paths`. Off with
+  `roux.spa.enabled=false`.
+
 ### Breaking changes
 
 - roux-web's list components take the resource module's query, not a key plus a fetch function.
