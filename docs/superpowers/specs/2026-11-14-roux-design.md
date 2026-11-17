@@ -14,7 +14,11 @@ set of published building-block libraries (`who`, `jpa-utils`, `codec`, `odyssey
 The patterns have never been extracted; each app carries its own copy, most recently
 `noir-app-template`.
 
-roux is the culmination of that work and the jumping-off point for future apps. It is two things that
+roux is the culmination of that work and the jumping-off point for future apps. It is an opinionated
+rapid-development accelerator for building applications that are safe, secure and easy to maintain,
+by agents above all. It is not designed for large companies: it says no to the configurability and
+multi-module layouts they would ask for, and an app that grows keeps working because its code is
+plain, owned and organized by feature. It is two things that
 fit together:
 
 1. **Components:** reusable building blocks for an app's plumbing. An app depends on them; it does not
