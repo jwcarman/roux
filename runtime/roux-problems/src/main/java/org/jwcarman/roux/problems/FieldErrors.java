@@ -34,6 +34,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.validation.method.ParameterErrors;
 import org.springframework.validation.method.ParameterValidationResult;
 
+import tools.jackson.core.JacksonException;
+
 /**
  * Turns every kind of validation result into a 400's {@code errors}, sorted by field then message.
  */
@@ -74,6 +76,19 @@ final class FieldErrors {
         violations.stream()
             .map(v -> new FieldProblem(path(v.getPropertyPath()), v.getMessage()))
             .toList());
+  }
+
+  /** The field a Jackson read failure names: {@code members[1].role}. */
+  static String path(List<JacksonException.Reference> references) {
+    StringBuilder field = new StringBuilder();
+    for (JacksonException.Reference reference : references) {
+      if (reference.getPropertyName() != null) {
+        field.append(field.isEmpty() ? "" : ".").append(reference.getPropertyName());
+      } else {
+        field.append('[').append(reference.getIndex()).append(']');
+      }
+    }
+    return field.toString();
   }
 
   private static String path(Path path) {

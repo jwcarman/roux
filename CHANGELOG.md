@@ -37,6 +37,7 @@ All notable changes to this project are documented in this file. The format foll
   gets who's chain. Read who's
   [upgrading guide](https://github.com/jwcarman/who/blob/0.20.0/docs/guides/upgrading.md) for
   0.16.0 through 0.20.0.
+- roux-problems answers an enum value in a JSON body that is outside its set (`"role": "OWNER"`) as a field error on that field, `Must be one of MEMBER, INSTRUCTOR` (`items[1].role` inside a list), as it already did for a query parameter. It was the generic 400 with no field. Other unreadable bodies are unchanged.
 
 ## [0.2.0] - 2026-11-14
 

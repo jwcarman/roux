@@ -130,6 +130,31 @@ class ProblemsAdviceTest {
   }
 
   @Test
+  void anUnknownEnumInABodyIsAFieldError() throws Exception {
+    isProblem(postJson("/feeling", "{\"mood\":\"ASLEEP\"}"), 400, "Bad Request")
+        .andExpect(jsonPath("$.detail").value("The request has invalid fields"))
+        .andExpect(jsonPath("$.errors.length()").value(1))
+        .andExpect(jsonPath("$.errors[0].field").value("mood"))
+        .andExpect(jsonPath("$.errors[0].message").value("Must be one of CALM, GRUMPY"));
+  }
+
+  @Test
+  void anUnknownEnumInsideAListNamesTheElement() throws Exception {
+    isProblem(
+            postJson("/feelings", "{\"feelings\":[{\"mood\":\"CALM\"},{\"mood\":\"ASLEEP\"}]}"),
+            400,
+            "Bad Request")
+        .andExpect(jsonPath("$.errors[0].field").value("feelings[1].mood"))
+        .andExpect(jsonPath("$.errors[0].message").value("Must be one of CALM, GRUMPY"));
+  }
+
+  @Test
+  void aWrongTypeThatIsNotAnEnumStaysGeneric() throws Exception {
+    isProblem(postJson("/count", "{\"count\":\"many\"}"), 400, "Bad Request")
+        .andExpect(jsonPath("$.errors").doesNotExist());
+  }
+
+  @Test
   void anInvariantViolationIs400WithItsMessageAndNoFields() throws Exception {
     isProblem(fetch("/invariant"), 400, "Bad Request")
         .andExpect(jsonPath("$.detail").value("A class meets at most 7 times a week"))

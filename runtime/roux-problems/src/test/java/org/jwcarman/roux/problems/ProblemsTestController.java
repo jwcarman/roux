@@ -15,6 +15,7 @@
  */
 package org.jwcarman.roux.problems;
 
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
@@ -47,6 +48,27 @@ class ProblemsTestController {
   record Short(@Size(max = 5) String text) {}
 
   record Note(String note) {}
+
+  record Feeling(Mood mood) {}
+
+  record Feelings(List<Feeling> feelings) {}
+
+  record Count(int count) {}
+
+  @PostMapping("/feeling")
+  String feeling(@RequestBody Feeling body) {
+    return String.valueOf(body.mood());
+  }
+
+  @PostMapping("/feelings")
+  String feelings(@RequestBody Feelings body) {
+    return String.valueOf(body.feelings());
+  }
+
+  @PostMapping("/count")
+  String count(@RequestBody Count body) {
+    return String.valueOf(body.count());
+  }
 
   record Code(@Size(min = 2, max = 5) String code) {}
 

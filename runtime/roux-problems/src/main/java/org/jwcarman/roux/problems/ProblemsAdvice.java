@@ -32,6 +32,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,6 +43,8 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import tools.jackson.databind.exc.InvalidFormatException;
 
 /**
  * Answers every error the API raises as an RFC 9457 Problem Detail. Spring MVC's own exceptions
@@ -98,6 +101,27 @@ public class ProblemsAdvice extends ResponseEntityExceptionHandler {
       WebRequest request) {
     return handleExceptionInternal(
         ex, invalid(FieldErrors.of(ex.getParameterValidationResults())), headers, status, request);
+  }
+
+  /**
+   * A body that cannot be read. A value that is not one of an enum's constants is a field error on
+   * that field, {@code Must be one of A, B}; any other unreadable body stays Spring's generic 400.
+   */
+  @Override
+  protected ResponseEntity<Object> handleHttpMessageNotReadable(
+      HttpMessageNotReadableException ex,
+      HttpHeaders headers,
+      HttpStatusCode status,
+      WebRequest request) {
+    if (ex.getCause() instanceof InvalidFormatException invalid
+        && invalid.getTargetType().isEnum()) {
+      FieldProblem problem =
+          new FieldProblem(
+              FieldErrors.path(invalid.getPath()),
+              FieldErrors.typeMessage(invalid.getTargetType()));
+      return handleExceptionInternal(ex, invalid(List.of(problem)), headers, status, request);
+    }
+    return super.handleHttpMessageNotReadable(ex, headers, status, request);
   }
 
   @Override
