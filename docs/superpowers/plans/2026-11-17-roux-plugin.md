@@ -230,6 +230,12 @@ Content:
   every `noir-gen` marker, `.noir/`, `scripts/trace.sh`, `.github/` (roux's CI runs it),
   `docs/superpowers/` and `docs/native-findings.md`, noir wording in `CLAUDE.md` and `README.md`.
   Rename to the package, class and app name in Global Constraints.
+- [ ] **Step 1a:** Move the copy to who 0.19.0 (roux now pins it, and roux's starter brings
+  `who-spring-boot-starter`, `who-email-link` and `who-passkey`): drop the app's own who starter
+  dependency, follow who's upgrading guide at the 0.19.0 tag (every who endpoint under `/who`, e.g.
+  `/ott/generate` → `/who/email/send`, `/logout` → `/who/logout`; the `who_session` table through
+  who's Liquibase changelog; `WhoSession`'s new `sessionId`), and update the frontend's sign-in,
+  sign-out and passkey calls and the Playwright tests that drive them.
 - [ ] **Step 1b:** Reorganize `frontend/src` by feature, mirroring the Java packages (the layout `roux
   new` will write): `src/shell/` (Layout, Logo, nav, session, guards, colour mode, theme, looks, fonts,
   csp, appearance and settings pages), `src/members/` (members.ts, passkeys, member pages and
