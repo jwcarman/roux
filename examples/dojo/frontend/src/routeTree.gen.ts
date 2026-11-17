@@ -14,6 +14,7 @@ import { Route as SignedInIndexRouteImport } from './routes/_signedIn/index'
 import { Route as SignedInAppearanceRouteImport } from './routes/_signedIn/appearance'
 import { Route as SignedInRanksRouteImport } from './routes/_signedIn/ranks'
 import { Route as SignedInSettingsRouteImport } from './routes/_signedIn/settings'
+import { Route as SignedInTimetableRouteImport } from './routes/_signedIn/timetable'
 import { Route as SigninIndexRouteImport } from './routes/signin/index'
 import { Route as SigninLinkRouteImport } from './routes/signin/link'
 import { Route as SignedInMembersIndexRouteImport } from './routes/_signedIn/members/index'
@@ -43,6 +44,11 @@ const SignedInRanksRoute = SignedInRanksRouteImport.update({
 const SignedInSettingsRoute = SignedInSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => SignedInRoute,
+} as any)
+const SignedInTimetableRoute = SignedInTimetableRouteImport.update({
+  id: '/timetable',
+  path: '/timetable',
   getParentRoute: () => SignedInRoute,
 } as any)
 const SigninIndexRoute = SigninIndexRouteImport.update({
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/appearance': typeof SignedInAppearanceRoute
   '/ranks': typeof SignedInRanksRoute
   '/settings': typeof SignedInSettingsRoute
+  '/timetable': typeof SignedInTimetableRoute
   '/signin/link': typeof SigninLinkRoute
   '/signin/': typeof SigninIndexRoute
   '/members/$memberId': typeof SignedInMembersMemberIdRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/appearance': typeof SignedInAppearanceRoute
   '/ranks': typeof SignedInRanksRoute
   '/settings': typeof SignedInSettingsRoute
+  '/timetable': typeof SignedInTimetableRoute
   '/signin/link': typeof SigninLinkRoute
   '/': typeof SignedInIndexRoute
   '/signin': typeof SigninIndexRoute
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/_signedIn/appearance': typeof SignedInAppearanceRoute
   '/_signedIn/ranks': typeof SignedInRanksRoute
   '/_signedIn/settings': typeof SignedInSettingsRoute
+  '/_signedIn/timetable': typeof SignedInTimetableRoute
   '/signin/link': typeof SigninLinkRoute
   '/_signedIn/': typeof SignedInIndexRoute
   '/signin/': typeof SigninIndexRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
     | '/appearance'
     | '/ranks'
     | '/settings'
+    | '/timetable'
     | '/signin/link'
     | '/signin/'
     | '/members/$memberId'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/appearance'
     | '/ranks'
     | '/settings'
+    | '/timetable'
     | '/signin/link'
     | '/'
     | '/signin'
@@ -146,6 +157,7 @@ export interface FileRouteTypes {
     | '/_signedIn/appearance'
     | '/_signedIn/ranks'
     | '/_signedIn/settings'
+    | '/_signedIn/timetable'
     | '/signin/link'
     | '/_signedIn/'
     | '/signin/'
@@ -198,6 +210,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignedInSettingsRouteImport
       parentRoute: typeof SignedInRoute
     }
+    '/_signedIn/timetable': {
+      id: '/_signedIn/timetable'
+      path: '/timetable'
+      fullPath: '/timetable'
+      preLoaderRoute: typeof SignedInTimetableRouteImport
+      parentRoute: typeof SignedInRoute
+    }
     '/signin/': {
       id: '/signin/'
       path: '/signin'
@@ -247,6 +266,7 @@ interface SignedInRouteChildren {
   SignedInAppearanceRoute: typeof SignedInAppearanceRoute
   SignedInRanksRoute: typeof SignedInRanksRoute
   SignedInSettingsRoute: typeof SignedInSettingsRoute
+  SignedInTimetableRoute: typeof SignedInTimetableRoute
   SignedInIndexRoute: typeof SignedInIndexRoute
   SignedInMembersMemberIdRoute: typeof SignedInMembersMemberIdRoute
   SignedInStudentsStudentIdRoute: typeof SignedInStudentsStudentIdRoute
@@ -258,6 +278,7 @@ const SignedInRouteChildren: SignedInRouteChildren = {
   SignedInAppearanceRoute: SignedInAppearanceRoute,
   SignedInRanksRoute: SignedInRanksRoute,
   SignedInSettingsRoute: SignedInSettingsRoute,
+  SignedInTimetableRoute: SignedInTimetableRoute,
   SignedInIndexRoute: SignedInIndexRoute,
   SignedInMembersMemberIdRoute: SignedInMembersMemberIdRoute,
   SignedInStudentsStudentIdRoute: SignedInStudentsStudentIdRoute,

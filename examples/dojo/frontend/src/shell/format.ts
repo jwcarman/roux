@@ -2,6 +2,7 @@
 
 const dates = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 const dateTimes = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
+const times = new Intl.DateTimeFormat(undefined, { timeStyle: "short" });
 const numbers = new Intl.NumberFormat();
 
 /** A `LocalDate` (`2026-03-01`), on that day whatever the reader's time zone. */
@@ -11,6 +12,12 @@ export function formatDate(iso: string | null): string {
   }
   const [year, month, day] = iso.split("-").map(Number);
   return dates.format(new Date(year, month - 1, day));
+}
+
+/** A `LocalTime` (`16:30`), as the reader's locale writes a time of day. */
+export function formatTime(hhmm: string): string {
+  const [hours, minutes] = hhmm.split(":").map(Number);
+  return times.format(new Date(2000, 0, 1, hours, minutes));
 }
 
 /** An instant, with its date and time in the reader's time zone. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDate, formatDateTime, formatNumber, yesNo } from "./format";
+import { formatDate, formatDateTime, formatNumber, formatTime, yesNo } from "./format";
 
 describe("display formats", () => {
   it("show a boolean as Yes or No", () => {
@@ -18,6 +18,12 @@ describe("display formats", () => {
       new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(
         new Date("2026-03-01T15:30:00Z"),
       ),
+    );
+  });
+
+  it("show a time of day in the reader's format, whatever the date", () => {
+    expect(formatTime("16:30")).toBe(
+      new Intl.DateTimeFormat(undefined, { timeStyle: "short" }).format(new Date(2000, 0, 1, 16, 30)),
     );
   });
 

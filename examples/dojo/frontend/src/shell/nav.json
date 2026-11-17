@@ -28,6 +28,13 @@
     "description": "Who trains at the school and the rank each holds."
   },
   {
+    "label": "Timetable",
+    "to": "/timetable",
+    "icon": "calendar",
+    "permission": "classes.read",
+    "description": "The week's classes: when each runs and who teaches it."
+  },
+  {
     "label": "Appearance",
     "to": "/appearance",
     "icon": "palette",

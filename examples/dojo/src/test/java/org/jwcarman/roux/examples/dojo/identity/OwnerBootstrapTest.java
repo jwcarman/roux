@@ -76,7 +76,11 @@ class OwnerBootstrapTest {
             "ranks.manage",
             "students.read",
             "students.manage",
-            "promotions.manage");
+            "promotions.manage",
+            "classes.read",
+            "classes.manage",
+            "attendance.record",
+            "attendance.read");
     assertThat(permissionsOf("INSTRUCTOR"))
         .containsExactlyInAnyOrder(
             "ranks.read",
@@ -84,10 +88,18 @@ class OwnerBootstrapTest {
             "students.manage",
             "promotions.manage",
             "members.read",
-            "members.profile");
+            "members.profile",
+            "classes.read",
+            "attendance.record",
+            "attendance.read");
     assertThat(permissionsOf("MEMBER"))
         .containsExactlyInAnyOrder(
-            "members.read", "members.profile", "ranks.read", "students.read");
+            "members.read",
+            "members.profile",
+            "ranks.read",
+            "students.read",
+            "classes.read",
+            "attendance.read");
   }
 
   @Test
@@ -121,7 +133,10 @@ class OwnerBootstrapTest {
             "students.manage",
             "promotions.manage",
             "members.read",
-            "members.profile");
+            "members.profile",
+            "classes.read",
+            "attendance.record",
+            "attendance.read");
   }
 
   @Test

@@ -23,7 +23,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
- * Who may call each ranks, students and promotions endpoint: a 403 for a role without the
+ * Who may call each ranks, students, promotions and classes endpoint: a 403 for a role without the
  * permission, anything else (a 2xx, or a 400 or 404 for the made-up ids) for a role with it.
  * Authorization comes before the controller, so no endpoint's data matters here.
  */
@@ -38,6 +38,9 @@ class RolePermissionsTest {
   private static final String RANKS = "/api/ranks";
   private static final String STUDENTS = "/api/students";
   private static final String PROMOTIONS = STUDENTS + "/" + ID + "/promotions";
+  private static final String CLASSES = "/api/classes";
+  private static final String CLASS_BODY =
+      "{\"name\":\"Kids\",\"weekday\":\"MONDAY\",\"startsAt\":\"16:00\",\"endsAt\":\"17:00\"}";
   private static final String RANK_BODY = "{\"name\":\"White\",\"colour\":\"WHITE\"}";
   private static final String STUDENT_BODY =
       "{\"firstName\":\"Ada\",\"lastName\":\"Lovelace\",\"startDate\":\"2026-01-01\"}";
@@ -56,7 +59,7 @@ class RolePermissionsTest {
 
   @BeforeEach
   void cleanSlate() {
-    members.reset("promotion", "student", "rank");
+    members.reset("promotion", "student", "rank", "school_class");
   }
 
   static Stream<Endpoint> endpoints() {
@@ -74,7 +77,13 @@ class RolePermissionsTest {
         new Endpoint("deactivate", post(STUDENTS + "/" + ID + "/deactivate"), STAFF),
         new Endpoint("reactivate", post(STUDENTS + "/" + ID + "/reactivate"), STAFF),
         new Endpoint("promote", json(post(PROMOTIONS), PROMOTION_BODY), STAFF),
-        new Endpoint("remove a promotion", delete(PROMOTIONS + "/" + ID), STAFF));
+        new Endpoint("remove a promotion", delete(PROMOTIONS + "/" + ID), STAFF),
+        new Endpoint("GET classes", get(CLASSES), EVERYONE),
+        new Endpoint("GET class", get(CLASSES + "/" + ID), EVERYONE),
+        new Endpoint("GET instructors", get(CLASSES + "/instructors"), OWNER_ONLY),
+        new Endpoint("POST classes", json(post(CLASSES), CLASS_BODY), OWNER_ONLY),
+        new Endpoint("PUT class", json(put(CLASSES + "/" + ID), CLASS_BODY), OWNER_ONLY),
+        new Endpoint("DELETE class", delete(CLASSES + "/" + ID), OWNER_ONLY));
   }
 
   @ParameterizedTest(name = "{0}")

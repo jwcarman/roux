@@ -31,6 +31,10 @@ export const RANKS_MANAGE = "ranks.manage";
 export const STUDENTS_READ = "students.read";
 export const STUDENTS_MANAGE = "students.manage";
 export const PROMOTIONS_MANAGE = "promotions.manage";
+export const CLASSES_READ = "classes.read";
+export const CLASSES_MANAGE = "classes.manage";
+export const ATTENDANCE_RECORD = "attendance.record";
+export const ATTENDANCE_READ = "attendance.read";
 
 /** The signed-in member's own profile; `version` goes back with a rename. */
 export interface Profile {

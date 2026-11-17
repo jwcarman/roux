@@ -224,3 +224,51 @@ What building the dojo showed about roux: one entry per finding, in the order fo
 - roux could: report the pending term when the field loses focus (blur comes on mousedown, before
   the click's navigation, so the navigation lands last).
 - Outcome: fixed in 42e0c2e.
+
+## A time of day has no rule helper, no wire format and no input
+- Where: `classes/classes.ts` (`time`), `classes/ClassRequest`, `shell/format.ts` (`formatTime`)
+- What was clunky: a class starts and ends at a `LocalTime`, and roux has nothing for it. The
+  browser's schema is hand-written (`z.string().trim().min(1, ...).regex(/^HH:mm$/, ...)` registered
+  in `fieldRules` so the field is marked required), with the server's `Must not be empty` and
+  `Is not in the expected format` retyped, which the skill says never to do. The server side needed
+  `@JsonFormat(pattern = "HH:mm")` on the request and the response (otherwise Jackson answers
+  `17:00:00`, which the `type="time"` input does not hold) and a truncation to the minute. Display
+  needed its own `formatTime`, as `formatDate` is the app's. A time the server cannot read (`6pm`)
+  is the generic 400 with no field, the known gap in the errors guide.
+- roux could: a `time()` rule (`HH:mm`, `Must not be empty` / `Is not in the expected format`), say
+  in the forms guide how a `LocalTime` travels (`HH:mm`, with the `@JsonFormat`), and answer an
+  unreadable time as a field error as it does for an enum.
+- Outcome: deferred (a roux rule helper: the user decides).
+
+## A rule across two fields lives twice, in two shapes
+- Where: `classes/classes.ts` (`classRequestSchema.refine`), `classes/ClassService.requireValid`
+- What was clunky: "ends after it starts" cannot be a Bean Validation annotation that names `endsAt`
+  (a class-level constraint reports on the object, not the field), so the server checks it in the
+  service and throws `InvalidFieldException("endsAt", ...)`, while the browser has a `.refine` with
+  `path: ["endsAt"]`. The message is retyped on both sides (`Must be after the start time`) with
+  nothing to keep them equal.
+- roux could: say so in the forms guide's cross-field section (the server half is missing there), or
+  offer a constant both sides share, as `Phone.PATTERN` does for the phone rule.
+- Outcome: deferred (guide gap; not a code change).
+
+## An optional choice has no helper either
+- Where: `classes/classes.ts` (`optionalId`), `ClassFormDialog` (instructor)
+- What was clunky: the instructor may be left empty. `oneOf` and `id()` have no `.optional()` (the
+  forms guide says so for `oneOf`), so the schema is `z.string().transform(v => v === "" ? null : v)`,
+  which also hides the rule from the form (fine here: no required indicator wanted) and makes the
+  form's input and output types differ by hand.
+- roux could: `id().optional()` and `oneOf(...).optional()` giving `null` for the placeholder, like
+  the text helpers.
+- Outcome: deferred (small roux addition: the user decides).
+
+## A week grid is plain Chakra plus constants the app writes
+- Where: `classes/TimetablePage.tsx`, `classes/classes.ts` (`WEEKDAYS`, `WEEKDAY_LABELS`)
+- What was clunky: nothing in roux helps a page that is not a table or a list: the seven columns
+  are a `SimpleGrid` of sections, grouping the whole timetable by weekday in the browser, with the
+  weekday names (`DayOfWeek`) and their labels written out by hand, and the server sorting by weekday
+  and start time in Java because the column is a string. The guides say nothing about a short list
+  shown in a custom layout (`SimpleQueryTable` is the only short-list component and it is a table).
+- roux could: say in the short-list section that a custom layout reads `useQuery(theQuery)` and
+  names `ErrorMessage` for the failure; a `weekdays` constant (names, labels, Monday first) would be
+  small but is probably the app's.
+- Outcome: deferred (guide note only).

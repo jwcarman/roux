@@ -44,6 +44,7 @@ class SpaRoutingTest {
         "/ranks",
         "/students",
         "/students/" + SAMPLE_ID,
+        "/timetable",
         "/signin",
         "/signin/link",
         "/a/page/no/route/file/names");
