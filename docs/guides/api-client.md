@@ -120,7 +120,7 @@ To turn a failed `Response` into a problem yourself, use `problemOf` from `/prob
 ## Call a path outside the API
 
 A path that starts with `/` is used as it is, not put under `baseUrl`: `get("/who/me")`,
-`send("POST", "/logout")`. Use this for who's endpoints and Spring Security's; keep the app's own
+`send("POST", "/who/logout")`. Use this for who's endpoints (all under `/who`); keep the app's own
 endpoints under `/api` and call them without the slash.
 
 ## Handle a refused call

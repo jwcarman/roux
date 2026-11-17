@@ -17,9 +17,9 @@ roux supports one stack and nothing else:
 
 ## Add the Java side
 
-Import `roux-bom` and depend on `roux-spring-boot-starter` and `who-spring-boot-starter`. Keep
-Spring Boot's parent as the app's parent: `roux-bom` does not import Spring Boot's BOM, so Spring
-Boot's managed versions stay the parent's.
+Import `roux-bom` and depend on `roux-spring-boot-starter`, plus mail, JPA, Liquibase and the
+PostgreSQL driver. Keep Spring Boot's parent as the app's parent: `roux-bom` does not import Spring
+Boot's BOM, so Spring Boot's managed versions stay the parent's.
 
 ```xml
 <properties>
@@ -43,21 +43,87 @@ Boot's managed versions stay the parent's.
         <groupId>org.jwcarman.roux</groupId>
         <artifactId>roux-spring-boot-starter</artifactId>
     </dependency>
-    <!-- identity: its version comes from roux-bom, which imports who's BOM -->
+    <!-- who sends sign-in links through Spring Boot's mail sender; the roux starter does not bring it -->
     <dependency>
-        <groupId>org.jwcarman.who</groupId>
-        <artifactId>who-spring-boot-starter</artifactId>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-mail</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-liquibase</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <scope>runtime</scope>
     </dependency>
 </dependencies>
 ```
 
-The starter brings `roux-problems`, `roux-autoconfigure`, jpa-utils (`org.jwcarman.jpa:jpa-utils`),
-`spring-boot-starter-validation` and `spring-boot-starter-webmvc`. Do not declare versions for any of
-them, for who's modules, or for jpa-utils: `roux-bom` pins who 0.15.0 and jpa-utils 0.2.0.
+The starter brings `roux-problems`, `roux-autoconfigure`, who (`who-spring-boot-starter`, with
+email-link sign-in, `who-email-link`, and passkeys, `who-passkey`), jpa-utils
+(`org.jwcarman.jpa:jpa-utils`), `spring-boot-starter-validation` and `spring-boot-starter-webmvc`.
+Do not add who's starter yourself, and do not declare versions for any of them, for who's other
+modules (`who-test`), or for jpa-utils: `roux-bom` pins who 0.19.0 and jpa-utils 0.2.0. The test
+dependencies are in [Testing](testing.md#dependencies).
 
-That is all the Java setup. Errors are answered as Problem Details from the first request; see
-[Errors](errors.md). The settings, both optional, are under `roux.problems` (`enabled`,
-`api-path-prefix`).
+Errors are answered as Problem Details from the first request; see [Errors](errors.md). roux's own
+settings, both optional, are under `roux.problems` (`enabled`, `api-path-prefix`). who's are not
+optional: the app does not start without them.
+
+## Required settings
+
+who's two sign-in methods fail startup until they are configured, and the message names the
+missing setting. In `application.yml`, for development on `http://localhost:8080`:
+
+```yaml
+spring:
+  mail:
+    host: localhost   # an SMTP server; in development, Mailpit or similar
+    port: 1025
+
+who:
+  initialize-schema: never   # Liquibase creates who's tables (below)
+  security:
+    public-paths:            # what a signed-out browser may load
+      - /
+      - /index.html
+      - /signin/**
+      - /assets/**
+  email-link:
+    link-base-url: http://localhost:8080/signin/link
+    code-secret: development-only-code-secret-not-for-production
+    from: noreply@example.com
+  passkey:
+    rp-id: localhost
+    allowed-origins: http://localhost:8080
+```
+
+| Setting | What it is |
+| --- | --- |
+| `spring.mail.host` | The SMTP server sign-in emails go through (Spring Boot's `JavaMailSender`, from `spring-boot-starter-mail`). Instead of mail, an app may register its own `EmailLinkSender` bean. |
+| `who.email-link.link-base-url` | The app's page that receives sign-in links; who appends `#token=...`. Required. |
+| `who.email-link.code-secret` | Keys the typed sign-in codes: at least 32 characters, the same on every instance, from the environment in production. Required. |
+| `who.email-link.from` | The sender of sign-in emails. Required when they go out through `JavaMailSender`. |
+| `who.passkey.rp-id` | The app's own host (`localhost` in development, `app.example.com` in production). Required. |
+| `who.passkey.allowed-origins` | The origins passkey sign-in may come from. Defaults to `https://<rp-id>`, which does not match `http://localhost:8080`, so set it in development. |
+| `who.security.public-paths` | Paths of the app open to signed-out requests. who's sign-in endpoints are open already; list the SPA's shell (`/`, `/index.html`), the sign-in pages (including the one `link-base-url` names) and the files they load (`/assets/**`, and any icon at the root). Anything else answers `401` to a signed-out request. |
+| `who.initialize-schema` | `never` with Liquibase, which then creates who's tables. |
+
+Include who's changelog first in the app's Liquibase master changelog:
+
+```yaml
+databaseChangeLog:
+  - include:
+      file: classpath:org/jwcarman/who/db/who-changelog.xml
+```
+
+The full list of who's settings is in who's configuration guide
+(`docs/guides/configuration.md` in who's repository, at tag `0.19.0`).
 
 ## Add the web side
 
@@ -197,7 +263,7 @@ supported:
 1. **One jar (the default).** Spring Boot serves the built SPA from its static resources. In the
    template this is app code (`SpaController` and `ShellController`), not part of roux.
 2. **Edge routing.** Static hosting or a CDN serves the SPA, and a proxy on the same domain routes
-   `/api` (and who's paths) to the app.
+   `/api` and `/who` to the app.
 
 Separate origins (the SPA on one host calling the API on another, with CORS and cross-site cookies)
 are not supported; `baseUrl` is a path, not a host. In development, Vite's dev server proxies the
@@ -214,15 +280,14 @@ export default defineConfig({
     proxy: {
       "/api": backend,
       "/who": backend,
-      "/login": backend,
-      "/logout": backend,
     },
   },
 });
 ```
 
-Add a proxy entry for every other server path the app calls (the template also proxies `/ott` and
-`/webauthn` for who's sign-in).
+Every who endpoint (`/who/me`, `/who/email/send`, `/who/logout`, `/who/passkey/...`) is under
+`/who`, so these two entries cover the app's API and its sign-in. Add an entry only for another
+server path the app calls.
 
 ## Content-Security-Policy
 
@@ -230,6 +295,17 @@ Add a proxy entry for every other server path the app calls (the template also p
 `eval` and a Content-Security-Policy without `unsafe-eval` raises no violation. The package's
 `package.json` marks that file in `sideEffects` so bundlers keep it; do not override `sideEffects`
 for the package or tree-shake it away.
+
+## Things to know
+
+- **who's chain is the app's security.** An app that defines no `SecurityFilterChain` gets who's:
+  every sign-in method mounted, CSRF for the SPA, and `401` (no redirect) for a signed-out request
+  outside `who.security.public-paths`. Defining any `SecurityFilterChain` makes who's back off; the
+  app's own chain must then mount who with `WhoSecurity.all()` (see who's getting-started guide).
+- **A signed-out reload of a deep link answers `401`.** In a one-jar app, the SPA's routes
+  (`/students`, `/ranks/...`) serve the shell only to a signed-in caller unless listed in
+  `who.security.public-paths`; a signed-out visitor starts from `/`. List a route there if a
+  signed-out visitor must be able to open it directly.
 
 ## Next
 
