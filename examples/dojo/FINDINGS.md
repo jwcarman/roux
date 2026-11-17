@@ -179,3 +179,13 @@ What building the dojo showed about roux: one entry per finding, in the order fo
 - roux could: answer an unknown enum constant in a body as a field error (`Must be one of
   MEMBER, INSTRUCTOR`), as it already does for a query parameter.
 - Outcome: deferred.
+
+## Signing in as a role in Playwright means inviting through the UI each time
+- Where: `e2e/tests/school.spec.ts` (`invite`), `member.spec.ts`, `members-lifecycle.spec.ts`
+- What was clunky: the only way to get a signed-in instructor or member in the browser is the
+  owner's invite dialog and the Mailpit link, written out again in each spec. The testing guide's
+  Playwright section covers the owner's sign-in only, and the school's tests, which share one
+  database, also have to be serial and tag their data to stay apart from other specs.
+- roux could: ship `invite(page, request, ...)` and `signedInThrough(browser, link)` helpers in the
+  guide's helpers.ts, and say how specs share one database.
+- Outcome: deferred (guide work).
