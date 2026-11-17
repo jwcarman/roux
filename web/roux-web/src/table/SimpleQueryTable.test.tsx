@@ -86,6 +86,36 @@ describe("SimpleQueryTable", () => {
     expect(query).not.toHaveBeenCalled();
   });
 
+  it("keeps the query's own enabled: false, whatever the enabled prop says", async () => {
+    const spy = vi.fn(() => Promise.resolve(people(3)));
+    renderWithProviders(
+      <SimpleQueryTable
+        aria-label="People"
+        query={queryOptions({ queryKey: ["people", "held"], queryFn: spy, enabled: false })}
+        columns={columns}
+        enabled
+      />,
+    );
+    await screen.findByRole("table", { name: "People" });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [false, 0],
+    [true, 1],
+  ])("follows the query's own enabled function (%s)", async (allowed, calls) => {
+    const spy = vi.fn(() => Promise.resolve(people(3)));
+    renderWithProviders(
+      <SimpleQueryTable
+        aria-label="People"
+        query={queryOptions({ queryKey: ["people", "fn", allowed], queryFn: spy, enabled: () => allowed })}
+        columns={columns}
+      />,
+    );
+    await screen.findByRole("table", { name: "People" });
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(calls));
+  });
+
   it("shows the rows in the order given when there is no initial sort", async () => {
     show(() => Promise.resolve([...people(3)].reverse()), true, null);
     await screen.findByText("Person 003");

@@ -20,7 +20,10 @@ export type SimpleQueryTableProps<T, K extends QueryKey = QueryKey> = Omit<
   query: UseQueryOptions<T[], Error, T[], K>;
   columns: ColumnDef<T, unknown>[];
   initialSort?: ColumnSort;
-  /** False holds the fetch, for example until a filter it needs is chosen. */
+  /**
+   * False holds the fetch, for example until a filter it needs is chosen. The query's own `enabled`
+   * still applies when this is true.
+   */
   enabled?: boolean;
   getRowId?: (row: T) => string;
   /** Shown above the table when the rows cannot be loaded. */
@@ -40,7 +43,7 @@ export function SimpleQueryTable<T, K extends QueryKey = QueryKey>({
   ...props
 }: SimpleQueryTableProps<T, K>) {
   const [sorting, setSorting] = useState<SortingState>(initialSort ? [initialSort] : EMPTY);
-  const { data, isLoading, isError } = useQuery({ ...query, enabled });
+  const { data, isLoading, isError } = useQuery({ ...query, enabled: enabled ? query.enabled : false });
 
   const table = useReactTable<T>({
     data: data ?? EMPTY,
