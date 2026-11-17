@@ -32,14 +32,17 @@ public class ClassService {
   private final ClassRepository classes;
   private final MemberDirectoryRepository directory;
   private final List<ClassRemovalCheck> removalChecks;
+  private final List<ClassWeekdayChangeCheck> weekdayChecks;
 
   public ClassService(
       ClassRepository classes,
       MemberDirectoryRepository directory,
-      List<ClassRemovalCheck> removalChecks) {
+      List<ClassRemovalCheck> removalChecks,
+      List<ClassWeekdayChangeCheck> weekdayChecks) {
     this.classes = classes;
     this.directory = directory;
     this.removalChecks = removalChecks;
+    this.weekdayChecks = weekdayChecks;
   }
 
   /** The timetable: Monday's classes first, each day's by start time. */
@@ -88,11 +91,16 @@ public class ClassService {
    * @throws ClassNotFoundException if there is no such class
    * @throws InvalidFieldException as {@link #create}, or on {@code version} if none is given
    * @throws ObjectOptimisticLockingFailureException if the class changed since it was read
+   * @throws ConflictException if the weekday changes and a {@link ClassWeekdayChangeCheck} refuses
+   *     (the class has attendance)
    */
   public SchoolClass update(UUID id, ClassRequest request) {
     ClassEntity schoolClass = find(id);
     Versions.require(schoolClass, request.version());
     requireValid(request);
+    if (schoolClass.getWeekday() != request.weekday()) {
+      weekdayChecks.forEach(check -> check.check(schoolClass, request.weekday()));
+    }
     schoolClass.change(request);
     return view(classes.saveAndFlush(schoolClass));
   }

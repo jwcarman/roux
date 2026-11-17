@@ -22,7 +22,7 @@ describe("returnTo", () => {
     expect(takeReturn()).toBe("/timetable");
   });
 
-  it.each(["/", "//evil.example/steal", "https://evil.example/", "students", "/signin", "/signin/link#token=x", "/api/students", "/who/me", ""])(
+  it.each(["/", "//evil.example/steal", "https://evil.example/", "students", "/signin", "/signin/link#token=x", "/api/students", "/who/me", "/\\evil.example", "/students\\..\\evil", ""])(
     "never sends anyone to %j",
     (path) => {
       expect(isReturnable(path)).toBe(false);

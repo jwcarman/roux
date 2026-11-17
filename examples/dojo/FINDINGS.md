@@ -368,8 +368,24 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   in a transaction of its own, written by hand with a `TransactionTemplate` and the ordering
   (commit, then send) to get right.
 - roux could: nothing; who could offer it.
-- Outcome: fixed by who 0.21.0 (`InvitationService.invite`, `IdentityInvited`) and this commit: the
-  dojo keeps a thin endpoint for its own rules and a listener for the profile row.
+- Outcome: the primitive is fixed by who 0.21.0 (`InvitationService.invite`, `IdentityInvited`): the
+  dojo keeps a thin endpoint for its own rules and a listener for the profile row. What the
+  invitation cannot carry (the form's name) is the next entry.
+
+## An invitation carries no app data, so the form's name travels in a ScopedValue
+- Where: `members/MemberProfileOnInvite`, `members/InviteController`
+- What was clunky: who's `IdentityInvited` has the identity, address and roles but nothing the app
+  supplied, so the listener that creates the profile row cannot see the name typed in the invite
+  form. The controller passes it in a `ScopedValue` bound around `invite(...)`, and the listener
+  falls back to the address's local part for an invitation made any other way (who's own
+  `POST /who/invitations`). The listener also checks the roles against `InvitableRole` and rolls
+  the invitation back for any other, because who's service applies no policy of its own: anyone
+  with who's endpoint permission could invite an owner.
+- who could: take an in-transaction callback. who is shipping
+  `invite(email, roleNames, Consumer<Identity> inTransaction)`, which makes the ScopedValue, the
+  fallback name and the allow-list guard in the listener unnecessary (the allow-list stays in the
+  controller, where the request is).
+- Outcome: deferred, until who's release; then the ScopedValue and the listener's guard go.
 
 ## Listing a member's passkeys needed an app endpoint
 - Where: `passkeys/PasskeysController` (removed)

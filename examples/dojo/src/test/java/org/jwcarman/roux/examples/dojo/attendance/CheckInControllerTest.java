@@ -284,6 +284,37 @@ class CheckInControllerTest {
   }
 
   @Test
+  void aClassWithAttendanceKeepsItsWeekdayButMayChangeAnythingElse() throws Exception {
+    mark(tuesdayClass, ada, TUESDAY, true);
+    Map<String, Object> change = new LinkedHashMap<>();
+    change.put("name", "Tuesday Karate");
+    change.put("weekday", "WEDNESDAY");
+    change.put("startsAt", "17:00");
+    change.put("endsAt", "18:00");
+    change.put("version", 0);
+
+    owner
+        .perform(send(put(CLASSES + "/" + tuesdayClass), change))
+        .andExpect(status().isConflict())
+        .andExpect(
+            jsonPath("$.detail")
+                .value("Tuesday Karate has attendance on Tuesdays; it cannot move to another day"));
+
+    change.put("weekday", "TUESDAY");
+    change.put("endsAt", "18:30");
+    owner
+        .perform(send(put(CLASSES + "/" + tuesdayClass), change))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.endsAt").value("18:30"));
+
+    // with the mark taken back, the class may move
+    mark(tuesdayClass, ada, TUESDAY, false);
+    change.put("weekday", "WEDNESDAY");
+    change.put("version", 1);
+    owner.perform(send(put(CLASSES + "/" + tuesdayClass), change)).andExpect(status().isOk());
+  }
+
+  @Test
   void anUnknownClassOrStudentIs404() throws Exception {
     UUID missing = UUID.randomUUID();
 

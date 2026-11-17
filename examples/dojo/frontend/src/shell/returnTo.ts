@@ -11,6 +11,7 @@ export function isReturnable(path: string): boolean {
   return (
     path.startsWith("/") &&
     !path.startsWith("//") &&
+    !path.includes("\\") &&
     path !== "/" &&
     !/^\/(signin|api|who)(\/|\?|#|$)/.test(path)
   );

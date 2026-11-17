@@ -8,7 +8,7 @@ import { ErrorMessage } from "@jwcarman/roux-web/feedback";
 import { fieldErrorsOf } from "@jwcarman/roux-web/form";
 import { SearchInput } from "@jwcarman/roux-web/table";
 import { classQuery, WEEKDAY_LABELS } from "../classes/classes";
-import { todayIso } from "../shell/dates";
+import { latestOn } from "../shell/dates";
 import { formatTime } from "../shell/format";
 import { checkInQuery, type Attendee } from "./attendance";
 import { AttendeeToggle } from "./AttendeeToggle";
@@ -25,13 +25,13 @@ function matches(attendee: Attendee, term: string): boolean {
     .every((word) => name.includes(word));
 }
 
-/** /classes/$classId/check-in: every active student as a toggle for a date (today unless changed). */
+/** /classes/$classId/check-in: every active student as a toggle for a date (the class's latest day, today if it runs today, unless changed). */
 export function CheckInPage() {
   const { classId } = route.useParams();
   const { date: searched } = route.useSearch();
   const navigate = route.useNavigate();
-  const date = searched ?? todayIso();
   const { data: schoolClass } = useSuspenseQuery(classQuery(classId));
+  const date = searched ?? latestOn(schoolClass.weekday);
   const list = useQuery(checkInQuery(classId, date));
   const [term, setTerm] = useState("");
 

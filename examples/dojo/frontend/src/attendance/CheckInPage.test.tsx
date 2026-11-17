@@ -2,7 +2,7 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toaster } from "@jwcarman/roux-web/feedback";
 import { ATTENDANCE_RECORD, CLASSES_READ } from "../api";
 import type { SchoolClass } from "../classes/classes";
@@ -61,10 +61,36 @@ function toggle(name: string) {
 describe("CheckInPage", () => {
   beforeEach(() => {
     document.cookie = "XSRF-TOKEN=token";
+    // Tuesday, the day Tuesday Karate runs; only the clock's date is faked.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 10, 17, 12));
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     act(() => toaster.remove());
+  });
+
+  it("defaults to the most recent day the class runs when it does not run today", async () => {
+    vi.setSystemTime(new Date(2026, 10, 19, 12)); // the Thursday after
+    const { asked } = school();
+    renderRoute("/classes/c1/check-in", STAFF);
+
+    await toggle("Ada Lovelace");
+
+    expect(screen.getByLabelText("Date")).toHaveValue("2026-11-17");
+    expect(asked).toEqual(["2026-11-17"]);
+  });
+
+  it("defaults to a week back on the day before the class runs", async () => {
+    vi.setSystemTime(new Date(2026, 10, 16, 12)); // the Monday before
+    const { asked } = school();
+    renderRoute("/classes/c1/check-in", STAFF);
+
+    await toggle("Ada Lovelace");
+
+    expect(screen.getByLabelText("Date")).toHaveValue("2026-11-10");
+    expect(asked).toEqual(["2026-11-10"]);
   });
 
   it("lists every active student as a toggle, none present, for today unless the URL says otherwise", async () => {

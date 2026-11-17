@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isoDate, isoDateOf, todayIso } from "./dates";
+import { isoDate, isoDateOf, latestOn, todayIso } from "./dates";
 
 describe("dates", () => {
   afterEach(() => {
@@ -24,5 +24,19 @@ describe("dates", () => {
     expect(isoDateOf("tuesday")).toBeUndefined();
     expect(isoDateOf(20260310)).toBeUndefined();
     expect(isoDateOf(undefined)).toBeUndefined();
+  });
+});
+
+describe("latestOn", () => {
+  const tuesday = new Date(2026, 10, 17, 12);
+
+  it("is today when today is that weekday", () => {
+    expect(latestOn("TUESDAY", tuesday)).toBe("2026-11-17");
+  });
+
+  it("is the last such day before today, across a month end", () => {
+    expect(latestOn("MONDAY", tuesday)).toBe("2026-11-16");
+    expect(latestOn("WEDNESDAY", tuesday)).toBe("2026-11-11");
+    expect(latestOn("SUNDAY", new Date(2026, 11, 2, 12))).toBe("2026-11-29");
   });
 });
