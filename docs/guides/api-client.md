@@ -188,10 +188,8 @@ Writes need no CSRF code in the app. Before every `send`/`sendJson`, the client 
 get one, then sends the token as the `X-XSRF-TOKEN` header. The cookie is read afresh on every call,
 because sign-in and sign-out rotate or clear it. `get` and `getJson` send no CSRF header.
 
-The cookie and header names are fixed: they are what Spring Security's `csrf.spa()` uses, which
-who's browser chain turns on. An app without who must configure its chain with
-`http.csrf(csrf -> csrf.spa())` too, and point `csrfBootstrapPath` at an endpoint that sets the
-cookie.
+This relies on who's CSRF setup: the cookie `XSRF-TOKEN`, the header `X-XSRF-TOKEN`, and the
+bootstrap from `/who/me`. The names are fixed in the client.
 
 ## Change where the API lives
 

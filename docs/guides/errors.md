@@ -185,9 +185,9 @@ listing knows what they are. All are registered by `RouxProblemsAutoConfiguratio
 
 - `ProblemsAdvice`: Spring MVC's exceptions, Bean Validation, roux's exceptions, optimistic locking
   and data integrity.
-- `SecurityProblemsAdvice`: Spring Security's (only when Spring Security is on the classpath).
-- `WhoProblemsAdvice`: who's (only when who is on the classpath).
-- `PagingProblemsAdvice`: jpa-utils' unknown sort (only when jpa-utils is on the classpath).
+- `SecurityProblemsAdvice`: Spring Security's.
+- `WhoProblemsAdvice`: who's.
+- `PagingProblemsAdvice`: jpa-utils' unknown sort.
 - `RootProblemsAdvice`: the last resort, ordered after all of the above.
 - `ProblemErrorController`: replaces Spring Boot's `BasicErrorController` so that `/error` answers
   any client not asking for HTML with a problem (`title`, `status`, `instance`). A browser still gets

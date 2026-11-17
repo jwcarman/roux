@@ -11,15 +11,15 @@ roux supports one stack and nothing else:
 
 - Java 25, Spring Boot 4.1 (`spring-boot-starter-parent` 4.1.x), Maven.
 - PostgreSQL with Liquibase; jpa-utils for paging.
-- who for identity (optional, but the API client's defaults assume it).
+- who for identity: sign-in, the session and CSRF. Every roux app uses it.
 - React 19, Chakra UI v3, TanStack Router, Query, Form and Table, Zod 4.
 - Vitest with MSW, and Playwright, for tests.
 
 ## Add the Java side
 
-Import `roux-bom` and depend on `roux-spring-boot-starter`. Keep Spring Boot's parent as the app's
-parent: `roux-bom` does not import Spring Boot's BOM, so Spring Boot's managed versions stay the
-parent's.
+Import `roux-bom` and depend on `roux-spring-boot-starter` and `who-spring-boot-starter`. Keep
+Spring Boot's parent as the app's parent: `roux-bom` does not import Spring Boot's BOM, so Spring
+Boot's managed versions stay the parent's.
 
 ```xml
 <properties>
@@ -43,7 +43,7 @@ parent's.
         <groupId>org.jwcarman.roux</groupId>
         <artifactId>roux-spring-boot-starter</artifactId>
     </dependency>
-    <!-- identity (optional): its version comes from roux-bom, which imports who's BOM -->
+    <!-- identity: its version comes from roux-bom, which imports who's BOM -->
     <dependency>
         <groupId>org.jwcarman.who</groupId>
         <artifactId>who-spring-boot-starter</artifactId>
@@ -62,11 +62,12 @@ That is all the Java setup. Errors are answered as Problem Details from the firs
 ## Add the web side
 
 ```
-npm install @jwcarman/roux-web
+npm install @jwcarman/roux-web@0.2.0
 npm install @chakra-ui/react @emotion/react @tanstack/react-form @tanstack/react-query @tanstack/react-table react react-icons zod
 ```
 
-The second line is the peer dependencies; the app supplies them (`react` `^19.3.1`,
+The Java and web versions must match: use the same version for `roux.version` and `@jwcarman/roux-web`
+(here `0.2.0`). The second line is the peer dependencies; the app supplies them (`react` `^19.3.1`,
 `@chakra-ui/react` `^3.38.0`, `@tanstack/react-query` `^5.107.1`, `@tanstack/react-form` `^1.33.5`,
 `@tanstack/react-table` `^8.21.3`, `zod` `^4.6.7`, `@emotion/react` `^11.14.0`, `react-icons`
 `^5.7.0`). The package is ESM only.
@@ -175,7 +176,7 @@ user; `undefined` (still loading) changes nothing. It must be called inside `Que
 ## Point the client at the API
 
 Nothing to do for a standard app. The client's defaults are `baseUrl` `/api`, `csrfBootstrapPath`
-`/who/me` and `sessionPathPrefix` `/api/`, which match a roux server with who. Only if the API lives
+`/who/me` and `sessionPathPrefix` `/api/`, which match a roux server (who serves `/who/me`). Only if the API lives
 elsewhere on the same origin, call `configureApi` once in `main.tsx` before rendering:
 
 ```ts
@@ -204,6 +205,8 @@ server's paths to Spring Boot:
 
 ```ts
 // vite.config.ts
+import { defineConfig } from "vite";
+
 const backend = "http://localhost:8080";
 
 export default defineConfig({
