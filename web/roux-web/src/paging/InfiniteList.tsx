@@ -11,7 +11,7 @@ export type LoadMode = "manual" | "auto" | "hybrid";
 export interface InfiniteListProps<T> {
   /** The list's accessible name. */
   "aria-label": string;
-  /** The list's query, from its resource module; the list asks it for one page at a time. */
+  /** The list's query, from its resource module; the list asks it for one page at a time, under the key plus `"infinite"`. */
   query: PageQuery<T>;
   /** A stable key per item, such as its id. */
   getItemKey: (item: T) => string;
@@ -48,7 +48,7 @@ export function InfiniteList<T>({
   const showsButton = !observes || loadMode === "hybrid";
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } = useInfiniteQuery({
-    queryKey: query.queryKey,
+    queryKey: [...query.queryKey, "infinite"],
     queryFn: ({ pageParam, signal }) => query.fetch({ pageIndex: pageParam }, signal),
     initialPageParam: 0,
     getNextPageParam: (lastPage: PageDto<T>) => nextPageIndex(lastPage),

@@ -161,7 +161,7 @@ describe("InfiniteList", () => {
     expect(fetchPage.mock.calls[0][1]).toBeInstanceOf(AbortSignal);
   });
 
-  it("keys the list by the query's key", async () => {
+  it("keys the list by the query's key and \"infinite\", never a plain query's key", async () => {
     const view = renderWithProviders(
       <InfiniteList
         aria-label="People"
@@ -178,7 +178,7 @@ describe("InfiniteList", () => {
         .getQueryCache()
         .getAll()
         .map((cached) => cached.queryKey),
-    ).toEqual([["people", { status: "ACTIVE" }]]);
+    ).toEqual([["people", { status: "ACTIVE" }, "infinite"]]);
   });
 
   it("says when there is nothing to list", async () => {

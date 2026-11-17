@@ -260,6 +260,11 @@ interface PageQuery<T> {
 function pageQuery<T>(queryKey: QueryKey, fetch: PageQuery<T>["fetch"]): PageQuery<T>;
 ```
 
+Each component appends its own part to the key, so no two shapes of cached data collide: the table
+adds the page request, `InfiniteSelect` its search and page size, and `InfiniteList` the word
+`"infinite"` (an infinite query caches `{ pages, pageParams }`, not a plain list). All stay under the
+module's key, so `meta.refreshes` reaches them.
+
 The page never calls `studentsApi` or builds a key: it passes `query={studentsPage(filters)}`.
 
 ## A paged table
