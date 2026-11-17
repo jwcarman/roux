@@ -23,7 +23,7 @@ All notable changes to this project are documented in this file. The format foll
 
 - roux-web's `DebouncedSearchInput` reports its pending term when the field loses focus, not only
   after the debounce. A link clicked within the debounce no longer loses to the late search
-  navigating back to the list.
+  navigating back to the list. Clearing the field (the clear button or Escape) reports at once too.
 
 ### Changed
 

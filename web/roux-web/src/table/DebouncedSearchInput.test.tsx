@@ -207,4 +207,53 @@ describe("DebouncedSearchInput", () => {
     await user.tab();
     expect(onSearchChange).toHaveBeenCalledWith(undefined);
   });
+
+  it("reports a clear at once, once, with no report of the old term on the press", async () => {
+    const { onSearchChange, user, input } = show();
+    await user.type(input, "ada");
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    await user.type(input, "m");
+    await user.click(screen.getByRole("button", { name: "Clear search" }));
+    expect(onSearchChange).toHaveBeenCalledTimes(2);
+    expect(onSearchChange).toHaveBeenLastCalledWith(undefined);
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(onSearchChange).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports nothing when a pending term is cleared before it was ever reported", async () => {
+    const { onSearchChange, user, input } = show();
+    await user.type(input, "ada");
+    await user.click(screen.getByRole("button", { name: "Clear search" }));
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(onSearchChange).not.toHaveBeenCalled();
+  });
+
+  it("reports the search gone at once on Escape, after the term was reported", async () => {
+    const { onSearchChange, user, input } = show();
+    await user.type(input, "ada");
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    await user.keyboard("{Escape}");
+    expect(onSearchChange).toHaveBeenCalledTimes(2);
+    expect(onSearchChange).toHaveBeenLastCalledWith(undefined);
+    await user.tab();
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(onSearchChange).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports nothing on clear when nothing was reported", async () => {
+    const { onSearchChange, user, input } = show();
+    await user.type(input, "a");
+    await user.keyboard("{Escape}");
+    expect(onSearchChange).not.toHaveBeenCalled();
+  });
 });

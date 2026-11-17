@@ -1,13 +1,15 @@
 import { IconButton, Input, InputGroup, type InputProps } from "@chakra-ui/react";
-import type { KeyboardEvent } from "react";
+import { useRef, type KeyboardEvent } from "react";
 import { LuSearch, LuX } from "react-icons/lu";
 
 /** What {@link SearchInput} takes. */
 export interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
-  /** Called when the field loses focus. */
+  /** Called when the field loses focus, except when the press that caused it is on the clear button. */
   onBlur?: () => void;
+  /** Called after the clear button or Escape empties the field, with `onChange("")`. */
+  onClear?: () => void;
   /** The field's accessible name, such as "Search members". */
   label: string;
   placeholder?: string;
@@ -20,14 +22,29 @@ export function SearchInput({
   value,
   onChange,
   onBlur,
+  onClear,
   label,
   placeholder,
   width = "100%",
   size = "md",
 }: SearchInputProps) {
+  const pressingClear = useRef(false);
+
+  function clear() {
+    pressingClear.current = false;
+    onChange("");
+    onClear?.();
+  }
+
   function onKeyDown(event: KeyboardEvent) {
     if (event.key === "Escape") {
-      onChange("");
+      clear();
+    }
+  }
+
+  function onInputBlur() {
+    if (!pressingClear.current) {
+      onBlur?.();
     }
   }
 
@@ -37,7 +54,13 @@ export function SearchInput({
       startElement={<LuSearch aria-hidden />}
       endElement={
         value ? (
-          <IconButton aria-label="Clear search" size="xs" variant="ghost" onClick={() => onChange("")}>
+          <IconButton
+            onMouseDown={() => (pressingClear.current = true)}
+            aria-label="Clear search"
+            size="xs"
+            variant="ghost"
+            onClick={clear}
+          >
             <LuX />
           </IconButton>
         ) : undefined
@@ -51,7 +74,7 @@ export function SearchInput({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
-        onBlur={onBlur}
+        onBlur={onInputBlur}
       />
     </InputGroup>
   );

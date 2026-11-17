@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../testing/render";
@@ -54,5 +54,44 @@ describe("SearchInput", () => {
     const { input } = show({ width: "50%", size: "sm" });
     expect(getComputedStyle(input.parentElement as HTMLElement).width).toBe("50%");
     expect(getComputedStyle(input).height).toBe("36px");
+  });
+
+  it("reports losing focus, and copes with no listener", async () => {
+    const onBlur = vi.fn();
+    const { user, input } = show({ onBlur });
+    await user.click(input);
+    await user.tab();
+    expect(onBlur).toHaveBeenCalledTimes(1);
+  });
+
+  it("copes with losing focus when nothing listens", async () => {
+    const { user, input } = show();
+    await user.click(input);
+    await user.tab();
+    expect(input).not.toHaveFocus();
+  });
+
+  it("does not report the blur a press on the clear button causes, nor one after it", async () => {
+    const onBlur = vi.fn();
+    const onClear = vi.fn();
+    const { user, input } = show({ value: "ada", onBlur, onClear });
+    await user.click(input);
+    await user.click(screen.getByRole("button", { name: "Clear search" }));
+    expect(onBlur).not.toHaveBeenCalled();
+    expect(onClear).toHaveBeenCalledTimes(1);
+    await user.click(input);
+    await user.tab();
+    expect(onBlur).toHaveBeenCalledTimes(1);
+  });
+
+  it("forgets a press on the clear button that never moved focus", async () => {
+    const onBlur = vi.fn();
+    const { user, input } = show({ value: "ada", onBlur });
+    const clear = screen.getByRole("button", { name: "Clear search" });
+    fireEvent.mouseDown(clear);
+    fireEvent.click(clear);
+    await user.click(input);
+    await user.tab();
+    expect(onBlur).toHaveBeenCalledTimes(1);
   });
 });

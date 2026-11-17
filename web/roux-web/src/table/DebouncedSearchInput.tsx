@@ -5,7 +5,7 @@ import { useDebounce } from "./useDebounce";
 import { SearchInput, type SearchInputProps } from "./SearchInput";
 
 /** What {@link DebouncedSearchInput} takes: a {@link SearchInput}'s props, minus the value it manages. */
-export type DebouncedSearchInputProps = Omit<SearchInputProps, "value" | "onChange" | "onBlur"> & {
+export type DebouncedSearchInputProps = Omit<SearchInputProps, "value" | "onChange" | "onBlur" | "onClear"> & {
   /**
    * The search in effect, such as the one in the URL: the field starts from it and follows it when
    * it changes elsewhere (Back, a link), without reporting it back.
@@ -22,7 +22,7 @@ export type DebouncedSearchInputProps = Omit<SearchInputProps, "value" | "onChan
  * A search field that reports its term once typing pauses, and only when the term changes. It also
  * reports a pending term at once when the field loses focus: a click on a link already on screen
  * blurs the field on mousedown, so the pending search is reported before the link's navigation and
- * cannot land after it and take the user back.
+ * cannot land after it and take the user back. Clearing, an explicit act, reports at once too.
  */
 export function DebouncedSearchInput({
   term: given,
@@ -54,18 +54,23 @@ export function DebouncedSearchInput({
     }
   }, [term]);
 
-  function reportNow() {
-    const pending = searchTermOf(text, minLength);
-    if (pending !== reported.current) {
-      reported.current = pending;
-      onSearchChangeRef.current(pending);
+  function report(next: string | undefined) {
+    if (next !== reported.current) {
+      reported.current = next;
+      onSearchChangeRef.current(next);
     }
   }
 
   const typed = text.trim().length;
   return (
     <Stack gap="1">
-      <SearchInput value={text} onChange={setText} onBlur={reportNow} {...props} />
+      <SearchInput
+        value={text}
+        onChange={setText}
+        onBlur={() => report(searchTermOf(text, minLength))}
+        onClear={() => report(undefined)}
+        {...props}
+      />
       {typed > 0 && typed < minLength && (
         <Text fontSize="sm" color="fg.muted">
           Type at least {minLength} characters to search
