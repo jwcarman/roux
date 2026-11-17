@@ -92,14 +92,15 @@ are the worked example. Copy their shape:
   dropped) and leaves defaults out of the URL with `stripSearchParams`; the page hands them to
   `QueryTable` as `params` and writes changes back with `navigate`. A reload, Back and a shared
   link keep the page, sort and search.
-- **Forms use TanStack Form** through `useAppForm` (`@jwcarman/roux-web/form`): `<form.AppForm>`,
-  `<form.Form>`, a `<form.AppField>` per field rendering `InputField`, `NumberField`,
-  `TextAreaField`, `SelectField` or `RadioGroupField`, and `<form.SubmitButton>`. Validators are
-  plain functions returning a message (or a schema's issues); errors show once a field is left or
-  the form submitted, and one press of submit flags every field. A refused submission
-  goes to `await showProblem(form, response, "Could not save")`: field errors go under their fields,
-  and anything else toasts the server's reason (or the fallback when it gave none). The invite,
-  profile, sign-in and passkey forms are the examples.
+- **Forms use `useSchemaForm`** (`@jwcarman/roux-web/form`): a Zod schema built from roux's rule
+  helpers (`text()`, `email()`, `.max(n)`, `.optional()`, whose messages are the server's), the
+  mutation that saves it, and a `<form.AppField>` per field. `useSchemaForm` validates, submits
+  through the mutation, puts a 400's field errors under their fields, toasts any other refusal
+  and starts over on a 409. In a dialog the fields go in `FormDialog`, which closes after a save
+  and stays open on a mistake (`members/InviteForm.tsx`); on a page they go in
+  `<form.AppForm><form.Form>` with `<form.SubmitButton>` (`members/ProfileForm.tsx`). A form that
+  does not save through a mutation (sign-in, Settings) uses `useAppForm`, the hook underneath.
+  roux's [Forms guide](../../docs/guides/forms.md) has the rest.
 - **Lists on the client use `QueryTable`** (`@jwcarman/roux-web/table`), TanStack Table over
   TanStack Query: column definitions whose ids are the sort enum's values, a
   `DebouncedSearchInput`, and a key from `queryKeys` that includes the search, so a new search
@@ -131,8 +132,8 @@ are the worked example. Copy their shape:
 - **Feedback** (`@jwcarman/roux-web/feedback`). `notify.success` and `notify.error` toast the outcome of an action, and
   `notify.problem(problem, fallback)` toasts a failed request's detail (with its reference on a 500); field mistakes
   stay under their fields. `useConfirm()` asks before a destructive action (an alert dialog, Cancel
-  focused first, `DANGER_PALETTE` for the button). `FormDialog` holds a `useAppForm` form in a
-  dialog ("Invite member").
+  focused first, `DANGER_PALETTE` for the button). See roux's
+  [Feedback guide](../../docs/guides/feedback.md).
 - **Filters and export.** `FilterChips` binds a filter to the URL (Status and Role on Members, with
   `enumSearchOf` dropping unknown values; the server answers an unknown enum with a 400 field
   message). `ExportButton` downloads `GET /api/members/export.csv`: the list's search, filters and

@@ -30,8 +30,8 @@ feature" section is the full worked example (member profiles); read the part you
 - Gate endpoints on a permission, never a role: `@RequiresPermission(AppRoles.MEMBERS_READ)`.
   `AppRoles` decides which role holds which permission.
 - Errors are Problem Details. Throw `NotFoundException`, `InvariantViolationException` or
-  `InvalidFieldException`; add no exception handlers. The client reads them with `problemOf`,
-  `showProblem` and `notify.problem`.
+  `InvalidFieldException`; add no exception handlers. On the client `useSchemaForm` puts field
+  errors under their fields, and `problemOf` and `notify.problem` read the rest.
 - Time comes from the injected `Clock` (UTC). Never call `now()` without it.
 - A record the client edits carries its `version`; a stale one is a 409.
 - Changes worth a history go through `ActivityLog.record` in the same transaction.
