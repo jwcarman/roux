@@ -306,6 +306,18 @@
     </build>
 
     <profiles>
+        <!-- The example apps, built against the roux code beside them. On by default; naming any
+             other profile (-P release, -P pit) turns it off, so they are never released or
+             mutation-tested. -->
+        <profile>
+            <id>examples</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <modules>
+                <module>examples/dojo</module>
+            </modules>
+        </profile>
         <profile>
             <id>release</id>
             <build>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <!-- One row per team member, created with the member's identity (invitation, owner bootstrap).
+       Its id is the identity's id, so deleting the identity deletes the profile. -->
+  <changeSet id="member-profile" author="dojo">
+    <createTable tableName="member_profile">
+      <column name="id" type="uuid">
+        <constraints primaryKey="true" nullable="false"
+            foreignKeyName="fk_member_profile_identity" references="who_identity(id)"
+            deleteCascade="true"/>
+      </column>
+      <column name="version" type="bigint"><constraints nullable="false"/></column>
+      <column name="display_name" type="varchar(80)"><constraints nullable="false"/></column>
+      <!-- A copy of the address as who stored it: search and sorting need it in SQL. An app that
+           adds email change updates it in the same transaction. -->
+      <column name="email" type="varchar(320)"><constraints nullable="false"/></column>
+      <column name="created_date" type="timestamptz"/>
+      <column name="modified_date" type="timestamptz"/>
+      <column name="created_by" type="varchar(64)"/>
+      <column name="modified_by" type="varchar(64)"/>
+    </createTable>
+  </changeSet>
+
+  <!-- The team directory: one row per member, OWNER winning over MEMBER. It carries the profile's
+       id and version, so its entity extends jpa-utils' BaseEntity like every other. It reads
+       who's role tables directly; a who release that renames them fails here or in Hibernate's
+       validate. Grouping by the primary keys lets the other columns be selected. status is who's
+       identity status as the app shows it: ACTIVE, or DEACTIVATED for any other. -->
+  <changeSet id="member-directory" author="dojo" runOnChange="true">
+    <createView viewName="member_directory" replaceIfExists="true">
+      select p.id, p.version, p.display_name, p.email,
+             case when bool_or(r.name = 'OWNER') then 'OWNER' else 'MEMBER' end as role,
+             case when bool_or(r.name = 'OWNER') then 0 else 1 end as role_rank,
+             case when i.status = 'ACTIVE' then 'ACTIVE' else 'DEACTIVATED' end as status,
+             i.created_at as joined_at
+      from member_profile p
+      join who_identity i on i.id = p.id
+      join who_identity_role ir on ir.identity_id = p.id
+      join who_role r on r.id = ir.role_id
+      where r.name in ('OWNER', 'MEMBER')
+      group by p.id, i.id
+    </createView>
+  </changeSet>
+</databaseChangeLog>

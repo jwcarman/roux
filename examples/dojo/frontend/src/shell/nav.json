@@ -1,0 +1,18 @@
+[
+  { "label": "Home", "to": "/", "icon": "house", "description": "A welcome page.", "start": true },
+  {
+    "label": "Members",
+    "to": "/members",
+    "icon": "users",
+    "permission": "members.read",
+    "description": "Who can use the app and what they may do."
+  },
+  {
+    "label": "Appearance",
+    "to": "/appearance",
+    "icon": "palette",
+    "permission": "theme.manage",
+    "description": "The app's colours, corners and font."
+  },
+  { "label": "Settings", "to": "/settings", "icon": "settings", "description": "Your own account settings." }
+]

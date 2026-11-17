@@ -1,0 +1,10 @@
+target/
+.idea/
+*.iml
+.DS_Store
+*.log
+node_modules/
+frontend/dist/
+playwright-report/
+test-results/
+frontend/*.tsbuildinfo

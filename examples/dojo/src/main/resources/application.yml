@@ -1,0 +1,79 @@
+# Defaults for development on http://localhost:8080. Production overrides them in
+# application-prod.yml; see the README's "Production" section.
+app:
+  # app.name, the app's name until the owner names it on the Appearance page, is in
+  # app-name.properties (imported below), written when the app is created.
+  base-url: http://localhost:8080
+
+server:
+  servlet:
+    session:
+      # How long a session lasts without a request. Spring Session JDBC takes it from here
+      # (spring.session.timeout is unset); expired rows are deleted every minute (Spring Session's
+      # default spring.session.jdbc.cleanup-cron).
+      timeout: 30m
+      cookie:
+        # who's recommendation (email-links guide, "Session cookie"); who does not set these.
+        same-site: lax
+        http-only: true
+        # The dev profile turns this off for plain http://localhost.
+        secure: true
+
+spring:
+  config:
+    import: classpath:app-name.properties
+  application:
+    name: dojo
+  threads:
+    virtual:
+      enabled: true
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          # The SPA's shell (index.html) and other unhashed files: revalidate on every load, so a
+          # deploy is picked up at once. Hashed /assets/** are cached for a year (SpaController).
+          no-cache: true
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+  jpa:
+    # Liquibase owns the schema; Hibernate only checks its mappings against it at startup.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  session:
+    jdbc:
+      # Sessions live in PostgreSQL; Liquibase creates the tables (db/changelog/spring-session.xml).
+      initialize-schema: never
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAILPIT_SMTP_PORT:1025}
+
+who:
+  # Liquibase creates who's tables (db.changelog-master.xml includes who's changelog).
+  initialize-schema: never
+  security:
+    # What a signed-out browser may load: the SPA's shell, every client route (SpaController.ROUTES,
+    # so a deep link opens signed out and the app sends the visitor to sign in) and the files they
+    # load. who's own sign-in endpoints are open already; everything else answers 401.
+    public-paths:
+      - /
+      - /index.html
+      - /settings
+      - /appearance
+      - /members
+      - /members/*
+      - /signin
+      - /signin/link
+      - /assets/**
+      - /favicon.ico
+      - /favicon.svg
+  email-link:
+    link-base-url: ${app.base-url}/signin/link
+    from: noreply@dojo.test
+    # Keys the typed sign-in codes. A development value only: prod takes it from the environment.
+    code-secret: development-only-code-secret-not-for-production
+  passkey:
+    rp-id: localhost
+    allowed-origins: ${app.base-url}
+    from: noreply@dojo.test
