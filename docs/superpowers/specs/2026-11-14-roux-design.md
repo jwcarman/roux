@@ -125,7 +125,7 @@ Three choices shaped this design; each was settled in conversation.
 6. **The generator writes plain code, including the browser client** (approach A above).
 7. **The code is the source of truth.** No model file: operations read and edit the app's code where
    it stands, by its syntax tree.
-8. **One stack.** Spring Boot 4.1, Java 25, PostgreSQL with Liquibase, `who` for identity (optional),
+8. **One stack.** Spring Boot 4.1, Java 25, PostgreSQL with Liquibase, `who` for identity (every app; like `jpa-utils`, a building block, not an option),
    React 19 with Chakra UI v3 and TanStack Router, Query, Form and Table, Vitest with MSW, Playwright.
 9. **The frontend is part of the framework.** A backend-only scaffold is not a prototype.
 10. **Licence: Apache 2.0**, as `who` and `jpa-utils` are; the repository is already public.
