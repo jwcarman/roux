@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { get, getJson, onSessionLost, send, useClearQueriesOnIdentityChange } from "@jwcarman/roux-web/api";
+import { getJson, onSessionLost, useClearQueriesOnIdentityChange } from "@jwcarman/roux-web/api";
 import { fetchMe, MEMBERS_PROFILE, type Me, type Profile } from "../api";
+import { who } from "../who";
 
 export interface Session {
   /** undefined while loading, null when signed out. */
@@ -51,8 +52,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [me, refreshProfile]);
 
   const signOut = useCallback(async () => {
-    await send("POST", "/who/logout");
-    await get("/who/me"); // sets a fresh XSRF-TOKEN cookie
+    await who.signOut(); // also fetches a fresh XSRF-TOKEN cookie
     meNow.current = null;
     setMe(null);
   }, []);

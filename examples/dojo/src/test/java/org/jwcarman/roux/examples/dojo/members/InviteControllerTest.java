@@ -1,19 +1,21 @@
 package org.jwcarman.roux.examples.dojo.members;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.jwcarman.roux.examples.dojo.AppTest;
-import org.jwcarman.roux.examples.dojo.RecordingEmailLinkSender;
+import org.jwcarman.roux.examples.dojo.RecordingWhoEmailSender;
 import org.jwcarman.roux.examples.dojo.TestMembers;
 import org.jwcarman.roux.examples.dojo.activity.ActivityRepository;
 import org.jwcarman.who.core.domain.IdentityStatus;
@@ -23,6 +25,8 @@ import org.jwcarman.who.emaillink.EmailCredential;
 import org.jwcarman.who.emaillink.EmailCredentialService;
 import org.jwcarman.who.emaillink.EmailLinkIssuer;
 import org.jwcarman.who.emaillink.EmailLinkOutcome;
+import org.jwcarman.who.emaillink.Invitation;
+import org.jwcarman.who.emaillink.InvitationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.system.CapturedOutput;
@@ -37,14 +41,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @ExtendWith(OutputCaptureExtension.class)
 @AppTest
-@Import(InvitationServiceTest.Mail.class)
-class InvitationServiceTest {
+@Import(InviteControllerTest.Mail.class)
+class InviteControllerTest {
 
   @TestConfiguration
   static class Mail {
     @Bean
-    RecordingEmailLinkSender recordingSender() {
-      return new RecordingEmailLinkSender();
+    RecordingWhoEmailSender recordingSender() {
+      return new RecordingWhoEmailSender();
     }
   }
 
@@ -52,7 +56,7 @@ class InvitationServiceTest {
   @Autowired TestMembers members;
   @Autowired EmailCredentialService emailCredentials;
   @Autowired InvitationService invitations;
-  @Autowired RecordingEmailLinkSender mail;
+  @Autowired RecordingWhoEmailSender mail;
   @Autowired TransactionTemplate tx;
   @Autowired WhoService who;
   @Autowired MemberProfileRepository profiles;
@@ -228,22 +232,37 @@ class InvitationServiceTest {
   }
 
   @Test
-  void rolledBackInviteSendsNothing() {
+  void whoRefusesAnInvitationMadeInsideATransaction() {
     int identities = count("who_identity");
 
-    try {
-      tx.executeWithoutResult(
-          status -> {
-            invitations.invite("Bob", "bob@example.com", InvitableRole.MEMBER);
-            throw new IllegalStateException("force rollback");
-          });
-    } catch (IllegalStateException expected) {
-      assertThat(expected).hasMessage("force rollback");
-    }
+    assertThatThrownBy(
+            () ->
+                tx.executeWithoutResult(
+                    status -> invitations.invite("bob@example.com", Set.of("MEMBER"))))
+        .isInstanceOf(IllegalStateException.class);
 
     assertThat(mail.sent()).isEmpty();
     assertThat(count("who_identity")).isEqualTo(identities);
-    assertThat(emailCredentials.findByAddress("bob@example.com")).isEmpty();
+  }
+
+  @Test
+  void anInvitationWithoutANameGetsTheAddressAsItsName() {
+    Invitation invitation = invitations.invite("grace.hopper@example.org", Set.of("MEMBER"));
+
+    assertThat(profiles.findById(invitation.identityId()).orElseThrow().getDisplayName())
+        .isEqualTo("grace.hopper");
+  }
+
+  @Test
+  void anInvitationNeverGivesTheOwnerRoleWhoeverSendsIt() {
+    int identities = count("who_identity");
+
+    assertThatThrownBy(() -> invitations.invite("king@example.org", Set.of("OWNER")))
+        .isInstanceOf(IllegalStateException.class);
+
+    assertThat(mail.sent()).isEmpty();
+    assertThat(count("who_identity")).isEqualTo(identities);
+    assertThat(emailCredentials.findByAddress("king@example.org")).isEmpty();
   }
 
   private ResultActions invite(String email) throws Exception {

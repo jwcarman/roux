@@ -17,19 +17,15 @@ package org.jwcarman.roux.autoconfigure.spa;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
-
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Test;
-import org.jwcarman.who.spring.security.WhoPublicPaths;
+import org.jwcarman.who.spring.security.WhoPublicPathContributor;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -39,16 +35,6 @@ class RouxSpaAutoConfigurationTest {
   private final WebApplicationContextRunner web =
       new WebApplicationContextRunner()
           .withConfiguration(AutoConfigurations.of(RouxSpaAutoConfiguration.class));
-
-  @Configuration(proxyBeanMethods = false)
-  static class OwnPublicPaths {
-    static final WhoPublicPaths PATHS = new WhoPublicPaths(List.of(), List.of("/mine"));
-
-    @Bean
-    WhoPublicPaths ownPublicPaths() {
-      return PATHS;
-    }
-  }
 
   @Test
   void a_servlet_app_with_a_built_frontend_serves_the_shell() {
@@ -75,7 +61,7 @@ class RouxSpaAutoConfigurationTest {
             context ->
                 assertThat(context)
                     .doesNotHaveBean("spaFallbackFilter")
-                    .doesNotHaveBean(WhoPublicPaths.class));
+                    .doesNotHaveBean(WhoPublicPathContributor.class));
   }
 
   @Test
@@ -92,34 +78,17 @@ class RouxSpaAutoConfigurationTest {
   }
 
   @Test
-  void the_shell_and_assets_join_the_configured_public_paths() {
-    web.withPropertyValues("who.security.public-paths=/favicon.svg,/robots.txt")
-        .run(
-            context ->
-                assertThat(context.getBean(WhoPublicPaths.class).patterns())
-                    .containsExactly(
-                        "/error", "/index.html", "/assets/**", "/favicon.svg", "/robots.txt"));
-  }
-
-  @Test
-  void the_shell_and_assets_are_public_with_nothing_configured() {
+  void the_shell_and_assets_are_contributed_as_public_paths() {
     web.run(
         context ->
-            assertThat(context.getBean(WhoPublicPaths.class).patterns())
-                .containsExactly("/error", "/index.html", "/assets/**"));
-  }
-
-  @Test
-  void an_app_with_its_own_public_paths_keeps_them() {
-    web.withUserConfiguration(OwnPublicPaths.class)
-        .run(
-            context ->
-                assertThat(context.getBean(WhoPublicPaths.class)).isSameAs(OwnPublicPaths.PATHS));
+            assertThat(context.getBeansOfType(WhoPublicPathContributor.class).values())
+                .flatMap(WhoPublicPathContributor::publicPaths)
+                .containsExactly("/index.html", "/assets/**"));
   }
 
   @Test
   void an_app_without_who_has_no_public_paths_to_extend() {
-    web.withClassLoader(new FilteredClassLoader(WhoPublicPaths.class))
+    web.withClassLoader(new FilteredClassLoader(WhoPublicPathContributor.class))
         .run(context -> assertThat(context).hasBean("spaFallbackFilter"));
   }
 }

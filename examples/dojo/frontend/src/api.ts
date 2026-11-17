@@ -1,6 +1,5 @@
-import { get } from "@jwcarman/roux-web/api";
-
 import type { ThemeSettings } from "./shell/theme";
+import { who } from "./who";
 
 export interface Me {
   identityId: string;
@@ -9,16 +8,8 @@ export interface Me {
 
 /** The signed-in caller, or null when signed out. */
 export async function fetchMe(): Promise<Me | null> {
-  const response = await get("/who/me");
-  return response.ok ? ((await response.json()) as Me) : null;
-}
-
-export interface Passkey {
-  id: string;
-  credentialId: string;
-  label: string;
-  created: string;
-  lastUsed: string | null;
+  const result = await who.me.get();
+  return result.ok ? result.value : null;
 }
 
 export const MEMBERS_INVITE = "members.invite";

@@ -42,6 +42,6 @@ class DojoApplicationTests {
 
   @Test
   void apiNeedsSignIn() throws Exception {
-    mvc.perform(get("/api/passkeys")).andExpect(status().isUnauthorized());
+    mvc.perform(get("/api/members/me")).andExpect(status().isUnauthorized());
   }
 }

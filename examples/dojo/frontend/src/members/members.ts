@@ -15,7 +15,7 @@ export const INVITABLE_ROLES = ["MEMBER", "INSTRUCTOR"] as const;
 /** A role as people read it, for a member's page, the directory and the invite form. */
 export const ROLE_LABELS = { OWNER: "Owner", INSTRUCTOR: "Instructor", MEMBER: "Member" } as const;
 
-/** InvitationsController.Invitation's rules, in roux's words. */
+/** InviteController.InvitationRequest's rules, in roux's words. */
 export const invitationSchema = z.object({
   name: text().max(MAX_NAME),
   email: email(),

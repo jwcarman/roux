@@ -170,7 +170,7 @@ export async function heldPasskeys(cdp: CDPSession, authenticatorId: string): Pr
 
 /** Offers the authenticator only one key algorithm when a passkey is registered. */
 export async function onlyAlgorithm(page: Page, alg: number) {
-  await page.route("**/who/passkey/register/options", async (route) => {
+  await page.route("**/who/me/passkeys/options", async (route) => {
     const response = await route.fetch();
     const options = await response.json();
     options.pubKeyCredParams = [{ type: "public-key", alg }];

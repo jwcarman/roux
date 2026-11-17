@@ -112,6 +112,10 @@ export async function fetchMe(): Promise<Me | null> {
   const response = await get("/who/me");
   return response.ok ? ((await response.json()) as Me) : null;
 }
+
+// For who's own endpoints, prefer who's typed client, @jwcarman/who-client: `who.me.get()`,
+// `who.email.send(address)`, `who.me.passkeys.list()`, `who.signOut()`. It handles who's CSRF
+// cookie and answers a typed result instead of a status.
 ```
 
 To turn a failed `Response` into a problem yourself, use `problemOf` from `/problem` (see
@@ -120,7 +124,7 @@ To turn a failed `Response` into a problem yourself, use `problemOf` from `/prob
 ## Call a path outside the API
 
 A path that starts with `/` is used as it is, not put under `baseUrl`: `get("/who/me")`,
-`send("POST", "/who/logout")`. Use this for who's endpoints (all under `/who`); keep the app's own
+`send("POST", "/who/logout")`. Use this for a who endpoint the client does not cover (all under `/who`); `@jwcarman/who-client` is the way to call the ones it does. Keep the app's own
 endpoints under `/api` and call them without the slash.
 
 ## Handle a refused call

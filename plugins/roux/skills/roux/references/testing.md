@@ -713,7 +713,7 @@ app's arguments set the URL-dependent settings: `who.passkey.rp-id=localhost`,
 
 The suite signs in as a user does: it asks for a link on the sign-in page, reads the link from
 Mailpit's API, and opens it. Passkeys use Chrome's virtual authenticator (the DevTools `WebAuthn`
-domain). Requests a test intercepts are who's, under `/who` (`/who/passkey/register/options`).
+domain). Requests a test intercepts are who's, under `/who` (`/who/me/passkeys/options`).
 
 ### The Content-Security-Policy test
 

@@ -102,7 +102,7 @@ who:
 
 | Setting | What it is |
 | --- | --- |
-| `spring.mail.host` | The SMTP server sign-in emails go through (Spring Boot's `JavaMailSender`, from `spring-boot-starter-mail`). Instead of mail, an app may register its own `EmailLinkSender` bean. |
+| `spring.mail.host` | The SMTP server sign-in emails go through (Spring Boot's `JavaMailSender`, from `spring-boot-starter-mail`). Instead of mail, an app may register its own `WhoEmailSender` bean; it receives every who email (sign-in links, invitations, address confirmations), a sealed `WhoEmail`, so write its `switch` exhaustive with no `default` branch, or a new kind of email is silently dropped. |
 | `who.email-link.link-base-url` | The app's page that receives sign-in links; who appends `#token=...`. Required. |
 | `who.email-link.code-secret` | Keys the typed sign-in codes: at least 32 characters, the same on every instance, from the environment in production. Required. |
 | `who.email-link.from` | The sender of sign-in emails. Required when they go out through `JavaMailSender`. |
@@ -270,8 +270,10 @@ supported:
    `roux.spa.excluded-paths`. An app that serves the shell itself (to render the theme or
    a nonce into it, say) keeps doing that: roux presents the page URL to it as a request for
    `/index.html`, so its own `/index.html` handler and headers apply. An app with its own
-   `SecurityFilterChain` must permit `/index.html` and `/assets/**`, which roux adds to who's
-   `WhoPublicPaths` (the same bean the chain reads).
+   `SecurityFilterChain` must permit `/index.html` and `/assets/**`, which roux contributes with a
+   `WhoPublicPathContributor` bean. who adds a contributor's paths to `who.security.public-paths`
+   and every other contributor's, so an app that needs more public paths contributes its own bean
+   the same way; it never replaces the `WhoPublicPaths` bean, which would drop every contribution.
 2. **Edge routing.** Static hosting or a CDN serves the SPA, and a proxy on the same domain routes
    `/api` and `/who` to the app.
 
@@ -295,7 +297,7 @@ export default defineConfig({
 });
 ```
 
-Every who endpoint (`/who/me`, `/who/email/send`, `/who/logout`, `/who/passkey/...`) is under
+Every who endpoint (`/who/me`, `/who/email/send`, `/who/logout`, `/who/passkey/sign-in`, and the signed-in person's own account under `/who/me/...`) is under
 `/who`, so these two entries cover the app's API and its sign-in. Add an entry only for another
 server path the app calls.
 

@@ -1,10 +1,10 @@
 import { Button, Heading, Stack, Text } from "@chakra-ui/react";
 import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import { send } from "@jwcarman/roux-web/api";
 import { email, useAppForm } from "@jwcarman/roux-web/form";
 import { z } from "zod";
 import { signInWithPasskey } from "../members/passkeys";
+import { who } from "../who";
 import { takeReturn } from "./returnTo";
 import { useSession } from "./session";
 
@@ -22,8 +22,8 @@ export function SignIn() {
     validators: { onBlur: linkRequestSchema, onSubmit: linkRequestSchema },
     onSubmit: async ({ value }) => {
       setError(null);
-      const response = await send("POST", "/who/email/send", value);
-      if (response.ok) {
+      const result = await who.email.send(value.email);
+      if (result.ok) {
         setSent(true);
       } else {
         setError("Could not send the link. Try again.");
@@ -34,7 +34,8 @@ export function SignIn() {
   async function onPasskey() {
     setError(null);
     try {
-      if (await signInWithPasskey()) {
+      const result = await signInWithPasskey();
+      if (result.ok) {
         await refresh();
         const returnTo = takeReturn();
         if (returnTo === undefined) {
@@ -43,10 +44,10 @@ export function SignIn() {
           router.history.push(returnTo);
         }
       } else {
-        setError("Passkey sign-in failed.");
+        setError(result.reason === "cancelled" ? "Passkey sign-in was cancelled." : "Passkey sign-in failed.");
       }
     } catch {
-      setError("Passkey sign-in was cancelled.");
+      setError("Passkey sign-in failed.");
     }
   }
 

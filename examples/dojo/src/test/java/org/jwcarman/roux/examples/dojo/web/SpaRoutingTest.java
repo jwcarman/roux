@@ -63,7 +63,7 @@ class SpaRoutingTest {
   @Test
   void apiAndWhoEndpointsAreNotShadowed() {
     assertThat(get("/who/me").getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-    assertThat(get("/api/passkeys").getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    assertThat(get("/api/members/me").getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
   }
 
   @Test
@@ -106,7 +106,7 @@ class SpaRoutingTest {
     ResponseEntity<String> response =
         LocalClient.to(port)
             .delete()
-            .uri("/who/passkey/register/abc")
+            .uri("/who/me/passkeys/abc")
             .header(HttpHeaders.COOKIE, "XSRF-TOKEN=" + xsrf)
             .header("X-XSRF-TOKEN", xsrf)
             .retrieve()

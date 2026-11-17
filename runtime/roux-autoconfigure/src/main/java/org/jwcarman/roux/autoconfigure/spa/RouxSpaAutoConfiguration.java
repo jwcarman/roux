@@ -17,25 +17,18 @@ package org.jwcarman.roux.autoconfigure.spa;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.stream.Stream;
 
-import org.jwcarman.who.spring.security.PasswordlessLoginMethod;
-import org.jwcarman.who.spring.security.WhoPublicPaths;
-import org.springframework.beans.factory.ObjectProvider;
+import org.jwcarman.who.spring.security.WhoPublicPathContributor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnResource;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.context.properties.bind.Bindable;
-import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
 import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -44,10 +37,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * Serves a single-page app: the shell for any page URL ({@link SpaFallbackFilter}) and the hashed
  * assets for a year. On when a servlet application has {@code static/index.html} on its classpath
  * (the frontend build puts it there); off with {@code roux.spa.enabled=false}. With who on the
- * classpath, the shell and {@code /assets/**} are also public paths, so a signed-out visitor loads
- * the app from any URL without the application listing its pages.
+ * classpath, the shell and {@code /assets/**} are also public paths (a {@code
+ * WhoPublicPathContributor} bean, beside whatever the app and other libraries contribute), so a
+ * signed-out visitor loads the app from any URL without the application listing its pages.
  */
-@AutoConfiguration(beforeName = "org.jwcarman.who.autoconfigure.WhoSpringSecurityAutoConfiguration")
+@AutoConfiguration
 @ConditionalOnWebApplication(type = Type.SERVLET)
 @ConditionalOnResource(resources = "classpath:/static" + SpaFallbackFilter.SHELL)
 @ConditionalOnBooleanProperty(name = "roux.spa.enabled", matchIfMissing = true)
@@ -91,25 +85,17 @@ public class RouxSpaAutoConfiguration {
   }
 
   /**
-   * who's public paths with the shell and the assets added. who builds its own only when the
-   * application has none, so this one stands in for it: the same error page, sign-in methods' paths
-   * and {@code who.security.public-paths}, plus what the app needs to load signed out.
+   * Adds the shell and the assets to who's public paths. A contributor only adds: who's own paths,
+   * {@code who.security.public-paths} and every other contributor still apply, which a replaced
+   * {@code WhoPublicPaths} bean would drop.
    */
   @Configuration(proxyBeanMethods = false)
-  @ConditionalOnClass(WhoPublicPaths.class)
+  @ConditionalOnClass(WhoPublicPathContributor.class)
   static class SpaPublicPaths {
 
     @Bean
-    @ConditionalOnMissingBean
-    WhoPublicPaths whoPublicPaths(
-        ObjectProvider<PasswordlessLoginMethod> methods, Environment environment) {
-      List<String> configured =
-          Binder.get(environment)
-              .bind("who.security.public-paths", Bindable.listOf(String.class))
-              .orElse(List.of());
-      return new WhoPublicPaths(
-          methods.orderedStream().toList(),
-          Stream.concat(Stream.of(SpaFallbackFilter.SHELL, ASSETS), configured.stream()).toList());
+    WhoPublicPathContributor spaPublicPaths() {
+      return () -> List.of(SpaFallbackFilter.SHELL, ASSETS);
     }
   }
 }

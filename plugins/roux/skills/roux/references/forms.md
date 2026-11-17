@@ -650,10 +650,12 @@ client-side filter) uses `useAppForm`, the hook `useSchemaForm` is built on: Tan
 ```tsx
 import { Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
-import { send } from "@jwcarman/roux-web/api";
+import { createWhoClient } from "@jwcarman/who-client";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { email, useAppForm } from "@jwcarman/roux-web/form";
 import { z } from "zod";
+
+const who = createWhoClient(); // who's endpoints, typed (npm install @jwcarman/who-client)
 
 /** The address to email a sign-in link to. */
 const linkRequestSchema = z.object({ email: email() });
@@ -665,8 +667,8 @@ export function EmailLinkForm() {
     defaultValues: { email: "" },
     validators: { onBlur: linkRequestSchema, onSubmit: linkRequestSchema },
     onSubmit: async ({ value }) => {
-      const response = await send("POST", "/who/email/send", value);
-      if (response.ok) {
+      const result = await who.email.send(value.email);
+      if (result.ok) {
         setSent(true);
       } else {
         notify.error("Could not send the link. Try again.");

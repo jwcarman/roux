@@ -1,10 +1,9 @@
 import { Button, Heading, Stack, Table, Text } from "@chakra-ui/react";
 import { useCallback, useEffect, useState } from "react";
-import { getJson, isSessionLost } from "@jwcarman/roux-web/api";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { useAppForm } from "@jwcarman/roux-web/form";
-import type { Passkey } from "../api";
-import { registerPasskey, removePasskey } from "../members/passkeys";
+import type { Passkey } from "@jwcarman/who-client";
+import { listPasskeys, registerPasskey, removePasskey } from "../members/passkeys";
 import { useSession } from "./session";
 import { ProfileForm } from "../members/ProfileForm";
 
@@ -17,21 +16,26 @@ function formatDate(value: string | null): string {
 }
 
 export function Settings() {
-  const { me } = useSession();
+  const { me, refresh } = useSession();
   const [passkeys, setPasskeys] = useState<Passkey[]>([]);
   const [loadFailed, setLoadFailed] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      setPasskeys(await getJson<Passkey[]>("/api/passkeys"));
-    } catch (error) {
-      // A lost session (for example, after removing the passkey this session signed in with) is
-      // handled by the session provider, which sends the user to sign in.
-      if (!isSessionLost(error)) {
+      const result = await listPasskeys();
+      if (result.ok) {
+        setPasskeys(result.value);
+      } else if (result.reason === "signed-out") {
+        // The session ended (for example, by removing the passkey it signed in with): who's client
+        // does not tell the session provider, so ask it, and it sends the user to sign in.
+        await refresh();
+      } else {
         setLoadFailed(true);
       }
+    } catch {
+      setLoadFailed(true);
     }
-  }, []);
+  }, [refresh]);
 
   useEffect(() => {
     if (me) {
@@ -51,23 +55,33 @@ export function Settings() {
     defaultValues: { label: "" },
     onSubmit: async ({ value, formApi }) => {
       try {
-        if (await registerPasskey(value.label.trim())) {
+        const result = await registerPasskey(value.label.trim());
+        if (result.ok) {
           formApi.reset();
           report("Passkey added", false);
           await load();
+        } else if (result.reason === "cancelled") {
+          report("Adding the passkey was cancelled.", true);
+        } else if (result.reason === "already-registered") {
+          report("This device already has a passkey for your account.", true);
         } else {
           report("Could not add the passkey. Sign in again and retry.", true);
         }
       } catch {
-        report("Adding the passkey was cancelled.", true);
+        report("Could not add the passkey. Sign in again and retry.", true);
       }
     },
   });
 
   async function onRemove(passkey: Passkey) {
-    if (await removePasskey(passkey.credentialId)) {
+    const result = await removePasskey(passkey.credentialId);
+    if (result.ok) {
       report("Passkey removed", false);
       await load();
+    } else if (result.reason === "signed-out") {
+      await refresh();
+    } else if (result.reason === "last-credential") {
+      report("That is your only way to sign in, so it stays.", true);
     } else {
       report("Could not remove the passkey.", true);
     }
@@ -109,10 +123,10 @@ export function Settings() {
           </Table.Header>
           <Table.Body>
             {passkeys.map((passkey) => (
-              <Table.Row key={passkey.id}>
+              <Table.Row key={passkey.credentialId}>
                 <Table.Cell>{passkey.label}</Table.Cell>
-                <Table.Cell>{formatDate(passkey.created)}</Table.Cell>
-                <Table.Cell>{formatDate(passkey.lastUsed)}</Table.Cell>
+                <Table.Cell>{formatDate(passkey.createdAt)}</Table.Cell>
+                <Table.Cell>{formatDate(passkey.lastUsedAt)}</Table.Cell>
                 <Table.Cell>
                   <Button
                     size="xs"

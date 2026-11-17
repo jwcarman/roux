@@ -256,11 +256,23 @@ can serve it; no sticky sessions are needed.
 
 ## Known limits
 
-- **Invitations.** An invitation is a who sign-in link, so it expires with who's token TTL (5
+- **Invitations.** `POST /api/members/invitations` (`InviteController`) is a thin endpoint over
+  who's `InvitationService.invite(email, roleNames)`, called outside any transaction: it keeps the
+  dojo's rules (a name, and only the roles in `InvitableRole`, so an invitation never makes an
+  owner) in front of who's, which creates the identity, registers the address, assigns the role and
+  publishes `IdentityInvited` in one transaction, then sends the link after it commits.
+  `MemberProfileOnInvite` is a plain `@EventListener` for that event, so the member's profile row
+  and activity entry are made in the same transaction (a failure rolls the invitation back and no
+  email is sent). The event carries no name, so the controller passes the form's name to the
+  listener in a `ScopedValue`; an invitation made through who's own `POST /who/invitations` gets the
+  address's local part as its name. An invitation is a who sign-in link, so it expires with who's token TTL (5
   minutes by default); an invited member who opens it later is sent to sign in, which works because
   the address is registered. If the email cannot be sent, the member is still added and the answer
   says so (`{"linkSent": false}`): the owner is told to have them sign in from the sign-in page, and
-  the app logs a warning with who's `EmailLinkOutcome` (never the address).
+  the app logs a warning with who's `EmailLinkOutcome` (never the address). Deactivating and
+  reactivating stay in `MembersController` over `WhoService`, because the app's own rules (the last
+  active owner, the status lock) and its activity log belong to the same transaction; who's
+  `PATCH /who/identities/{id}` (who-admin) knows none of them.
 - **The owner.** `app.owner-email` makes the first owner: the bootstrap creates one only while no
   identity holds `OWNER`. Once an owner exists, changing `app.owner-email` changes nothing (a log
   line says so); if every owner is deleted, the next start makes that address the owner again,

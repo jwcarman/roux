@@ -81,7 +81,12 @@ Before changing anything, find out what is there:
   internal test helpers) is not API and breaks on upgrade.
 - **Sign-in, identities and permissions are who's.** Use who's own guides (its Claude Code skill, if
   installed) for them; roux only wires the session into the client (`onSessionLost`,
-  `useClearQueriesOnIdentityChange`).
+  `useClearQueriesOnIdentityChange`). The browser calls who (sign-in, sign-out, the person's own
+  passkeys and sessions) go through `@jwcarman/who-client`, not hand-written fetches. To invite
+  someone, call who's `InvitationService.invite` outside a transaction and create the app's own
+  rows in a plain `@EventListener` for `IdentityInvited`; a public path is a `WhoPublicPathContributor`
+  bean, never a replaced `WhoPublicPaths`; an email sender is a `WhoEmailSender` with an exhaustive
+  `switch` and no `default`.
 
 ## Which guide for the task
 

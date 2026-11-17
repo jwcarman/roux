@@ -1,7 +1,7 @@
 import { Heading, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
 import { Link as RouterLink, useRouter } from "@tanstack/react-router";
-import { send } from "@jwcarman/roux-web/api";
+import { who } from "../who";
 import { takeReturn } from "./returnTo";
 import { useSession } from "./session";
 
@@ -17,20 +17,10 @@ export function LinkLanding() {
       return;
     }
     started.current = true;
-    const token = new URLSearchParams(window.location.hash.slice(1)).get("token");
-    // Take the token out of the address bar. Only when there is one: this effect can run again as
-    // the page is left (React reconnects a page the router is replacing), and by then the address is
-    // the next page's, which must keep its search.
-    if (window.location.hash !== "") {
-      history.replaceState(null, "", window.location.pathname + window.location.search);
-    }
-    if (!token) {
-      setFailed(true);
-      return;
-    }
     void (async () => {
-      const response = await send("POST", "/who/email/sign-in", { token });
-      if (response.ok) {
+      // Takes the token out of the address bar and history, and signs in with it.
+      const result = await who.email.signInFromLocation();
+      if (result?.ok) {
         await refresh();
         // Back to the page the visitor asked for before signing in, else Home.
         const returnTo = takeReturn();

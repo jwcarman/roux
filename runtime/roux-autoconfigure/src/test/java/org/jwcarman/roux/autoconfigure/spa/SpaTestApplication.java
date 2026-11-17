@@ -15,8 +15,13 @@
  */
 package org.jwcarman.roux.autoconfigure.spa;
 
+import java.util.List;
+
+import org.jwcarman.who.spring.security.WhoPaths;
+import org.jwcarman.who.spring.security.WhoPublicPathContributor;
 import org.jwcarman.who.spring.security.WhoPublicPaths;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -41,6 +46,21 @@ import org.springframework.web.bind.annotation.RestController;
       "org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration"
     })
 class SpaTestApplication {
+
+  /**
+   * Stands in for who's auto-configuration, which needs a database: the same {@link
+   * WhoPublicPaths}, built from {@code who.security.public-paths} and every contributor.
+   */
+  @Bean
+  WhoPublicPaths whoPublicPaths(
+      ObjectProvider<WhoPublicPathContributor> contributors,
+      @Value("${who.security.public-paths:}") List<String> configured) {
+    return new WhoPublicPaths(
+        WhoPaths.defaults(),
+        List.of(),
+        configured,
+        contributors.orderedStream().flatMap(c -> c.publicPaths().stream()).toList());
+  }
 
   @Bean
   SecurityFilterChain publicPathsOpen(

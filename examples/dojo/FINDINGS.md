@@ -177,7 +177,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
 - Outcome: deferred (not on the approved round-1 list).
 
 ## A request enum outside its set is not a field error
-- Where: `members/InvitationsController.Invitation` (`role`)
+- Where: `members/InviteController.InvitationRequest` (`role`)
 - What was clunky: the invite role must be Member or Instructor and an owner is never invited, so
   the request takes an `InvitableRole` enum. A body saying `OWNER` is refused when Jackson reads it,
   with the generic 400 and no field, which the errors guide lists as a known gap; the form's select
@@ -361,3 +361,26 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   An agent following the app's own notes would have written the wrong form, as in the README finding.
 - roux could: nothing more than the README finding's answer: an app's notes point at the guides.
 - Outcome: fixed in this commit.
+
+## who had no invitation primitive, so the dojo wrote one
+- Where: `members/InvitationService` (removed), `InvitationsController`
+- What was clunky: inviting was an identity, a role, a credential, a profile row and a link issued
+  in a transaction of its own, written by hand with a `TransactionTemplate` and the ordering
+  (commit, then send) to get right.
+- roux could: nothing; who could offer it.
+- Outcome: fixed by who 0.21.0 (`InvitationService.invite`, `IdentityInvited`) and this commit: the
+  dojo keeps a thin endpoint for its own rules and a listener for the profile row.
+
+## Listing a member's passkeys needed an app endpoint
+- Where: `passkeys/PasskeysController` (removed)
+- What was clunky: who removed a passkey but did not list them, so the app wrote `GET /api/passkeys`
+  and a client type for it.
+- roux could: nothing; who could serve it.
+- Outcome: fixed by who 0.21.0 (`GET /who/me/passkeys`, `who.me.passkeys.list()`) and this commit.
+
+## A library's public paths had to replace who's bean
+- Where: `RouxSpaAutoConfiguration.SpaPublicPaths`
+- What was clunky: to open the shell and `/assets/**`, roux defined its own `WhoPublicPaths`, a
+  copy of who's construction, which dropped every other contributor's paths.
+- roux could: contribute a path instead of replacing the bean.
+- Outcome: fixed by who 0.21.0 (`WhoPublicPathContributor`) and this commit.

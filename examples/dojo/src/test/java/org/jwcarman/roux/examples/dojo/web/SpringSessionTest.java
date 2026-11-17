@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.DojoApplication;
-import org.jwcarman.roux.examples.dojo.RecordingEmailLinkSender;
+import org.jwcarman.roux.examples.dojo.RecordingWhoEmailSender;
 import org.jwcarman.roux.examples.dojo.TestDatabase;
 import org.jwcarman.who.emaillink.EmailCredentialService;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -51,8 +51,8 @@ class SpringSessionTest {
   @TestConfiguration(proxyBeanMethods = false)
   static class Mail {
     @Bean
-    RecordingEmailLinkSender recordingSender() {
-      return new RecordingEmailLinkSender();
+    RecordingWhoEmailSender recordingSender() {
+      return new RecordingWhoEmailSender();
     }
   }
 
@@ -174,7 +174,7 @@ class SpringSessionTest {
     }
 
     void signIn(ConfigurableApplicationContext context, String address) throws Exception {
-      RecordingEmailLinkSender mail = context.getBean(RecordingEmailLinkSender.class);
+      RecordingWhoEmailSender mail = context.getBean(RecordingWhoEmailSender.class);
       mail.clear();
       get("/who/me");
       assertThat(post("/who/email/send", "{\"email\":\"" + address + "\"}").statusCode())

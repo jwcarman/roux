@@ -19,6 +19,17 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Breaking changes
 
+- who 0.21.0 (was 0.20.0), in the parent POM and roux-bom. who's endpoints are REST-shaped: the
+  person's own things moved under `/who/me` (`/who/me/sessions`, `/who/me/passkeys` for listing and
+  registering, `/who/me/email-addresses`, `/who/me/accounts`, `/who/me/api-keys`; a passkey is
+  registered with `POST /who/me/passkeys/options` then `POST /who/me/passkeys`), with no aliases.
+  `EmailLinkSender` is `WhoEmailSender` and invitations are a new `InvitationMessage` kind, so a
+  sender needs an exhaustive `switch` with no `default`. `@jwcarman/who-client` 0.21.0 moves the
+  account calls to `client.me.*`. See who's changelog for the full list.
+- roux-autoconfigure no longer defines a `WhoPublicPaths` bean. It contributes `/index.html` and
+  `/assets/**` with a `WhoPublicPathContributor` bean, so an app's `who.security.public-paths` and
+  any other contributor apply with them (an app that replaced `WhoPublicPaths` before drops every
+  contribution; contribute with a bean instead).
 - roux-web's list components take the resource module's query, not a key plus a fetch function.
   `QueryTable` and `useQueryTable` take `query: PageQuery<T>` (replacing `queryKey` and `query`),
   `InfiniteList` takes `query: PageQuery<T>` (replacing `queryKey` and `fetchPage`), `InfiniteSelect`

@@ -10,7 +10,7 @@ import { takeReturn } from "./returnTo";
 /** What the server answers once the emailed link's token is sent. */
 function answerTheLink() {
   server.use(
-    http.post("/who/email/sign-in", () => new HttpResponse(null, { status: 204 })),
+    http.post("/who/email/sign-in", () => HttpResponse.json({ identityId: "id-1" })),
     http.get("/who/me", () => HttpResponse.json({ identityId: "id-1", permissions: [CLASSES_READ, ATTENDANCE_RECORD] })),
   );
 }
