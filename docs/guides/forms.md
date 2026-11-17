@@ -619,7 +619,7 @@ export function EmailLinkForm() {
     defaultValues: { email: "" },
     validators: { onBlur: linkRequestSchema, onSubmit: linkRequestSchema },
     onSubmit: async ({ value }) => {
-      const response = await send("POST", "/ott/generate", value);
+      const response = await send("POST", "/who/email/send", value);
       if (response.ok) {
         setSent(true);
       } else {
