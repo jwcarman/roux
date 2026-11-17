@@ -1,0 +1,14 @@
+{
+  "name": "roux",
+  "owner": {
+    "name": "jwcarman"
+  },
+  "description": "roux's agent skill: building Spring Boot and React apps on roux's errors, API client, paging, tables, forms and feedback.",
+  "plugins": [
+    {
+      "name": "roux",
+      "source": "./plugins/roux",
+      "description": "Agent skill for roux, the base Spring Boot and React apps are built on: errors, API client, paging, tables, forms and feedback."
+    }
+  ]
+}
