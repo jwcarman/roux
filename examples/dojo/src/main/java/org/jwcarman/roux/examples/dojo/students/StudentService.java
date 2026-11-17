@@ -3,12 +3,14 @@ package org.jwcarman.roux.examples.dojo.students;
 import static org.jwcarman.roux.examples.dojo.students.StudentSpecifications.currentRankIs;
 import static org.jwcarman.roux.examples.dojo.students.StudentSpecifications.statusIs;
 
+import java.time.Clock;
 import java.util.UUID;
 
 import org.jwcarman.jpa.pagination.PageDto;
 import org.jwcarman.jpa.pagination.PageSpec;
 import org.jwcarman.jpa.spring.page.Paginator;
 import org.jwcarman.roux.problems.ConflictException;
+import org.jwcarman.roux.problems.InvalidFieldException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -33,9 +35,14 @@ public class StudentService {
   private final StudentRepository students;
   private final StudentListRepository list;
   private final PromotionRepository promotions;
+  private final Clock clock;
 
   public StudentService(
-      StudentRepository students, StudentListRepository list, PromotionRepository promotions) {
+      StudentRepository students,
+      StudentListRepository list,
+      PromotionRepository promotions,
+      Clock clock) {
+    this.clock = clock;
     this.students = students;
     this.list = list;
     this.promotions = promotions;
@@ -60,8 +67,13 @@ public class StudentService {
         spec, pageable -> list.findAll(filtered, nullsLast(pageable)), Student::of);
   }
 
-  /** Adds a student, active. */
+  /**
+   * Adds a student, active.
+   *
+   * @throws InvalidFieldException on {@code birthDate} if it is in the future
+   */
   public StudentDetail create(StudentRequest request) {
+    FutureDates.requireNotInTheFuture(clock, "birthDate", request.birthDate());
     StudentEntity student = students.saveAndFlush(new StudentEntity(request));
     return detail(student.getId());
   }
@@ -70,10 +82,12 @@ public class StudentService {
    * Replaces a student's details, if the student is still at {@code request.version()}.
    *
    * @throws StudentNotFoundException if there is no such student
-   * @throws org.jwcarman.roux.problems.InvalidFieldException on {@code version} if none is given
+   * @throws InvalidFieldException on {@code version} if none is given, or on {@code birthDate} if
+   *     it is in the future
    * @throws ObjectOptimisticLockingFailureException if the student changed since it was read
    */
   public StudentDetail update(UUID id, StudentRequest request) {
+    FutureDates.requireNotInTheFuture(clock, "birthDate", request.birthDate());
     StudentEntity student = find(id);
     StudentVersions.require(student, request.version());
     student.change(request);

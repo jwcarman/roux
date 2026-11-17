@@ -3,8 +3,10 @@ package org.jwcarman.roux.examples.dojo.ranks;
 import java.util.List;
 import java.util.UUID;
 
+import org.hibernate.exception.ConstraintViolationException;
 import org.jwcarman.roux.problems.ConflictException;
 import org.jwcarman.roux.problems.InvalidFieldException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +15,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class RankService {
+
+  /** The unique index on {@code lower(name)} (ranks.xml). */
+  static final String NAME_INDEX = "rank_name_key";
+
+  private static final String NAME_TAKEN = "Another rank has this name";
 
   private final RankRepository ranks;
   private final List<RankRemovalCheck> removalChecks;
@@ -36,7 +43,7 @@ public class RankService {
   public Rank create(RankRequest request) {
     requireUniqueName(request.name(), null);
     RankEntity rank = new RankEntity(request.name(), request.colour(), ranks.maxPosition() + 1);
-    return Rank.of(ranks.saveAndFlush(rank));
+    return Rank.of(saveAndFlush(rank));
   }
 
   /**
@@ -57,7 +64,7 @@ public class RankService {
     }
     requireUniqueName(request.name(), id);
     rank.change(request.name(), request.colour());
-    return Rank.of(ranks.saveAndFlush(rank));
+    return Rank.of(saveAndFlush(rank));
   }
 
   /**
@@ -110,6 +117,23 @@ public class RankService {
     return list();
   }
 
+  /**
+   * Saves the rank and writes it to the database now. The name check before it can lose a race with
+   * another request adding the same name; the unique index {@value #NAME_INDEX} decides, and its
+   * violation is answered as the same refusal.
+   */
+  private RankEntity saveAndFlush(RankEntity rank) {
+    try {
+      return ranks.saveAndFlush(rank);
+    } catch (DataIntegrityViolationException e) {
+      if (e.getCause() instanceof ConstraintViolationException violation
+          && NAME_INDEX.equals(violation.getConstraintName())) {
+        throw new InvalidFieldException("name", NAME_TAKEN);
+      }
+      throw e;
+    }
+  }
+
   private void renumber() {
     List<RankEntity> ladder = ranks.findAllByOrderByPositionAsc();
     for (int i = 0; i < ladder.size(); i++) {
@@ -124,7 +148,7 @@ public class RankService {
         .filter(other -> !other.getId().equals(self))
         .ifPresent(
             other -> {
-              throw new InvalidFieldException("name", "Another rank has this name");
+              throw new InvalidFieldException("name", NAME_TAKEN);
             });
   }
 

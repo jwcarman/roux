@@ -55,12 +55,16 @@ export const ranksQuery = queryOptions({
   queryFn: ({ signal }) => ranksApi.list(signal),
 });
 
-const refreshesRanks = { refreshes: [queryKeys.ranks.lists()] };
+/**
+ * What a rank's change refreshes: the ladder, and the students' lists and pages, which show each
+ * student's current rank (its name, colour and place) as it was when they were fetched.
+ */
+const refreshesRanks = { refreshes: [queryKeys.ranks.lists(), queryKeys.students.all] };
 
 /** Adds a rank at the top of the ladder. */
 export const createRank = mutationOptions({
   mutationFn: (request: RankRequest) => ranksApi.create(request),
-  meta: refreshesRanks,
+  meta: { refreshes: [queryKeys.ranks.lists()] },
 });
 
 /** Saves a rank at the `version` it was read at; a change made since answers 409. */

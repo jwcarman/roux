@@ -31,13 +31,19 @@
     </createIndex>
   </changeSet>
 
+  <!-- One promotion to a rank per student per day. -->
+  <changeSet id="promotion-unique" author="dojo">
+    <addUniqueConstraint tableName="promotion" columnNames="student_id, rank_id, promoted_on"
+        constraintName="promotion_student_rank_day_key"/>
+  </changeSet>
+
   <!-- Each student's current rank: the promotion with the latest date, the latest created when
        two share a date. A student with no promotion has no row. -->
   <changeSet id="student-current-rank" author="dojo">
     <createView viewName="student_current_rank">
       select distinct on (p.student_id) p.student_id, p.rank_id
       from promotion p
-      order by p.student_id, p.promoted_on desc, p.created_date desc nulls last
+      order by p.student_id, p.promoted_on desc, p.created_date desc
     </createView>
   </changeSet>
 

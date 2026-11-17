@@ -8,7 +8,8 @@ import { RANKS_MANAGE, RANKS_READ } from "../api";
 import { invalidFields } from "../testing/problems";
 import { renderRoute } from "../testing/route";
 import { server } from "../testing/server";
-import type { Rank } from "./ranks";
+import { queryKeys } from "../queryKeys";
+import { moveRankDown, moveRankUp, removeRank, updateRank, type Rank } from "./ranks";
 
 const WHITE: Rank = { id: "r1", name: "White", colour: "WHITE", position: 1, version: 0 };
 const YELLOW: Rank = { id: "r2", name: "Yellow", colour: "YELLOW", position: 2, version: 0 };
@@ -68,6 +69,31 @@ describe("RanksPage", () => {
     await userEvent.setup().click(await screen.findByRole("button", { name: "Move White up" }));
 
     await waitFor(async () => expect(await ladder()).toEqual(["Yellow", "White"]));
+  });
+
+  it("marks the students' cached lists and pages stale when a rank changes, so no old rank name lingers", async () => {
+    ranks(WHITE, YELLOW);
+    server.use(http.post("/api/ranks/r1/move-up", () => HttpResponse.json([YELLOW, WHITE])));
+    const { client } = renderRoute("/ranks", { permissions: [RANKS_READ, RANKS_MANAGE] });
+    const list = queryKeys.students.list({});
+    const detail = queryKeys.students.detail("s1");
+    client.setQueryData(list, { data: [] });
+    client.setQueryData(detail, { id: "s1" });
+    expect(client.getQueryState(list)?.isInvalidated).toBe(false);
+
+    await userEvent.setup().click(await screen.findByRole("button", { name: "Move White up" }));
+
+    await waitFor(() => expect(client.getQueryState(list)?.isInvalidated).toBe(true));
+    expect(client.getQueryState(detail)?.isInvalidated).toBe(true);
+  });
+
+  it.each([
+    ["updateRank", updateRank("r1", 0)],
+    ["moveRankUp", moveRankUp],
+    ["moveRankDown", moveRankDown],
+    ["removeRank", removeRank],
+  ])("%s refreshes the students too", (_, mutation) => {
+    expect(mutation.meta?.refreshes).toEqual([queryKeys.ranks.lists(), queryKeys.students.all]);
   });
 
   it("shows the server's refusal of a name under the Name field", async () => {

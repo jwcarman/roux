@@ -56,14 +56,20 @@ What building the dojo showed about roux: one entry per finding, in the order fo
 - Outcome: route harness fixed in the app (this commit); fixtures deferred (a roux-test proposal).
 
 ## No rule for a date that may not be in the future
-- Where: `students/students.ts` (`birthDate`), `shell/dates.ts`, `StudentRequest` (`@PastOrPresent`)
+- Where: `students/students.ts` (`birthDate`), `shell/dates.ts`, `students/FutureDates`
 - What was clunky: the server's `@PastOrPresent` answers `Must not be in the future` (roux's
-  ContributorValidationMessages), but `date()` has no counterpart. The schema adds
-  `.refine(notInTheFuture, { error: NOT_IN_THE_FUTURE })` with the server's text retyped in the app,
-  which the skill says never to do, and a `todayIso()` that reads the browser's clock and zone (the
-  server's clock may be on another day near midnight).
-- roux could: `date().notInFuture()` (and `.notInPast()`), with the server's words, beside `.min`/`.max`.
-- Outcome: deferred (a roux rule helper; the dojo's promotion date needs it too).
+  ContributorValidationMessages), but it compares with the server's today in the server's zone, and a
+  browser is often in another one. A person ahead of UTC picking "today" (or a promotion date of
+  today) was refused with 400, in any zone offset and not only near midnight, and the test clock
+  could not drive it. The dojo dropped the annotation: the services refuse only a date after the
+  server's tomorrow (`LocalDate.now(clock).plusDays(1)`; UTC+14 is the furthest zone ahead) with an
+  `InvalidFieldException` in the same words. On the browser, `date()` has no counterpart either: the
+  schema adds `.refine(notInTheFuture, { error: NOT_IN_THE_FUTURE })` with the server's text retyped,
+  which the skill says never to do, and a `todayIso()` from the browser's clock.
+- roux could: `date().notInFuture()` in the browser and a `@NotInFuture` constraint (or a
+  `FutureDates.require(clock, field, date)`) on the server, both with the one-day tolerance and the
+  app's `Clock`, so the zone problem is solved once.
+- Outcome: deferred (a roux rule on each side).
 
 ## A rule the browser has, the server rewrites: `phone()`
 - Where: `students/StudentRequest` (`phone`)
@@ -158,7 +164,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   this inversion for a `ConflictException` that depends on another feature.
 - Outcome: deferred (guide note).
 
-## A new role is written in eight places
+## A new role is written in six files, eight lists
 - Where: `AppRoles.AppRole`, `members.xml` (the directory view's role and rank), `InvitableRole`,
   `frontend/src/api.ts` (`Member.role`), `MembersPage` (`MEMBER_ROLES`, chips), `members.ts`
   (`INVITABLE_ROLES`, `ROLE_LABELS`), and the tests that count roles
@@ -189,3 +195,22 @@ What building the dojo showed about roux: one entry per finding, in the order fo
 - roux could: ship `invite(page, request, ...)` and `signedInThrough(browser, link)` helpers in the
   guide's helpers.ts, and say how specs share one database.
 - Outcome: deferred (guide work).
+
+## Auditing ignores the app's Clock
+- Where: `persistence/PersistenceConfig` (`auditingDateTimeProvider`)
+- What was clunky: `@EnableJpaAuditing` stamps `created_date` from the system clock, not the app's
+  `Clock` bean, so a test that set the clock still got real time, and ordering by `created_date`
+  (a promotion tie) could only be tested by waiting. The dojo adds a `DateTimeProvider` over `Clock`.
+- roux could: wire auditing to the `Clock` bean in the starter, so every app's audit dates follow it.
+- Outcome: deferred.
+
+## A read-model view's column types must match Hibernate's
+- Where: `students.xml` (`student_list`: `null::uuid`, `null::varchar`), `promotions.xml`
+  (`r.name::varchar`, `r.colour::varchar`)
+- What was clunky: `create or replace view` cannot change a column's type, so replacing the first
+  `student_list` (null placeholders) with the real one needed a drop and create, and the joined
+  `varchar(40)` columns are cast to plain `varchar` to match the entity. Hibernate's `validate` and
+  the view each have their own idea of a column's type; a mismatch shows only at startup or in a query.
+- roux could: say in the paging guide's read-model section to cast view columns to the types the entity
+  maps and to drop and create the view when a column changes.
+- Outcome: deferred (guide note).

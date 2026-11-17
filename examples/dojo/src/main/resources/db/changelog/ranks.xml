@@ -20,4 +20,10 @@
     </createTable>
     <sql>create unique index rank_name_key on rank (lower(name))</sql>
   </changeSet>
+
+  <!-- Positions are 1..n with no duplicate. Deferred, so a move can swap two ranks' positions and
+       a removal can renumber the rest within one transaction: it is checked at commit. -->
+  <changeSet id="rank-position-unique" author="dojo">
+    <sql>alter table rank add constraint rank_position_key unique (position) deferrable initially deferred</sql>
+  </changeSet>
 </databaseChangeLog>

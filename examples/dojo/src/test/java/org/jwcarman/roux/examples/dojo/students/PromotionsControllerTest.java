@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -252,17 +251,32 @@ class PromotionsControllerTest {
   }
 
   @Test
-  void aFutureDateIs400OnDateButTodayIsFine() throws Exception {
+  void aDateTwoDaysAheadIs400OnDateButTodayAndTomorrowAreFine() throws Exception {
     String ada = student("Ada", "Lovelace");
+    clock.set("2026-03-10T23:30:00Z");
 
+    // tomorrow is already today in UTC+14, so a person there may enter it
+    owner.perform(promotion(ada, white, "2026-03-10")).andExpect(status().isCreated());
+    owner.perform(promotion(ada, yellow, "2026-03-11")).andExpect(status().isCreated());
     owner
-        .perform(promotion(ada, white, LocalDate.now().plusDays(1).toString()))
+        .perform(promotion(ada, green, "2026-03-12"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.errors[0].field").value("date"))
         .andExpect(jsonPath("$.errors[0].message").value("Must not be in the future"));
+  }
+
+  @Test
+  void theSamePromotionOnTheSameDayTwiceIs409() throws Exception {
+    String ada = student("Ada", "Lovelace");
+    promote(ada, white, "2026-03-10");
+
     owner
-        .perform(promotion(ada, white, LocalDate.now().toString()))
-        .andExpect(status().isCreated());
+        .perform(promotion(ada, white, "2026-03-10"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.detail").value("Ada Lovelace already holds White from that date"));
+    // another day, or another rank, is a promotion of its own
+    owner.perform(promotion(ada, white, "2026-03-11")).andExpect(status().isCreated());
+    owner.perform(promotion(ada, yellow, "2026-03-10")).andExpect(status().isCreated());
   }
 
   @Test

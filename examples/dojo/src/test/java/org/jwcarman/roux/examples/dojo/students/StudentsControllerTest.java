@@ -19,6 +19,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.AppTest;
+import org.jwcarman.roux.examples.dojo.TestClock;
 import org.jwcarman.roux.examples.dojo.TestMember;
 import org.jwcarman.roux.examples.dojo.TestMembers;
 import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
@@ -36,6 +37,7 @@ class StudentsControllerTest {
   private static final String STUDENTS = "/api/students";
 
   @Autowired TestMembers members;
+  @Autowired TestClock clock;
   @Autowired ObjectMapper json;
 
   private TestMember owner;
@@ -149,13 +151,12 @@ class StudentsControllerTest {
     Map<String, Object> body = student(" ", "x".repeat(81));
     body.put("email", "not an address");
     body.put("phone", "12");
-    body.put("birthDate", LocalDate.now().plusDays(1).toString());
     body.put("startDate", null);
 
     owner
         .perform(send(post(STUDENTS), body))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.errors", hasSize(6)))
+        .andExpect(jsonPath("$.errors", hasSize(5)))
         .andExpect(
             jsonPath("$.errors[?(@.field == 'firstName')].message").value("Must not be blank"))
         .andExpect(
@@ -168,10 +169,35 @@ class StudentsControllerTest {
             jsonPath("$.errors[?(@.field == 'phone')].message")
                 .value("Is not in the expected format"))
         .andExpect(
-            jsonPath("$.errors[?(@.field == 'birthDate')].message")
-                .value("Must not be in the future"))
-        .andExpect(
             jsonPath("$.errors[?(@.field == 'startDate')].message").value("Must not be empty"));
+  }
+
+  @Test
+  void aBirthDateUpToTomorrowInTheServersZoneIsAcceptedAndLaterIsRefused() throws Exception {
+    clock.set("2026-03-10T23:30:00Z");
+    Map<String, Object> body = student("Ada", "Lovelace");
+
+    body.put("birthDate", "2026-03-11"); // already today in UTC+14, so a person may enter it
+    owner.perform(send(post(STUDENTS), body)).andExpect(status().isCreated());
+    body.put("birthDate", "2026-03-12");
+    owner
+        .perform(send(post(STUDENTS), body))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("birthDate"))
+        .andExpect(jsonPath("$.errors[0].message").value("Must not be in the future"));
+  }
+
+  @Test
+  void aFutureBirthDateIsRefusedOnAnEditToo() throws Exception {
+    JsonNode ada = add("Ada", "Lovelace", "2026-02-01");
+    Map<String, Object> change = student("Ada", "Lovelace");
+    change.put("birthDate", LocalDate.now().plusDays(3).toString());
+    change.put("version", 0);
+
+    owner
+        .perform(send(put(STUDENTS + "/" + id(ada)), change))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("birthDate"));
   }
 
   @Test

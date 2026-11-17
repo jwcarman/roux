@@ -1,9 +1,11 @@
 package org.jwcarman.roux.examples.dojo.students;
 
+import java.time.Clock;
 import java.util.UUID;
 
 import org.jwcarman.roux.examples.dojo.ranks.RankEntity;
 import org.jwcarman.roux.examples.dojo.ranks.RankRepository;
+import org.jwcarman.roux.problems.ConflictException;
 import org.jwcarman.roux.problems.InvalidFieldException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,12 +19,15 @@ public class PromotionService {
   private final StudentRepository students;
   private final RankRepository ranks;
   private final StudentService studentService;
+  private final Clock clock;
 
   public PromotionService(
       PromotionRepository promotions,
       StudentRepository students,
       RankRepository ranks,
-      StudentService studentService) {
+      StudentService studentService,
+      Clock clock) {
+    this.clock = clock;
     this.promotions = promotions;
     this.students = students;
     this.ranks = ranks;
@@ -35,14 +40,23 @@ public class PromotionService {
    *
    * @return the student after the promotion
    * @throws StudentNotFoundException if there is no such student
-   * @throws InvalidFieldException on {@code rankId} if there is no such rank
+   * @throws InvalidFieldException on {@code rankId} if there is no such rank, or on {@code date} if
+   *     it is in the future
+   * @throws ConflictException if the student already has a promotion to that rank on that date
    */
   public StudentDetail promote(UUID studentId, PromotionRequest request) {
-    requireStudent(studentId);
+    FutureDates.requireNotInTheFuture(clock, "date", request.date());
+    StudentEntity student = find(studentId);
     RankEntity rank =
         ranks
             .findById(request.rankId())
             .orElseThrow(() -> new InvalidFieldException("rankId", "No such rank"));
+    if (promotions.existsByStudentIdAndRankIdAndPromotedOn(
+        studentId, rank.getId(), request.date())) {
+      throw new ConflictException(
+          "%s already holds %s from that date",
+          student.getFirstName() + " " + student.getLastName(), rank.getName());
+    }
     promotions.saveAndFlush(new PromotionEntity(studentId, rank, request.date()));
     return studentService.detail(studentId);
   }
@@ -55,7 +69,7 @@ public class PromotionService {
    * @throws PromotionNotFoundException if the student has no such promotion
    */
   public StudentDetail remove(UUID studentId, UUID promotionId) {
-    requireStudent(studentId);
+    find(studentId);
     PromotionEntity promotion =
         promotions
             .findByIdAndStudentId(promotionId, studentId)
@@ -65,9 +79,7 @@ public class PromotionService {
     return studentService.detail(studentId);
   }
 
-  private void requireStudent(UUID studentId) {
-    if (!students.existsById(studentId)) {
-      throw new StudentNotFoundException(studentId);
-    }
+  private StudentEntity find(UUID studentId) {
+    return students.findById(studentId).orElseThrow(() -> new StudentNotFoundException(studentId));
   }
 }
