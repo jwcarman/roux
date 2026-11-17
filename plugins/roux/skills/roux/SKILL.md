@@ -51,8 +51,8 @@ Before changing anything, find out what is there:
   save is refused with a 409 instead of overwriting someone else's change.
 - **Refusals are exceptions.** Throw `NotFoundException` (a subclass per resource),
   `InvariantViolationException`, `InvalidFieldException` (one field; also a uniqueness clash on
-  something the user typed) or `ConflictException` from `org.jwcarman.roux.problems`, and Spring's
-  `ObjectOptimisticLockingFailureException` for a stale version. roux answers every one as a Problem
+  something the user typed) or `ConflictException` from `org.jwcarman.roux.problems`, and
+  `Versions.require(entity, request.version())` for a stale version (never hand-written). roux answers every one as a Problem
   Detail the browser already knows how to show. Write no `@ExceptionHandler` or
   `@RestControllerAdvice`, and return no error `ResponseEntity`: those answers would not be problems.
   Messages are shown to users verbatim, so write them for people.

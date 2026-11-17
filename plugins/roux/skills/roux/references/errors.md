@@ -133,17 +133,22 @@ Answer: `409`, `detail` = the message (`contracts/problem-conflict.json`). The c
 
 ## Refuse a stale save (optimistic locking)
 
-A save carries the `version` it was read at. When it does not match, throw Spring's
-`ObjectOptimisticLockingFailureException` (any `OptimisticLockingFailureException` works, including
-the one JPA throws on flush):
+A save carries the `version` it was read at. Call `Versions.require(entity, request.version())` first
+in the update, before changing anything:
 
 ```java
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.jwcarman.roux.problems.Versions;
 
-if (!student.getVersion().equals(request.version())) {
-  throw new ObjectOptimisticLockingFailureException(StudentEntity.class, id);
-}
+RankEntity rank = find(id);
+Versions.require(rank, request.version());
+rank.change(request.name(), request.colour());
 ```
+
+`entity` is any jpa-utils `BaseEntity`; `version` is a nullable `Long` in the request. A request with
+no `version` is a `400` with `errors` on `version` (`Must not be empty`), as a missing required field
+is. A `version` that is not the entity's current one throws Spring's
+`ObjectOptimisticLockingFailureException` (any `OptimisticLockingFailureException` is answered the
+same way, including the one JPA throws on flush). Do not write the check yourself.
 
 Answer: `409`, `detail` `This record changed since you loaded it`. `useSchemaForm` handles this 409
 specially; see [Forms](forms.md).

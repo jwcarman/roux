@@ -70,6 +70,12 @@
             <artifactId>jpa-utils</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <!-- ObjectOptimisticLockingFailureException, thrown by Versions, which JPA apps call -->
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-orm</artifactId>
+            <optional>true</optional>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

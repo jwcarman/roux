@@ -29,18 +29,13 @@ public record RankRequest(@NotBlank @Size(max = 40) String name, @NotNull BeltCo
 ```
 
 `version` is a nullable `Long` with no annotation: a create sends none and the service ignores it. The
-update checks it before changing anything (`InvalidFieldException` from `org.jwcarman.roux.problems`,
-`ObjectOptimisticLockingFailureException` from `org.springframework.orm`):
+update checks it before changing anything, with `Versions.require` from `org.jwcarman.roux.problems`
+(no version is a `400` on `version`; a stale one is the `409`):
 
 ```java
 public Rank update(UUID id, RankRequest request) {
-  if (request.version() == null) {
-    throw new InvalidFieldException("version", "Must not be empty");
-  }
   RankEntity rank = find(id);
-  if (!rank.getVersion().equals(request.version())) {
-    throw new ObjectOptimisticLockingFailureException(RankEntity.class, id);
-  }
+  Versions.require(rank, request.version());
   rank.change(request.name(), request.colour());
   return Rank.of(ranks.saveAndFlush(rank));
 }
@@ -576,7 +571,8 @@ An edit form must not quietly undo someone else's save. roux handles this with t
 `version`, end to end:
 
 1. **The server** keeps a `version` on the entity and takes the one the client read in the request.
-   When they differ it throws `ObjectOptimisticLockingFailureException`, answered `409` with `This
+   `Versions.require` refuses a missing version (`400` on `version`) and, when they differ, throws
+   `ObjectOptimisticLockingFailureException`, answered `409` with `This
    record changed since you loaded it` ([Errors](errors.md#refuse-a-stale-save-optimistic-locking)).
 2. **The mutation** carries the version it was built with, and refreshes the queries the record comes
    from:
