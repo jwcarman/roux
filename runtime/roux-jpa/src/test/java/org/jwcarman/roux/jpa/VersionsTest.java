@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jwcarman.roux.problems;
+package org.jwcarman.roux.jpa;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -23,6 +23,7 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.jwcarman.jpa.entity.BaseEntity;
+import org.jwcarman.roux.problems.InvalidFieldException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 class VersionsTest {

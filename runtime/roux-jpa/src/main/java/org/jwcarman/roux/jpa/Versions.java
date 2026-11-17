@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jwcarman.roux.problems;
+package org.jwcarman.roux.jpa;
 
 import org.jspecify.annotations.Nullable;
 import org.jwcarman.jpa.entity.BaseEntity;
+import org.jwcarman.roux.problems.InvalidFieldException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 /**

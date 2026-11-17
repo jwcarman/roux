@@ -22,8 +22,7 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar;
 
 /**
  * What a native image needs for problems: {@link FieldProblem} is serialized from inside a
- * ProblemDetail's untyped properties, where ahead-of-time processing cannot see it, and the
- * readable validation messages are a resource bundle that must be included explicitly.
+ * ProblemDetail's untyped properties, where ahead-of-time processing cannot see it.
  */
 public class ProblemsRuntimeHints implements RuntimeHintsRegistrar {
 
@@ -35,6 +34,5 @@ public class ProblemsRuntimeHints implements RuntimeHintsRegistrar {
             FieldProblem.class,
             MemberCategory.INVOKE_PUBLIC_METHODS,
             MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);
-    hints.resources().registerResourceBundle("ContributorValidationMessages");
   }
 }

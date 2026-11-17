@@ -5,7 +5,7 @@ import java.util.UUID;
 
 import jakarta.validation.constraints.NotNull;
 
-import org.jwcarman.roux.problems.constraints.NotInFuture;
+import org.jwcarman.roux.validation.NotInFuture;
 
 /**
  * What a check-in screen says about one student: present at the class on {@code date}, or not. It

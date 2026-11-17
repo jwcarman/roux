@@ -23,6 +23,7 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
+import org.jwcarman.roux.jpa.Versions;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -185,5 +186,13 @@ class RouxAuditingAutoConfigurationTest {
         .withUserConfiguration(WithAClock.class)
         .withClassLoader(new FilteredClassLoader(DateTimeProvider.class))
         .run(context -> assertThat(context).doesNotHaveBean("auditingDateTimeProvider"));
+  }
+
+  @Test
+  void without_the_roux_jpa_jar_it_does_nothing() {
+    runner
+        .withUserConfiguration(WithAClock.class)
+        .withClassLoader(new FilteredClassLoader(Versions.class))
+        .run(context -> assertThat(context).doesNotHaveBean(DateTimeProvider.class));
   }
 }

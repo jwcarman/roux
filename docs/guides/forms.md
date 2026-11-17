@@ -29,7 +29,7 @@ public record RankRequest(@NotBlank @Size(max = 40) String name, @NotNull BeltCo
 ```
 
 `version` is a nullable `Long` with no annotation: a create sends none and the service ignores it. The
-update checks it before changing anything, with `Versions.require` from `org.jwcarman.roux.problems`
+update checks it before changing anything, with `Versions.require` from `org.jwcarman.roux.jpa` (`roux-jpa`)
 (no version is a `400` on `version`; a stale one is the `409`):
 
 ```java
@@ -79,7 +79,7 @@ server caught the mistake ([Errors](errors.md#what-else-is-answered-for-you)).
 | `text()` | an input's string, trimmed | `string` | `Must not be blank` | `@NotBlank` |
 | `email()` | an input's string, trimmed | `string` | `Must not be blank`, `Must be a valid email address` | `@NotBlank @Email` |
 | `url()` | an input's string, trimmed; `http` or `https` only | `string` | `Must not be blank`, `Must be a valid web address` | `@NotBlank @URL` |
-| `phone()` | an input's string, trimmed: digits, spaces and `+ - ( ) .`, at least 7 digits | `string` | `Must not be blank`, `Is not in the expected format` | `@NotBlank @Phone` (roux-problems; the same pattern) |
+| `phone()` | an input's string, trimmed: digits, spaces and `+ - ( ) .`, at least 7 digits | `string` | `Must not be blank`, `Is not in the expected format` | `@NotBlank @Phone` (`org.jwcarman.roux.validation`, roux-validation; the same pattern) |
 | `date()` | a `type="date"` input's `YYYY-MM-DD` | `string` (unchanged) | `Must not be empty`, `Is not in the expected format` | `@NotNull LocalDate` |
 | `number()` | a `NumberField`'s `number \| undefined` | `number` | `Must not be empty` | `@NotNull` |
 | `integer()` | a `NumberField`'s `number \| undefined` | `number` | `Must not be empty`, `Must be a whole number` (browser only) | `@NotNull` on an `int`/`Integer`/`long` |
@@ -93,7 +93,7 @@ Their methods:
 | `.max(n)` | `text`, `email`, `url`, `phone` | at most `n` characters once trimmed; the input gets `maxLength={n}` | `Must be between 0 and {n} characters` | `@Size(max = n)` |
 | `.min(n)` | `number`, `integer` | at least `n` | `Must be at least {n}` | `@Min(n)` |
 | `.max(n)` | `number`, `integer` | at most `n` | `Must be at most {n}` | `@Max(n)` |
-| `.notInFuture()` | `date` | not after the browser's today | `Must not be in the future` | `@NotInFuture` (roux-problems) |
+| `.notInFuture()` | `date` | not after the browser's today | `Must not be in the future` | `@NotInFuture` (roux-validation) |
 | `.optional()` | all but `oneOf`, `id` | may be left empty; empty gives `null` | none | no `@NotBlank`/`@NotNull` |
 
 - **A date that may not be in the future** is `date().notInFuture()` in the browser and `@NotInFuture`

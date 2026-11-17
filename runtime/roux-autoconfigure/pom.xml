@@ -62,6 +62,18 @@
             <optional>true</optional>
         </dependency>
         <dependency>
+            <groupId>org.jwcarman.roux</groupId>
+            <artifactId>roux-spa</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.jwcarman.roux</groupId>
+            <artifactId>roux-jpa</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
             <groupId>org.jwcarman.jpa</groupId>
             <artifactId>jpa-utils</artifactId>
             <optional>true</optional>

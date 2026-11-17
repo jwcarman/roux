@@ -4,9 +4,9 @@ import java.util.List;
 import java.util.UUID;
 
 import org.hibernate.exception.ConstraintViolationException;
+import org.jwcarman.roux.jpa.Versions;
 import org.jwcarman.roux.problems.ConflictException;
 import org.jwcarman.roux.problems.InvalidFieldException;
-import org.jwcarman.roux.problems.Versions;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;

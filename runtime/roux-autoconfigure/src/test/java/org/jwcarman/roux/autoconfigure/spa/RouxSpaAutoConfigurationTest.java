@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Test;
+import org.jwcarman.roux.spa.SpaFallbackFilter;
 import org.jwcarman.who.spring.security.WhoPublicPathContributor;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
@@ -72,8 +73,8 @@ class RouxSpaAutoConfigurationTest {
   }
 
   @Test
-  void the_property_turns_it_off() {
-    web.withPropertyValues("roux.spa.enabled=false")
+  void without_the_roux_spa_jar_there_is_nothing_to_serve() {
+    web.withClassLoader(new FilteredClassLoader(SpaFallbackFilter.class))
         .run(context -> assertThat(context).doesNotHaveBean("spaFallbackFilter"));
   }
 

@@ -17,16 +17,15 @@ package org.jwcarman.roux.autoconfigure.spa;
 
 import java.util.List;
 
+import org.jwcarman.roux.spa.SpaFallbackFilter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
  * The single-page app support's settings, under {@code roux.spa}.
  *
- * @param enabled whether roux serves the app's shell for page URLs at all
  * @param excludedPaths path patterns, besides {@link SpaFallbackFilter#DEFAULT_EXCLUDED_PATHS},
  *     that are never answered with the shell: the app's own server-rendered pages, say
  */
 @ConfigurationProperties("roux.spa")
-public record RouxSpaProperties(
-    @DefaultValue("true") boolean enabled, @DefaultValue List<String> excludedPaths) {}
+public record RouxSpaProperties(@DefaultValue List<String> excludedPaths) {}

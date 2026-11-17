@@ -49,8 +49,5 @@ class RouxSpaPropertiesMetadataTest {
             .map(name -> "roux.spa." + name.replaceAll("([A-Z])", "-$1").toLowerCase(Locale.ROOT))
             .toList();
     assertThat(names).containsExactlyInAnyOrderElementsOf(expected);
-    List<Object> enabledDefault =
-        JsonPath.read(json, "$.properties[?(@.name == 'roux.spa.enabled')].defaultValue");
-    assertThat(enabledDefault).containsExactly(true);
   }
 }

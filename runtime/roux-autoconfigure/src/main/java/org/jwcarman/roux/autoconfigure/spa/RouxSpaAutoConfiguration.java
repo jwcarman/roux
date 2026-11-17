@@ -18,9 +18,9 @@ package org.jwcarman.roux.autoconfigure.spa;
 import java.time.Duration;
 import java.util.List;
 
+import org.jwcarman.roux.spa.SpaFallbackFilter;
 import org.jwcarman.who.spring.security.WhoPublicPathContributor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnResource;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -36,15 +36,16 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 /**
  * Serves a single-page app: the shell for any page URL ({@link SpaFallbackFilter}) and the hashed
  * assets for a year. On when a servlet application has {@code static/index.html} on its classpath
- * (the frontend build puts it there); off with {@code roux.spa.enabled=false}. With who on the
- * classpath, the shell and {@code /assets/**} are also public paths (a {@code
- * WhoPublicPathContributor} bean, beside whatever the app and other libraries contribute), so a
- * signed-out visitor loads the app from any URL without the application listing its pages.
+ * (the frontend build puts it there), and roux-spa, the module with {@link SpaFallbackFilter}, is
+ * on the class path: leave the jar out to turn it off. With who on the classpath, the shell and
+ * {@code /assets/**} are also public paths (a {@code WhoPublicPathContributor} bean, beside
+ * whatever the app and other libraries contribute), so a signed-out visitor loads the app from any
+ * URL without the application listing its pages.
  */
 @AutoConfiguration
+@ConditionalOnClass(SpaFallbackFilter.class)
 @ConditionalOnWebApplication(type = Type.SERVLET)
 @ConditionalOnResource(resources = "classpath:/static" + SpaFallbackFilter.SHELL)
-@ConditionalOnBooleanProperty(name = "roux.spa.enabled", matchIfMissing = true)
 @EnableConfigurationProperties(RouxSpaProperties.class)
 public class RouxSpaAutoConfiguration {
 

@@ -19,6 +19,19 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Breaking changes
 
+- roux's features are in their own modules, switched on by their jars (every auto-configuration
+  stays in roux-autoconfigure, with optional dependencies on the modules). The starter and roux-bom
+  carry all of them, so an app on the starter needs only the new imports.
+  - New `roux-validation` (`org.jwcarman.roux.validation`): `@Phone` and `@NotInFuture`, moved from
+    `org.jwcarman.roux.problems.constraints`, and every roux validation message
+    (`ContributorValidationMessages.properties`, which roux-problems no longer has). The message
+    keys for the two constraints follow the packages.
+  - New `roux-spa` (`org.jwcarman.roux.spa`): `SpaFallbackFilter`, moved from
+    `org.jwcarman.roux.autoconfigure.spa`. The `roux.spa.enabled` property is gone: removing the
+    jar is the off switch. `roux.spa.excluded-paths` stays.
+  - New `roux-jpa` (`org.jwcarman.roux.jpa`): `Versions`, moved from `org.jwcarman.roux.problems`.
+    roux-problems drops spring-orm; `RouxAuditingAutoConfiguration` now needs roux-jpa on the class
+    path.
 - who 0.21.0 (was 0.20.0), in the parent POM and roux-bom. who's endpoints are REST-shaped: the
   person's own things moved under `/who/me` (`/who/me/sessions`, `/who/me/passkeys` for listing and
   registering, `/who/me/email-addresses`, `/who/me/accounts`, `/who/me/api-keys`; a passkey is

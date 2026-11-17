@@ -32,7 +32,7 @@
     <artifactId>roux-spring-boot-starter</artifactId>
 
     <name>Roux - Spring Boot Starter</name>
-    <description>Convenience starter that pulls in Roux, who, jpa-utils and their auto-configuration</description>
+    <description>Convenience starter that pulls in Roux (problems, validation, SPA and JPA support), who, jpa-utils and their auto-configuration</description>
 
     <dependencies>
         <dependency>
@@ -43,6 +43,21 @@
         <dependency>
             <groupId>org.jwcarman.roux</groupId>
             <artifactId>roux-problems</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jwcarman.roux</groupId>
+            <artifactId>roux-validation</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jwcarman.roux</groupId>
+            <artifactId>roux-spa</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jwcarman.roux</groupId>
+            <artifactId>roux-jpa</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

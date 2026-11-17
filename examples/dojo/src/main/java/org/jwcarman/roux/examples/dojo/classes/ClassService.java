@@ -9,9 +9,9 @@ import java.util.stream.Collectors;
 
 import org.jwcarman.roux.examples.dojo.members.MemberDirectoryEntry;
 import org.jwcarman.roux.examples.dojo.members.MemberDirectoryRepository;
+import org.jwcarman.roux.jpa.Versions;
 import org.jwcarman.roux.problems.ConflictException;
 import org.jwcarman.roux.problems.InvalidFieldException;
-import org.jwcarman.roux.problems.Versions;
 import org.springframework.data.domain.Sort;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;

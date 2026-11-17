@@ -29,7 +29,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.jwcarman.roux.problems.constraints.Phone;
+import org.jwcarman.roux.validation.Phone;
 
 import tools.jackson.databind.JsonNode;
 

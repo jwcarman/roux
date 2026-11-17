@@ -7,8 +7,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-import org.jwcarman.roux.problems.constraints.NotInFuture;
-import org.jwcarman.roux.problems.constraints.Phone;
+import org.jwcarman.roux.validation.NotInFuture;
+import org.jwcarman.roux.validation.Phone;
 
 /**
  * A new student, or new details for one. Text is stripped, and a blank email or phone is none.

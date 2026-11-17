@@ -18,6 +18,7 @@ package org.jwcarman.roux.autoconfigure.auditing;
 import java.time.Clock;
 import java.util.Optional;
 
+import org.jwcarman.roux.jpa.Versions;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -31,10 +32,10 @@ import org.springframework.data.auditing.DateTimeProvider;
  * {@code @LastModifiedDate} too. An application writes {@code @EnableJpaAuditing(auditorAwareRef =
  * ...)} and nothing about dates: Spring Data's auditing handler takes the one {@link
  * DateTimeProvider} bean by type. With no {@code Clock} bean, or a {@code DateTimeProvider} of the
- * application's own, this does nothing.
+ * application's own, this does nothing. Only with roux-jpa on the class path.
  */
 @AutoConfiguration
-@ConditionalOnClass(DateTimeProvider.class)
+@ConditionalOnClass({DateTimeProvider.class, Versions.class})
 public class RouxAuditingAutoConfiguration {
 
   @Bean

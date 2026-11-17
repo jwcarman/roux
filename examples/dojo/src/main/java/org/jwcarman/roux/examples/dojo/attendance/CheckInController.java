@@ -8,7 +8,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
 import org.jwcarman.roux.examples.dojo.identity.AppRoles;
-import org.jwcarman.roux.problems.constraints.NotInFuture;
+import org.jwcarman.roux.validation.NotInFuture;
 import org.jwcarman.who.spring.security.RequiresPermission;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;

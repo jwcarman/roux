@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jwcarman.roux.problems.constraints;
+package org.jwcarman.roux.validation;
 
 import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 import static java.lang.annotation.ElementType.CONSTRUCTOR;
@@ -32,22 +32,22 @@ import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
 
 /**
- * A phone number: digits, spaces and {@code + - ( ) .}, with at least 7 digits. The browser's
- * {@code phone()} rule in roux-web checks the same pattern with the same message, and a contract
- * test holds the two together ({@code contracts/phone.json}). {@code null} and blank are valid, as
- * for every constraint here: leave "required" to {@code @NotBlank}, which reports a blank value
- * alone.
+ * A {@code LocalDate} that is not in the future, for a date a person picks in a browser (a birth
+ * date, the day something happened). It compares with today by the application's {@link
+ * java.time.Clock} bean (the system clock when there is none) and allows one day past the server's
+ * today: a browser can be up to UTC+14, ahead of the server's zone, and its "today" must not be
+ * refused. The browser's {@code date().notInFuture()} in roux-web says the same words, comparing
+ * with the browser's own today. {@code null} is valid; leave "required" to {@code @NotNull}.
+ *
+ * <p>Use it in place of {@code @PastOrPresent}, which compares with the server's exact today.
  */
 @Documented
-@Constraint(validatedBy = PhoneValidator.class)
+@Constraint(validatedBy = NotInFutureValidator.class)
 @Target({METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER, RECORD_COMPONENT, TYPE_USE})
 @Retention(RUNTIME)
-public @interface Phone {
+public @interface NotInFuture {
 
-  /** What a phone number looks like, as a regular expression both Java and JavaScript read. */
-  String PATTERN = "^(?=(?:\\D*\\d){7})[\\d +\\-().]+$";
-
-  String message() default "{org.jwcarman.roux.problems.constraints.Phone.message}";
+  String message() default "{org.jwcarman.roux.validation.NotInFuture.message}";
 
   Class<?>[] groups() default {};
 

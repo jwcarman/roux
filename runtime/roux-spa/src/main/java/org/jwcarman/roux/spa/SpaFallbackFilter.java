@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jwcarman.roux.autoconfigure.spa;
+package org.jwcarman.roux.spa;
 
 import java.io.IOException;
 import java.util.Collection;

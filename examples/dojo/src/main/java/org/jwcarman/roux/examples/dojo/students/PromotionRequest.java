@@ -5,7 +5,7 @@ import java.util.UUID;
 
 import jakarta.validation.constraints.NotNull;
 
-import org.jwcarman.roux.problems.constraints.NotInFuture;
+import org.jwcarman.roux.validation.NotInFuture;
 
 /**
  * A promotion to record: the rank, and the day, which may not be in the future ({@link

@@ -23,8 +23,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-import org.jwcarman.roux.problems.constraints.NotInFuture;
-import org.jwcarman.roux.problems.constraints.Phone;
+import org.jwcarman.roux.validation.NotInFuture;
+import org.jwcarman.roux.validation.Phone;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;

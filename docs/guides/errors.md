@@ -137,7 +137,7 @@ A save carries the `version` it was read at. Call `Versions.require(entity, requ
 in the update, before changing anything:
 
 ```java
-import org.jwcarman.roux.problems.Versions;
+import org.jwcarman.roux.jpa.Versions;
 
 RankEntity rank = find(id);
 Versions.require(rank, request.version());

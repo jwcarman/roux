@@ -27,13 +27,6 @@
       "defaultValue": "/api/"
     },
     {
-      "name": "roux.spa.enabled",
-      "type": "java.lang.Boolean",
-      "description": "Whether roux serves the app's shell (static/index.html) for page URLs at all.",
-      "sourceType": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties",
-      "defaultValue": true
-    },
-    {
       "name": "roux.spa.excluded-paths",
       "type": "java.util.List<java.lang.String>",
       "description": "Path patterns, besides /api/**, /who/**, /assets/**, /actuator/**, /.well-known/** and /error, that are never answered with the shell.",

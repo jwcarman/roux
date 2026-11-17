@@ -10,7 +10,12 @@ Java, published to Maven Central under `org.jwcarman.roux`:
 - `runtime/roux-problems`: answers every error a Spring MVC API raises as an
   [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) Problem Detail. Settings live under
   `roux.problems` (`enabled`, `api-path-prefix`).
-- `runtime/roux-autoconfigure`: the Spring Boot auto-configuration for roux.
+- `runtime/roux-validation`: `@Phone`, `@NotInFuture` and roux's readable validation messages
+  (every bundle of that name on the class path is merged by Hibernate Validator).
+- `runtime/roux-spa`: serves a single-page app's shell for any page URL (`roux.spa.excluded-paths`).
+- `runtime/roux-jpa`: `Versions.require`, the stale-version check for JPA entities.
+- `runtime/roux-autoconfigure`: the Spring Boot auto-configuration for every module above. Each
+  feature switches on when its jar is on the class path.
 - `runtime/roux-spring-boot-starter`: the one dependency an application adds (no code of its own).
 - `runtime/roux-bom`: aligns the versions of the modules above.
 - `runtime/roux-contract-tests`: tests that hold the Java and web sides to the same contracts. Never published.

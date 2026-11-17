@@ -64,7 +64,7 @@ Boot's BOM, so Spring Boot's managed versions stay the parent's.
 </dependencies>
 ```
 
-The starter brings `roux-problems`, `roux-autoconfigure`, who (`who-spring-boot-starter`, with
+The starter brings `roux-problems`, `roux-validation` (`@Phone`, `@NotInFuture` and roux's validation messages), `roux-spa` (the shell for any page URL), `roux-jpa` (`Versions`), `roux-autoconfigure`, who (`who-spring-boot-starter`, with
 email-link sign-in, `who-email-link`, and passkeys, `who-passkey`), jpa-utils
 (`org.jwcarman.jpa:jpa-utils`), `spring-boot-starter-validation` and `spring-boot-starter-webmvc`.
 Do not add who's starter yourself, and do not declare versions for any of them, for who's other
@@ -265,9 +265,9 @@ supported:
    is open to signed-out visitors (with `/assets/**`, which roux also caches for a year), so a
    reload or a deep link opens the app, which sends the visitor to sign in. A fetch for JSON, an
    API path (a missing one is still a `404` problem) and a request for a file never get the shell.
-   The filter is `SpaFallbackFilter`, configured by `RouxSpaProperties` under `roux.spa`: turn it
-   off with `roux.spa.enabled=false`; add paths it must leave alone (a server-rendered page) to
-   `roux.spa.excluded-paths`. An app that serves the shell itself (to render the theme or
+   The filter is `SpaFallbackFilter` (in `roux-spa`, which switches it on by being on the class
+   path: leave the jar out to turn it off); add paths it must leave alone (a server-rendered page) to
+   `roux.spa.excluded-paths` (`RouxSpaProperties`). An app that serves the shell itself (to render the theme or
    a nonce into it, say) keeps doing that: roux presents the page URL to it as a request for
    `/index.html`, so its own `/index.html` handler and headers apply. An app with its own
    `SecurityFilterChain` must permit `/index.html` and `/assets/**`, which roux contributes with a

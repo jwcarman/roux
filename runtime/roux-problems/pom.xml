@@ -65,15 +65,11 @@
             <artifactId>who-spring-security</artifactId>
             <optional>true</optional>
         </dependency>
+
         <dependency>
+            <!-- UnknownSortByValueException, which PagingProblemsAdvice answers -->
             <groupId>org.jwcarman.jpa</groupId>
             <artifactId>jpa-utils</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <!-- ObjectOptimisticLockingFailureException, thrown by Versions, which JPA apps call -->
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-orm</artifactId>
             <optional>true</optional>
         </dependency>
 
@@ -90,6 +86,13 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- the messages roux words validation errors in, and @Phone and @NotInFuture -->
+            <groupId>org.jwcarman.roux</groupId>
+            <artifactId>roux-validation</artifactId>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

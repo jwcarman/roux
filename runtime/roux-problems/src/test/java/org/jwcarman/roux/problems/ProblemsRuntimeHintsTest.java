@@ -40,10 +40,4 @@ class ProblemsRuntimeHintsTest {
                 .withMemberCategories(MemberCategory.INVOKE_PUBLIC_METHODS))
         .accepts(hints);
   }
-
-  @Test
-  void theContributorValidationMessagesAreIncluded() {
-    assertThat(RuntimeHintsPredicates.resource().forBundle("ContributorValidationMessages"))
-        .accepts(hints);
-  }
 }
