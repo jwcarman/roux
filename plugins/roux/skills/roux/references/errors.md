@@ -153,6 +153,41 @@ same way, including the one JPA throws on flush). Do not write the check yoursel
 Answer: `409`, `detail` `This record changed since you loaded it`. `useSchemaForm` handles this 409
 specially; see [Forms](forms.md).
 
+## Refuse because of what another feature holds
+
+"A rank a student holds may not be removed" belongs to the feature that refers to ranks, and `ranks`
+must not depend on `students`. Invert it: the owning feature declares a one-method interface, and
+each referring feature implements it as a `@Component` that throws a `ConflictException`:
+
+```java
+/** A reason a rank may not be removed, from a feature that refers to ranks. */
+@FunctionalInterface
+public interface RankRemovalCheck {
+  void check(RankEntity rank); // throws ConflictException to refuse
+}
+
+// in students:
+@Component
+class PromotionRankRemovalCheck implements RankRemovalCheck {
+  private final PromotionRepository promotions;
+
+  PromotionRankRemovalCheck(PromotionRepository promotions) {
+    this.promotions = promotions;
+  }
+
+  @Override
+  public void check(RankEntity rank) {
+    if (promotions.existsByRankId(rank.getId())) {
+      throw new ConflictException("Students hold or have held %s", rank.getName());
+    }
+  }
+}
+```
+
+`RankService` takes `List<RankRemovalCheck>` and runs each before deleting. It is plain Spring; roux
+adds nothing. Keep the database's foreign key as the last line of defence (a refusal there is the
+generic `This conflicts with existing data`), and the check as the one that says why.
+
 ## What else is answered for you
 
 Nothing here needs app code. The answers below come from roux's advices.

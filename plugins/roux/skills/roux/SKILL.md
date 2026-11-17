@@ -102,6 +102,11 @@ sections you need.
 | A paged endpoint (sort enum, `Paginator`, `PageParams`) and its `PageDto` | `references/tables-and-paging.md` (The wire, Write a paged endpoint) |
 | A list page: `QueryTable`, search and filter chips, URL state, row selection | `references/tables-and-paging.md` |
 | A short list, a list that grows (`InfiniteList`), a picker over a long list (`InfiniteSelect`), an export link | `references/tables-and-paging.md` |
+| A dialog in a table cell closes by itself, or a test passes alone and fails after another | `references/tables-and-paging.md` (Things to know: define columns once) |
+| A valid date is refused as in the future | `references/forms.md` (`@NotInFuture`, `date().notInFuture()`) |
+| A view-backed list or detail misses a row just saved | `references/tables-and-paging.md` (a read-model view: flush first) |
+| Reorder rows (move up/down) | `references/tables-and-paging.md` (An ordered list) |
+| One feature must refuse another's removal | `references/errors.md` (Refuse because of what another feature holds) |
 | Toasts, confirmations, an inline error, not-found and error pages | `references/feedback.md` |
 | Java tests (`@AppTest`, signed-in members, PostgreSQL), Vitest with MSW, form and route tests, Playwright | `references/testing.md` |
 

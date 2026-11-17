@@ -628,8 +628,8 @@ export function ChooseStudents({ onChosen }: { onChosen: (students: Student[]) =
 `Map`), `keyOf` (a stable key; rows are new objects on every fetch), `labelOf` (each checkbox is
 labelled `Select <label>`), and `selectAllLabel` (the header checkbox, `Select every row on this page`
 by default). The header checkbox selects or clears the rows on the page shown and leaves other pages'
-selections alone; it is indeterminate when some are chosen. Build the columns on each render, since
-the column reads `selected`.
+selections alone; it is indeterminate when some are chosen. The column reads `selected`, so build the
+columns with `useMemo` keyed on `selected`, not inline on every render (see below).
 
 ## A short list
 
@@ -694,6 +694,76 @@ It asks for pages of `MAX_PAGE_SIZE` (100) unless `params.pageSize` says otherwi
 other values with every request, and stops at the page without `hasNext`. Past `maxPages` (`MAX_PAGES`,
 100, so 10,000 rows) it throws `fetchAllPages: the list has more than 100 pages`: a list that big
 wants paging.
+
+## An ordered list
+
+A short list whose order is the point (the school's rank ladder) keeps a `position` on each row, 1 to
+n, and moves a row one step at a time. The pieces, from the dojo's ranks:
+
+- **The table.** `position` is unique, but a swap passes through a duplicate, so make the constraint
+  deferrable: `alter table rank add constraint rank_position_key unique (position) deferrable
+  initially deferred`. It is checked at commit.
+- **One endpoint per move, answering the new list.** `POST /api/ranks/{id}/move-up` and
+  `.../move-down` return the whole list (`List<Rank>`). A move past either end is a
+  `ConflictException` (`Rank is already the lowest rank`), not a silent no-op.
+- **The service swaps two positions and flushes**, in one transaction:
+
+```java
+private List<Rank> move(UUID id, int step, String refusal) {
+  List<RankEntity> ladder = ranks.findAllByOrderByPositionAsc();
+  RankEntity rank = find(id);
+  int other = ladder.indexOf(rank) + step;
+  if (other < 0 || other >= ladder.size()) {
+    throw new ConflictException(refusal, rank.getName());
+  }
+  RankEntity neighbour = ladder.get(other);
+  int position = rank.getPosition();
+  rank.moveTo(neighbour.getPosition());
+  neighbour.moveTo(position);
+  ranks.flush();
+  return list();
+}
+```
+
+- **A new row goes to the end** (`maxPosition() + 1`), and **a removal closes the gap**: delete,
+  `flush`, then renumber the rest 1..n by their order and `flush` again.
+- **The browser** has two mutations (`moveRankUp`, `moveRankDown`) that refresh the list (and any
+  query that embeds a rank, as the students' do). The row's buttons are disabled at the ends: take
+  `first` and `last` from the table in the actions cell, `row.index === 0` and
+  `row.index === table.getRowModel().rows.length - 1`, and give each `IconButton` an `aria-label` that
+  names the row (`Move Blue up`) and `loading` from its `useServerAction`.
+
+```tsx
+column.display({
+  id: "actions",
+  cell: ({ row, table }) => (
+    <RankActions rank={row.original} first={row.index === 0} last={row.index === table.getRowModel().rows.length - 1} />
+  ),
+});
+```
+
+## A list sorted or filtered by a computed value: a read-model view
+
+A `Paginator` sorts by one property of the entity. To sort by something computed (last name then
+first, lower-cased) or by something joined (a student's current rank), put it in a database view and
+map a second, read-only entity over it (`@Entity @Immutable @Table(name = "student_list")`, extending
+`BaseEntity`, so its id and version are the writable entity's). Change through the writable entity;
+list and read through the view's. Two traps:
+
+- **Flush before you read the view in the same transaction.** Hibernate flushes pending changes
+  before a query only when the query touches a changed table, and a query over a view names none. A
+  write that answers with the read model (`save`, then `detail(id)`) must `saveAndFlush` (or `flush`
+  after `delete`) first, or the answer misses the row just saved or still shows the one just removed.
+  Nothing fails at compile time.
+- **The view's column types must be the types Hibernate's `validate` expects for the entity.** A
+  joined `varchar(40)` is `varchar(40)` to the view but the entity maps plain `varchar`: cast it
+  (`r.name::varchar`), and give a placeholder column its type (`null::uuid`). `create or replace
+  view` cannot change a column's type, so a changed view is a drop and create (a new changeSet, never
+  an edit of one that has run: its checksum would break existing databases), or `createView
+  replaceIfExists="true"` when the columns keep their types.
+
+A Paginator cannot put nulls last in a sort; the dojo rebuilds the `Pageable`'s `Sort` with
+`Order::nullsLast` inside the query callback.
 
 ## A list that grows
 
@@ -836,6 +906,12 @@ export function studentsExportHref(search: string | undefined, status: StudentSt
 ```
 
 ## Things to know
+
+- **Define columns once.** Module scope (one constant per permission: `LADDER`, `MANAGE_COLUMNS`) or
+  `useMemo`. Columns rebuilt on every render make new cell components, which React remounts: a
+  dialog opened from a cell closes by itself whenever the page re-renders (a query finishing is
+  enough), and a test passes alone and fails after another. A column that must read state (the
+  select column) is memoized on that state, and a cell that holds a dialog should not depend on it.
 
 Gaps in 0.2.0 that a builder hits:
 
