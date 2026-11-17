@@ -2,6 +2,7 @@
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { Activity } from "../api";
+import { pageQuery } from "@jwcarman/roux-web/paging";
 import { renderWithProviders } from "../testing/render";
 import { ActivityList } from "./ActivityList";
 
@@ -18,8 +19,7 @@ describe("ActivityList", () => {
     renderWithProviders(
       <ActivityList
         aria-label="History"
-        queryKey={["history"]}
-        fetchPage={async () => ({
+        query={pageQuery(["history"], async () => ({
           data: [ENTRY],
           pagination: {
             pageIndex: 0,
@@ -29,7 +29,7 @@ describe("ActivityList", () => {
             hasNext: false,
             hasPrevious: false,
           },
-        })}
+        }))}
         now={new Date("2026-11-08T12:00:00Z")}
       />,
     );
@@ -46,8 +46,7 @@ describe("ActivityList", () => {
     renderWithProviders(
       <ActivityList
         aria-label="History"
-        queryKey={["empty-history"]}
-        fetchPage={async () => ({
+        query={pageQuery(["empty-history"], async () => ({
           data: [],
           pagination: {
             pageIndex: 0,
@@ -57,7 +56,7 @@ describe("ActivityList", () => {
             hasNext: false,
             hasPrevious: false,
           },
-        })}
+        }))}
       />,
     );
     expect(await screen.findByText("Nothing has happened yet.")).toBeInTheDocument();

@@ -4,8 +4,7 @@ import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, useConfirm } from "@jwcarman/roux-web/feedback";
 import type { MemberDetail } from "../api";
 import { ActivityList } from "../activity/ActivityList";
-import { changeMemberStatus, membersApi, type MemberStatusAction } from "./members";
-import { queryKeys } from "../queryKeys";
+import { activitiesPage, changeMemberStatus, type MemberStatusAction } from "./members";
 import { DANGER_PALETTE } from "../shell/theme";
 
 export interface MemberDetailViewProps {
@@ -90,11 +89,7 @@ export function MemberDetailView({ member, canManage, isSelf }: MemberDetailView
       <Heading as="h3" size="md">
         History
       </Heading>
-      <ActivityList
-        aria-label="History"
-        queryKey={queryKeys.members.activities(member.id)}
-        fetchPage={(pageIndex) => membersApi.activities(member.id, pageIndex)}
-      />
+      <ActivityList aria-label="History" query={activitiesPage(member.id)} />
     </Stack>
   );
 }

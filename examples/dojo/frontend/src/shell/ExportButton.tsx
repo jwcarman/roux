@@ -1,6 +1,6 @@
 import { Button } from "@chakra-ui/react";
 import { LuDownload } from "react-icons/lu";
-import { pageQuery, type PageParams } from "@jwcarman/roux-web/paging";
+import { queryStringOf, type PageParams } from "@jwcarman/roux-web/paging";
 
 /**
  * The export URL for a list: its search, filters and sort, without paging, so the file holds what
@@ -8,7 +8,7 @@ import { pageQuery, type PageParams } from "@jwcarman/roux-web/paging";
  */
 export function exportHref(path: string, params: PageParams & Record<string, string | number | undefined>): string {
   const { pageIndex: _pageIndex, pageSize: _pageSize, ...unpaged } = params;
-  return `${path}${pageQuery(unpaged)}`;
+  return `${path}${queryStringOf(unpaged)}`;
 }
 
 /** A download link styled as a button; the browser saves what the server sends. */

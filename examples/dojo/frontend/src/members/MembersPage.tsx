@@ -5,7 +5,7 @@ import type { TableSearch } from "@jwcarman/roux-web/paging";
 import { DEFAULT_PAGE_SIZE, DebouncedSearchInput, FilterChips, QueryTable } from "@jwcarman/roux-web/table";
 import { MEMBERS_INVITE, type Member } from "../api";
 import { ExportButton, exportHref } from "../shell/ExportButton";
-import { membersQuery } from "./members";
+import { membersPage } from "./members";
 import { useSession } from "../shell/session";
 import { InviteForm } from "./InviteForm";
 
@@ -120,7 +120,7 @@ export function Members() {
       </Flex>
       <QueryTable
         aria-label="Members"
-        {...membersQuery(filters)}
+        query={membersPage(filters)}
         columns={COLUMNS}
         initialSort={{ id: MEMBERS_SEARCH_DEFAULTS.sortBy, desc: false }}
         params={search}

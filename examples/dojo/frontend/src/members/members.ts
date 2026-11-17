@@ -1,7 +1,7 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
 import { email, text } from "@jwcarman/roux-web/form";
-import type { PageDto, PageParams } from "@jwcarman/roux-web/paging";
+import { pageQuery, type PageDto, type PageParams } from "@jwcarman/roux-web/paging";
 import { z } from "zod";
 import type { Activity, Member, MemberDetail, Profile } from "../api";
 import { queryKeys } from "../queryKeys";
@@ -42,8 +42,8 @@ export const membersApi = {
   list: (params: PageParams & MemberFilters, signal?: AbortSignal) =>
     getJson<PageDto<Member>>("members", { params, signal }),
   get: (id: string, signal?: AbortSignal) => getJson<MemberDetail>(path`members/${id}`, { signal }),
-  activities: (id: string, pageIndex: number) =>
-    getJson<PageDto<Activity>>(path`members/${id}/activities`, { params: { pageIndex } }),
+  activities: (id: string, pageIndex: number, signal?: AbortSignal) =>
+    getJson<PageDto<Activity>>(path`members/${id}/activities`, { params: { pageIndex }, signal }),
   invite: (invitation: Invitation) => sendJson<InvitationResult>("POST", "members/invitations", invitation),
   changeStatus: (id: string, action: MemberStatusAction) =>
     sendJson<MemberDetail>("POST", path`members/${id}/${action}`),
@@ -58,12 +58,18 @@ export function memberQuery(id: string) {
   });
 }
 
-/** The directory under `filters`, as a QueryTable takes it: its key and the page query. */
-export function membersQuery(filters: MemberFilters) {
-  return {
-    queryKey: queryKeys.members.list(filters),
-    query: (params: PageParams) => membersApi.list({ ...params, ...filters }),
-  };
+/** The directory under `filters`, as a QueryTable takes it: its key and how to fetch a page. */
+export function membersPage(filters: MemberFilters) {
+  return pageQuery(queryKeys.members.list(filters), (params, signal) =>
+    membersApi.list({ ...params, ...filters }, signal),
+  );
+}
+
+/** A member's history, newest first, as an ActivityList takes it. */
+export function activitiesPage(id: string) {
+  return pageQuery(queryKeys.members.activities(id), ({ pageIndex = 0 }, signal) =>
+    membersApi.activities(id, pageIndex, signal),
+  );
 }
 
 /** Invites a member; the directory refreshes. */

@@ -24,9 +24,10 @@ What building the dojo showed about roux: one entry per finding, in the order fo
 - What was clunky: the resource module already has `ranksQuery` (`queryOptions`), but
   `SimpleQueryTable` wants `queryKey` and `query: () => Promise<T[]>`, so the page calls
   `ranksApi.list()` itself, which the skill and queries guide say a component never does, and the
-  fetch loses its abort signal. The tables guide's own example does the same.
+  fetch loses its abort signal. The tables guide's own example does the same. `QueryTable`, `InfiniteList` and `InfiniteSelect` had the same
+  shape, each slightly different.
 - roux could: accept the query's options (`query={ranksQuery}`), as `useQuery` does.
-- Outcome: deferred to the end of round 1 (a roux-web API change; proposed with the others).
+- Outcome: fixed in 37cfe22.
 
 ## A client route is written in three places
 - Where: `routes/_signedIn/ranks.tsx`, `SpaController.ROUTES`, `who.security.public-paths`

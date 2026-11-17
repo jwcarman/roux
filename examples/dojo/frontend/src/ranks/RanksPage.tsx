@@ -5,7 +5,7 @@ import { RANKS_MANAGE } from "../api";
 import { useSession } from "../shell/session";
 import { RankActions } from "./RankActions";
 import { RankFormDialog } from "./RankFormDialog";
-import { BELT_SWATCHES, ranksApi, ranksQuery, type Rank } from "./ranks";
+import { BELT_SWATCHES, ranksQuery, type Rank } from "./ranks";
 
 const column = createColumnHelper<Rank>();
 
@@ -60,8 +60,7 @@ export function RanksPage() {
       </Flex>
       <SimpleQueryTable
         aria-label="Ranks"
-        queryKey={ranksQuery.queryKey}
-        query={() => ranksApi.list()}
+        query={ranksQuery}
         columns={columns}
         getRowId={(rank) => rank.id}
         emptyText="No ranks yet."
