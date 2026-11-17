@@ -455,7 +455,8 @@ function FilterChips<T extends string>(props: FilterChipsProps<T>): JSX.Element;
 //   allLabel?: string  |  defaultValue?: T   (one or the other, never both)
 ```
 
-- `DebouncedSearchInput` (`DebouncedSearchInputProps`) reports the trimmed term once typing pauses, only when it changes, and
+- `DebouncedSearchInput` (`DebouncedSearchInputProps`) reports the trimmed term once typing pauses (or at once when the field loses focus, so a link
+  clicked mid-debounce navigates after it, not before), only when it changes, and
   `undefined` for a blank one. It follows `term` when the URL changes elsewhere (Back, a link)
   without reporting it back. Below `minLength` characters it searches for nothing and says `Type at
   least <n> characters to search`. Escape and its clear button empty it. Pass `replace: true` to the

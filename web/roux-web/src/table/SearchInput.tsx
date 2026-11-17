@@ -6,6 +6,8 @@ import { LuSearch, LuX } from "react-icons/lu";
 export interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
+  /** Called when the field loses focus. */
+  onBlur?: () => void;
   /** The field's accessible name, such as "Search members". */
   label: string;
   placeholder?: string;
@@ -14,7 +16,15 @@ export interface SearchInputProps {
 }
 
 /** A search field with a clear button; Escape clears it too. */
-export function SearchInput({ value, onChange, label, placeholder, width = "100%", size = "md" }: SearchInputProps) {
+export function SearchInput({
+  value,
+  onChange,
+  onBlur,
+  label,
+  placeholder,
+  width = "100%",
+  size = "md",
+}: SearchInputProps) {
   function onKeyDown(event: KeyboardEvent) {
     if (event.key === "Escape") {
       onChange("");
@@ -41,6 +51,7 @@ export function SearchInput({ value, onChange, label, placeholder, width = "100%
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={onKeyDown}
+        onBlur={onBlur}
       />
     </InputGroup>
   );

@@ -157,4 +157,54 @@ describe("DebouncedSearchInput", () => {
     await user.type(input, "ada");
     expect(screen.queryByText("Type at least 3 characters to search")).toBeNull();
   });
+
+  it("reports a pending term at once when the field loses focus, and not again after the timer", async () => {
+    const { onSearchChange, user, input } = show();
+    await user.type(input, " ada ");
+    expect(onSearchChange).not.toHaveBeenCalled();
+    await user.tab();
+    expect(onSearchChange).toHaveBeenCalledTimes(1);
+    expect(onSearchChange).toHaveBeenLastCalledWith("ada");
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(onSearchChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports nothing on blur when the term is unchanged", async () => {
+    const { onSearchChange, user, input } = show();
+    await user.type(input, "ada");
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    await user.tab();
+    expect(onSearchChange).toHaveBeenCalledTimes(1);
+    await user.click(input);
+    await user.tab();
+    expect(onSearchChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports nothing on blur when the field was not typed in", async () => {
+    const { onSearchChange, user, input } = show();
+    await user.click(input);
+    await user.tab();
+    expect(onSearchChange).not.toHaveBeenCalled();
+  });
+
+  it("still skips a term shorter than minLength on blur", async () => {
+    const { onSearchChange, user, input } = show(3);
+    await user.type(input, "ad");
+    await user.tab();
+    expect(onSearchChange).not.toHaveBeenCalled();
+  });
+
+  it("reports a cleared search on blur", async () => {
+    const onSearchChange = vi.fn();
+    renderWithProviders(<DebouncedSearchInput label="Search people" term="ada" onSearchChange={onSearchChange} />);
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const input = screen.getByRole("searchbox", { name: "Search people" });
+    await user.clear(input);
+    await user.tab();
+    expect(onSearchChange).toHaveBeenCalledWith(undefined);
+  });
 });

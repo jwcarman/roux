@@ -19,6 +19,12 @@ All notable changes to this project are documented in this file. The format foll
   returns a `PageQuery<T>` (also new, with `queryKey` and `fetch`). The old `pageQuery(params)`, a URL
   query string for an export link, is renamed `queryStringOf(params)`.
 
+### Fixed
+
+- roux-web's `DebouncedSearchInput` reports its pending term when the field loses focus, not only
+  after the debounce. A link clicked within the debounce no longer loses to the late search
+  navigating back to the list.
+
 ### Changed
 
 - `NotFoundException` takes a format pattern and its arguments, as `ConflictException`,
