@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # The roux arms' eval fixture: a standalone copy of examples/dojo at <commit>, written into <dir>
 # (outside the repository), that builds without roux's checkout:
-#   - roux's Maven modules at <commit> installed into ~/.m2, so the pom's parent (roux-parent) and
-#     the starter resolve from there;
+#   - roux's Maven modules at <commit> installed into the fixture's own local repository,
+#     <dir>/.m2repo, so the pom's parent (roux-parent) and the starter resolve from there, and a later
+#     `./mvnw install` in the checkout cannot change a fixture made earlier. .mvn/jvm.config points
+#     every ./mvnw in the fixture (from any directory) at it, with ~/.m2/repository as a read-only
+#     tail for third-party artifacts, so the fixture holds only roux's (about 1 MB); an artifact in
+#     neither is downloaded into .m2repo;
 #   - roux-web at <commit> built and packed into <dir>/vendor/, and the frontend depending on that
 #     tgz rather than linking roux's source;
 #   - git init and one commit, so a run's changes show as a diff (check-roux-way.sh judges those).
@@ -40,8 +44,11 @@ trap 'rm -rf "$work"' EXIT
 mkdir "$work/roux"
 git -C "$root" archive "$commit" | tar -x -C "$work/roux"
 
-echo "installing roux's Maven modules at ${commit:0:7} into ~/.m2" >&2
-(cd "$work/roux" && ./mvnw -B -q install -DskipTests -P '!examples') >&2
+# Maven reads the tail as a second, read-only local repository (Maven 3.9 or later).
+tail_repo="$HOME/.m2/repository"
+echo "installing roux's Maven modules at ${commit:0:7} into $dir/.m2repo" >&2
+(cd "$work/roux" && ./mvnw -B -q install -DskipTests -P '!examples' \
+  "-Dmaven.repo.local=$dir/.m2repo" "-Dmaven.repo.local.tail=$tail_repo") >&2
 
 echo "building and packing roux-web at ${commit:0:7}" >&2
 mkdir "$dir/vendor"
@@ -52,6 +59,12 @@ tgz="$(cd "$work/roux/web/roux-web" && npm pack --silent --pack-destination "$di
 # The dojo and the Maven wrapper beside it.
 cp -R "$work/roux/examples/dojo/." "$dir/"
 cp -R "$work/roux/mvnw" "$work/roux/mvnw.cmd" "$work/roux/.mvn" "$dir/"
+# Maven's launcher puts the fixture's own directory in for ${MAVEN_PROJECTBASEDIR}, so the local
+# repository is the copy's own wherever the copy is (place-dojo.sh copies .m2repo with it).
+[ ! -e "$dir/.mvn/jvm.config" ] || { echo "eval-fixture: .mvn/jvm.config exists already" >&2; exit 1; }
+printf '%s\n' "-Dmaven.repo.local=\${MAVEN_PROJECTBASEDIR}/.m2repo" \
+  "-Dmaven.repo.local.tail=$tail_repo" >"$dir/.mvn/jvm.config"
+printf '\n# roux, installed for this copy (eval-fixture.sh)\n.m2repo/\n' >>"$dir/.gitignore"
 
 # Rewrites one file with a Perl substitution and fails when the pattern is not there, so a change
 # to the dojo that this script no longer matches stops it rather than leaving roux's paths behind.
@@ -87,9 +100,15 @@ rewrite frontend/src/roux-link.test.tsx 's{roux-web is linked from roux.s source
 
 # Prose that pointed at roux's checkout.
 rewrite CLAUDE.md 's{ It builds in roux.s reactor against the roux code beside it\.}{}'
-rewrite README.md 's{\.\./\.\./mvnw }{./mvnw }g'
+rewrite README.md 's{built on roux in roux.s own repository, against the roux code beside\nit: it is how roux finds out what is still hard for an app\.}{built on roux.}'
+rewrite README.md 's{\nIt builds in roux.s reactor \(\x60\./mvnw verify\x60 from the repository.s root\) and is never published\.\n}{}'
+rewrite README.md 's{From the repository.s root, build roux once \(\x60\./mvnw install -DskipTests\x60\), then:\n\n\x60\x60\x60bash\ncd examples/dojo\n\.\./\.\./mvnw }{\x60\x60\x60bash\n./mvnw }'
+rewrite README.md 's{From the repository.s root:\n\n\x60\x60\x60bash\n\./mvnw verify[^\n]*\n\./mvnw verify -pl examples/dojo -am[^\n]*\n}{\x60\x60\x60bash\n./mvnw verify\n}'
+# roux's guides, linked as they are at <commit>.
+rewrite README.md "s{\\]\\(\\.\\./\\.\\./docs/guides/}{](https://github.com/jwcarman/roux/blob/$commit/docs/guides/}g"
 
-if grep -rn '\.\./\.\./' "$dir/pom.xml" "$dir/frontend/package.json" "$dir/frontend/vite.config.ts" >&2; then
+if grep -n '\.\./\.\./\|reactor\|roux code beside\|examples/dojo -am' "$dir/pom.xml" "$dir/frontend/package.json" \
+  "$dir/frontend/vite.config.ts" "$dir/README.md" "$dir/CLAUDE.md" >&2; then
   echo "eval-fixture: a path into roux's checkout is left" >&2
   exit 1
 fi

@@ -3,9 +3,8 @@ name: duplicate-name-invite
 expected_outcome: |
   Inviting someone whose name an existing member already has is refused before anything is
   created or sent: the server answers with an error on the name field reading "A member already
-  has that name", and the invite dialog stays open with that message under the Name field. Other
-  invitations work as before, and `./mvnw -B verify -DskipITs` passes with tests for it. In the roux
-  arms, the error is thrown as roux's InvalidFieldException and the form stays on useSchemaForm and
-  FormDialog (graders marked "roux arms only"; the plain-stack arm is scored on the others).
+  has that name", and the invite dialog shows it under the Name field. The build and tests pass.
+  The graders named NN-roux-* judge roux's way (roux's exceptions, useSchemaForm) and apply to the
+  roux arms only; the plain-stack arm is scored on the others.
 context:
   scaffold_script: place-dojo.sh

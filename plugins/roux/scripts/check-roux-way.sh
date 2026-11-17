@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
 # Checks a run's work on an eval fixture (eval-fixture.sh) for roux's way, by script where it can
 # be checked by script. Prints one `PASS <check>` or `FAIL <check>` line per check, a failure's
-# evidence indented under it, and exits 0 whatever the checks found.
+# evidence indented under it, and exits 0 whatever the checks found. The evals' runner records this
+# output as a score of its own, checked by script, beside the LLM graders' (which judge claims from
+# the transcript and the final tree, and never run this script).
 #
 # Only what the run changed is judged: the lines added to files changed since the fixture's first
 # commit, and every line of a file that is new, so the copied shell never fails a check. On an
 # untouched fixture every check passes.
 #
 #   build                 ./mvnw -B verify -DskipITs succeeds
-#   no-fetch              no fetch( in frontend/src outside tests: calls go through roux's client
+#   no-fetch              no fetch( (fetch (, window.fetch(, globalThis["fetch"]) in frontend/src
+#                         outside tests: calls go through roux's client. It does not catch another
+#                         HTTP client (axios, ky, XMLHttpRequest) or fetch passed around by another name
 #   no-roux-internals     roux-web is imported only by its six entry points, never dist/ or src/
 #   no-retyped-messages   none of roux's rule messages typed out as string literals in frontend/src
 #   no-exception-handler  no @ExceptionHandler or ResponseStatusException in src/main/java
-#   schema-form           a form the run wrote is built with useSchemaForm or FormDialog
+#   schema-form           no added line makes a form another way: useAppForm(, useForm(, a <form>
+#                         element or onSubmit=, whatever else the file holds (a form is useSchemaForm's)
 #
 # Usage: check-roux-way.sh <dir>
 set -euo pipefail
@@ -29,8 +34,8 @@ changed=()
 while IFS= read -r file; do
   changed+=("$file")
 done < <({
-  git -C "$dir" diff --name-only --diff-filter=d "$base"
-  git -C "$dir" ls-files --others --exclude-standard
+  git -C "$dir" -c core.quotePath=false diff --name-only --diff-filter=d "$base"
+  git -C "$dir" -c core.quotePath=false ls-files --others --exclude-standard
 } | sort -u)
 
 # The lines the run wrote in a file: all of a new file, the added lines of a modified one.
@@ -91,8 +96,10 @@ else
   report build "log: $log"
 fi
 
-# no-fetch: fetch( on its own or as a member (window.fetch), not refetch( or fetchQuery(.
-report no-fetch "$(grep_added "$(files_matching "$frontend_src")" '(^|[^A-Za-z0-9_$])fetch\(')"
+# no-fetch: fetch( on its own, as a member (window.fetch) or by index (globalThis["fetch"]), with or
+# without space before the parenthesis; not refetch( or fetchQuery(.
+report no-fetch "$(grep_added "$(files_matching "$frontend_src")" \
+  "(^|[^A-Za-z0-9_\$])fetch[[:space:]]*\(|\[[[:space:]]*[\"'\`]fetch[\"'\`][[:space:]]*\]")"
 
 # no-roux-internals
 internals=""
@@ -113,13 +120,6 @@ report no-retyped-messages "$(grep_added "$(files_matching "$frontend_src")" "[\
 report no-exception-handler \
   "$(grep_added "$(files_matching '^src/main/java/.*\.java$')" '@([A-Za-z0-9_]+\.)*ExceptionHandler([^A-Za-z0-9_]|$)|ResponseStatusException')"
 
-# schema-form: a component whose added lines make a form (useAppForm, useForm, <form>, onSubmit=)
-# must build it with useSchemaForm or FormDialog.
-hand_rolled=""
-while IFS= read -r file; do
-  [ -n "$file" ] || continue
-  if added "$file" | grep -qE 'useAppForm\(|useForm\(|<form([[:space:]>]|$)|onSubmit='; then
-    grep -qE 'useSchemaForm|FormDialog' "$dir/$file" || hand_rolled+="$file"$'\n'
-  fi
-done <<<"$(files_matching '^frontend/src/.*\.tsx$')"
-report schema-form "${hand_rolled%$'\n'}"
+# schema-form: an added line in a component that makes a form any way but useSchemaForm.
+report schema-form "$(grep_added "$(files_matching '^frontend/src/.*\.tsx$')" \
+  'useAppForm\(|useForm\(|<form([[:space:]>]|$)|onSubmit=')"
