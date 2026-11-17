@@ -54,6 +54,12 @@ describe("MemberDetailView", () => {
     act(() => toaster.remove());
   });
 
+  it("shows an instructor's role by name", () => {
+    answer(() => HttpResponse.json(GRACE));
+    show({ ...GRACE, role: "INSTRUCTOR" }, false);
+    expect(screen.getByText("Instructor")).toBeInTheDocument();
+  });
+
   it("shows the member", () => {
     answer(() => HttpResponse.json(GRACE));
     show(GRACE, false);

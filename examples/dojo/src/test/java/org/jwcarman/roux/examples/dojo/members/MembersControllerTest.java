@@ -158,7 +158,7 @@ class MembersControllerTest {
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.errors[?(@.field == \'role\')].message")
-                .value("Must be one of OWNER, MEMBER"));
+                .value("Must be one of OWNER, INSTRUCTOR, MEMBER"));
   }
 
   @Test

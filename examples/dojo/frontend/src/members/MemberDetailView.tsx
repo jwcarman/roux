@@ -4,7 +4,7 @@ import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, useConfirm } from "@jwcarman/roux-web/feedback";
 import type { MemberDetail } from "../api";
 import { ActivityList } from "../activity/ActivityList";
-import { activitiesPage, changeMemberStatus, type MemberStatusAction } from "./members";
+import { activitiesPage, changeMemberStatus, ROLE_LABELS, type MemberStatusAction } from "./members";
 import { DANGER_PALETTE } from "../shell/theme";
 
 export interface MemberDetailViewProps {
@@ -71,7 +71,7 @@ export function MemberDetailView({ member, canManage, isSelf }: MemberDetailView
         </DataList.Item>
         <DataList.Item>
           <DataList.ItemLabel>Role</DataList.ItemLabel>
-          <DataList.ItemValue>{member.role === "OWNER" ? "Owner" : "Member"}</DataList.ItemValue>
+          <DataList.ItemValue>{ROLE_LABELS[member.role]}</DataList.ItemValue>
         </DataList.Item>
         <DataList.Item>
           <DataList.ItemLabel>Status</DataList.ItemLabel>

@@ -2,7 +2,7 @@ import { Button } from "@chakra-ui/react";
 import { LuUserPlus } from "react-icons/lu";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { FormDialog, useSchemaForm } from "@jwcarman/roux-web/form";
-import { invitationSchema, inviteMember } from "./members";
+import { INVITABLE_ROLES, invitationSchema, inviteMember, ROLE_LABELS } from "./members";
 
 /**
  * "Invite member": a button that opens the invite form in a dialog. The outcome is a toast; a
@@ -11,7 +11,7 @@ import { invitationSchema, inviteMember } from "./members";
 export function InviteForm() {
   const form = useSchemaForm({
     schema: invitationSchema,
-    defaultValues: { name: "", email: "" },
+    defaultValues: { name: "", email: "", role: "MEMBER" },
     mutation: inviteMember,
     onSuccess: ({ linkSent }, { name, email }) => {
       if (linkSent) {
@@ -40,6 +40,9 @@ export function InviteForm() {
     >
       <form.AppField name="name">{(f) => <f.InputField label="Name" />}</form.AppField>
       <form.AppField name="email">{(f) => <f.InputField label="Email" type="email" />}</form.AppField>
+      <form.AppField name="role">
+        {(f) => <f.SelectField label="Role" options={INVITABLE_ROLES} labels={ROLE_LABELS} />}
+      </form.AppField>
     </FormDialog>
   );
 }

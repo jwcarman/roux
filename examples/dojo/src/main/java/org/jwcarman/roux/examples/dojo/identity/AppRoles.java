@@ -30,6 +30,13 @@ public final class AppRoles {
         STUDENTS_READ,
         STUDENTS_MANAGE,
         PROMOTIONS_MANAGE),
+    INSTRUCTOR(
+        RANKS_READ,
+        STUDENTS_READ,
+        STUDENTS_MANAGE,
+        PROMOTIONS_MANAGE,
+        MEMBERS_READ,
+        MEMBERS_PROFILE),
     MEMBER(MEMBERS_READ, MEMBERS_PROFILE, RANKS_READ, STUDENTS_READ);
 
     private final List<String> permissions;

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { useQuery } from "@tanstack/react-query";
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -68,6 +68,45 @@ describe("InviteForm", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Invitation sent");
     await waitFor(() => expect(dialog).toHaveAttribute("data-state", "closed"));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.members.lists() });
+  });
+
+  it("invites as a member unless another role is chosen", async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.post("/api/members/invitations", async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ linkSent: true }, { status: 202 });
+      }),
+    );
+    const { user } = await openInvite();
+    const role = screen.getByLabelText(/^Role/);
+    expect(role).toHaveValue("MEMBER");
+    expect(within(role).getAllByRole("option").map((option) => option.textContent)).toEqual(["Member", "Instructor"]);
+
+    await user.type(screen.getByLabelText(/^Name/), "Ivy");
+    await user.type(screen.getByLabelText(/^Email/), "ivy@example.com");
+    await user.click(screen.getByRole("button", { name: "Send invitation" }));
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toEqual({ name: "Ivy", email: "ivy@example.com", role: "MEMBER" });
+  });
+
+  it("invites an instructor when Instructor is chosen", async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.post("/api/members/invitations", async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ linkSent: true }, { status: 202 });
+      }),
+    );
+    const { user } = await openInvite();
+
+    await user.type(screen.getByLabelText(/^Name/), "Ivy");
+    await user.type(screen.getByLabelText(/^Email/), "ivy@example.com");
+    await user.selectOptions(screen.getByLabelText(/^Role/), "INSTRUCTOR");
+    await user.click(screen.getByRole("button", { name: "Send invitation" }));
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toEqual({ name: "Ivy", email: "ivy@example.com", role: "INSTRUCTOR" });
   });
 
   it("stays open until the list has refreshed, so a quick second invitation can be sent", async () => {

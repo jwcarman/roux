@@ -5,7 +5,7 @@ import type { TableSearch } from "@jwcarman/roux-web/paging";
 import { DEFAULT_PAGE_SIZE, DebouncedSearchInput, FilterChips, QueryTable } from "@jwcarman/roux-web/table";
 import { MEMBERS_INVITE, type Member } from "../api";
 import { ExportButton, exportHref } from "../shell/ExportButton";
-import { membersPage } from "./members";
+import { membersPage, ROLE_LABELS } from "./members";
 import { useSession } from "../shell/session";
 import { InviteForm } from "./InviteForm";
 
@@ -15,11 +15,12 @@ type MemberSort = (typeof MEMBER_SORTS)[number];
 
 /** The directory's defaults, left out of the URL. */
 /** The directory's filters: the server's AppRole and MemberStatus values. */
-export const MEMBER_ROLES = ["OWNER", "MEMBER"] as const;
+export const MEMBER_ROLES = ["OWNER", "INSTRUCTOR", "MEMBER"] as const;
 export const MEMBER_STATUSES = ["ACTIVE", "DEACTIVATED"] as const;
 
 const ROLE_CHIPS = [
   { value: "OWNER", label: "Owners" },
+  { value: "INSTRUCTOR", label: "Instructors" },
   { value: "MEMBER", label: "Members" },
 ] as const;
 
@@ -59,7 +60,7 @@ const COLUMNS: ColumnDef<Member, unknown>[] = [
   column.accessor("role", {
     id: "ROLE" satisfies MemberSort,
     header: "Role",
-    cell: (info) => (info.getValue() === "OWNER" ? "Owner" : "Member"),
+    cell: (info) => ROLE_LABELS[info.getValue()],
   }),
 ];
 

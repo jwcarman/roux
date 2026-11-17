@@ -26,7 +26,7 @@
     </createTable>
   </changeSet>
 
-  <!-- The team directory: one row per member, OWNER winning over MEMBER. It carries the profile's
+  <!-- The team directory: one row per member, the highest of OWNER, INSTRUCTOR and MEMBER winning. It carries the profile's
        id and version, so its entity extends jpa-utils' BaseEntity like every other. It reads
        who's role tables directly; a who release that renames them fails here or in Hibernate's
        validate. Grouping by the primary keys lets the other columns be selected. status is who's
@@ -34,15 +34,19 @@
   <changeSet id="member-directory" author="dojo" runOnChange="true">
     <createView viewName="member_directory" replaceIfExists="true">
       select p.id, p.version, p.display_name, p.email,
-             case when bool_or(r.name = 'OWNER') then 'OWNER' else 'MEMBER' end as role,
-             case when bool_or(r.name = 'OWNER') then 0 else 1 end as role_rank,
+             case when bool_or(r.name = 'OWNER') then 'OWNER'
+                  when bool_or(r.name = 'INSTRUCTOR') then 'INSTRUCTOR'
+                  else 'MEMBER' end as role,
+             case when bool_or(r.name = 'OWNER') then 0
+                  when bool_or(r.name = 'INSTRUCTOR') then 1
+                  else 2 end as role_rank,
              case when i.status = 'ACTIVE' then 'ACTIVE' else 'DEACTIVATED' end as status,
              i.created_at as joined_at
       from member_profile p
       join who_identity i on i.id = p.id
       join who_identity_role ir on ir.identity_id = p.id
       join who_role r on r.id = ir.role_id
-      where r.name in ('OWNER', 'MEMBER')
+      where r.name in ('OWNER', 'INSTRUCTOR', 'MEMBER')
       group by p.id, i.id
     </createView>
   </changeSet>

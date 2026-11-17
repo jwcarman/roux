@@ -1,6 +1,6 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
-import { email, text } from "@jwcarman/roux-web/form";
+import { email, oneOf, text } from "@jwcarman/roux-web/form";
 import { pageQuery, type PageDto, type PageParams } from "@jwcarman/roux-web/paging";
 import { z } from "zod";
 import type { Activity, Member, MemberDetail, Profile } from "../api";
@@ -9,10 +9,17 @@ import { queryKeys } from "../queryKeys";
 /** The longest name, as the server's MemberProfile.MAX_NAME allows. */
 const MAX_NAME = 80;
 
+/** The roles an invitation can give: the server's InvitableRole. An owner is never invited. */
+export const INVITABLE_ROLES = ["MEMBER", "INSTRUCTOR"] as const;
+
+/** A role as people read it, for a member's page, the directory and the invite form. */
+export const ROLE_LABELS = { OWNER: "Owner", INSTRUCTOR: "Instructor", MEMBER: "Member" } as const;
+
 /** InvitationsController.Invitation's rules, in roux's words. */
 export const invitationSchema = z.object({
   name: text().max(MAX_NAME),
   email: email(),
+  role: oneOf(INVITABLE_ROLES),
 });
 
 /** An invitation as it is sent: a name and an email address, trimmed. */

@@ -28,10 +28,13 @@ public class MemberDirectoryEntry extends BaseEntity {
   @Searchable private String displayName;
   @Searchable private String email;
 
-  /** {@code OWNER} or {@code MEMBER}. */
+  /** {@code OWNER}, {@code INSTRUCTOR} or {@code MEMBER}. */
   private String role;
 
-  /** 0 for {@code OWNER}, 1 for {@code MEMBER}: sorting by role puts owners first. */
+  /**
+   * 0 for {@code OWNER}, 1 for {@code INSTRUCTOR}, 2 for {@code MEMBER}: sorting by role puts
+   * owners first.
+   */
   private int roleRank;
 
   /** A {@link MemberStatus} name: {@code DEACTIVATED} when who will not let them sign in. */

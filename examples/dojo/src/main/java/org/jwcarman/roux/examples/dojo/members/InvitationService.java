@@ -2,10 +2,10 @@ package org.jwcarman.roux.examples.dojo.members;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import org.jwcarman.roux.examples.dojo.activity.ActivityLog;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
 import org.jwcarman.roux.problems.InvalidFieldException;
 import org.jwcarman.who.core.crypto.Secrets;
 import org.jwcarman.who.core.domain.Identity;
@@ -25,8 +25,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * Invites a member: a MEMBER identity with an email credential, then a who sign-in link. Accepting
- * the invitation is signing in.
+ * Invites a member: an identity with the role invited and an email credential, then a who sign-in
+ * link. Accepting the invitation is signing in.
  */
 @Service
 @Validated
@@ -65,16 +65,18 @@ public class InvitationService {
   }
 
   /**
-   * Invites the address as a member named {@code name}: creates the member and the profile,
-   * commits, then sends the sign-in link. The member is invited even when the link cannot be sent
-   * (they can sign in from the sign-in page), so the answer says whether it was.
+   * Invites the address, with {@code role}, as a member named {@code name}: creates the member and
+   * the profile, commits, then sends the sign-in link. The member is invited even when the link
+   * cannot be sent (they can sign in from the sign-in page), so the answer says whether it was.
    *
    * @return whether the sign-in link was sent
    * @throws InvalidFieldException on {@code email} if the address is already registered
    */
   public boolean invite(
-      @NotBlank @Size(max = MemberProfile.MAX_NAME) String name, @NotBlank @Email String email) {
-    registration.executeWithoutResult(_ -> register(name, email));
+      @NotBlank @Size(max = MemberProfile.MAX_NAME) String name,
+      @NotBlank @Email String email,
+      @NotNull InvitableRole role) {
+    registration.executeWithoutResult(_ -> register(name, email, role));
     EmailLinkOutcome outcome =
         linkTransaction.execute(_ -> linkIssuer.issue(email, Secrets.token()));
     if (outcome != EmailLinkOutcome.SENT) {
@@ -84,13 +86,13 @@ public class InvitationService {
     return true;
   }
 
-  private void register(String name, String email) {
+  private void register(String name, String email, InvitableRole role) {
     // findByAddress normalizes the way who does, so any spelling of a known address matches.
     if (emailCredentials.findByAddress(email).isPresent()) {
       throw new InvalidFieldException("email", "That address is already a member");
     }
     Identity identity = who.createIdentity();
-    rbac.assignRoleToIdentity(identity, rbac.findRequiredRole(AppRole.MEMBER));
+    rbac.assignRoleToIdentity(identity, rbac.findRequiredRole(role.role()));
     EmailCredential credential;
     try {
       credential = emailCredentials.register(identity, email);

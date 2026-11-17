@@ -28,7 +28,8 @@ public class InvitationsController {
   @ResponseStatus(HttpStatus.ACCEPTED)
   @RequiresPermission(AppRoles.MEMBERS_INVITE)
   public InvitationResult invite(@Valid @RequestBody Invitation request) {
-    return new InvitationResult(invitations.invite(request.name(), request.email()));
+    return new InvitationResult(
+        invitations.invite(request.name(), request.email(), request.role()));
   }
 
   /**
@@ -39,12 +40,17 @@ public class InvitationsController {
 
   /**
    * The name and address are trimmed before they are checked; who normalizes the address further.
+   * No role means {@link InvitableRole#MEMBER}; a role outside {@link InvitableRole} is refused
+   * when the body is read (400, no field named: Spring's own answer to an enum it does not know).
    */
   public record Invitation(
-      @NotBlank @Size(max = MemberProfile.MAX_NAME) String name, @NotBlank @Email String email) {
+      @NotBlank @Size(max = MemberProfile.MAX_NAME) String name,
+      @NotBlank @Email String email,
+      InvitableRole role) {
     public Invitation {
       name = name == null ? null : name.strip();
       email = email == null ? null : email.strip();
+      role = role == null ? InvitableRole.MEMBER : role;
     }
   }
 }

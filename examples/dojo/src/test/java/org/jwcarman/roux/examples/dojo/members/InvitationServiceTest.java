@@ -1,10 +1,12 @@
 package org.jwcarman.roux.examples.dojo.members;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -83,6 +85,38 @@ class InvitationServiceTest {
     assertThat(mail.sent().get(0).link()).contains("/signin/link#token=");
     // The link's token must be stored (committed), or signing in with it would fail.
     assertThat(count("who_email_link_token")).isEqualTo(1);
+  }
+
+  @Test
+  void anInvitationCanGiveTheInstructorRole() throws Exception {
+    invite("Ivy Instructor", "ivy@example.org", "INSTRUCTOR").andExpect(status().isAccepted());
+
+    UUID identityId = identityOf(emailCredentials.findByAddress("ivy@example.org").orElseThrow());
+    assertThat(rolesOf(identityId)).containsExactly("INSTRUCTOR");
+    members
+        .owner()
+        .perform(get("/api/members/" + identityId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.role").value("INSTRUCTOR"));
+  }
+
+  @Test
+  void anInvitationCanAskForTheMemberRoleOutright() throws Exception {
+    invite("Mo Member", "mo@example.org", "MEMBER").andExpect(status().isAccepted());
+
+    UUID identityId = identityOf(emailCredentials.findByAddress("mo@example.org").orElseThrow());
+    assertThat(rolesOf(identityId)).containsExactly("MEMBER");
+  }
+
+  @Test
+  void anOwnerIsNeverInvited() throws Exception {
+    long before = profiles.count();
+
+    invite("Olive Again", "olive@example.org", "OWNER").andExpect(status().isBadRequest());
+    invite("Nobody", "nobody@example.org", "KING").andExpect(status().isBadRequest());
+
+    assertThat(emailCredentials.findByAddress("olive@example.org")).isEmpty();
+    assertThat(profiles.count()).isEqualTo(before);
   }
 
   @Test
@@ -200,7 +234,7 @@ class InvitationServiceTest {
     try {
       tx.executeWithoutResult(
           status -> {
-            invitations.invite("Bob", "bob@example.com");
+            invitations.invite("Bob", "bob@example.com", InvitableRole.MEMBER);
             throw new IllegalStateException("force rollback");
           });
     } catch (IllegalStateException expected) {
@@ -223,6 +257,25 @@ class InvitationServiceTest {
             post("/api/members/invitations")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"" + name + "\",\"email\":\"" + email + "\"}"));
+  }
+
+  private ResultActions invite(String name, String email, String role) throws Exception {
+    return members
+        .owner()
+        .perform(
+            post("/api/members/invitations")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"name\":\"%s\",\"email\":\"%s\",\"role\":\"%s\"}"
+                        .formatted(name, email, role)));
+  }
+
+  private List<String> rolesOf(UUID identityId) {
+    return jdbc.queryForList(
+        "select r.name from who_identity_role ir join who_role r on r.id = ir.role_id"
+            + " where ir.identity_id = ?",
+        String.class,
+        identityId);
   }
 
   private UUID identityOf(EmailCredential credential) {

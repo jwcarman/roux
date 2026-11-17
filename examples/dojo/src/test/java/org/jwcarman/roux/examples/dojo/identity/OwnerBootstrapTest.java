@@ -77,6 +77,14 @@ class OwnerBootstrapTest {
             "students.read",
             "students.manage",
             "promotions.manage");
+    assertThat(permissionsOf("INSTRUCTOR"))
+        .containsExactlyInAnyOrder(
+            "ranks.read",
+            "students.read",
+            "students.manage",
+            "promotions.manage",
+            "members.read",
+            "members.profile");
     assertThat(permissionsOf("MEMBER"))
         .containsExactlyInAnyOrder(
             "members.read", "members.profile", "ranks.read", "students.read");
@@ -93,6 +101,27 @@ class OwnerBootstrapTest {
     bootstrap.run(null);
 
     assertThat(permissionsOf("OWNER")).contains("members.manage");
+  }
+
+  @Test
+  void aDatabaseMadeBeforeTheInstructorRoleGainsIt() throws Exception {
+    bootstrap.run(null);
+    jdbc.update(
+        "delete from who_role_permission where role_id = (select id from who_role where name ="
+            + " 'INSTRUCTOR')");
+    jdbc.update("delete from who_role where name = 'INSTRUCTOR'");
+    assertThat(jdbc.queryForObject("select count(*) from who_role", Integer.class)).isEqualTo(2);
+
+    bootstrap.run(null);
+
+    assertThat(permissionsOf("INSTRUCTOR"))
+        .containsExactlyInAnyOrder(
+            "ranks.read",
+            "students.read",
+            "students.manage",
+            "promotions.manage",
+            "members.read",
+            "members.profile");
   }
 
   @Test
@@ -139,7 +168,7 @@ class OwnerBootstrapTest {
     bootstrap.run(null);
 
     assertThat(ownerCount()).isEqualTo(1);
-    assertThat(jdbc.queryForObject("select count(*) from who_role", Integer.class)).isEqualTo(2);
+    assertThat(jdbc.queryForObject("select count(*) from who_role", Integer.class)).isEqualTo(3);
     assertThat(jdbc.queryForObject("select count(*) from who_identity", Integer.class))
         .isEqualTo(1);
   }
@@ -202,7 +231,7 @@ class OwnerBootstrapTest {
   private void assertOwnerRecreated() {
     assertThat(ownerCount()).isEqualTo(1);
     assertThat(emailCredentials.findByAddress("owner@example.com")).isPresent();
-    assertThat(jdbc.queryForObject("select count(*) from who_role", Integer.class)).isEqualTo(2);
+    assertThat(jdbc.queryForObject("select count(*) from who_role", Integer.class)).isEqualTo(3);
   }
 
   @Test

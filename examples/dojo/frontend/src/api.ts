@@ -44,7 +44,7 @@ export interface Member {
   id: string;
   displayName: string;
   email: string;
-  role: "OWNER" | "MEMBER";
+  role: "OWNER" | "INSTRUCTOR" | "MEMBER";
   status: "ACTIVE" | "DEACTIVATED";
 }
 

@@ -157,3 +157,25 @@ What building the dojo showed about roux: one entry per finding, in the order fo
 - roux could: leave it to the app (it is plain Spring), but say so: the errors guide could show
   this inversion for a `ConflictException` that depends on another feature.
 - Outcome: deferred (guide note).
+
+## A new role is written in eight places
+- Where: `AppRoles.AppRole`, `members.xml` (the directory view's role and rank), `InvitableRole`,
+  `frontend/src/api.ts` (`Member.role`), `MembersPage` (`MEMBER_ROLES`, chips), `members.ts`
+  (`INVITABLE_ROLES`, `ROLE_LABELS`), and the tests that count roles
+- What was clunky: adding Instructor meant finding every list of roles by hand: the Java enum, the
+  SQL `case` that picks a member's highest role, the browser's union type, the filter chips, the
+  labels and the invite choices. Nothing fails to compile when one is missed (the SQL view only
+  fails at run time, as an unlisted role shown as Member).
+- roux could: a guide section on roles (who's RBAC plus the app's enum), saying which lists a role
+  appears in; or a `GET /api/roles` the browser reads instead of a union type.
+- Outcome: deferred.
+
+## A request enum outside its set is not a field error
+- Where: `members/InvitationsController.Invitation` (`role`)
+- What was clunky: the invite role must be Member or Instructor and an owner is never invited, so
+  the request takes an `InvitableRole` enum. A body saying `OWNER` is refused when Jackson reads it,
+  with the generic 400 and no field, which the errors guide lists as a known gap; the form's select
+  cannot send it, but an API caller gets no field name.
+- roux could: answer an unknown enum constant in a body as a field error (`Must be one of
+  MEMBER, INSTRUCTOR`), as it already does for a query parameter.
+- Outcome: deferred.
