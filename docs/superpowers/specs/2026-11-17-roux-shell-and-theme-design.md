@@ -79,16 +79,24 @@ already routes page requests to the shell (roux-spa); it should serve the shell 
 Prior art: who's example app, `who-examples/spa/frontend/src/pages/SignIn.tsx` (link, code with
 `autoComplete="one-time-code"`, passkey, OIDC providers from `who.signInOptions()`, pending sign-up).
 
-- **roux-web `<SignInPage />`**, ported from that page in Chakra: email me a link, then "open the
-  link, or type the code from the email" (`who.email.signIn({ email, code })`, who's error under the
-  field), passkey sign-in, and one provider button per provider `signInOptions()` reports. After any
-  sign-in it returns to the page the visitor asked for (the dojo's `rememberReturn`/`takeReturn`,
-  moved into roux-web).
+- **The page is the app's, the pieces are roux's** (user decision): roux-web ships components, ported
+  from that page in Chakra, and the sign-in page that composes them is generated when a new roux app
+  is created (then the app's to change). The components: `<EmailSignIn />` (email me a link, then
+  "open the link, or type the code from the email" via `who.email.signIn({ email, code })`, who's
+  error under the field), `<PasskeySignInButton />`, `<ProviderSignInButtons />` (one per provider
+  `signInOptions()` reports), and `useSignInReturn()` (return to the page the visitor asked for:
+  the dojo's `rememberReturn`/`takeReturn`, moved into roux-web), which each calls after a sign-in.
+  The same rule applies to Appearance: roux ships `<AppearanceSettings />`; the page placing it is
+  the app's.
+- **Open:** roux has no "create a new app" step yet (the dojo started from a copy of the template's
+  shell). Where generation lives (a roux app template, or a plugin generator an agent runs) gets its
+  own short design after this round.
 - **roux-web `<ProviderSignInButton provider="google" />`**: takes the provider's id as who reports
   it; links to `who.oidc.authorizeUrl(id)`; shows the provider's icon and "Continue with <Name>" for
   known providers (Google, Microsoft, GitHub, Apple, GitLab, Okta…; icons from react-icons), and a
   generic icon with the provider's display name for any other. `icon` and `label` props override.
   Usable alone, for an app that lays out its own sign-in page. Follows each provider's published
   button guidance where one exists (Google's in particular).
-- The dojo drops its `SignIn.tsx` and `LinkLanding` sign-in code for these; `code.spec.ts` types the
+- The dojo rebuilds its `SignIn.tsx` from these components (proving they compose) and drops its
+  hand-written sign-in calls; `code.spec.ts` types the
   code into the page.
