@@ -90,7 +90,8 @@ Prior art: who's example app, `who-examples/spa/frontend/src/pages/SignIn.tsx` (
   the app's.
 - **Open:** roux has no "create a new app" step yet (the dojo started from a copy of the template's
   shell). Where generation lives (a roux app template, or a plugin generator an agent runs) gets its
-  own short design after this round.
+  own short design after this round. Decided: a new app declares `roux-theme` itself (it is not in the starter), so it starts with an
+  Appearance page and the app removes it for a fixed brand.
 - **roux-web `<ProviderSignInButton provider="google" />`**: takes the provider's id as who reports
   it; links to `who.oidc.authorizeUrl(id)`; shows the provider's icon and "Continue with <Name>" for
   known providers (Google, Microsoft, GitHub, Apple, GitLab, Okta…; icons from react-icons), and a

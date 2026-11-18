@@ -51,6 +51,12 @@
             <artifactId>roux-spring-boot-starter</artifactId>
         </dependency>
         <dependency>
+            <!-- The owner changes the app's look on the Appearance page; not in the starter, so a
+                 fixed-brand app leaves it out and sets roux.theme.* instead. -->
+            <groupId>org.jwcarman.roux</groupId>
+            <artifactId>roux-theme</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>

@@ -49,6 +49,13 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <!-- the owner's theme: not in the starter, so added as an app adds it -->
+            <groupId>org.jwcarman.roux</groupId>
+            <artifactId>roux-theme</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <!-- who keeps identities in PostgreSQL, the one database it supports -->
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>

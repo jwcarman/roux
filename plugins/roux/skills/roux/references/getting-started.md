@@ -43,6 +43,11 @@ Boot's BOM, so Spring Boot's managed versions stay the parent's.
         <groupId>org.jwcarman.roux</groupId>
         <artifactId>roux-spring-boot-starter</artifactId>
     </dependency>
+    <!-- the owner's theme (an Appearance page); remove it for a fixed brand -->
+    <dependency>
+        <groupId>org.jwcarman.roux</groupId>
+        <artifactId>roux-theme</artifactId>
+    </dependency>
     <!-- who sends sign-in links through Spring Boot's mail sender; the roux starter does not bring it -->
     <dependency>
         <groupId>org.springframework.boot</groupId>
@@ -64,9 +69,10 @@ Boot's BOM, so Spring Boot's managed versions stay the parent's.
 </dependencies>
 ```
 
-The starter brings `roux-problems`, `roux-validation` (`@Phone`, `@NotInFuture` and roux's validation messages), `roux-spa` (the shell for any page URL), `roux-jpa` (`Versions`), `roux-theme` (the owner's theme), `roux-autoconfigure`, who (`who-spring-boot-starter`, with
+The starter brings `roux-problems`, `roux-validation` (`@Phone`, `@NotInFuture` and roux's validation messages), `roux-spa` (the shell for any page URL), `roux-jpa` (`Versions`), `roux-autoconfigure`, who (`who-spring-boot-starter`, with
 email-link sign-in, `who-email-link`, and passkeys, `who-passkey`), jpa-utils
 (`org.jwcarman.jpa:jpa-utils`), `spring-boot-starter-validation` and `spring-boot-starter-webmvc`.
+`roux-theme` (the owner changes the look on an Appearance page) is not in the starter: add it beside the starter, with no version, as a new app does. Leave it out for a fixed brand and set `roux.theme.*` instead ([The owner's theme](#the-owners-theme)).
 Do not add who's starter yourself, and do not declare versions for any of them, for who's other
 modules (`who-test`), or for jpa-utils: `roux-bom` pins who 0.20.0 and jpa-utils 0.2.0. The test
 dependencies are in [Testing](testing.md#dependencies).
@@ -121,7 +127,7 @@ databaseChangeLog:
       file: classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml
 ```
 
-(The second is roux-theme's table, below; the app does not start without it.) The full list of who's settings is in who's configuration guide
+(The second is roux-theme's table, below; include it when the app has `roux-theme`, which then does not start without it.) The full list of who's settings is in who's configuration guide
 (`docs/guides/configuration.md` in who's repository, at tag `0.20.0`).
 
 ## Add the web side
@@ -354,7 +360,7 @@ neither does not start), `palette` (`gray`), `brand-color` (`#3b82f6`), `shape` 
 
 ### The owner's theme
 
-`roux-theme` (in the starter) keeps the theme in roux's own table, `roux_theme`: one row, from the
+`roux-theme` (added beside the starter) keeps the theme in roux's own table, `roux_theme`: one row, from the
 changelog above, whose columns are null until the owner chooses (`roux.theme.*` stands for every part
 not chosen, so the answer is always a whole theme). It brings:
 
@@ -375,8 +381,8 @@ The pieces behind them are `AppTheme` (the entity), `AppThemeRepository` and `Th
 that carries the app's name, say).
 
 An app that keeps its look elsewhere declares its own `ShellThemeSource` bean (the API stays); an
-app that wants no owner theme leaves `roux-theme` out of its dependencies (exclude it from the
-starter) and does not include the changelog. Entities and repositories are found without any entity
+app that wants no owner theme leaves `roux-theme` out of its dependencies and does not include the
+changelog. Entities and repositories are found without any entity
 scan or `@EnableJpaRepositories` of the app's; an app that sets its own `@EnableJpaRepositories`
 must still reach `org.jwcarman.roux.theme`.
 

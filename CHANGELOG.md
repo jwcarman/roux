@@ -41,7 +41,7 @@ All notable changes to this project are documented in this file. The format foll
   `GET /api/theme` (open to anyone: the shell needs it signed out), `PUT /api/theme` (`theme.manage`, with the
   `version` read; a stale one is a 409), values validated against the shell's own sets, and the
   `ShellThemeSource` bean that makes the shell show it. Each part the owner has not chosen is the `roux.theme.*`
-  property. The starter brings it, and roux-autoconfigure switches it on (`RouxThemeAutoConfiguration`,
+  property. It is not in the starter: an app adds it beside the starter (a new app does; a fixed-brand app leaves it out and sets `roux.theme.*`), and roux-autoconfigure switches it on (`RouxThemeAutoConfiguration`,
   `RouxThemePersistenceAutoConfiguration`).
 - roux serves the app's shell. `roux-spa` answers the page request with `index.html` carrying the request's
   nonce, the theme and the app's name, `Cache-Control: no-store` and a strict Content-Security-Policy
