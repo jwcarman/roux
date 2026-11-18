@@ -19,7 +19,8 @@ const KEY = "roux.returnTo";
  */
 export function isReturnable(path: string): boolean {
   return (
-    path !== "/" &&
+    // Longer than "/" (Home). Read as a length, not compared, so only a string ever gets past here.
+    path.length > 1 &&
     !/^\/(signin|api|who)(\/|\?|#|$)/.test(path) &&
     URL.canParse(path, location.origin) &&
     new URL(path, location.origin).href === location.origin + path
