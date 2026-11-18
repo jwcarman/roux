@@ -73,3 +73,22 @@ already routes page requests to the shell (roux-spa); it should serve the shell 
 
 - Exact property names under `roux.theme` / `roux.spa.csp`, the theme table's name, the font and
   shape sets (start from the dojo's), how the nonce placeholder is found (the dojo's convention).
+
+## Part 3: sign-in (added 2026-11-17, approved)
+
+Prior art: who's example app, `who-examples/spa/frontend/src/pages/SignIn.tsx` (link, code with
+`autoComplete="one-time-code"`, passkey, OIDC providers from `who.signInOptions()`, pending sign-up).
+
+- **roux-web `<SignInPage />`**, ported from that page in Chakra: email me a link, then "open the
+  link, or type the code from the email" (`who.email.signIn({ email, code })`, who's error under the
+  field), passkey sign-in, and one provider button per provider `signInOptions()` reports. After any
+  sign-in it returns to the page the visitor asked for (the dojo's `rememberReturn`/`takeReturn`,
+  moved into roux-web).
+- **roux-web `<ProviderSignInButton provider="google" />`**: takes the provider's id as who reports
+  it; links to `who.oidc.authorizeUrl(id)`; shows the provider's icon and "Continue with <Name>" for
+  known providers (Google, Microsoft, GitHub, Apple, GitLab, Okta…; icons from react-icons), and a
+  generic icon with the provider's display name for any other. `icon` and `label` props override.
+  Usable alone, for an app that lays out its own sign-in page. Follows each provider's published
+  button guidance where one exists (Google's in particular).
+- The dojo drops its `SignIn.tsx` and `LinkLanding` sign-in code for these; `code.spec.ts` types the
+  code into the page.
