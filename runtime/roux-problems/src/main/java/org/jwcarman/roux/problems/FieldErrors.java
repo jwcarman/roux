@@ -15,6 +15,7 @@
  */
 package org.jwcarman.roux.problems;
 
+import java.time.temporal.Temporal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -27,6 +28,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ElementKind;
 import jakarta.validation.Path;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.validation.BindingResult;
@@ -40,6 +42,9 @@ import tools.jackson.core.JacksonException;
  * Turns every kind of validation result into a 400's {@code errors}, sorted by field then message.
  */
 final class FieldErrors {
+
+  /** The words for a malformed value: ContributorValidationMessages' {@code Pattern}. */
+  static final String NOT_EXPECTED_FORMAT = "Is not in the expected format";
 
   private static final Comparator<FieldProblem> ORDER =
       Comparator.comparing(FieldProblem::field).thenComparing(FieldProblem::message);
@@ -149,6 +154,18 @@ final class FieldErrors {
               .collect(Collectors.joining(", "));
     }
     return "Invalid value";
+  }
+
+  /**
+   * What a body value that cannot be read as {@code type} is told: the choices for an enum, {@code
+   * Is not in the expected format} for a date, time or instant, and {@code null} for any other
+   * type, which stays a generic 400.
+   */
+  static @Nullable String readMessage(Class<?> type) {
+    if (type.isEnum()) {
+      return typeMessage(type);
+    }
+    return Temporal.class.isAssignableFrom(type) ? NOT_EXPECTED_FORMAT : null;
   }
 
   private static String message(MessageSourceResolvable error) {

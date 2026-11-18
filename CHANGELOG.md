@@ -14,6 +14,11 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- A time of day. roux-web's `time()` rule (`Must not be empty`, `Is not in the expected format`; `HH:mm`
+  or the `HH:mm:ss` Jackson writes) and `timeInputOf` mirror a `@NotNull LocalTime`, with
+  `contracts/time.json` and a contract test on each side. A date, time or instant in a JSON body
+  that the server cannot read is now a field error, `Is not in the expected format`, in roux-problems
+  (it was a generic 400).
 - roux-web's date library is date-fns, a new peer dependency (`^4.4.0`; `npm install date-fns`). The
   new `@jwcarman/roux-web/dates` subpath has `parseIsoDate`, `formatIsoDate`, `parseIsoTime` and
   `formatIsoTime`, which go between the wire's ISO strings (`2026-11-17`, `18:30`) and date-fns Dates,

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { formatIsoDate, parseIsoDate } from "../dates/dates";
+import { formatIsoDate, parseIsoDate, parseIsoTime } from "../dates/dates";
 
 /*
  * Rule helpers for a form's Zod schema, in the server's words: each message is the one in
@@ -201,6 +201,40 @@ function optionalDate(notInFuture: boolean): DateRule<string | null> {
 /** A required date, from `<input type="date">`: `Must not be empty`. */
 export function date(): DateRule {
   return requiredDate(false);
+}
+
+// --- time -----------------------------------------------------------------------------------------
+
+/** A time input's value (`HH:mm`, or the server's `HH:mm:ss`): `string`, or `string | null` once optional. */
+export type TimeRule<Out extends string | null = string> = Rule<
+  Out,
+  string,
+  {
+    /** May be left empty, which gives `null`. */
+    optional(): TimeRule<string | null>;
+  }
+>;
+
+/** The checks on a time input's value that `required` asks for; `""` passes unless `required`. */
+function timeSchema(required: boolean): z.ZodString {
+  const schema = required ? z.string().min(1, { error: NOT_EMPTY }) : z.string();
+  return schema.refine((value) => value === "" || parseIsoTime(value) !== undefined, { error: NOT_EXPECTED_FORMAT });
+}
+
+function requiredTime(): TimeRule<string> {
+  return rule(timeSchema(true), { required: true }, { optional: optionalTime });
+}
+
+function optionalTime(): TimeRule<string | null> {
+  return rule(emptyAsNull(timeSchema(false)), { required: false }, { optional: optionalTime });
+}
+
+/**
+ * A required time of day, from `<input type="time">`: `Must not be empty`, `Is not in the expected
+ * format`. The wire format is `HH:mm` (a `LocalTime`: Jackson reads it, and writes `HH:mm:ss`).
+ */
+export function time(): TimeRule {
+  return requiredTime();
 }
 
 // --- number ---------------------------------------------------------------------------------------

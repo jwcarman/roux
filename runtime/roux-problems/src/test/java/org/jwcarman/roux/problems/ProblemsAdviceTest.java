@@ -149,6 +149,31 @@ class ProblemsAdviceTest {
   }
 
   @Test
+  void aTimeTheServerCannotReadIsAFieldError() throws Exception {
+    isProblem(postJson("/schedule", "{\"startsAt\":\"6pm\"}"), 400, "Bad Request")
+        .andExpect(jsonPath("$.detail").value("The request has invalid fields"))
+        .andExpect(jsonPath("$.errors.length()").value(1))
+        .andExpect(jsonPath("$.errors[0].field").value("startsAt"))
+        .andExpect(jsonPath("$.errors[0].message").value("Is not in the expected format"));
+  }
+
+  @Test
+  void aDateOrInstantTheServerCannotReadIsAFieldErrorToo() throws Exception {
+    isProblem(postJson("/schedule", "{\"day\":\"2026-02-30\"}"), 400, "Bad Request")
+        .andExpect(jsonPath("$.errors[0].field").value("day"))
+        .andExpect(jsonPath("$.errors[0].message").value("Is not in the expected format"));
+    isProblem(postJson("/schedule", "{\"at\":\"yesterday\"}"), 400, "Bad Request")
+        .andExpect(jsonPath("$.errors[0].field").value("at"))
+        .andExpect(jsonPath("$.errors[0].message").value("Is not in the expected format"));
+  }
+
+  @Test
+  void aTimeWithOrWithoutSecondsIsRead() throws Exception {
+    postJson("/schedule", "{\"startsAt\":\"18:30\"}").andExpect(status().isOk());
+    postJson("/schedule", "{\"startsAt\":\"18:30:00\"}").andExpect(status().isOk());
+  }
+
+  @Test
   void aWrongTypeThatIsNotAnEnumStaysGeneric() throws Exception {
     isProblem(postJson("/count", "{\"count\":\"many\"}"), 400, "Bad Request")
         .andExpect(jsonPath("$.errors").doesNotExist());

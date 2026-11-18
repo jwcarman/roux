@@ -105,7 +105,9 @@ public class ProblemsAdvice extends ResponseEntityExceptionHandler {
 
   /**
    * A body that cannot be read. A value that is not one of an enum's constants is a field error on
-   * that field, {@code Must be one of A, B}; any other unreadable body stays Spring's generic 400.
+   * that field, {@code Must be one of A, B}; a date, time or instant the server cannot read ({@code
+   * 6pm}, {@code 2026-02-30}) is {@code Is not in the expected format}, the browser's own words for
+   * it; any other unreadable body stays Spring's generic 400.
    */
   @Override
   protected ResponseEntity<Object> handleHttpMessageNotReadable(
@@ -113,13 +115,12 @@ public class ProblemsAdvice extends ResponseEntityExceptionHandler {
       HttpHeaders headers,
       HttpStatusCode status,
       WebRequest request) {
-    if (ex.getCause() instanceof InvalidFormatException invalid
-        && invalid.getTargetType().isEnum()) {
-      FieldProblem problem =
-          new FieldProblem(
-              FieldErrors.path(invalid.getPath()),
-              FieldErrors.typeMessage(invalid.getTargetType()));
-      return handleExceptionInternal(ex, invalid(List.of(problem)), headers, status, request);
+    if (ex.getCause() instanceof InvalidFormatException invalid) {
+      String message = FieldErrors.readMessage(invalid.getTargetType());
+      if (message != null) {
+        FieldProblem problem = new FieldProblem(FieldErrors.path(invalid.getPath()), message);
+        return handleExceptionInternal(ex, invalid(List.of(problem)), headers, status, request);
+      }
     }
     return super.handleHttpMessageNotReadable(ex, headers, status, request);
   }

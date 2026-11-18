@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateTimeInputOf, inputOf, numberInputOf } from "./values";
+import { dateTimeInputOf, inputOf, numberInputOf, timeInputOf } from "./values";
 
 describe("form values", () => {
   it("start a number input from a record's value", () => {
@@ -21,5 +21,12 @@ describe("form values", () => {
 
   it("leave an empty instant empty", () => {
     expect(dateTimeInputOf(null)).toBe("");
+  });
+
+  it("show a time without the server's seconds, and keep text that is not a time", () => {
+    expect(timeInputOf("17:00:00")).toBe("17:00");
+    expect(timeInputOf("06:05")).toBe("06:05");
+    expect(timeInputOf(null)).toBe("");
+    expect(timeInputOf("6pm")).toBe("6pm");
   });
 });

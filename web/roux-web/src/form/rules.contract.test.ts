@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { z } from "zod";
 import { validationMessage } from "../testing/validationMessages";
 import { contract } from "../testing/contracts";
-import { date, email, id, number, oneOf, PHONE_PATTERN, phone, text, url } from "./rules";
+import { date, email, id, number, oneOf, PHONE_PATTERN, phone, text, time, url } from "./rules";
 
 /** The single message a failed parse reports. */
 function messageOf(result: { success: boolean; error?: z.ZodError }): string | undefined {
@@ -24,6 +24,7 @@ describe("rules say what the server says", () => {
     ["a number over its maximum", () => number().max(5).safeParse(6), "Max", { value: 5 }],
     ["a malformed phone number", () => phone().safeParse("call me"), "Phone", {}],
     ["a date in the future", () => date().notInFuture().safeParse("2999-01-01"), "NotInFuture", {}],
+    ["an unset time", () => time().safeParse(""), "NotNull", {}],
     ["a malformed web address", () => url().safeParse("example"), "URL", {}],
   ] as const)("%s", (_, parse, constraint, args) => {
     expect(messageOf(parse())).toBe(validationMessage(constraint, args));
@@ -60,5 +61,19 @@ describe("phone() is the server's @Phone", () => {
   // The rule trims before it checks, so only a value that has nothing to trim shows the pattern's own answer.
   it.each(fixture.invalid.filter((value) => value === value.trim()))("phone() refuses %j", (value) => {
     expect(messageOf(phone().safeParse(value))).toBe(fixture.message);
+  });
+});
+
+// A malformed LocalTime in a body is a field error with the browser's words (contracts/time.json;
+// RuleContractTest is the Java side).
+describe("time() is how the server reads a LocalTime", () => {
+  const fixture = contract<{ message: string; valid: string[]; invalid: string[] }>("time.json");
+
+  it.each(fixture.valid)("accepts %j", (value) => {
+    expect(time().safeParse(value)).toEqual({ success: true, data: value });
+  });
+
+  it.each(fixture.invalid)("refuses %j with the server's message", (value) => {
+    expect(messageOf(time().safeParse(value))).toBe(fixture.message);
   });
 });

@@ -1,3 +1,5 @@
+import { formatIsoTime, parseIsoTime } from "../dates/dates";
+
 /**
  * A record's values as inputs hold them: strings (and NumberField's `number | undefined`). The
  * schema's parse turns them back into the request.
@@ -22,4 +24,16 @@ export function dateTimeInputOf(iso: string | null): string {
   }
   const d = new Date(iso);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/**
+ * A record's `LocalTime` as a `time` input's value (`HH:mm`, without the seconds Jackson writes);
+ * `null` as `""`. Text that is not a time is kept as it is, so the form's rule refuses it.
+ */
+export function timeInputOf(iso: string | null): string {
+  if (iso === null) {
+    return "";
+  }
+  const parsed = parseIsoTime(iso);
+  return parsed === undefined ? iso : formatIsoTime(parsed);
 }

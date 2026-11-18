@@ -81,6 +81,7 @@ server caught the mistake ([Errors](errors.md#what-else-is-answered-for-you)).
 | `url()` | an input's string, trimmed; `http` or `https` only | `string` | `Must not be blank`, `Must be a valid web address` | `@NotBlank @URL` |
 | `phone()` | an input's string, trimmed: digits, spaces and `+ - ( ) .`, at least 7 digits | `string` | `Must not be blank`, `Is not in the expected format` | `@NotBlank @Phone` (`org.jwcarman.roux.validation`, roux-validation; the same pattern) |
 | `date()` | a `type="date"` input's `YYYY-MM-DD` | `string` (unchanged) | `Must not be empty`, `Is not in the expected format` | `@NotNull LocalDate` |
+| `time()` | a `type="time"` input's `HH:mm` (or the server's `HH:mm:ss`) | `string` (unchanged) | `Must not be empty`, `Is not in the expected format` | `@NotNull LocalTime` |
 | `number()` | a `NumberField`'s `number \| undefined` | `number` | `Must not be empty` | `@NotNull` |
 | `integer()` | a `NumberField`'s `number \| undefined` | `number` | `Must not be empty`, `Must be a whole number` (browser only) | `@NotNull` on an `int`/`Integer`/`long` |
 | `oneOf(values)` | a `SelectField`'s value, `""` for its placeholder | one of `values` | `Must not be empty` | `@NotNull` on an enum |
@@ -115,7 +116,7 @@ Their methods:
 - `oneOf` takes a `const` tuple (`["WHITE", "YELLOW"] as const`). Its input also accepts `""`, so a
   create's `defaultValues` can start a select at its placeholder.
 - The types, for annotating your own helpers: `TextRule<Out>` (`text`, `email`, `url`, `phone`),
-  `DateRule<Out>`, `NumberRule<Out>`; `Out` is the output, `string | null` or `number | null` once
+  `DateRule<Out>`, `TimeRule<Out>`, `NumberRule<Out>`; `Out` is the output, `string | null` or `number | null` once
   optional.
 
 Check a rule across fields with `.refine` on the object; `path` puts the message under that field:
@@ -145,6 +146,19 @@ function parseIsoDate(iso: string): Date | undefined; // "2026-11-17" as local m
 function formatIsoDate(date: Date): string; // the local calendar day, "2026-11-17"
 function parseIsoTime(iso: string): Date | undefined; // "18:30" or "18:30:00", on an arbitrary day
 function formatIsoTime(date: Date): string; // "18:30"
+```
+
+A time of day is `time()` with a `type="time"` input. On the server it is a plain `LocalTime`
+(`@NotNull LocalTime startsAt`, no `@JsonFormat`): Jackson reads `18:30` and `18:30:00` and writes
+`18:30:00`, so start the form with `timeInputOf(record.startsAt)` (`18:30:00` as `18:30`; `null` as
+`""`) and show it with date-fns (`format(parseIsoTime(iso), "p")`). A time the server cannot read
+(`6pm`) is a field error, `Is not in the expected format`, as the browser's rule says
+(`contracts/time.json` holds the two together):
+
+```tsx
+const classSchema = z.object({ name: text().max(60), startsAt: time(), endsAt: time().optional() });
+
+<form.AppField name="startsAt">{(f) => <f.InputField label="Starts" type="time" />}</form.AppField>;
 ```
 
 For example, the most recent Tuesday, as a date input holds it: `formatIsoDate(previousTuesday(new Date()))`
@@ -284,12 +298,13 @@ on submit when the mutation names `meta.refreshes` and the app's client is not `
 
 `defaultValues` holds what the inputs hold, not what the record holds. A record's `null` must become
 the input's empty value; the schema's parse turns it back into `null` on the way out. Use `inputOf`
-for text, `numberInputOf` for a `NumberField`, and `dateTimeInputOf` for an ISO instant shown in a
-`type="datetime-local"` input:
+for text, `numberInputOf` for a `NumberField`, `timeInputOf` for a `LocalTime` in a `type="time"`
+input, and `dateTimeInputOf` for an ISO instant shown in a `type="datetime-local"` input:
 
 ```ts
 function inputOf(value: string | null): string; // null as ""
 function numberInputOf(value: number | null): number | undefined; // null as undefined
+function timeInputOf(iso: string | null): string; // a LocalTime as a time input's value (HH:mm); null as ""
 function dateTimeInputOf(iso: string | null): string; // an ISO instant as a datetime-local value, in the browser's time zone; null as ""
 ```
 
@@ -799,7 +814,7 @@ Gaps in 0.2.0 that a builder hits:
 
 - **A nullable record field needs `inputOf` in `defaultValues`.** An optional text's input is
   `string`, so `email: student.email` (`string | null`) does not compile (`Type 'string | null' is
-  not assignable to type 'string'`). Use `inputOf`, `numberInputOf` or `dateTimeInputOf`.
+  not assignable to type 'string'`). Use `inputOf`, `numberInputOf`, `timeInputOf` or `dateTimeInputOf`.
 - **`url()` rejects a host without a dot**, such as `http://localhost:8080`, and **`email()` rejects a
   domain without a dot**, such as `ann@localhost`, though the server's `@URL` and `@Email` accept both.
   Where such values are valid, write that field's schema with Zod and register it in `fieldRules`

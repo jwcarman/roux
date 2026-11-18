@@ -13,13 +13,15 @@ export {
   oneOf,
   phone,
   text,
+  time,
   url,
   type DateRule,
   type FieldRule,
   type NumberRule,
   type TextRule,
+  type TimeRule,
 } from "./rules";
-export { dateTimeInputOf, inputOf, numberInputOf } from "./values";
+export { dateTimeInputOf, inputOf, numberInputOf, timeInputOf } from "./values";
 export { CheckboxField, type CheckboxFieldProps } from "./fields/CheckboxField";
 export { Form, ResetButton, SubmitButton, SubmittingIndicator } from "./fields/formComponents";
 export { FormField, type FormFieldProps } from "./fields/FormField";

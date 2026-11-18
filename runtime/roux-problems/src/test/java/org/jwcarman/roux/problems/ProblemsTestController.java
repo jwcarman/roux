@@ -15,7 +15,9 @@
  */
 package org.jwcarman.roux.problems;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -64,6 +66,13 @@ class ProblemsTestController {
   record Feelings(List<Feeling> feelings) {}
 
   record Count(int count) {}
+
+  record Schedule(LocalTime startsAt, LocalDate day, Instant at) {}
+
+  @PostMapping("/schedule")
+  String schedule(@RequestBody Schedule body) {
+    return String.valueOf(body);
+  }
 
   @PostMapping("/feeling")
   String feeling(@RequestBody Feeling body) {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { z } from "zod";
-import { date, email, fieldRules, id, integer, number, oneOf, phone, text, url } from "./rules";
+import { date, email, fieldRules, id, integer, number, oneOf, phone, text, time, url } from "./rules";
 
 /** The messages a failed parse reports, in order. */
 function messagesOf(result: { success: boolean; error?: z.ZodError }): string[] {
@@ -170,6 +170,37 @@ describe("rules", () => {
       const optional = date().optional();
       expectTypeOf<z.input<typeof optional>>().toEqualTypeOf<string>();
       expectTypeOf(optional.parse).returns.toEqualTypeOf<string | null>();
+    });
+  });
+
+  describe("time", () => {
+    it("accepts a time input's value, and the server's seconds", () => {
+      expect(time().safeParse("18:30")).toEqual({ success: true, data: "18:30" });
+      expect(time().safeParse("18:30:00")).toEqual({ success: true, data: "18:30:00" });
+    });
+
+    it("refuses empty, as required", () => {
+      expect(messagesOf(time().safeParse(""))).toEqual(["Must not be empty"]);
+      expect(fieldRules.get(time())).toStrictEqual({ required: true });
+    });
+
+    it("refuses what is not a time, reporting only that", () => {
+      expect(messagesOf(time().safeParse("6pm"))).toEqual(["Is not in the expected format"]);
+      expect(messagesOf(time().safeParse("24:00"))).toEqual(["Is not in the expected format"]);
+    });
+
+    it("lets an optional one be empty, which gives null, but not malformed", () => {
+      expect(time().optional().parse("")).toBeNull();
+      expect(time().optional().parse("09:00")).toBe("09:00");
+      expect(messagesOf(time().optional().safeParse("late"))).toEqual(["Is not in the expected format"]);
+      expect(fieldRules.get(time().optional())).toStrictEqual({ required: false });
+      expect(fieldRules.get(time().optional().optional())).toStrictEqual({ required: false });
+    });
+
+    it("types its input and output", () => {
+      expectTypeOf<z.input<ReturnType<typeof time>>>().toEqualTypeOf<string>();
+      expectTypeOf(time().optional().parse).returns.toEqualTypeOf<string | null>();
+      expectTypeOf(time().parse).returns.toEqualTypeOf<string>();
     });
   });
 

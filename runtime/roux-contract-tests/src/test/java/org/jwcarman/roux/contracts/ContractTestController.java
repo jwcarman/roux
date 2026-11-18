@@ -15,6 +15,7 @@
  */
 package org.jwcarman.roux.contracts;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +42,13 @@ class ContractTestController {
   record Row(String id, String name) {}
 
   record NewNote(@NotBlank String title) {}
+
+  record Appointment(LocalTime startsAt) {}
+
+  @PostMapping("/api/contract/time")
+  String time(@RequestBody Appointment appointment) {
+    return String.valueOf(appointment.startsAt());
+  }
 
   @GetMapping("/api/contract/not-found")
   String notFound() {

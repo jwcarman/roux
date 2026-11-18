@@ -198,6 +198,7 @@ Nothing here needs app code. The answers below come from roux's advices.
 | `@Validated` method parameter violation (controller or service) | 400 | same, with `errors` |
 | `@RequestParam` of the wrong type | 400 | same; the message is `Must be one of A, B` for an enum, else `Invalid value` |
 | An enum value in a JSON body outside its set (`"role": "OWNER"`) | 400 | same, `errors` on that field (`items[1].role` inside a list): `Must be one of MEMBER, INSTRUCTOR` |
+| A date, time or instant in a JSON body the server cannot read (`"startsAt": "6pm"`, `"day": "2026-02-30"`) | 400 | same, `errors` on that field: `Is not in the expected format`, the browser's `time()` and `date()` words |
 | `@ModelAttribute` field of the wrong type (query parameters bound to a record) | 400 | same, message as above (Spring's conversion text is never shown) |
 | Unknown `sortBy` on a jpa-utils page request | 400 | same, `errors` on `sortBy` (`contracts/problem-unknown-sort.json`) |
 | Unmatched path under `/api/` | 404 | Spring's default |
@@ -216,10 +217,10 @@ Bean Validation's messages come from roux's `ContributorValidationMessages` bund
 not hide them. The browser's rule helpers in `/form` use the same words.
 
 Known gap: a JSON body that does not parse, or a body field of the wrong type (a string where a number
-is expected), is answered by Spring's own mapping: 400 with a generic `detail` and no `errors`. roux
+is expected, a malformed number), is answered by Spring's own mapping: 400 with a generic `detail` and no `errors`. roux
 does not reword it. The form's Zod schema keeps such bodies from being sent; do not rely on the
-server to name the field. (An enum value that does not exist is not part of this gap: it is a field
-error, as in the table above.)
+server to name the field. (An enum value that does not exist, and a date, time or instant that cannot be read, are not part
+of this gap: they are field errors, as in the table above.)
 
 ### The classes that do this
 
