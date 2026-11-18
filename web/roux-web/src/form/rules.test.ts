@@ -351,6 +351,52 @@ describe("rules", () => {
     });
   });
 
+  describe("oneOf(...).optional()", () => {
+    const statuses = ["LEAD", "ACTIVE"] as const;
+
+    it("takes the placeholder as no choice, which is null", () => {
+      expect(oneOf(statuses).optional().parse("")).toBeNull();
+      expect(oneOf(statuses).optional().optional().parse("")).toBeNull();
+      expect(oneOf(statuses).optional().parse("LEAD")).toBe("LEAD");
+    });
+
+    it("still refuses a value that is not one of them", () => {
+      expect(messagesOf(oneOf(statuses).optional().safeParse("GONE"))).toEqual(["Must not be empty"]);
+    });
+
+    it("is not required", () => {
+      expect(fieldRules.get(oneOf(statuses).optional())).toStrictEqual({ required: false });
+      expect(fieldRules.get(oneOf(statuses).optional().optional())).toStrictEqual({ required: false });
+      expect(fieldRules.get(z.object({ status: oneOf(statuses).optional() }).shape.status)).toStrictEqual({
+        required: false,
+      });
+    });
+
+    it("types the placeholder as input and null as output", () => {
+      const optional = oneOf(statuses).optional();
+      expectTypeOf<z.input<typeof optional>>().toEqualTypeOf<"LEAD" | "ACTIVE" | "">();
+      expectTypeOf(optional.parse).returns.toEqualTypeOf<"LEAD" | "ACTIVE" | null>();
+    });
+  });
+
+  describe("id().optional()", () => {
+    it("takes the placeholder as no choice, which is null", () => {
+      expect(id().optional().parse("")).toBeNull();
+      expect(id().optional().optional().parse("")).toBeNull();
+      expect(id().optional().parse("0b9f6c0e-4d3a-4f6e-9a57-1c2d3e4f5a6b")).toBe(
+        "0b9f6c0e-4d3a-4f6e-9a57-1c2d3e4f5a6b",
+      );
+    });
+
+    it("is not required, and types its output as string or null", () => {
+      const schema = z.object({ instructorId: id().optional() });
+      expect(fieldRules.get(schema.shape.instructorId)).toStrictEqual({ required: false });
+      expect(fieldRules.get(id().optional().optional())).toStrictEqual({ required: false });
+      expectTypeOf<z.input<typeof schema>>().toEqualTypeOf<{ instructorId: string }>();
+      expectTypeOf<z.output<typeof schema>>().toEqualTypeOf<{ instructorId: string | null }>();
+    });
+  });
+
   describe("id", () => {
     it("accepts a chosen id", () => {
       expect(id().safeParse("0b9f6c0e-4d3a-4f6e-9a57-1c2d3e4f5a6b")).toEqual({

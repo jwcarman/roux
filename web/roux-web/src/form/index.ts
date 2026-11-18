@@ -17,6 +17,7 @@ export {
   time,
   url,
   type AfterRule,
+  type ChoiceRule,
   type DateRule,
   type FieldRule,
   type NumberRule,

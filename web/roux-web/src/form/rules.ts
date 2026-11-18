@@ -318,25 +318,50 @@ export function integer(): NumberRule {
 // --- oneOf ----------------------------------------------------------------------------------------
 
 /**
- * One of `values` (an enum), required: `Must not be empty`. Its input also takes `""`, a select's
- * placeholder, so the form's default value type-checks.
+ * A select's value: one of `V` (an enum's values, or ids), `""` for its placeholder. Its output is
+ * `V`, or `V | null` once optional.
  */
-export function oneOf<const V extends readonly [string, ...string[]]>(values: V) {
+export type ChoiceRule<V extends string, Out extends string | null = V> = Rule<
+  Out,
+  V | "",
+  {
+    /** May be left at the placeholder, which gives `null`. */
+    optional(): ChoiceRule<V, V | null>;
+  }
+>;
+
+/**
+ * One of `values` (an enum), required: `Must not be empty`. Its input also takes `""`, a select's
+ * placeholder, so the form's default value type-checks. `.optional()` lets the placeholder stand:
+ * `""` in the form, `null` once parsed.
+ */
+export function oneOf<const V extends readonly [string, ...string[]]>(values: V): ChoiceRule<V[number]> {
   const choice = z.enum(values, { error: NOT_EMPTY });
-  return z
-    .union([z.literal(""), choice], { error: NOT_EMPTY })
-    .pipe(choice)
-    .register(fieldRules, { required: true });
+  const unset = z.union([z.literal(""), choice], { error: NOT_EMPTY });
+  return rule(unset.pipe(choice), { required: true }, { optional: () => optionalChoice(unset) });
+}
+
+function optionalChoice<V extends string>(unset: z.ZodType<V | "", V | "">): ChoiceRule<V, V | null> {
+  return rule(
+    unset.transform((value): V | null => (value === "" ? null : value)),
+    { required: false },
+    { optional: () => optionalChoice(unset) },
+  );
 }
 
 // --- id -------------------------------------------------------------------------------------------
 
 /**
  * A required choice among ids known only at run time (a select of ranks fetched from the server),
- * `""` for the select's placeholder: `Must not be empty`.
+ * `""` for the select's placeholder: `Must not be empty`. `.optional()` lets the placeholder
+ * stand: `""` in the form, `null` once parsed.
  */
-export function id() {
-  return z.string({ error: NOT_EMPTY }).min(1).register(fieldRules, { required: true });
+export function id(): ChoiceRule<string> {
+  return rule(z.string({ error: NOT_EMPTY }).min(1), { required: true }, { optional: optionalId });
+}
+
+function optionalId(): ChoiceRule<string, string | null> {
+  return rule(emptyAsNull(z.string()), { required: false }, { optional: optionalId });
 }
 
 // --- across fields ----------------------------------------------------------------------------------

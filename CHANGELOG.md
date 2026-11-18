@@ -14,6 +14,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- An optional choice. `oneOf(values).optional()` and `id().optional()` (roux-web): a select at its
+  placeholder is `""` in the form and `null` once parsed. New type `ChoiceRule`.
 - A rule across two fields. roux-validation's class-level `@After(field, other, otherLabel)` (a field error
   on the later field, `Must be after {other}`; `LocalTime`, `LocalDate`, `Instant`, numbers, any
   `Comparable`) and roux-web's `after(schema, { field, other, otherLabel })` say the same words, with

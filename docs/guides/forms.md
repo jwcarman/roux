@@ -95,7 +95,7 @@ Their methods:
 | `.min(n)` | `number`, `integer` | at least `n` | `Must be at least {n}` | `@Min(n)` |
 | `.max(n)` | `number`, `integer` | at most `n` | `Must be at most {n}` | `@Max(n)` |
 | `.notInFuture()` | `date` | not after the browser's today | `Must not be in the future` | `@NotInFuture` (roux-validation) |
-| `.optional()` | all but `oneOf`, `id` | may be left empty; empty gives `null` | none | no `@NotBlank`/`@NotNull` |
+| `.optional()` | all | may be left empty (a select at its placeholder); empty gives `null` | none | no `@NotBlank`/`@NotNull` |
 
 - **A date that may not be in the future** is `date().notInFuture()` in the browser and `@NotInFuture`
   on the server's `LocalDate`, with the one message `Must not be in the future`. Use them, never
@@ -115,8 +115,13 @@ Their methods:
   run on it.
 - `oneOf` takes a `const` tuple (`["WHITE", "YELLOW"] as const`). Its input also accepts `""`, so a
   create's `defaultValues` can start a select at its placeholder.
+- **An optional choice** is `oneOf(values).optional()` or `id().optional()`: the select sits at its
+  placeholder (`""`, so `defaultValues` is `record.instructorId ?? ""`, or `inputOf(record.instructorId)`),
+  and the parsed value, which is what the mutation sends, is `null` (`UUID instructorId`, no
+  annotation, on the server). Give the select a `placeholder` that says what none means (`No
+  instructor`); write no `.transform` of your own.
 - The types, for annotating your own helpers: `TextRule<Out>` (`text`, `email`, `url`, `phone`),
-  `DateRule<Out>`, `TimeRule<Out>`, `NumberRule<Out>`; `AfterRule<Shape>` is `after()`'s second argument; `Out` is the output, `string | null` or `number | null` once
+  `DateRule<Out>`, `TimeRule<Out>`, `ChoiceRule<V, Out>` (`oneOf`, `id`), `NumberRule<Out>`; `AfterRule<Shape>` is `after()`'s second argument; `Out` is the output, `string | null` or `number | null` once
   optional.
 
 Check a rule across fields with `.refine` on the object; `path` puts the message under that field:
@@ -863,9 +868,6 @@ Gaps in 0.2.0 that a builder hits:
 - **`withForm` does not accept a `useSchemaForm` form** (a type error); type a section's prop as
   `SchemaForm<typeof schema>` instead.
 - **`FormDialog` needs a `trigger` even when controlled.**
-- **`oneOf` has no optional form.** Zod's own `.optional()` on it accepts `undefined`, not the
-  select's `""`, so the placeholder is still refused. For an optional choice, write
-  `z.union([z.literal(""), z.enum(values)]).transform((value) => (value === "" ? null : value))`.
 - **`integer()`'s `Must be a whole number` is the browser's own**; roux's server messages have no
   counterpart.
 
