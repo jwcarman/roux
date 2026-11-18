@@ -9,7 +9,6 @@ import { ClassesSincePromotion, StudentAttendanceList } from "../attendance/Stud
 import { RankSwatch } from "../ranks/RankSwatch";
 import { formatDate } from "../shell/format";
 import { useSession } from "../shell/session";
-import { DANGER_PALETTE } from "../shell/theme";
 import { PromoteDialog } from "./PromoteDialog";
 import { StudentActions } from "./StudentActions";
 import { removePromotion, studentQuery, type Promotion, type StudentDetail } from "./students";
@@ -56,7 +55,7 @@ export function StudentPage() {
         <DataList.Item>
           <DataList.ItemLabel>Status</DataList.ItemLabel>
           <DataList.ItemValue>
-            <Badge colorPalette={student.status === "ACTIVE" ? undefined : DANGER_PALETTE}>
+            <Badge colorPalette={student.status === "ACTIVE" ? undefined : "red"}>
               {student.status === "ACTIVE" ? "Active" : "Inactive"}
             </Badge>
           </DataList.ItemValue>
@@ -159,7 +158,7 @@ function RemovePromotionButton({ student, promotion }: { student: StudentDetail;
     <Button
       size="sm"
       variant="outline"
-      colorPalette={DANGER_PALETTE}
+      colorPalette="red"
       loading={pending}
       aria-label={`Remove the promotion to ${promotion.rank.name} on ${formatDate(promotion.date)}`}
       onClick={onRemove}

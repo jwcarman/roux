@@ -1,8 +1,6 @@
 # Defaults for development on http://localhost:8080. Production overrides them in
 # application-prod.yml; see the README's "Production" section.
 app:
-  # app.name, the app's name until the owner names it on the Appearance page, is in
-  # app-name.properties (imported below), written when the app is created.
   base-url: http://localhost:8080
 
 server:
@@ -20,8 +18,6 @@ server:
         secure: true
 
 spring:
-  config:
-    import: classpath:app-name.properties
   application:
     name: dojo
   threads:
@@ -48,6 +44,12 @@ spring:
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAILPIT_SMTP_PORT:1025}
+
+roux:
+  theme:
+    # The app's name until the owner names it on the Appearance page (roux-theme keeps the owner's
+    # choices in its own table; whatever they have not chosen is read from here).
+    app-name: Dojo
 
 who:
   # Liquibase creates who's tables (db.changelog-master.xml includes who's changelog).

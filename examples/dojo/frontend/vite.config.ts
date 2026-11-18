@@ -22,7 +22,7 @@ export default defineConfig({
   build: { outDir: "dist", emptyOutDir: true },
   // Every script and style tag Vite writes carries this placeholder, and a <meta property="csp-nonce">
   // holds it for the app's own use. Spring Boot replaces it with a fresh nonce on each response
-  // (ShellController), matching its Content-Security-Policy header.
+  // (roux serves the shell), matching its Content-Security-Policy header.
   html: { cspNonce: "__CSP_NONCE__" },
   server: {
     proxy: {

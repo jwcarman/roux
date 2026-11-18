@@ -6,6 +6,7 @@
         https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
   <include file="classpath:org/jwcarman/who/db/who-changelog.xml"/>
+  <include file="classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml"/>
   <include file="classpath:db/changelog/spring-session.xml"/>
   <include file="classpath:db/changelog/members.xml"/>
   <include file="classpath:db/changelog/activity.xml"/>
@@ -15,4 +16,5 @@
   <include file="classpath:db/changelog/promotions.xml"/>
   <include file="classpath:db/changelog/classes.xml"/>
   <include file="classpath:db/changelog/attendance.xml"/>
+  <include file="classpath:db/changelog/theme-moved.xml"/>
 </databaseChangeLog>

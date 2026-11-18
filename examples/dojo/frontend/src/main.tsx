@@ -1,6 +1,4 @@
 import { Center, Spinner } from "@chakra-ui/react";
-import createCache from "@emotion/cache";
-import { CacheProvider } from "@emotion/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode, useEffect } from "react";
@@ -8,17 +6,11 @@ import { createRoot } from "react-dom/client";
 import { createQueryClient } from "@jwcarman/roux-web/api";
 import { ColorModeProvider } from "./shell/colorMode";
 import { ConfirmProvider, Toaster } from "@jwcarman/roux-web/feedback";
-import { cspNonce } from "./shell/csp";
 import { routeTree } from "./routeTree.gen";
 import { SessionProvider, useSession } from "./shell/session";
-import { readPageTheme } from "./shell/theme";
-import { ThemeProvider } from "./shell/themeContext";
+import { ThemeProvider } from "@jwcarman/roux-web/theme";
 
 const queryClient = createQueryClient();
-
-// Chakra styles through Emotion, which adds <style> tags at runtime: they carry the page's nonce,
-// or the Content-Security-Policy refuses them.
-const styleCache = createCache({ key: "css", nonce: cspNonce() });
 
 const router = createRouter({
   routeTree,
@@ -56,18 +48,16 @@ function App() {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <CacheProvider value={styleCache}>
-        <ThemeProvider initial={readPageTheme()}>
-          <ColorModeProvider>
-            <ConfirmProvider>
-              <SessionProvider>
-                <App />
-              </SessionProvider>
-            </ConfirmProvider>
-            <Toaster />
-          </ColorModeProvider>
-        </ThemeProvider>
-      </CacheProvider>
+      <ThemeProvider>
+        <ColorModeProvider>
+          <ConfirmProvider>
+            <SessionProvider>
+              <App />
+            </SessionProvider>
+          </ConfirmProvider>
+          <Toaster />
+        </ColorModeProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   </StrictMode>,
 );

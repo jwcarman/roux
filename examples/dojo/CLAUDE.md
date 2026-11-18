@@ -12,16 +12,17 @@ feature" section is the full worked example (member profiles); read the part you
   response records.
 - One frontend folder per feature, `frontend/src/<feature>/`, mirroring the package: its pages and
   dialogs, a `<feature>.ts` with its calls, schemas and query options, and its tests beside them.
-  The app's frame (layout, nav, session, guards, theme, sign-in, Appearance, Settings) is
+  The app's frame (layout, nav, session, guards, colour mode, the sign-in and Appearance pages, Settings) is
   `frontend/src/shell/`.
 - Schema changes: one changelog per feature in `src/main/resources/db/changelog`, included from
   `db.changelog-master.xml`.
 - A screen: a thin route file in `frontend/src/routes` (file-based) that opens its feature's page,
   the page in `frontend/src/<feature>/`, shared types and permissions in `api.ts`, query keys in
-  `queryKeys.ts`, a sidebar entry in `frontend/src/shell/nav.json` with a one-sentence
-  `description` an owner would understand (add its icon to `ICONS` in `shell/nav.ts` if it is new). When a request decides which page the app opens on,
-  move `"start": true` to it and remove Home (`/`) from `nav.json`; exactly one place has it. A
-  place's `permission` in `nav.json` is the same one its route's `requirePermission` checks. A new
+  `queryKeys.ts`, a sidebar entry in `frontend/src/shell/nav.ts` (`defineNav`: a Lucide icon component,
+  a one-sentence `description` an owner would understand). When a request decides which page the app
+  opens on, move `start: true` to it and remove Home (`/`) from `nav.ts`; exactly one place has it
+  (`defineNav` throws otherwise). A place's `permission` in `nav.ts` is the same one its route's
+  `requirePermission` checks, and must be in `PERMISSIONS` in `api.ts`. A new
   URL needs nothing on the server: roux serves the shell for any page URL.
 
 ## Rules that are easy to miss

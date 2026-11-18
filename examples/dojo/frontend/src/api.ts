@@ -1,4 +1,3 @@
-import type { ThemeSettings } from "./shell/theme";
 import { who } from "./who";
 
 export interface Me {
@@ -26,6 +25,24 @@ export const CLASSES_READ = "classes.read";
 export const CLASSES_MANAGE = "classes.manage";
 export const ATTENDANCE_RECORD = "attendance.record";
 export const ATTENDANCE_READ = "attendance.read";
+
+/** Every permission the server's roles grant (AppRoles.java): what the navigation's items may need. */
+export const PERMISSIONS = [
+  MEMBERS_INVITE,
+  MEMBERS_READ,
+  MEMBERS_PROFILE,
+  MEMBERS_MANAGE,
+  THEME_MANAGE,
+  RANKS_READ,
+  RANKS_MANAGE,
+  STUDENTS_READ,
+  STUDENTS_MANAGE,
+  PROMOTIONS_MANAGE,
+  CLASSES_READ,
+  CLASSES_MANAGE,
+  ATTENDANCE_RECORD,
+  ATTENDANCE_READ,
+] as const;
 
 /** The signed-in member's own profile; `version` goes back with a rename. */
 export interface Profile {
@@ -58,7 +75,4 @@ export interface Activity {
   /** Their display name, "System", or "A former member". */
   actorName: string;
 }
-
-/** The app's theme as `/api/theme` answers it: the settings and the version to save them at. */
-export type SavedTheme = ThemeSettings & { version: number };
 

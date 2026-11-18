@@ -2,7 +2,7 @@ import { ClientOnly, IconButton, Skeleton, type IconButtonProps } from "@chakra-
 import { ThemeProvider, useTheme } from "next-themes";
 import type { ReactNode } from "react";
 import { LuMoon, LuSun } from "react-icons/lu";
-import { cspNonce } from "./csp";
+import { cspNonce } from "@jwcarman/roux-web/theme";
 
 /** Light or dark mode, following the system's until the user picks one (kept in localStorage). */
 export function ColorModeProvider({ children }: { children: ReactNode }) {

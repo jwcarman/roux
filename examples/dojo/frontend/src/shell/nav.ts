@@ -1,124 +1,47 @@
-import type { IconType } from "react-icons";
-import {
-  LuAward,
-  LuCalendar,
-  LuChartBar,
-  LuCheck,
-  LuClipboard,
-  LuFolder,
-  LuGraduationCap,
-  LuHouse,
-  LuInbox,
-  LuList,
-  LuPalette,
-  LuSettings,
-  LuStar,
-  LuUsers,
-} from "react-icons/lu";
-import type { Me } from "../api";
-import navJson from "./nav.json";
-import type { FileRoutesByTo } from "../routeTree.gen";
-
-/** A page in the sidebar. */
-export interface NavItem {
-  label: string;
-  to: keyof FileRoutesByTo;
-  icon: IconType;
-  /** The permission the page needs; the item is hidden from callers without it. */
-  permission?: string;
-  /** What the page is for, in one sentence an owner would understand. */
-  description: string;
-  /** Whether the app opens on this page; exactly one place has it. */
-  start: boolean;
-}
-
-/** The icons a place in `nav.json` may name. A new icon is one more entry here. */
-export const ICONS: Readonly<Record<string, IconType>> = {
-  house: LuHouse,
-  users: LuUsers,
-  palette: LuPalette,
-  settings: LuSettings,
-  inbox: LuInbox,
-  folder: LuFolder,
-  list: LuList,
-  calendar: LuCalendar,
-  check: LuCheck,
-  star: LuStar,
-  clipboard: LuClipboard,
-  chart: LuChartBar,
-  award: LuAward,
-  "graduation-cap": LuGraduationCap,
-};
-
-/** One place as `nav.json` writes it. */
-interface NavEntry {
-  label: string;
-  to: string;
-  icon: string;
-  permission?: string;
-  description: string;
-  start?: boolean;
-}
-
-/** The sidebar, in order, from `nav.json`. A new feature's page is one more entry there. */
-export const NAV_ITEMS: readonly NavItem[] = (navJson as NavEntry[]).map((entry) => ({
-  label: entry.label,
-  // nav.test.ts checks that every place links to a page that exists.
-  to: entry.to as keyof FileRoutesByTo,
-  icon: ICONS[entry.icon],
-  permission: entry.permission,
-  description: entry.description,
-  start: entry.start === true,
-}));
-
-/** The items `me` may open: none when signed out. */
-export function navItemsFor(me: Me | null | undefined, items: readonly NavItem[] = NAV_ITEMS): NavItem[] {
-  if (!me) {
-    return [];
-  }
-  return items.filter((item) => item.permission === undefined || me.permissions.includes(item.permission));
-}
+import { LuAward, LuCalendar, LuGraduationCap, LuHouse, LuPalette, LuSettings, LuUsers } from "react-icons/lu";
+import { defineNav } from "@jwcarman/roux-web/navigation";
+import { PERMISSIONS } from "../api";
 
 /**
- * Where `/` sends `me`: the start place, when it is not `/` and `me` may open it; otherwise null,
- * and `/` shows Home. A start place `me` may not open never redirects, so guards that send people
- * to `/` cannot loop.
+ * The sidebar, in order. A new feature's page is one more entry: `to` must be a route that exists,
+ * `permission` one of the server's (api.ts), and `icon` a Lucide component, or this does not compile.
  */
-export function startPathFor(
-  me: Me | null | undefined,
-  items: readonly NavItem[] = NAV_ITEMS,
-): keyof FileRoutesByTo | null {
-  const start = navItemsFor(me, items).find((item) => item.start);
-  return start && start.to !== "/" ? start.to : null;
-}
-
-/**
- * Where opening `/` sends `me`: the start place, unless `home` says a guard sent them to Home (so a
- * start place that refuses them cannot loop); null shows Home.
- */
-export function openingRedirect(
-  me: Me | null | undefined,
-  home: boolean,
-  items: readonly NavItem[] = NAV_ITEMS,
-): keyof FileRoutesByTo | null {
-  return home ? null : startPathFor(me, items);
-}
-
-/** A place as `nav.json` writes it, for {@link placeProblems}. */
-export interface PlaceEntry {
-  label: string;
-  to: string;
-  start?: boolean;
-}
-
-/** What is wrong with the places in `nav.json` beyond their shape; empty when nothing is. */
-export function placeProblems(entries: readonly PlaceEntry[]): string[] {
-  const start = entries.find((entry) => entry.start === true);
-  const home = entries.find((entry) => entry.to === "/");
-  if (start && home && start.to !== "/") {
-    return [
-      `${home.label} (/) is in the sidebar, but the app opens on ${start.label} (${start.to}): remove ${home.label} from nav.json`,
-    ];
-  }
-  return [];
-}
+export const nav = defineNav(PERMISSIONS, [
+  { label: "Home", to: "/", icon: LuHouse, description: "A welcome page.", start: true },
+  {
+    label: "Members",
+    to: "/members",
+    icon: LuUsers,
+    permission: "members.read",
+    description: "Who can use the app and what they may do.",
+  },
+  {
+    label: "Ranks",
+    to: "/ranks",
+    icon: LuAward,
+    permission: "ranks.read",
+    description: "The school's belt ladder, lowest first.",
+  },
+  {
+    label: "Students",
+    to: "/students",
+    icon: LuGraduationCap,
+    permission: "students.read",
+    description: "Who trains at the school and the rank each holds.",
+  },
+  {
+    label: "Timetable",
+    to: "/timetable",
+    icon: LuCalendar,
+    permission: "classes.read",
+    description: "The week's classes: when each runs and who teaches it.",
+  },
+  {
+    label: "Appearance",
+    to: "/appearance",
+    icon: LuPalette,
+    permission: "theme.manage",
+    description: "The app's colours, corners and font.",
+  },
+  { label: "Settings", to: "/settings", icon: LuSettings, description: "Your own account settings." },
+]);

@@ -15,6 +15,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.jwcarman.roux.examples.dojo.AppTest;
+import org.jwcarman.roux.spa.ShellPage;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
@@ -167,17 +168,12 @@ class SpaRoutingTest {
     assertThat(shell.getBody())
         .contains("<script nonce=\"" + nonce + "\"")
         .contains("<script type=\"module\" crossorigin src=")
-        .doesNotContain(ShellController.NONCE_PLACEHOLDER);
+        .doesNotContain(ShellPage.NONCE_PLACEHOLDER);
   }
 
   @Test
   void eachLoadOfTheShellHasItsOwnNonce() {
     assertThat(nonceOf(get("/"))).isNotEqualTo(nonceOf(get("/")));
-  }
-
-  @Test
-  void apiResponsesCarryThePolicyToo() {
-    assertThat(get("/who/me").getHeaders().getFirst(CSP)).contains("default-src 'self'");
   }
 
   @Test

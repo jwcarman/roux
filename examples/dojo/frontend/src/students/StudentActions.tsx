@@ -1,7 +1,6 @@
 import { Button, HStack } from "@chakra-ui/react";
 import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, useConfirm } from "@jwcarman/roux-web/feedback";
-import { DANGER_PALETTE } from "../shell/theme";
 import { StudentDialog } from "./StudentDialog";
 import { changeStudentStatus, type Student, type StudentDetail, type StudentStatusAction } from "./students";
 
@@ -47,7 +46,7 @@ export function StudentActions({ student }: { student: Student }) {
         <Button
           size="sm"
           variant="outline"
-          colorPalette={DANGER_PALETTE}
+          colorPalette="red"
           loading={pending}
           aria-label={`Deactivate ${name}`}
           onClick={onDeactivate}

@@ -1,7 +1,6 @@
 import { Button, HStack } from "@chakra-ui/react";
 import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, removal, useConfirm } from "@jwcarman/roux-web/feedback";
-import { DANGER_PALETTE } from "../shell/theme";
 import { ClassFormDialog } from "./ClassFormDialog";
 import { removeClass, type SchoolClass } from "./classes";
 
@@ -32,7 +31,7 @@ export function ClassActions({ schoolClass }: { schoolClass: SchoolClass }) {
       <Button
         size="xs"
         variant="outline"
-        colorPalette={DANGER_PALETTE}
+        colorPalette="red"
         loading={remove.pending}
         aria-label={`Remove ${schoolClass.name}`}
         onClick={onRemove}

@@ -25,23 +25,22 @@ It builds in roux's reactor (`./mvnw verify` from the repository's root) and is 
   `/assets/` are sent with `Cache-Control: public, max-age=31536000, immutable`, and the page itself
   with `no-store`, so a CDN in front of the app can hold the assets and a deploy still shows on the
   next page load. API responses stay `no-store`.
-- A strict **Content-Security-Policy** on every response (`ContentSecurityPolicy`): scripts and
+- A strict **Content-Security-Policy** on the shell, which roux serves (nothing in the app): scripts and
   styles must be the app's own files or carry the response's nonce, so a script injected into the
-  page never runs; no plugins, `<base>` or framing. `index.html` is rendered per request
-  (`ShellController`): Vite writes the placeholder `__CSP_NONCE__` on every tag it emits
-  (`html.cspNonce`), and the server swaps in a fresh 128-bit nonce matching that response's header;
-  that is why the page is never stored. Code that adds a `<style>` or `<script>` at runtime takes
-  the nonce from `cspNonce()` (Chakra's Emotion cache and next-themes do). A small inline script in
-  `index.html` sets light or dark mode before the first paint. The look is the owner's to choose,
-  on the **Appearance** page (permission `theme.manage`, given to `OWNER`): a ready-made look, or
-  the color (one of Chakra's palettes, or their own color, from which `brandPalette` builds a
-  readable `brand` palette), the corners, the lettering and the app's name. It is stored in
-  `app_theme` (`/api/theme`), and the server writes it into every page (`#app-theme` and the
-  title), so the app builds its Chakra system from it (`systemFor` in `frontend/src/shell/theme.ts`)
-  before the first paint. Until the owner saves one, the app has its default look (`gray`).
-  Components use `colorPalette.*` and semantic tokens, never a named palette (a test enforces it),
-  so every one follows the owner's choice. A header button switches light and dark mode, which
-  follows the system's until the user picks one.
+  page never runs; no plugins or framing. roux renders `index.html` per request: Vite writes the
+  placeholder `__CSP_NONCE__` on every tag it emits (`html.cspNonce`), and roux swaps in a fresh
+  128-bit nonce matching that response's header; that is why the page is never stored. Code that adds
+  a `<style>` or `<script>` at runtime takes the nonce from `cspNonce()` (`ThemeProvider` sets up
+  Emotion's cache with it; next-themes gets it in `colorMode.tsx`). A small inline script in
+  `index.html` sets light or dark mode before the first paint. The look is the owner's to choose, on
+  the **Appearance** page (permission `theme.manage`, given to `OWNER`), which is roux's
+  `<AppearanceSettings />` inside this app's route: a ready-made look, or the color, the corners, the
+  lettering and the app's name. roux-theme keeps it in its own table, `roux_theme` (`/api/theme`), and
+  roux writes it into every page (`#app-theme` and the title), so `ThemeProvider` builds the Chakra
+  system from it before the first paint. Until the owner saves one, the app is `gray` and named by
+  `roux.theme.app-name` (application.yml). Components use `colorPalette.*` and semantic tokens, never
+  a named palette (a test enforces it), so every one follows the owner's choice. A header button
+  switches light and dark mode, which follows the system's until the user picks one.
 - A **Playwright** suite that drives all of it in Chromium, with Chrome's virtual authenticator for
   passkeys and Mailpit for email.
 
@@ -54,7 +53,7 @@ are the worked example. Copy their shape:
   `org.jwcarman.roux.examples.dojo.<feature>` and the frontend folder `frontend/src/<feature>/`
   hold the feature's code and its tests: `members/` (the directory, member pages and dialogs,
   `members.ts` for its calls, passkeys), `activity/` (the history list), and `shell/` for the app's
-  frame (layout, sidebar, session, guards, theme and colour mode, sign-in, Appearance and Settings).
+  frame (layout, nav, session, guards, colour mode, the sign-in and Appearance pages, Settings).
   `frontend/src/routes/` keeps TanStack's route files, each a thin file that opens its feature's
   page; `main.tsx`, `api.ts`, `queryKeys.ts` and `testing/` are shared.
 
@@ -79,8 +78,9 @@ are the worked example. Copy their shape:
   `id` last, so rows that sort equal keep their place from page to page.
 - **Navigation is a left sidebar** (`frontend/src/shell/Layout.tsx`): full from `lg`, an icon rail
   at `md`, a drawer behind a menu button on a phone. Its items come from one list,
-  `frontend/src/shell/nav.json`: a label, a route, an icon and the permission the page needs (an item is
-  hidden from callers without it). A new feature's page is one more entry there.
+  `frontend/src/shell/nav.ts` (`defineNav`): a label, a route, an icon component and the permission the
+  page needs (an item is hidden from callers without it). `to` is checked against the routes,
+  `permission` against `PERMISSIONS` in `api.ts`. A new feature's page is one more entry there.
 - **Routes are TanStack Router files** (`frontend/src/routes`, file-based; the Vite plugin
   generates `routeTree.gen.ts`, which is committed as TanStack recommends). A route's `beforeLoad`
   guards it with `shell/guards.ts` (`requireSignedIn`, `requirePermission`); pages under

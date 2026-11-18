@@ -2,7 +2,6 @@ import { Button, HStack, IconButton } from "@chakra-ui/react";
 import { LuArrowDown, LuArrowUp } from "react-icons/lu";
 import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, removal, useConfirm } from "@jwcarman/roux-web/feedback";
-import { DANGER_PALETTE } from "../shell/theme";
 import { RankFormDialog } from "./RankFormDialog";
 import { moveRankDown, moveRankUp, removeRank, type Rank } from "./ranks";
 
@@ -52,7 +51,7 @@ export function RankActions({ rank, first, last }: { rank: Rank; first: boolean;
           </Button>
         }
       />
-      <Button size="sm" variant="outline" colorPalette={DANGER_PALETTE} loading={remove.pending} onClick={onRemove}>
+      <Button size="sm" variant="outline" colorPalette="red" loading={remove.pending} onClick={onRemove}>
         Remove
       </Button>
     </HStack>

@@ -1,6 +1,6 @@
 import { redirect } from "@tanstack/react-router";
 import type { Me } from "../api";
-import { rememberReturn } from "./returnTo";
+import { rememberSignInReturn } from "@jwcarman/roux-web/signin";
 
 /**
  * Route guards, for `beforeLoad`. Each throws a redirect when the caller may not see the route;
@@ -15,7 +15,7 @@ import { rememberReturn } from "./returnTo";
 export function requireSignedIn(me: Me | null | undefined, returnTo?: string): Me {
   if (!me) {
     if (returnTo !== undefined) {
-      rememberReturn(returnTo);
+      rememberSignInReturn(returnTo);
     }
     throw redirect({ to: "/signin" });
   }

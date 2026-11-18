@@ -353,7 +353,10 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   reproduced in Vitest with the browser's own history (`renderRoute(..., { browserHistory: true })`).
 - roux could: say how in the getting-started guide's sign-in section, or ship `rememberReturn` /
   `takeReturn` with the session provider (who owns the sign-in pages, so possibly who's).
-- Outcome: deferred (the user decides whether it is roux's or who's).
+- Outcome: fixed in the shell round (`@jwcarman/roux-web/signin`: `rememberSignInReturn`, `useSignInReturn`
+  and the sign-in components that call it; the dojo's `returnTo.ts`, `LinkLanding.tsx` and hand-written
+  who calls are gone). Sign-in now ends in a full page load, so the app starts as the person who signed
+  in, which also removes the `history.replaceState` bug the landing page had.
 
 ## The app's CLAUDE.md taught `invalidateQueries`
 - Where: `examples/dojo/CLAUDE.md` ("Rules that are easy to miss")
@@ -403,3 +406,22 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   copy of who's construction, which dropped every other contributor's paths.
 - roux could: contribute a path instead of replacing the bean.
 - Outcome: fixed by who 0.21.0 (`WhoPublicPathContributor`) and this commit.
+
+## The shell, its policy and the theme were the app's to write
+- Where: `web/ShellController.java`, `web/ContentSecurityPolicy.java`, `theme/`, `shell/theme*.ts`, `shell/Appearance.tsx`
+- What was clunky: every roux app hand-wrote the controller that serves `index.html` with a nonce, the
+  CSP header and no-store, the theme and the name written into the page, the table, endpoint and
+  322-line page for the owner's theme. Easy to get subtly wrong (nonce, CSP), and nothing said when it was.
+- roux could: serve the shell itself, and own the theme.
+- Outcome: fixed in the shell round (roux-spa serves the shell with a strict CSP extended only by
+  `roux.spa.csp.*`; roux-theme owns `roux_theme`; `ThemeProvider` and `AppearanceSettings` in roux-web;
+  the dojo's migration `theme-moved.xml` carries its `app_theme` row over and drops the table).
+
+## The sidebar's icons and permissions were strings
+- Where: `shell/nav.json`, `shell/nav.ts`
+- What was clunky: an icon was a name looked up in a hand-kept map, a permission a string that fails
+  quietly when it stops matching `AppRoles`, a route a string the test had to check.
+- roux could: type them.
+- Outcome: fixed in the shell round (`defineNav` in `@jwcarman/roux-web/navigation`: route-checked `to`,
+  icon components, permissions checked against the app's list at compile time and when the module loads;
+  `AppShell` is the sidebar, rail and drawer).

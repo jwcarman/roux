@@ -5,7 +5,6 @@ import { notify, useConfirm } from "@jwcarman/roux-web/feedback";
 import type { MemberDetail } from "../api";
 import { ActivityList } from "../activity/ActivityList";
 import { activitiesPage, changeMemberStatus, ROLE_LABELS, type MemberStatusAction } from "./members";
-import { DANGER_PALETTE } from "../shell/theme";
 
 export interface MemberDetailViewProps {
   member: MemberDetail;
@@ -48,7 +47,7 @@ export function MemberDetailView({ member, canManage, isSelf }: MemberDetailView
       <Flex justify="space-between" align="center" gap="3" wrap="wrap">
         <Heading as="h2">{member.displayName}</Heading>
         {canManage && !isSelf && active && (
-          <Button variant="outline" colorPalette={DANGER_PALETTE} loading={busy} onClick={onDeactivate}>
+          <Button variant="outline" colorPalette="red" loading={busy} onClick={onDeactivate}>
             <LuUserX aria-hidden />
             Deactivate
           </Button>
@@ -76,7 +75,7 @@ export function MemberDetailView({ member, canManage, isSelf }: MemberDetailView
         <DataList.Item>
           <DataList.ItemLabel>Status</DataList.ItemLabel>
           <DataList.ItemValue>
-            <Badge colorPalette={active ? undefined : DANGER_PALETTE}>{active ? "Active" : "Deactivated"}</Badge>
+            <Badge colorPalette={active ? undefined : "red"}>{active ? "Active" : "Deactivated"}</Badge>
           </DataList.ItemValue>
         </DataList.Item>
         <DataList.Item>

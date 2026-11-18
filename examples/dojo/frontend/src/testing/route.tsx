@@ -6,8 +6,7 @@ import { ColorModeProvider } from "../shell/colorMode";
 import { ConfirmProvider, Toaster } from "@jwcarman/roux-web/feedback";
 import { routeTree } from "../routeTree.gen";
 import { SessionProvider, useSession } from "../shell/session";
-import { DEFAULT_THEME } from "../shell/theme";
-import { ThemeProvider } from "../shell/themeContext";
+import { ThemeProvider } from "@jwcarman/roux-web/theme";
 import { testQueryClient } from "./render";
 import { server } from "./server";
 
@@ -46,7 +45,7 @@ export function renderRoute(
 
   render(
     <QueryClientProvider client={client}>
-      <ThemeProvider initial={DEFAULT_THEME}>
+      <ThemeProvider>
         <ColorModeProvider>
           <ConfirmProvider>
             <SessionProvider>

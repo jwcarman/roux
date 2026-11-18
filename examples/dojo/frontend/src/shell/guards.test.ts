@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { Me } from "../api";
 import { MEMBERS_READ } from "../api";
 import { requirePermission, requireSignedIn, requireSignedOut } from "./guards";
-import { takeReturn } from "./returnTo";
+import { takeSignInReturn as takeReturn } from "@jwcarman/roux-web/signin";
 
 const member: Me = { identityId: "ada", permissions: [MEMBERS_READ] };
 const outsider: Me = { identityId: "eve", permissions: [] };

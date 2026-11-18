@@ -1,10 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { inboxSnapshot, nextSignInCode, ownerEmail } from "./helpers";
 
-/**
- * Posts a typed code to who's sign-in endpoint from the page, as a form for the code would, with
- * the CSRF header the SPA sends. The app has no code form yet; this proves who's side of it.
- */
+/** Posts a code to who's sign-in endpoint from the page, with the CSRF header the SPA sends. */
 async function postCode(page: Page, email: string, code: string): Promise<number> {
   return page.evaluate(
     async ({ email, code }) => {
@@ -38,14 +35,16 @@ test("the owner signs in with the code from the email instead of the link", asyn
     code = await nextSignInCode(request, ownerEmail, seen);
   }
 
-  // A wrong code is refused and costs one attempt; the right one still works afterwards.
+  // A wrong code is refused, under the field, and costs one attempt; the right one still works afterwards.
   const wrong = code.startsWith("0") ? "1" + code.slice(1) : "0" + code.slice(1);
-  expect(await postCode(page, ownerEmail, wrong)).toBe(401);
+  const field = page.getByLabel("Code from the email");
+  await field.fill(wrong);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByText("That code did not work. Check it, or ask for a new email.")).toBeVisible();
 
   // Typed the way a person might: lower case, the dash kept.
-  expect(await postCode(page, ownerEmail, code.toLowerCase())).toBe(200);
-
-  await page.goto("/");
+  await field.fill(code.toLowerCase());
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Home", level: 2 })).toBeVisible();
 
   // The code worked once; the same code again is refused.

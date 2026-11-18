@@ -2,79 +2,47 @@ package org.jwcarman.roux.examples.dojo.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.AppTest;
 import org.jwcarman.roux.examples.dojo.TestMembers;
-import org.jwcarman.roux.examples.dojo.theme.AppTheme.Settings;
-import org.jwcarman.roux.examples.dojo.theme.ThemeService;
+import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
-import org.springframework.web.util.HtmlUtils;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import tools.jackson.databind.json.JsonMapper;
-
+/**
+ * The shell carries the owner's theme, through roux-theme's table: what the owner saves is what the
+ * next visitor's page holds. (roux's own tests cover the shell and the theme API; this is the
+ * dojo's wiring of them: its roles, its changelog and its application.yml.)
+ */
 @AppTest
 class ShellThemeTest {
 
   @Autowired TestMembers members;
-  @Autowired ThemeService themes;
-  @Autowired JsonMapper json;
-
-  /** The name written into app-name.properties when the app was created. */
-  @Value("${app.name}")
-  String appName;
+  @Autowired JdbcTemplate jdbc;
 
   @BeforeEach
   void cleanSlate() {
-    members.reset("app_theme");
+    members.reset();
+    jdbc.update(
+        "update roux_theme set version = 0, app_name = null, palette = null, brand_color = null,"
+            + " shape = null, heading_font = null, body_font = null");
   }
 
-  @Test
-  void thePageCarriesTheDefaultsBeforeAnythingIsSaved() throws Exception {
-    String page = signedOutPage();
-
-    assertThat(page).contains("<title>" + HtmlUtils.htmlEscape(appName) + "</title>");
-    assertThat(page)
-        .contains("id=\"app-theme\"")
-        .contains(
-            ">{\"palette\":\"gray\",\"brandColor\":\"#3b82f6\",\"shape\":\"medium\","
-                + "\"headingFont\":\"standard\",\"bodyFont\":\"standard\",\"appName\":"
-                + json.writeValueAsString(appName).replace("<", "\\u003c")
-                + "}"
-                + "</script>");
-  }
-
-  @Test
-  void thePageCarriesTheSavedTheme() throws Exception {
-    themes.update(new Settings("teal", "#ff8800", "round", "friendly", "modern", "Dojo"), 0);
-
-    String page = signedOutPage();
-
-    assertThat(page).contains("<title>Dojo</title>");
-    assertThat(page).contains("\"palette\":\"teal\"").contains("\"appName\":\"Dojo\"");
-  }
-
-  @Test
-  void theAppNameCannotBreakOutOfThePage() throws Exception {
-    themes.update(
-        new Settings(
-            "gray",
-            "#3b82f6",
-            "medium",
-            "standard",
-            "standard",
-            "</title><script>alert(1)</script>"),
-        0);
-
-    String page = signedOutPage();
-
-    assertThat(page)
-        .contains("<title>&lt;/title&gt;&lt;script&gt;alert(1)&lt;/script&gt;</title>")
-        .contains("\\u003c/title>\\u003cscript>alert(1)\\u003c/script>")
-        .doesNotContain("<script>alert");
+  private static MockHttpServletRequestBuilder save(String name) {
+    return put("/api/theme")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(
+            "{\"appName\":\""
+                + name
+                + "\",\"palette\":\"teal\",\"brandColor\":\"#FF8800\",\"shape\":\"round\","
+                + "\"headingFont\":\"friendly\",\"bodyFont\":\"modern\",\"version\":0}");
   }
 
   private String signedOutPage() throws Exception {
@@ -84,5 +52,39 @@ class ShellThemeTest {
         .andReturn()
         .getResponse()
         .getContentAsString();
+  }
+
+  @Test
+  void thePageCarriesTheDojosNameAndTheStockLookBeforeAnythingIsSaved() throws Exception {
+    assertThat(signedOutPage())
+        .contains("<title>Dojo</title>")
+        .contains(
+            ">{\"appName\":\"Dojo\",\"palette\":\"gray\",\"brandColor\":\"#3b82f6\","
+                + "\"shape\":\"medium\",\"headingFont\":\"standard\",\"bodyFont\":\"standard\"}"
+                + "</script>");
+  }
+
+  @Test
+  void whatTheOwnerSavesIsWhatTheNextVisitorGets() throws Exception {
+    members.owner().perform(save("Kicks")).andExpect(status().isOk());
+
+    assertThat(signedOutPage())
+        .contains("<title>Kicks</title>")
+        .contains("\"palette\":\"teal\"")
+        .contains("\"brandColor\":\"#ff8800\"");
+  }
+
+  @Test
+  void theOwnerMaySeeItAndAMemberMayNotChangeIt() throws Exception {
+    members.anonymous().perform(get("/api/theme")).andExpect(status().isOk());
+    members
+        .signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER)
+        .perform(save("Mine"))
+        .andExpect(status().isForbidden());
+    members
+        .owner()
+        .perform(get("/api/theme"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.version").value(0));
   }
 }
