@@ -1,0 +1,16 @@
+[
+  "members.invite",
+  "members.read",
+  "members.profile",
+  "members.manage",
+  "theme.manage",
+  "ranks.read",
+  "ranks.manage",
+  "students.read",
+  "students.manage",
+  "promotions.manage",
+  "classes.read",
+  "classes.manage",
+  "attendance.record",
+  "attendance.read"
+]

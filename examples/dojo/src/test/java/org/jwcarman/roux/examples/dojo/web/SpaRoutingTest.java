@@ -62,6 +62,13 @@ class SpaRoutingTest {
   }
 
   @Test
+  void theShellAndTheApiAreNotMimeSniffed() {
+    assertThat(get("/signin").getHeaders().getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
+    assertThat(get("/api/theme").getHeaders().getFirst("X-Content-Type-Options"))
+        .isEqualTo("nosniff");
+  }
+
+  @Test
   void apiAndWhoEndpointsAreNotShadowed() {
     assertThat(get("/who/me").getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     assertThat(get("/api/members/me").getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);

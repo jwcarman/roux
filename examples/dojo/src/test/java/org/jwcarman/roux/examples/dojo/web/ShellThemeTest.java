@@ -75,6 +75,19 @@ class ShellThemeTest {
   }
 
   @Test
+  void aSignedOutVisitorCannotChangeItAndTheStoredThemeStaysAsItWas() throws Exception {
+    int status =
+        members.anonymous().perform(save("Hijacked")).andReturn().getResponse().getStatus();
+
+    assertThat(status).isIn(401, 403);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from roux_theme where app_name is not null", Integer.class))
+        .isZero();
+    assertThat(jdbc.queryForObject("select version from roux_theme", Integer.class)).isZero();
+  }
+
+  @Test
   void theOwnerMaySeeItAndAMemberMayNotChangeIt() throws Exception {
     members.anonymous().perform(get("/api/theme")).andExpect(status().isOk());
     members

@@ -424,4 +424,16 @@ What building the dojo showed about roux: one entry per finding, in the order fo
 - roux could: type them.
 - Outcome: fixed in the shell round (`defineNav` in `@jwcarman/roux-web/navigation`: route-checked `to`,
   icon components, permissions checked against the app's list at compile time and when the module loads;
-  `AppShell` is the sidebar, rail and drawer).
+  `AppShell` is the sidebar, rail and drawer). What is enforced: `to` and `icon` by the compiler, a
+  permission against `PERMISSIONS` (api.ts) by the compiler, and `PERMISSIONS` against the server by
+  two tests that meet at the committed `frontend/src/permissions.json`: `PermissionsFileTest` (Java)
+  fails when the file differs from the permissions `AppRoles` defines, `permissions.test.ts` fails when
+  api.ts differs from the file. The list is still hand-kept in three places, but drift now fails the build.
+
+## Every app keeps a copy of its permission list
+- Where: `frontend/src/api.ts` (`PERMISSIONS`), `frontend/src/permissions.json`, `identity/AppRoles.java`
+- What was clunky: the nav must know every permission the server defines; the only way to give it
+  that was to copy the list and write tests that the copy has not drifted.
+- roux could: generate the list, from an endpoint (the permissions of the app's roles) or a build step
+  that writes the file, so no app keeps a copy and `defineNav`'s type comes from the server's own.
+- Outcome: open.

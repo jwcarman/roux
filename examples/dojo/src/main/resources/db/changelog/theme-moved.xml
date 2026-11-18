@@ -9,6 +9,10 @@
        The dojo's row, if the owner had saved one, is carried over; the version goes up by one, so
        the version the API reports (one more than the row's) is the same as before. -->
   <changeSet id="theme-moved-to-roux" author="dojo">
+    <!-- A fresh database never had app_theme: there is nothing to carry over or drop. -->
+    <preConditions onFail="MARK_RAN">
+      <tableExists tableName="app_theme"/>
+    </preConditions>
     <sql>
       UPDATE roux_theme t
          SET app_name = a.app_name,
