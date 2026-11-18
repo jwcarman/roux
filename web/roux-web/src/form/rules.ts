@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValid, parseISO } from "date-fns";
 import { formatIsoDate, parseIsoDate, parseIsoTime } from "../dates/dates";
 
 /*
@@ -336,4 +337,51 @@ export function oneOf<const V extends readonly [string, ...string[]]>(values: V)
  */
 export function id() {
   return z.string({ error: NOT_EMPTY }).min(1).register(fieldRules, { required: true });
+}
+
+// --- across fields ----------------------------------------------------------------------------------
+
+/** A field's value as something comparable: a number, a time (`09:00`), a date or a date-time; `undefined` for anything else (empty, `null`). */
+function orderOf(value: unknown): number | undefined {
+  if (typeof value === "number") {
+    return value;
+  }
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const parsed = parseIsoTime(value) ?? parseISO(value);
+  return isValid(parsed) ? parsed.getTime() : undefined;
+}
+
+/** What the other field is called in the message: its name as words (`startsAt` is `starts at`). */
+function wordsOf(name: string): string {
+  return name.replace(/(?<=[a-z0-9])(?=[A-Z])/g, " ").toLowerCase();
+}
+
+/** Which two fields of a form {@link after} compares. */
+export interface AfterRule<Shape> {
+  /** The later field: the message is shown under it. */
+  field: Extract<keyof Shape, string>;
+  /** The earlier field. */
+  other: Extract<keyof Shape, string>;
+  /** What the earlier field is called in the message, such as `the start time`; its name as words by default. Give the server's `@After(otherLabel = ...)` the same. */
+  otherLabel?: string;
+}
+
+/**
+ * `field` must be after `other`: `Must be after {other}`, shown under `field`. The server's
+ * `@After` (roux-validation) says the same words. Works for times, dates, date-times and numbers;
+ * equal is not after. A field that is empty or not yet valid is left to its own rule. Call it last
+ * (it returns Zod's own schema): `after(z.object({ startsAt: time(), endsAt: time() }), { field: "endsAt", other: "startsAt" })`.
+ */
+export function after<S extends z.ZodObject>(schema: S, rule: AfterRule<z.output<S>>): S {
+  const label = rule.otherLabel ?? wordsOf(rule.other);
+  return schema.refine(
+    (value) => {
+      const later = orderOf((value as Record<string, unknown>)[rule.field]);
+      const earlier = orderOf((value as Record<string, unknown>)[rule.other]);
+      return later === undefined || earlier === undefined || later > earlier;
+    },
+    { path: [rule.field], error: `Must be after ${label}` },
+  );
 }

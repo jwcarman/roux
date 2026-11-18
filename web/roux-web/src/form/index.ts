@@ -4,6 +4,7 @@ export { fieldContext, formContext, useFieldContext, useFormContext } from "./fo
 export { FormDialog, type DialogForm, type FormDialogProps } from "./FormDialog";
 export { useSchemaForm, type SchemaForm, type SchemaFormOptions } from "./schemaForm";
 export {
+  after,
   date,
   email,
   fieldRules,
@@ -15,6 +16,7 @@ export {
   text,
   time,
   url,
+  type AfterRule,
   type DateRule,
   type FieldRule,
   type NumberRule,

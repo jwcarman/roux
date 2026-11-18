@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { z } from "zod";
 import { validationMessage } from "../testing/validationMessages";
 import { contract } from "../testing/contracts";
-import { date, email, id, number, oneOf, PHONE_PATTERN, phone, text, time, url } from "./rules";
+import { z } from "zod";
+import { after, date, email, id, number, oneOf, PHONE_PATTERN, phone, text, time, url } from "./rules";
 
 /** The single message a failed parse reports. */
 function messageOf(result: { success: boolean; error?: z.ZodError }): string | undefined {
@@ -25,6 +25,16 @@ describe("rules say what the server says", () => {
     ["a malformed phone number", () => phone().safeParse("call me"), "Phone", {}],
     ["a date in the future", () => date().notInFuture().safeParse("2999-01-01"), "NotInFuture", {}],
     ["an unset time", () => time().safeParse(""), "NotNull", {}],
+    [
+      "a time not after another",
+      () =>
+        after(z.object({ startsAt: time(), endsAt: time() }), { field: "endsAt", other: "startsAt" }).safeParse({
+          startsAt: "10:00",
+          endsAt: "09:00",
+        }),
+      "After",
+      { other: "starts at" },
+    ],
     ["a malformed web address", () => url().safeParse("example"), "URL", {}],
   ] as const)("%s", (_, parse, constraint, args) => {
     expect(messageOf(parse())).toBe(validationMessage(constraint, args));
@@ -75,5 +85,42 @@ describe("time() is how the server reads a LocalTime", () => {
 
   it.each(fixture.invalid)("refuses %j with the server's message", (value) => {
     expect(messageOf(time().safeParse(value))).toBe(fixture.message);
+  });
+});
+
+// @After on the server and after() here are one rule (contracts/after.json; RuleContractTest is the Java side).
+describe("after() is the server's @After", () => {
+  interface Case {
+    field: string;
+    other: string;
+    otherLabel?: string;
+    message: string;
+    valid: [string, string][];
+    invalid: [string, string][];
+  }
+  const fixture = contract<{ time: Case; date: Case }>("after.json");
+
+  function schemaOf(example: Case, rule: typeof time | typeof date) {
+    return after(z.object({ [example.other]: rule(), [example.field]: rule() }), {
+      field: example.field,
+      other: example.other,
+      otherLabel: example.otherLabel,
+    });
+  }
+
+  it.each([
+    ["times", fixture.time, time],
+    ["dates", fixture.date, date],
+  ] as const)("%s: the server's examples, and its message", (_, example, rule) => {
+    const schema = schemaOf(example, rule);
+    for (const [start, end] of example.valid) {
+      expect(schema.safeParse({ [example.other]: start, [example.field]: end }).success).toBe(true);
+    }
+    for (const [start, end] of example.invalid) {
+      const result = schema.safeParse({ [example.other]: start, [example.field]: end });
+      expect(result.error?.issues).toHaveLength(1);
+      expect(result.error?.issues[0]?.path).toEqual([example.field]);
+      expect(result.error?.issues[0]?.message).toBe(example.message);
+    }
   });
 });

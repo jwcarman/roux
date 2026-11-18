@@ -104,7 +104,7 @@ Their methods:
   `@NotInFuture` reads the application's `Clock` bean (the system clock when there is none) and
   allows one day past the server's today, so what `notInFuture()` accepts is never refused. Neither
   needs wiring: annotate the request's field (`@NotNull @NotInFuture LocalDate birthDate`; `null` is
-  left to `@NotNull`). A test that sets the `Clock` bean sets the rule's today. (`NotInFutureValidator` and `PhoneValidator`
+  left to `@NotNull`). A test that sets the `Clock` bean sets the rule's today. (`AfterValidator`, `NotInFutureValidator` and `PhoneValidator`
   are the constraints' validators; you never reference them.)
 - **A phone number** is `phone()` and `@Phone` (`@NotBlank @Phone String phone`): one pattern,
   `Phone.PATTERN`, with `contracts/phone.json` and a contract test on each side keeping them
@@ -116,7 +116,7 @@ Their methods:
 - `oneOf` takes a `const` tuple (`["WHITE", "YELLOW"] as const`). Its input also accepts `""`, so a
   create's `defaultValues` can start a select at its placeholder.
 - The types, for annotating your own helpers: `TextRule<Out>` (`text`, `email`, `url`, `phone`),
-  `DateRule<Out>`, `TimeRule<Out>`, `NumberRule<Out>`; `Out` is the output, `string | null` or `number | null` once
+  `DateRule<Out>`, `TimeRule<Out>`, `NumberRule<Out>`; `AfterRule<Shape>` is `after()`'s second argument; `Out` is the output, `string | null` or `number | null` once
   optional.
 
 Check a rule across fields with `.refine` on the object; `path` puts the message under that field:
@@ -129,6 +129,35 @@ export const termSchema = z
   .object({ startsOn: date(), endsOn: date() })
   .refine((term) => term.endsOn >= term.startsOn, { path: ["endsOn"], error: "Must not be before the start" });
 ```
+
+#### One field after another
+
+"Ends after it starts" is `@After` on the server and `after()` in the browser, with one message,
+`Must be after {other}`, under the later field. Do not write it as a service check or a `.refine`
+with a message of your own:
+
+```java
+@After(field = "endsAt", other = "startsAt")
+public record ClassRequest(@NotNull LocalTime startsAt, @NotNull LocalTime endsAt) { ... }
+```
+
+```ts
+export const classRequestSchema = after(z.object({ startsAt: time(), endsAt: time() }), {
+  field: "endsAt",
+  other: "startsAt",
+});
+```
+
+- `{other}` is the earlier field's name as words (`startsAt` is `starts at`: `Must be after starts at`).
+  To say `Must be after the start time`, give both sides the label: `@After(..., otherLabel = "the start
+  time")` and `after(schema, { ..., otherLabel: "the start time" })`.
+- It works for `LocalTime`, `LocalDate`, `Instant` and numbers (any `Comparable` the two fields share);
+  a date-time input's `YYYY-MM-DDTHH:mm` too in the browser. Equal is not after.
+- A `null` or empty field is left to its own rule (`@NotNull`, `time()`), so the user sees one mistake at
+  a time. A field that does not exist, or two that cannot be compared, throws on the server: it is a bug,
+  not a field error.
+- Call `after()` last: like `.refine`, it returns Zod's own schema. Several rules on one type repeat the
+  annotation. `contracts/after.json` and a contract test on each side keep the messages equal.
 
 ### Dates and times
 

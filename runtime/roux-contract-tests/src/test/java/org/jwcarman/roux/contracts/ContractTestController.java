@@ -15,6 +15,7 @@
  */
 package org.jwcarman.roux.contracts;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,7 @@ import org.jwcarman.jpa.spring.web.PageParams;
 import org.jwcarman.roux.problems.ConflictException;
 import org.jwcarman.roux.problems.InvariantViolationException;
 import org.jwcarman.roux.problems.NotFoundException;
+import org.jwcarman.roux.validation.After;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -42,6 +44,22 @@ class ContractTestController {
   record Row(String id, String name) {}
 
   record NewNote(@NotBlank String title) {}
+
+  @After(field = "endsAt", other = "startsAt")
+  record Shift(LocalTime startsAt, LocalTime endsAt) {}
+
+  @After(field = "end", other = "start", otherLabel = "the first day")
+  record Stay(LocalDate start, LocalDate end) {}
+
+  @PostMapping("/api/contract/after-time")
+  String afterTime(@Valid @RequestBody Shift shift) {
+    return shift.toString();
+  }
+
+  @PostMapping("/api/contract/after-date")
+  String afterDate(@Valid @RequestBody Stay stay) {
+    return stay.toString();
+  }
 
   record Appointment(LocalTime startsAt) {}
 

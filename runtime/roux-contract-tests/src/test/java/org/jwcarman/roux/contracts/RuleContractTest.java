@@ -45,7 +45,33 @@ class RuleContractTest {
 
   private static final JsonNode TIME = Fixtures.read("time.json");
 
+  private static final JsonNode AFTER = Fixtures.read("after.json");
+
   @Autowired MockMvc mvc;
+
+  /** One example of {@code after.json}: the two values, and whether the rule accepts them. */
+  record AfterExample(String kind, String start, String end, boolean valid) {}
+
+  static Stream<AfterExample> afterExamples() {
+    return Stream.of("time", "date")
+        .flatMap(
+            kind ->
+                Stream.concat(
+                    AFTER
+                        .get(kind)
+                        .get("valid")
+                        .valueStream()
+                        .map(pair -> example(kind, pair, true)),
+                    AFTER
+                        .get(kind)
+                        .get("invalid")
+                        .valueStream()
+                        .map(pair -> example(kind, pair, false))));
+  }
+
+  private static AfterExample example(String kind, JsonNode pair, boolean valid) {
+    return new AfterExample(kind, pair.get(0).asString(), pair.get(1).asString(), valid);
+  }
 
   static Stream<String> validTimes() {
     return TIME.get("valid").valueStream().map(JsonNode::asString);
@@ -74,6 +100,32 @@ class RuleContractTest {
     JsonNode error = Fixtures.parse(response.getContentAsString()).get("errors").get(0);
     assertThat(error.get("field").asString()).isEqualTo("startsAt");
     assertThat(error.get("message").asString()).isEqualTo(TIME.get("message").asString());
+  }
+
+  @ParameterizedTest
+  @MethodSource("afterExamples")
+  void theLaterFieldIsAFieldErrorWithTheContractsMessageExactlyWhenTheBrowserSaysSo(
+      AfterExample example) throws Exception {
+    JsonNode rule = AFTER.get(example.kind());
+    String json =
+        "{\"%s\":\"%s\",\"%s\":\"%s\"}"
+            .formatted(
+                rule.get("other").asString(),
+                example.start(),
+                rule.get("field").asString(),
+                example.end());
+
+    MockHttpServletResponse response = send("/api/contract/after-" + example.kind(), json);
+
+    if (example.valid()) {
+      assertThat(response.getStatus()).isEqualTo(200);
+    } else {
+      assertThat(response.getStatus()).isEqualTo(400);
+      JsonNode errors = Fixtures.parse(response.getContentAsString()).get("errors");
+      assertThat(errors.size()).isEqualTo(1);
+      assertThat(errors.get(0).get("field").asString()).isEqualTo(rule.get("field").asString());
+      assertThat(errors.get(0).get("message").asString()).isEqualTo(rule.get("message").asString());
+    }
   }
 
   /** POSTs {@code json} as a signed-in user, with the CSRF token a browser would send. */

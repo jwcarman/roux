@@ -14,6 +14,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- A rule across two fields. roux-validation's class-level `@After(field, other, otherLabel)` (a field error
+  on the later field, `Must be after {other}`; `LocalTime`, `LocalDate`, `Instant`, numbers, any
+  `Comparable`) and roux-web's `after(schema, { field, other, otherLabel })` say the same words, with
+  `contracts/after.json` and a contract test on each side.
 - A time of day. roux-web's `time()` rule (`Must not be empty`, `Is not in the expected format`; `HH:mm`
   or the `HH:mm:ss` Jackson writes) and `timeInputOf` mirror a `@NotNull LocalTime`, with
   `contracts/time.json` and a contract test on each side. A date, time or instant in a JSON body

@@ -1,0 +1,17 @@
+{
+  "time": {
+    "field": "endsAt",
+    "other": "startsAt",
+    "message": "Must be after starts at",
+    "valid": [["09:00", "10:00"], ["09:00", "09:01"], ["09:00:00", "09:00:30"]],
+    "invalid": [["10:00", "09:00"], ["09:00", "09:00"], ["09:00", "09:00:00"]]
+  },
+  "date": {
+    "field": "end",
+    "other": "start",
+    "otherLabel": "the first day",
+    "message": "Must be after the first day",
+    "valid": [["2026-03-01", "2026-03-02"], ["2026-12-31", "2027-01-01"]],
+    "invalid": [["2026-03-02", "2026-03-01"], ["2026-03-01", "2026-03-01"]]
+  }
+}

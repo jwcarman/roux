@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { z } from "zod";
-import { date, email, fieldRules, id, integer, number, oneOf, phone, text, time, url } from "./rules";
+import { after, date, email, fieldRules, id, integer, number, oneOf, phone, text, time, url } from "./rules";
 
 /** The messages a failed parse reports, in order. */
 function messagesOf(result: { success: boolean; error?: z.ZodError }): string[] {
@@ -371,6 +371,74 @@ describe("rules", () => {
     it("takes a select's placeholder as input", () => {
       expectTypeOf<z.input<ReturnType<typeof id>>>().toEqualTypeOf<string>();
       expectTypeOf<z.output<ReturnType<typeof id>>>().toEqualTypeOf<string>();
+    });
+  });
+
+  describe("after", () => {
+    const shifts = after(z.object({ startsAt: time(), endsAt: time() }), { field: "endsAt", other: "startsAt" });
+
+    function issuesOf(result: { success: boolean; error?: z.ZodError }) {
+      return result.error?.issues.map((issue) => ({ path: issue.path, message: issue.message })) ?? [];
+    }
+
+    it("accepts a later time, comparing times and not text", () => {
+      expect(shifts.safeParse({ startsAt: "09:00", endsAt: "10:00" }).success).toBe(true);
+      expect(shifts.safeParse({ startsAt: "09:00:00", endsAt: "09:00:30" }).success).toBe(true);
+    });
+
+    it("puts the message, in words, under the later field", () => {
+      expect(issuesOf(shifts.safeParse({ startsAt: "10:00", endsAt: "09:00" }))).toEqual([
+        { path: ["endsAt"], message: "Must be after starts at" },
+      ]);
+    });
+
+    it("says an equal one is not after", () => {
+      expect(shifts.safeParse({ startsAt: "09:00", endsAt: "09:00:00" }).success).toBe(false);
+    });
+
+    it("leaves an empty or invalid field to its own rule", () => {
+      expect(messagesOf(shifts.safeParse({ startsAt: "", endsAt: "09:00" }))).toEqual(["Must not be empty"]);
+      expect(messagesOf(shifts.safeParse({ startsAt: "10:00", endsAt: "late" }))).toEqual([
+        "Is not in the expected format",
+      ]);
+      const optional = after(z.object({ from: date().optional(), to: date().optional() }), {
+        field: "to",
+        other: "from",
+      });
+      expect(optional.safeParse({ from: "", to: "2026-01-01" }).success).toBe(true);
+      expect(optional.safeParse({ from: "2026-01-01", to: "" }).success).toBe(true);
+    });
+
+    it("compares dates, date-times and numbers, and takes a label", () => {
+      const stay = after(z.object({ start: date(), end: date() }), {
+        field: "end",
+        other: "start",
+        otherLabel: "the first day",
+      });
+      expect(messagesOf(stay.safeParse({ start: "2026-03-02", end: "2026-03-01" }))).toEqual([
+        "Must be after the first day",
+      ]);
+      expect(stay.safeParse({ start: "2026-03-01", end: "2026-03-02" }).success).toBe(true);
+      const range = after(z.object({ min: number(), max: number() }), { field: "max", other: "min" });
+      expect(messagesOf(range.safeParse({ min: 2, max: 1 }))).toEqual(["Must be after min"]);
+      expect(range.safeParse({ min: 1, max: 2 }).success).toBe(true);
+      const at = after(z.object({ from: z.string(), to: z.string() }), { field: "to", other: "from" });
+      expect(at.safeParse({ from: "2026-03-01T10:00", to: "2026-03-01T09:00" }).success).toBe(false);
+      expect(at.safeParse({ from: "2026-03-01T10:00", to: "2026-03-01T10:01" }).success).toBe(true);
+    });
+
+    it("words a camelCase name, and a name with digits", () => {
+      const schema = after(z.object({ line2Start: number(), lineEnd: number() }), {
+        field: "lineEnd",
+        other: "line2Start",
+      });
+      expect(messagesOf(schema.safeParse({ line2Start: 5, lineEnd: 1 }))).toEqual(["Must be after line2 start"]);
+    });
+
+    it("keeps the fields' rules, and takes only the schema's own fields", () => {
+      expect(fieldRules.get(shifts.shape.endsAt)).toEqual({ required: true });
+      // @ts-expect-error `finish` is not a field of the schema
+      after(z.object({ startsAt: time() }), { field: "finish", other: "startsAt" });
     });
   });
 });

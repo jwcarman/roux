@@ -40,12 +40,12 @@ function messages(): Map<string, string> {
   return new Map(entries);
 }
 
-/** The bundle key of `constraint`: Jakarta's, Hibernate's `URL`, or one of roux's own (`Phone`, `NotInFuture`). */
+/** The bundle key of `constraint`: Jakarta's, Hibernate's `URL`, or one of roux's own (`Phone`, `NotInFuture`, `After`). */
 function keyOf(constraint: string): string {
   if (constraint === "URL") {
     return "org.hibernate.validator.constraints.URL.message";
   }
-  if (constraint === "Phone" || constraint === "NotInFuture") {
+  if (constraint === "Phone" || constraint === "NotInFuture" || constraint === "After") {
     return `org.jwcarman.roux.validation.${constraint}.message`;
   }
   return `jakarta.validation.constraints.${constraint}.message`;
