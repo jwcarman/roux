@@ -14,6 +14,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- `dateSearchOf(raw)` in `@jwcarman/roux-web/paging`, beside `enumSearchOf` and `idSearchOf`: a URL's date is a real
+  `YYYY-MM-DD` or absent.
 - An optional choice. `oneOf(values).optional()` and `id().optional()` (roux-web): a select at its
   placeholder is `""` in the form and `null` once parsed. New type `ChoiceRule`.
 - A rule across two fields. roux-validation's class-level `@After(field, other, otherLabel)` (a field error

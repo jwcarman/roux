@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   enumSearchOf,
+  dateSearchOf,
   idSearchOf,
   tableSearchOf,
   fetchAllPages,
@@ -288,5 +289,26 @@ describe("queryStringOf with filters", () => {
     it("reads an ascending direction in any case", () => {
       expect(tableSearchOf({ sortDirection: "asc" }, SORTS)).toEqual({ sortDirection: "ASC" });
     });
+  });
+});
+
+describe("dateSearchOf", () => {
+  it("keeps a real date", () => {
+    expect(dateSearchOf("2026-11-17")).toBe("2026-11-17");
+    expect(dateSearchOf("2028-02-29")).toBe("2028-02-29");
+  });
+
+  it.each(["2026-02-30", "2026-13-01", "2026-2-3", "tomorrow", "", "2026-11-17T10:00", " 2026-11-17"])(
+    "drops %j",
+    (raw) => {
+      expect(dateSearchOf(raw)).toBeUndefined();
+    },
+  );
+
+  it("drops what is not text", () => {
+    expect(dateSearchOf(undefined)).toBeUndefined();
+    expect(dateSearchOf(20261117)).toBeUndefined();
+    expect(dateSearchOf(["2026-11-17"])).toBeUndefined();
+    expect(dateSearchOf({ toString: () => "2026-11-17" })).toBeUndefined();
   });
 });

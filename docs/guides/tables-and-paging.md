@@ -416,7 +416,9 @@ How it fits together:
   `ASC`/`DESC` direction (any case), and a non-blank `search`; anything else is dropped.
   `enumSearchOf(raw, values)` keeps a filter value only if `values` offers it; for a filter whose
   values are ids loaded at run time (a rank, a class), `idSearchOf(raw)` keeps a value only if it is
-  shaped like a UUID, so the route never needs its own `typeof` check. A typed URL past the
+  shaped like a UUID, so the route never needs its own `typeof` check. A date that is URL state (a
+  page for one day, a report's start) is `dateSearchOf(raw)`: a real `YYYY-MM-DD` (`2026-02-30` is
+  not one) or absent; the page falls back to today with date-fns (`formatIsoDate(new Date())`). A typed URL past the
   last page moves to the last page.
 - **The previous page stays on screen** while the next one loads (TanStack's `keepPreviousData`).
 - Without `params`, the table keeps its own page and sort, starting from `initialSort` and
@@ -934,7 +936,7 @@ Gaps in 0.2.0 that a builder hits:
 - Don't page, sort or filter a long list in the browser; page it on the server with a `Paginator`.
 - Don't use sort enum constant names that differ from the column ids, or leave `enableSorting` on a
   column the server cannot sort.
-- Don't read a table's state from the URL without `tableSearchOf`, `enumSearchOf` and `idSearchOf`.
+- Don't read a table's state from the URL without `tableSearchOf`, `enumSearchOf`, `idSearchOf` and `dateSearchOf`.
 - Don't build a list's key or call its API in the page; define its query in the module with
   `pageQuery` and pass it as `query`. A key built in the page can miss the `queryKeys` prefix, and
   `meta.refreshes` then stops refreshing the list.

@@ -1,6 +1,7 @@
 /** How the client talks to jpa-utils' paged endpoints: `PageParams` in, `PageDto` out. */
 
 import type { QueryKey } from "@tanstack/react-query";
+import { parseIsoDate } from "../dates/dates";
 
 export type SortDirection = "ASC" | "DESC";
 
@@ -184,4 +185,13 @@ const ID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
  */
 export function idSearchOf(raw: unknown): string | undefined {
   return typeof raw === "string" && ID_SHAPE.test(raw) ? raw : undefined;
+}
+
+/**
+ * A date in the URL (a route's `validateSearch`), for a page whose date is URL state: the value if it
+ * is a real `YYYY-MM-DD` date (`2026-02-30` is not), else absent, so a typed or stale URL never
+ * sends the server a date it would refuse.
+ */
+export function dateSearchOf(raw: unknown): string | undefined {
+  return typeof raw === "string" && parseIsoDate(raw) !== undefined ? raw : undefined;
 }
