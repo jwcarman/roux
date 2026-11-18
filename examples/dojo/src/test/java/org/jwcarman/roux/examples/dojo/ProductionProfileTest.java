@@ -39,7 +39,7 @@ class ProductionProfileTest {
           .isEqualTo("https://app.example.com");
       assertThat(env.getProperty("who.email-link.link-base-url"))
           .isEqualTo("https://app.example.com/signin/link");
-      assertThat(env.getProperty("who.email-link.from")).isEqualTo("mail@example.com");
+      assertThat(env.getProperty("who.email.from")).isEqualTo("mail@example.com");
       assertThat(env.getProperty("who.email-link.code-secret"))
           .isEqualTo("prod-code-secret-0123456789abcdef0123");
       assertThat(env.getProperty("spring.mail.host")).isEqualTo("smtp.example.com");

@@ -162,7 +162,8 @@ are the worked example. Copy their shape:
     (roux supplies their English messages in `ValidationMessages.properties`);
   - take ids as `@PathVariable UUID id`, where a malformed id is a 404.
 
-  who's sign-in errors arrive as exceptions and answer 401. JSON responses that reach `/error` are
+  who answers its own errors under `/who` as Problem Details (with a `code`); on the app's own endpoints its
+  exceptions answer through roux's advices. JSON responses that reach `/error` are
   problems too (roux's `ProblemErrorController`). On the client, `problemOf(response)`
   (`@jwcarman/roux-web/problem`) reads any failed
   response, and `ApiError.problem` carries it for `getJson`.
@@ -218,7 +219,7 @@ set these variables. None has a default. A missing one fails startup, except `PA
 | `APP_OWNER_EMAIL` | `app.owner-email`, the first `OWNER` | `owner@example.com` |
 | `APP_OWNER_NAME` | `app.owner-name`, the first `OWNER`'s display name | `Olive Owner` |
 | `PASSKEY_RP_ID` | `who.passkey.rp-id`: the app's own host, not derived from the base URL | `app.example.com` |
-| `MAIL_FROM` | `who.email-link.from` and `who.passkey.from` | `mail@example.com` |
+| `MAIL_FROM` | `who.email.from`, the one sending address | `mail@example.com` |
 | `WHO_CODE_SECRET` | `who.email-link.code-secret`, the key for typed sign-in codes; at least 32 characters, from `openssl rand -base64 32` | |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` | `spring.mail.*` (SMTP with STARTTLS required) | `smtp.example.com`, `587` |
 | `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` | the PostgreSQL database | |

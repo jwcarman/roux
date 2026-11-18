@@ -14,7 +14,7 @@ the right way is also the short way: an app imports the plumbing and writes only
 The stack is fixed: Java 25, Spring Boot 4.1, Maven, PostgreSQL with Liquibase, jpa-utils for paging,
 who for identity, React 19, Chakra UI v3, TanStack Router, Query, Form and Table, Zod 4, Vitest with
 MSW, Playwright. Every roux app uses who: `roux-spring-boot-starter` brings `who-spring-boot-starter`,
-`who-email-link` and `who-passkey`, and sign-in is passwordless (emailed links with codes, and
+`who-email-link`, `who-email` (it renders who's emails) and `who-passkey`, and sign-in is passwordless (emailed links with codes, and
 passkeys). Never describe or build a roux app without who. The SPA and the API share one origin
 (one jar by default, or edge routing); separate origins are not supported.
 
@@ -91,8 +91,11 @@ Before changing anything, find out what is there:
   an exception from a `@Transactional` call inside it must not be swallowed, and the `Identity`
   carries no address (take it from the request). An `@EventListener` for `IdentityInvited` is the
   place for a policy check on every invitation; a public path is a `WhoPublicPathContributor`
-  bean, never a replaced `WhoPublicPaths`; an email sender is a `WhoEmailSender` with an exhaustive
-  `switch` and no `default`.
+  bean, never a replaced `WhoPublicPaths`; who's emails go out over SMTP with `who-email-smtp` (an app
+  adds it beside `spring-boot-starter-mail`; the sending address is `who.email.from`), or through a
+  `WhoEmailSender` that only delivers the rendered `OutgoingEmail`. Under `/who/**` who answers every
+  error itself as Problem Details (`type` `urn:who:error:<code>`, `code`); a passkey label is 1 to 64
+  characters with no control characters, so cap the input at 64.
 
 ## Which guide for the task
 

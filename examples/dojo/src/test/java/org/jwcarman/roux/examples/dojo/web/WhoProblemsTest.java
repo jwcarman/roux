@@ -2,10 +2,13 @@ package org.jwcarman.roux.examples.dojo.web;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,8 +18,9 @@ import org.jwcarman.roux.examples.dojo.TestMembers;
 import org.jwcarman.who.rbac.RbacService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.ResultActions;
 
-/** who 0.14 hands its errors to the app, which answers them as Problem Details. */
+/** who answers its own errors under /who; the app answers the rest. */
 @AppTest
 class WhoProblemsTest {
 
@@ -36,23 +40,32 @@ class WhoProblemsTest {
 
   @Test
   void whoMeSignedOutIs401Problem() throws Exception {
-    AppProblemsTest.isProblem(members.anonymous().perform(get("/who/me")), 401, "Unauthorized")
-        .andExpect(jsonPath("$.detail").value("Sign in to continue"));
+    whoProblem(members.anonymous().perform(get("/who/me")), "not-signed-in");
   }
 
   @Test
   void failedSignInIs401Problem() throws Exception {
-    AppProblemsTest.isProblem(
+    whoProblem(
             members
                 .anonymous()
                 .perform(
                     post("/who/email/sign-in")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"token\":\"" + "x".repeat(43) + "\"}")),
-            401,
-            "Unauthorized")
+            "sign-in-failed")
         .andExpect(jsonPath("$.detail").value("Sign-in failed"))
         .andExpect(content().string(not(containsString("invalid_token"))));
+  }
+
+  /** Under /who, who answers: type urn:who:error:code, and the code, in one Problem Detail. */
+  private static ResultActions whoProblem(ResultActions result, String code) throws Exception {
+    return result
+        .andExpect(status().isUnauthorized())
+        .andExpect(header().string("Content-Type", startsWith("application/problem+json")))
+        .andExpect(jsonPath("$.type").value("urn:who:error:" + code))
+        .andExpect(jsonPath("$.title").value("Unauthorized"))
+        .andExpect(jsonPath("$.status").value(401))
+        .andExpect(jsonPath("$.code").value(code));
   }
 
   @Test

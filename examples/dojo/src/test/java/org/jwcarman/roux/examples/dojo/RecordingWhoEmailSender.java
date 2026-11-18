@@ -3,12 +3,10 @@ package org.jwcarman.roux.examples.dojo;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.jwcarman.who.emaillink.EmailAddressChangedMessage;
-import org.jwcarman.who.emaillink.EmailAddressConfirmationMessage;
+import org.jwcarman.who.core.email.OutgoingEmail;
+import org.jwcarman.who.core.email.WhoEmailSender;
 import org.jwcarman.who.emaillink.EmailLinkMessage;
 import org.jwcarman.who.emaillink.InvitationMessage;
-import org.jwcarman.who.emaillink.WhoEmail;
-import org.jwcarman.who.emaillink.WhoEmailSender;
 
 /**
  * Stands in for real mail: remembers the sign-in and invitation links that would have been sent.
@@ -22,19 +20,18 @@ public class RecordingWhoEmailSender implements WhoEmailSender {
   private volatile boolean failing;
 
   @Override
-  public void send(WhoEmail email) {
+  public void send(OutgoingEmail email) {
     if (failing) {
       throw new IllegalStateException("mail is down");
     }
-    // Exhaustive, with no default: a new kind of who email must be decided here, not dropped.
-    switch (email) {
+    // Only the emails that carry a way to sign in are kept; an address confirmed or changed, or a
+    // passkey added, is not a sign-in, and the app sends no other.
+    switch (email.source()) {
       case EmailLinkMessage message ->
           sent.add(new Sent(message.address(), message.link(), message.code()));
       case InvitationMessage message ->
           sent.add(new Sent(message.address(), message.link(), message.code()));
-      // An address confirmed or changed is not a sign-in; the app sends none.
-      case EmailAddressConfirmationMessage _ -> {}
-      case EmailAddressChangedMessage _ -> {}
+      default -> {}
     }
   }
 

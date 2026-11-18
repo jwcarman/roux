@@ -8,6 +8,24 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- who 0.23.0 (was 0.22.0), and `@jwcarman/who-client` 0.23.0. What changes for a roux app:
+  - The starter brings `who-email` (it renders who's emails). SMTP delivery stays the app's choice, as
+    `spring-boot-starter-mail` did: add `who-email-smtp` beside it (the dojo and the getting-started
+    guide's pom do), or write a `WhoEmailSender`, which now only delivers a rendered `OutgoingEmail`
+    (`to`, `subject`, `text`, `html` or null, `source`); `MailWhoEmailSender` is `SmtpWhoEmailSender`.
+  - `who.email.from` replaces `who.email-link.from` and `who.passkey.from`; subjects are message keys
+    (`who.email.<template>.subject`); the passkey-added email goes out whenever email-link sign-in is on.
+  - Under `/who`, who answers every error itself as Problem Details (`type` `urn:who:error:<code>`, `title`,
+    `status`, `detail`, `code`), whatever the app's advice says; `invalid-request` replaces
+    `invalid-admin-request`, `invalid-api-key-request` and `invalid-invitation`. `WhoProblemsAdvice` now
+    answers only who's exceptions on the app's own endpoints (sign-in failed, reauthentication required),
+    in who's shape (`type`, `code`); the passkey-registration handler is gone, as that error is only
+    raised under `/who`.
+  - who's `/who/me` and admin endpoints are Spring MVC controllers: the app's `authorizeHttpRequests`
+    rules apply to them (never deny `/who/**`), and an app controller on their paths, a path prefix or
+    `spring.mvc.servlet.path` that moves them fails startup.
+  - A passkey label is 1 to 64 characters, not blank, with no control characters; the dojo's passkey
+    form checks it before the browser creates the passkey.
 - who 0.22.0 (was 0.21.0): `InvitationService.invite(email, roleNames, callback)` runs the app's
   own writes in the invitation's transaction. The dojo's invite form uses it for the member's
   profile and activity entry.

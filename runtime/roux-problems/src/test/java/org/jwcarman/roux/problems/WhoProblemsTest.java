@@ -17,9 +17,12 @@ package org.jwcarman.roux.problems;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,8 +30,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
-/** who hands its errors to the app, which answers them as Problem Details. */
+/** who's exceptions on the app's own endpoints answer as Problem Details in who's shape. */
 @SpringBootTest(classes = ProblemsTestApplication.class)
 @AutoConfigureMockMvc
 @Import(LibraryErrorsTestController.class)
@@ -38,23 +42,27 @@ class WhoProblemsTest {
 
   @Test
   void signInFailureIsNotGenericSignIn() throws Exception {
-    ProblemsAdviceTest.isProblem(
-            mvc.perform(get("/api/test/libraries/sign-in-failed")), 401, "Unauthorized")
+    whoProblem(mvc.perform(get("/api/test/libraries/sign-in-failed")))
         .andExpect(jsonPath("$.detail").value("Sign-in failed"))
+        .andExpect(jsonPath("$.type").value("urn:who:error:sign-in-failed"))
+        .andExpect(jsonPath("$.code").value("sign-in-failed"))
         .andExpect(content().string(not(containsString("invalid_token"))));
   }
 
   @Test
   void reauthenticationIsNotGenericSignIn() throws Exception {
-    ProblemsAdviceTest.isProblem(
-            mvc.perform(get("/api/test/libraries/reauthenticate")), 401, "Unauthorized")
-        .andExpect(jsonPath("$.detail").value("Sign in again to continue"));
+    whoProblem(mvc.perform(get("/api/test/libraries/reauthenticate")))
+        .andExpect(jsonPath("$.detail").value("Sign in again to continue"))
+        .andExpect(jsonPath("$.type").value("urn:who:error:reauthentication-required"))
+        .andExpect(jsonPath("$.code").value("reauthentication-required"));
   }
 
-  @Test
-  void anInvalidPasskeyIs400() throws Exception {
-    ProblemsAdviceTest.isProblem(
-            mvc.perform(get("/api/test/libraries/passkey")), 400, "Bad Request")
-        .andExpect(jsonPath("$.detail").value("The passkey could not be registered"));
+  /** A 401 Problem Detail with a {@code type} of its own, which who's own answers have too. */
+  private static ResultActions whoProblem(ResultActions result) throws Exception {
+    return result
+        .andExpect(status().isUnauthorized())
+        .andExpect(header().string("Content-Type", startsWith("application/problem+json")))
+        .andExpect(jsonPath("$.title").value("Unauthorized"))
+        .andExpect(jsonPath("$.status").value(401));
   }
 }

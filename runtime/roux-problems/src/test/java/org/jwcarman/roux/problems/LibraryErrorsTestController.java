@@ -16,7 +16,6 @@
 package org.jwcarman.roux.problems;
 
 import org.jwcarman.jpa.pagination.UnknownSortByValueException;
-import org.jwcarman.who.spring.security.web.InvalidPasskeyRegistrationException;
 import org.jwcarman.who.spring.security.web.ReauthenticationRequiredException;
 import org.jwcarman.who.spring.security.web.SignInFailedException;
 import org.springframework.security.access.AccessDeniedException;
@@ -48,11 +47,6 @@ class LibraryErrorsTestController {
   @GetMapping("/reauthenticate")
   String reauthenticate() {
     throw new ReauthenticationRequiredException();
-  }
-
-  @GetMapping("/passkey")
-  String passkey() {
-    throw new InvalidPasskeyRegistrationException();
   }
 
   @GetMapping("/unknown-sort")

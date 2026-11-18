@@ -63,10 +63,11 @@ who:
       - /favicon.svg
   email-link:
     link-base-url: ${app.base-url}/signin/link
-    from: noreply@dojo.test
     # Keys the typed sign-in codes. A development value only: prod takes it from the environment.
     code-secret: development-only-code-secret-not-for-production
   passkey:
     rp-id: localhost
     allowed-origins: ${app.base-url}
+  email:
+    # The address every who email is sent from.
     from: noreply@dojo.test

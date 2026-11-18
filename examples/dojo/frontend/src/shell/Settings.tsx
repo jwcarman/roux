@@ -3,12 +3,12 @@ import { useCallback, useEffect, useState } from "react";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { useAppForm } from "@jwcarman/roux-web/form";
 import type { Passkey } from "@jwcarman/who-client";
-import { listPasskeys, registerPasskey, removePasskey } from "../members/passkeys";
+import { listPasskeys, PASSKEY_LABEL_MAX, passkeyLabelError, registerPasskey, removePasskey } from "../members/passkeys";
 import { useSession } from "./session";
 import { ProfileForm } from "../members/ProfileForm";
 
 function labelError({ value }: { value: string }) {
-  return value.trim() ? undefined : "Name this passkey, such as the device it is on";
+  return passkeyLabelError(value);
 }
 
 function formatDate(value: string | null): string {
@@ -98,7 +98,7 @@ export function Settings() {
         <addForm.Form>
           <Stack gap="4">
             <addForm.AppField name="label" validators={{ onBlur: labelError, onSubmit: labelError }}>
-              {(field) => <field.InputField label="Passkey label" placeholder="Work laptop" />}
+              {(field) => <field.InputField label="Passkey label" placeholder="Work laptop" maxLength={PASSKEY_LABEL_MAX} />}
             </addForm.AppField>
             <addForm.SubmitButton>Add a passkey</addForm.SubmitButton>
           </Stack>

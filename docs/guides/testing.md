@@ -709,7 +709,7 @@ starts PostgreSQL (`TestDatabase`), Mailpit and the app on a free port, passes t
 suite in the environment (`E2E_BASE_URL`, `E2E_MAILPIT_URL`), and runs `npx playwright test`. The
 app's arguments set the URL-dependent settings: `who.passkey.rp-id=localhost`,
 `who.passkey.allowed-origins` and the link base URL at the chosen port, and `spring.mail.host` and
-`spring.mail.port` at Mailpit.
+`spring.mail.port` at Mailpit (`who.email.from` set, and `who-email-smtp` on the classpath).
 
 The suite signs in as a user does: it asks for a link on the sign-in page, reads the link from
 Mailpit's API, and opens it. Passkeys use Chrome's virtual authenticator (the DevTools `WebAuthn`

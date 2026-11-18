@@ -23,6 +23,7 @@ import java.util.UUID;
 
 import jakarta.servlet.http.Cookie;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,6 +72,25 @@ class ProblemContractTest {
                 assertThat(actual.get(name)).isEqualTo(expected.get(name));
               }
             });
+  }
+
+  /**
+   * who answers its own errors under its base path as Problem Details: the members roux-web's
+   * {@code problemOf} reads (type, title, status, detail), and who's {@code code}. roux's advices
+   * do not touch it, so a client sees one shape.
+   */
+  @Test
+  void whoAnswersItsOwnErrorsAsProblemDetails() throws Exception {
+    MockHttpServletResponse response = mvc.perform(get("/who/me")).andReturn().getResponse();
+
+    assertThat(response.getStatus()).isEqualTo(401);
+    assertThat(response.getContentType()).startsWith("application/problem+json");
+    JsonNode body = Fixtures.parse(response.getContentAsString());
+    assertThat(body.get("type").asString()).isEqualTo("urn:who:error:not-signed-in");
+    assertThat(body.get("title").asString()).isEqualTo("Unauthorized");
+    assertThat(body.get("status").asInt()).isEqualTo(401);
+    assertThat(body.get("code").asString()).isEqualTo("not-signed-in");
+    assertThat(body.get("detail").isString()).isTrue();
   }
 
   private MockHttpServletRequestBuilder request(String method, String path) throws Exception {

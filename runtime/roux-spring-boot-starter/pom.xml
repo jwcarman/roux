@@ -64,10 +64,15 @@
             <groupId>org.jwcarman.who</groupId>
             <artifactId>who-spring-boot-starter</artifactId>
         </dependency>
-        <!-- a roux app signs in with email links (and typed codes) and passkeys -->
+        <!-- a roux app signs in with email links (and typed codes) and passkeys; who-email renders its mail (an app adds
+             who-email-smtp, or its own WhoEmailSender, to deliver it) -->
         <dependency>
             <groupId>org.jwcarman.who</groupId>
             <artifactId>who-email-link</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jwcarman.who</groupId>
+            <artifactId>who-email</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jwcarman.who</groupId>

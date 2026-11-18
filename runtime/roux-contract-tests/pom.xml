@@ -74,9 +74,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <!-- how a roux app sends who's sign-in emails -->
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
+            <!-- how a roux app delivers who's emails: over SMTP, through spring-boot-starter-mail -->
+            <groupId>org.jwcarman.who</groupId>
+            <artifactId>who-email-smtp</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

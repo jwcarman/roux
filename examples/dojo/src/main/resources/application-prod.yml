@@ -25,12 +25,12 @@ spring:
 who:
   email-link:
     # Links go to ${app.base-url}/signin/link (application.yml).
-    from: ${MAIL_FROM}
     # Keys the typed sign-in codes. At least 32 characters: openssl rand -base64 32
     code-secret: ${WHO_CODE_SECRET}
   passkey:
     # The app's own host, such as app.example.com. It is not derived from app.base-url, and it
     # must not be a domain that other apps share. allowed-origins stays ${app.base-url}.
     rp-id: ${PASSKEY_RP_ID}
+  email:
     from: ${MAIL_FROM}
 # The session cookie is Secure, HttpOnly and SameSite=Lax by default (application.yml).

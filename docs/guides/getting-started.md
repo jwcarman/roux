@@ -48,10 +48,15 @@ Boot's BOM, so Spring Boot's managed versions stay the parent's.
         <groupId>org.jwcarman.roux</groupId>
         <artifactId>roux-theme</artifactId>
     </dependency>
-    <!-- who sends sign-in links through Spring Boot's mail sender; the roux starter does not bring it -->
+    <!-- delivers who's emails (sign-in links, invitations) over SMTP; the roux starter brings who-email, which
+         renders them, but not how they are sent. who-email-smtp brings spring-boot-starter-mail -->
     <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-mail</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.jwcarman.who</groupId>
+        <artifactId>who-email-smtp</artifactId>
     </dependency>
     <dependency>
         <groupId>org.springframework.boot</groupId>
@@ -70,11 +75,11 @@ Boot's BOM, so Spring Boot's managed versions stay the parent's.
 ```
 
 The starter brings `roux-problems`, `roux-validation` (`@Phone`, `@NotInFuture` and roux's validation messages), `roux-spa` (the shell for any page URL), `roux-jpa` (`Versions`), `roux-autoconfigure`, who (`who-spring-boot-starter`, with
-email-link sign-in, `who-email-link`, and passkeys, `who-passkey`), jpa-utils
+email-link sign-in, `who-email-link`, which renders its mail with `who-email`, and passkeys, `who-passkey`), jpa-utils
 (`org.jwcarman.jpa:jpa-utils`), `spring-boot-starter-validation` and `spring-boot-starter-webmvc`.
 `roux-theme` (the owner changes the look on an Appearance page) is not in the starter: add it beside the starter, with no version, as a new app does. Leave it out for a fixed brand and set `roux.theme.*` instead ([The owner's theme](#the-owners-theme)).
 Do not add who's starter yourself, and do not declare versions for any of them, for who's other
-modules (`who-test`), or for jpa-utils: `roux-bom` pins who 0.20.0 and jpa-utils 0.2.0. The test
+modules (`who-test`), or for jpa-utils: `roux-bom` pins who 0.23.0 and jpa-utils 0.2.0. The test
 dependencies are in [Testing](testing.md#dependencies).
 
 Errors are answered as Problem Details from the first request; see [Errors](errors.md). roux's own
@@ -100,18 +105,19 @@ who:
   email-link:
     link-base-url: http://localhost:8080/signin/link
     code-secret: development-only-code-secret-not-for-production
-    from: noreply@example.com
   passkey:
     rp-id: localhost
     allowed-origins: http://localhost:8080
+  email:
+    from: noreply@example.com   # the address every who email is sent from
 ```
 
 | Setting | What it is |
 | --- | --- |
-| `spring.mail.host` | The SMTP server sign-in emails go through (Spring Boot's `JavaMailSender`, from `spring-boot-starter-mail`). Instead of mail, an app may register its own `WhoEmailSender` bean; it receives every who email (sign-in links, invitations, address confirmations), a sealed `WhoEmail`, so write its `switch` exhaustive with no `default` branch, or a new kind of email is silently dropped. |
+| `spring.mail.host` | The SMTP server who's emails go through (`who-email-smtp`, over Spring Boot's `JavaMailSender`). Instead of SMTP, an app may register its own `WhoEmailSender` bean (leave out `who-email-smtp`, keep `who-email`): it only delivers, receiving every who email already rendered as an `OutgoingEmail` (`to`, `subject`, `text`, an optional `html`, and the `source` record it was rendered from). Send `text` as `text/plain`, never inside HTML: it is not escaped. who renders the wording from templates the app can replace (`templates/who/email/<template>.txt`), and each subject is the message `who.email.<template>.subject`. |
 | `who.email-link.link-base-url` | The app's page that receives sign-in links; who appends `#token=...`. Required. |
 | `who.email-link.code-secret` | Keys the typed sign-in codes: at least 32 characters, the same on every instance, from the environment in production. Required. |
-| `who.email-link.from` | The sender of sign-in emails. Required when they go out through `JavaMailSender`. |
+| `who.email.from` | The one address every who email (sign-in links, invitations, the passkey-added notice) is sent from. Required with `who-email-smtp` and a mail host. |
 | `who.passkey.rp-id` | The app's own host (`localhost` in development, `app.example.com` in production). Required. |
 | `who.passkey.allowed-origins` | The origins passkey sign-in may come from. Defaults to `https://<rp-id>`, which does not match `http://localhost:8080`, so set it in development. |
 | `who.security.public-paths` | Paths of the app open to signed-out requests besides who's sign-in endpoints and what roux opens (the shell, `/index.html`, and `/assets/**`, with a built frontend). Every page URL reaches the shell, so no page is listed; list only the files a signed-out browser loads from elsewhere, such as an icon at the root. Anything else answers `401` to a signed-out request. |

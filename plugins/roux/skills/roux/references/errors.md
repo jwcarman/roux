@@ -256,8 +256,8 @@ Nothing here needs app code. The answers below come from roux's advices.
 | `DataIntegrityViolationException` | 409 | `This conflicts with existing data` (never the database's text) |
 | `AccessDeniedException` from method security, signed in | 403 | `You do not have permission` |
 | `AccessDeniedException` from method security when anonymous, or any `AuthenticationException` | 401 | `Sign in to continue` |
-| who: sign-in failed / reauthentication required | 401 | `Sign-in failed` / `Sign in again to continue` |
-| who: passkey registration rejected | 400 | `The passkey could not be registered` |
+| who: reauthentication required, on an app endpoint (`@RequiresRecentSignIn`) | 401 | `Sign in again to continue`, with `type` `urn:who:error:reauthentication-required` and `code` `reauthentication-required` |
+| Any error under who's base path (`/who/**`) | its status | who's own Problem Detail: `type` `urn:who:error:<code>`, `title`, `status`, `detail` (not on a 5xx), `code`. roux's advices never see it |
 | An exception annotated `@ResponseStatus` | its status | the annotation's `reason`, if any |
 | Anything else | 500 | `Something went wrong`, with `errorId` (`contracts/problem-server-error.json`) |
 | Client disconnected mid-response | nothing | logged at TRACE |
@@ -282,7 +282,7 @@ listing knows what they are. All are registered by `RouxProblemsAutoConfiguratio
 - `ProblemsAdvice`: Spring MVC's exceptions, Bean Validation, roux's exceptions, optimistic locking
   and data integrity.
 - `SecurityProblemsAdvice`: Spring Security's.
-- `WhoProblemsAdvice`: who's.
+- `WhoProblemsAdvice`: who's exceptions on the app's own endpoints (outside who's base path, who answers its own errors). It gives them who's shape: `type` `urn:who:error:<code>` and `code`.
 - `PagingProblemsAdvice`: jpa-utils' unknown sort.
 - `RootProblemsAdvice`: the last resort, ordered after all of the above.
 - `ProblemErrorController`: replaces Spring Boot's `BasicErrorController` so that `/error` answers

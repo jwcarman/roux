@@ -59,7 +59,7 @@
     </scm>
 
     <properties>
-        <who.version>0.22.0</who.version>
+        <who.version>0.23.0</who.version>
         <jpa-utils.version>0.2.0</jpa-utils.version>
 
         <!-- Plugin Versions -->
