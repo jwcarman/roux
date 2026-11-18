@@ -100,3 +100,13 @@ Prior art: who's example app, `who-examples/spa/frontend/src/pages/SignIn.tsx` (
 - The dojo rebuilds its `SignIn.tsx` from these components (proving they compose) and drops its
   hand-written sign-in calls; `code.spec.ts` types the
   code into the page.
+
+## Part 4: navigation (added 2026-11-17, approved with the shell round)
+
+The dojo's nav is `shell/nav.json` (label, path, icon name, permission, description) plus a
+hand-kept icon map in `nav.ts`; an unknown icon name or a permission string that no longer matches
+`AppRoles` fails quietly. roux-web owns the nav: entries are typed (`to` is a route the router
+knows, `icon` a component rather than a name, `permission` checked against the permissions the
+signed-in user's session reports so a misspelt one is a loud error in development and a test), and
+the sidebar/drawer/rail rendering the dojo has moves into roux-web. Where the app declares its nav
+(a typed `nav.ts` module) stays the app's.
