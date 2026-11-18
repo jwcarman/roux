@@ -41,7 +41,7 @@
 
         <!-- Dependency Versions -->
         <spring-boot.version>4.1.2</spring-boot.version>
-        <who.version>0.23.0</who.version>
+        <who.version>0.24.0-SNAPSHOT</who.version>
         <jpa-utils.version>0.2.0</jpa-utils.version>
 
         <!-- Plugin Versions -->
@@ -103,6 +103,7 @@
         <module>runtime/roux-spa</module>
         <module>runtime/roux-jpa</module>
         <module>runtime/roux-theme</module>
+        <module>runtime/roux-email</module>
         <module>runtime/roux-autoconfigure</module>
         <module>runtime/roux-spring-boot-starter</module>
         <module>runtime/roux-contract-tests</module>

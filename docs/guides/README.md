@@ -8,4 +8,5 @@
 - [Tables and paging](tables-and-paging.md)
 - [Feedback](feedback.md)
 - [The shell: theme, sign-in and navigation](shell.md)
+- [Email](email.md)
 - [Testing](testing.md)

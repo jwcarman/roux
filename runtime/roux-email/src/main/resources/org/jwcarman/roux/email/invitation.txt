@@ -1,0 +1,11 @@
+{{extra.roux.appName}}
+
+You have been invited to {{extra.roux.appName}}. Accept by signing in: {{email.link}}
+
+Or enter this code: {{email.formattedCode}}
+
+The link and the code expire in {{email.expiresIn}} and work once.
+
+If you weren't expecting this invitation, ignore this email. Never share this code with anyone.
+
+You got this email from {{extra.roux.appName}}.

@@ -80,6 +80,17 @@
             <optional>true</optional>
         </dependency>
         <dependency>
+            <groupId>org.jwcarman.roux</groupId>
+            <artifactId>roux-email</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.jwcarman.who</groupId>
+            <artifactId>who-email</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
             <groupId>org.jwcarman.jpa</groupId>
             <artifactId>jpa-utils</artifactId>
             <optional>true</optional>

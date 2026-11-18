@@ -9,6 +9,8 @@ import {
 
 export const mailpit = process.env.E2E_MAILPIT_URL ?? "http://localhost:8025";
 export const ownerEmail = process.env.E2E_OWNER_EMAIL ?? "owner@dojo.test";
+/** What the app is called until the owner renames it: application.yml's `roux.theme.app-name`. */
+export const appName = process.env.E2E_APP_NAME ?? "Dojo";
 export const ownerName = process.env.E2E_OWNER_NAME ?? "Olive Owner";
 
 /** COSE algorithm ids. */
@@ -94,6 +96,28 @@ export async function nextSignInCode(
   timeout = 15_000,
 ): Promise<string> {
   return nextMatch(request, address, seen, SIGN_IN_CODE, "a sign-in code", timeout);
+}
+
+/**
+ * Checks that every message to the address that is not in `seen` has the subject, and names the app
+ * (`appName`) in its text and its HTML: roux's finished emails, not who's plain ones.
+ */
+export async function expectEmailsNameApp(
+  request: APIRequestContext,
+  address: string,
+  seen: Set<string>,
+  subject: string,
+) {
+  const ids = (await messagesTo(request, address)).filter((id) => !seen.has(id));
+  expect(ids.length).toBeGreaterThan(0);
+  for (const id of ids) {
+    const response = await request.get(`${mailpit}/api/v1/message/${id}`);
+    expect(response.ok()).toBeTruthy();
+    const message = (await response.json()) as { Subject?: string; Text?: string; HTML?: string };
+    expect(message.Subject).toBe(subject);
+    expect(message.Text).toContain(appName);
+    expect(message.HTML).toContain(appName);
+  }
 }
 
 /** Opens an emailed link in the page, at the page's own base URL. */

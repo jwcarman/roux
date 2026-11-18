@@ -32,6 +32,14 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- `roux-email`, in the starter: who's five emails (sign-in, invitation, address-confirmation, address-changed,
+  passkey-added) finished. Each names the app in its subject and bodies, in who's wording, as plain text and as
+  one HTML card (tables and inline styles, no images or web fonts) with the action in the brand colour.
+  `RouxEmailModelContributor` gives every email `extra.roux.appName`, `extra.roux.brandColor` (`#rrggbb`; the
+  brand colour, or a fixed colour per Chakra palette) and `extra.roux.buttonText` (white or near-black, by WCAG
+  contrast), read from the shell's theme at each send. An app replaces one email, or one subject, with its own
+  file or message (`docs/guides/email.md`). Needs who 0.24.0's library templates; until it ships, who is
+  `0.24.0-SNAPSHOT`.
 - `@jwcarman/roux-web/navigation`: the navigation, typed. `defineNav(permissions, items)` takes entries whose
   `to` is a route the router knows (a misspelt route is a type error), `icon` a component (not a name looked up
   in a hand-kept map) and `permission` one of the app's declared permissions: TypeScript checks it, and

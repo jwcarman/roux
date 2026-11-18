@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { inboxSnapshot, nextSignInLink, openDialog, openLink, ownerEmail, signInByLink } from "./helpers";
+import { appName, expectEmailsNameApp, inboxSnapshot, nextSignInLink, openDialog, openLink, ownerEmail, signInByLink } from "./helpers";
 
 test("an invited member signs in by link, sees the directory, and cannot invite", async ({
   browser,
@@ -23,6 +23,9 @@ test("an invited member signs in by link, sees the directory, and cannot invite"
   // The new member is in the directory at once.
   await expect(page.getByRole("cell", { name: "Ada Lovelace", exact: true })).toBeVisible();
   const link = await nextSignInLink(request, member, seen);
+
+  // The invitation is roux's: the app's name in its subject and in both bodies.
+  await expectEmailsNameApp(request, member, seen, `You've been invited to ${appName}`);
 
   // The member accepts in a browser of their own.
   const memberContext = await browser.newContext();

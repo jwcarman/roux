@@ -1,0 +1,11 @@
+{{extra.roux.appName}}
+
+Sign in: {{email.link}}
+
+Or enter this code: {{email.formattedCode}}
+
+The link and the code expire in {{email.expiresIn}} and work once.
+
+If you didn't ask to sign in, ignore this email. Never share this code with anyone.
+
+You got this email from {{extra.roux.appName}}.
