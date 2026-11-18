@@ -14,6 +14,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- `roux-theme`, the owner's theme in roux's own table (`roux_theme`, from the changelog the jar ships:
+  `classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml`, which the app includes as it includes who's).
+  `GET /api/theme` (open to anyone: the shell needs it signed out), `PUT /api/theme` (`theme.manage`, with the
+  `version` read; a stale one is a 409), values validated against the shell's own sets, and the
+  `ShellThemeSource` bean that makes the shell show it. Each part the owner has not chosen is the `roux.theme.*`
+  property. The starter brings it, and roux-autoconfigure switches it on (`RouxThemeAutoConfiguration`,
+  `RouxThemePersistenceAutoConfiguration`).
 - roux serves the app's shell. `roux-spa` answers the page request with `index.html` carrying the request's
   nonce, the theme and the app's name, `Cache-Control: no-store` and a strict Content-Security-Policy
   (`ContentSecurityPolicy`), extended only by explicit per-directive `roux.spa.csp.*` properties that append to

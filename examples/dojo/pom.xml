@@ -49,6 +49,13 @@
         <dependency>
             <groupId>org.jwcarman.roux</groupId>
             <artifactId>roux-spring-boot-starter</artifactId>
+            <exclusions>
+                <!-- Until the dojo's own theme code is replaced by it (see FINDINGS). -->
+                <exclusion>
+                    <groupId>org.jwcarman.roux</groupId>
+                    <artifactId>roux-theme</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

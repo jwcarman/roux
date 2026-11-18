@@ -64,7 +64,7 @@ Boot's BOM, so Spring Boot's managed versions stay the parent's.
 </dependencies>
 ```
 
-The starter brings `roux-problems`, `roux-validation` (`@Phone`, `@NotInFuture` and roux's validation messages), `roux-spa` (the shell for any page URL), `roux-jpa` (`Versions`), `roux-autoconfigure`, who (`who-spring-boot-starter`, with
+The starter brings `roux-problems`, `roux-validation` (`@Phone`, `@NotInFuture` and roux's validation messages), `roux-spa` (the shell for any page URL), `roux-jpa` (`Versions`), `roux-theme` (the owner's theme), `roux-autoconfigure`, who (`who-spring-boot-starter`, with
 email-link sign-in, `who-email-link`, and passkeys, `who-passkey`), jpa-utils
 (`org.jwcarman.jpa:jpa-utils`), `spring-boot-starter-validation` and `spring-boot-starter-webmvc`.
 Do not add who's starter yourself, and do not declare versions for any of them, for who's other
@@ -117,9 +117,11 @@ Include who's changelog first in the app's Liquibase master changelog:
 databaseChangeLog:
   - include:
       file: classpath:org/jwcarman/who/db/who-changelog.xml
+  - include:
+      file: classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml
 ```
 
-The full list of who's settings is in who's configuration guide
+(The second is roux-theme's table, below; the app does not start without it.) The full list of who's settings is in who's configuration guide
 (`docs/guides/configuration.md` in who's repository, at tag `0.20.0`).
 
 ## Add the web side
@@ -348,6 +350,34 @@ neither does not start), `palette` (`gray`), `brand-color` (`#3b82f6`), `shape` 
 `heading-font` and `body-font` (`standard`). A value the frontend has no look for (a palette
 `mauve`) stops the app from starting. An app that keeps its look elsewhere declares its own
 `ShellThemeSource` bean; `roux-theme` (owner-editable, in roux's own table) provides one.
+
+### The owner's theme
+
+`roux-theme` (in the starter) keeps the theme in roux's own table, `roux_theme`: one row, from the
+changelog above, whose columns are null until the owner chooses (`roux.theme.*` stands for every part
+not chosen, so the answer is always a whole theme). It brings:
+
+- `GET /api/theme`, open to anyone, signed out too (the sign-in page needs its look): the whole
+  theme and its `version`, 0 until the first save.
+- `PUT /api/theme`, for whoever holds the `theme.manage` permission (`ThemeController.MANAGE`; grant
+  it to the owner's role in who): a `ThemeRequest` with the `version` the owner read. A stale one is a
+  `409`, a missing one a `400` on `version` (`Versions.require`). The values are the shell's own
+  (`ShellTheme.PALETTES`, `SHAPES`, `FONTS`, `COLOR`): palette `gray|red|orange|yellow|green|teal|blue|cyan|purple|pink|brand`,
+  shape `square|slight|medium|round|extra-round`, fonts `standard|modern|friendly|classic`, a
+  `#rrggbb` colour (kept lower-case) and a name of 1 to 60 characters (stripped); a bad one is a
+  `400` naming the field.
+- the `ShellThemeSource` the shell reads (`OwnerShellTheme`), so a change shows on the next page
+  load, for everyone.
+
+The pieces behind them are `AppTheme` (the entity), `AppThemeRepository` and `ThemeService`, whose
+`current()` answers a `ThemeResponse`: inject the service where the server needs the theme (an email
+that carries the app's name, say).
+
+An app that keeps its look elsewhere declares its own `ShellThemeSource` bean (the API stays); an
+app that wants no owner theme leaves `roux-theme` out of its dependencies (exclude it from the
+starter) and does not include the changelog. Entities and repositories are found without any entity
+scan or `@EnableJpaRepositories` of the app's; an app that sets its own `@EnableJpaRepositories`
+must still reach `org.jwcarman.roux.theme`.
 
 `@jwcarman/roux-web` runs under this policy: `@jwcarman/roux-web/form` calls
 `z.config({ jitless: true })` when it loads, so Zod never probes `eval`. The package's

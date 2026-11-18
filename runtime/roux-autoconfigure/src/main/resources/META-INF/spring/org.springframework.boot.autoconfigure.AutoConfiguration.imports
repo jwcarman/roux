@@ -1,3 +1,5 @@
 org.jwcarman.roux.autoconfigure.problems.RouxProblemsAutoConfiguration
 org.jwcarman.roux.autoconfigure.auditing.RouxAuditingAutoConfiguration
 org.jwcarman.roux.autoconfigure.spa.RouxSpaAutoConfiguration
+org.jwcarman.roux.autoconfigure.theme.RouxThemePersistenceAutoConfiguration
+org.jwcarman.roux.autoconfigure.theme.RouxThemeAutoConfiguration

@@ -102,6 +102,7 @@
         <module>runtime/roux-validation</module>
         <module>runtime/roux-spa</module>
         <module>runtime/roux-jpa</module>
+        <module>runtime/roux-theme</module>
         <module>runtime/roux-autoconfigure</module>
         <module>runtime/roux-spring-boot-starter</module>
         <module>runtime/roux-contract-tests</module>
