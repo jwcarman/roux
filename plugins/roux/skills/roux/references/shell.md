@@ -1,8 +1,8 @@
-# The shell: theme
+# The shell: theme and sign-in
 
 roux serves the app's shell (`index.html`, with its nonce, its Content-Security-Policy and the theme in
 place: [Getting started](getting-started.md#the-shell)) and ships the pieces every shell needs, from
-`@jwcarman/roux-web/theme`. The pages are the app's: the appearance page stays app code, composed from roux's components.
+`@jwcarman/roux-web/theme`. The pages are the app's: the sign-in page and the appearance page stay app code, composed from roux's components.
 
 ## The theme
 
@@ -59,8 +59,48 @@ the form over from the other owner's look), toasts `The new look is saved` with 
 earlier look back, and `Cancel` drops the draft. It takes no props. Its page is the app's, and so
 is the route guard: guard it with `theme.manage`, which the server enforces too.
 
+## Sign-in
+
+`@jwcarman/roux-web/signin` ships the pieces; the page is the app's (`routes/signin/index.tsx`
+composes them, and is the app's to change). who is `@jwcarman/who-client` (a peer dependency).
+
+```tsx
+import { EmailSignIn, PasskeySignInButton, ProviderSignInButtons } from "@jwcarman/roux-web/signin";
+
+export function SignIn() {
+  return (
+    <Stack gap="6">
+      <Heading as="h2">Sign in</Heading>
+      <EmailSignIn />
+      <PasskeySignInButton />
+      <ProviderSignInButtons />
+    </Stack>
+  );
+}
+```
+
+- `EmailSignIn`: "Email me a link" for an address (`email()` rule), then `Check your email` and "Open the
+  link, or type the code from the email": a code field (`autoComplete="one-time-code"`) whose
+  "Sign in" calls `who.email.signIn({ email, code })`; who's refusal is told under the field.
+- `PasskeySignInButton`: "Sign in with a passkey"; a refusal or cancel is told under it (`role="alert"`).
+- `ProviderSignInButtons`: one `ProviderSignInButton` per provider `who.signInOptions()` reports, with
+  who's display names; nothing when there are none. `ProviderSignInButton provider="google"` alone is
+  a link (a full page load, because the provider's own page must open) to who's authorize URL, "Continue with
+  Google", drawn as the provider's guidance asks (Google: the four-color G on white with a #747775
+  outline, #131314 in dark mode; Microsoft's four squares; Apple, GitHub, GitLab, Okta). Any other provider
+  gets a generic icon and `name` (who's display name; `ProviderSignInButtons` passes it, else the id).
+  `label` and `icon` override (`ProviderSignInButtonProps` also takes the button's own Chakra props).
+- `EmailLinkLanding`: the page who's `email-link.link-base-url` opens (`/signin/link`): redeems the token once,
+  then goes on. A bad link says so, with a link to `signInPath` (`/signin`).
+- `useSignInReturn()` returns the function every component calls on success: it opens the page the
+  visitor asked for, else Home, as a full page load (so the app starts as the person who signed in).
+  The route guard that sends a signed-out visitor to sign in calls `rememberSignInReturn(path)`
+  (`isReturnable` says which paths count: never Home, sign-in, `/api` or `/who`; `takeSignInReturn` reads it once).
+  After a sign-in of your own, call `useSignInReturn()()`.
+
 ## Don't
 
 - Don't mount `ChakraProvider` or Emotion's `CacheProvider` yourself next to `ThemeProvider`.
 - Don't write the theme, the nonce or the page's title into `index.html` by hand: the server does.
 - Don't call `/api/theme` from the app; `AppearanceSettings` is the only caller.
+- Don't hand-write sign-in calls to who: use the components.

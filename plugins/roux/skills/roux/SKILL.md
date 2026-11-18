@@ -77,12 +77,13 @@ Before changing anything, find out what is there:
   A list's key and fetch live in its resource module as `pageQuery(queryKeys..., (params, signal) => ...)`
   and the page passes it as `query={...}`: never build a list's key or call its API in the page.
 - **Import roux-web only from its subpaths**: `@jwcarman/roux-web/problem`, `/api`, `/paging`,
-  `/table`, `/feedback`, `/form`, `/dates`, `/theme`. There is no root import, and anything else (roux's source, its
+  `/table`, `/feedback`, `/form`, `/dates`, `/theme`, `/signin`. There is no root import, and anything else (roux's source, its
   internal test helpers) is not API and breaks on upgrade.
 - **Sign-in, identities and permissions are who's.** Use who's own guides (its Claude Code skill, if
   installed) for them; roux only wires the session into the client (`onSessionLost`,
   `useClearQueriesOnIdentityChange`). The browser calls who (sign-in, sign-out, the person's own
-  passkeys and sessions) go through `@jwcarman/who-client`, not hand-written fetches. To invite
+  passkeys and sessions) go through `@jwcarman/who-client`, not hand-written fetches; the sign-in page is
+  composed of `@jwcarman/roux-web/signin`'s components, never hand-written sign-in calls. To invite
   someone, call who's `InvitationService.invite(email, roleNames, identity -> ...)` outside a
   transaction and write the app's own rows (a profile, an activity entry) in the callback: it runs
   in the invitation's transaction on the caller's thread, and if it throws everything rolls back and
@@ -118,7 +119,7 @@ sections you need.
 | Reorder rows (move up/down) | `references/tables-and-paging.md` (An ordered list) |
 | One feature must refuse another's removal | `references/errors.md` (Refuse because of what another feature holds) |
 | Toasts, confirmations, an inline error, not-found and error pages | `references/feedback.md` |
-| The shell (`index.html`, its CSP and nonce, `roux.spa.csp.*`), the theme (`roux.theme.*`, roux-theme, `ThemeProvider`, `AppearanceSettings`) | `references/getting-started.md` (The shell), `references/shell.md` |
+| The shell (`index.html`, its CSP and nonce, `roux.spa.csp.*`), the theme (`roux.theme.*`, roux-theme, `ThemeProvider`, `AppearanceSettings`), the sign-in page (`EmailSignIn`, `PasskeySignInButton`, `ProviderSignInButtons`) | `references/getting-started.md` (The shell), `references/shell.md` |
 | Java tests (`@AppTest`, signed-in members, PostgreSQL), Vitest with MSW, form and route tests, Playwright | `references/testing.md` |
 
 A feature usually touches several: a new resource with a list and a form reads errors, queries and

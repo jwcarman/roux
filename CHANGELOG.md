@@ -14,6 +14,15 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- `@jwcarman/roux-web/signin`: the sign-in pieces, ported from who's example app into Chakra. `EmailSignIn`
+  (email me a link, then "open the link, or type the code from the email" with `autoComplete="one-time-code"`,
+  who's refusal under the field), `PasskeySignInButton`, `ProviderSignInButtons` / `ProviderSignInButton`
+  (a link to who's authorize URL, "Continue with <name>", drawn as each provider's published guidance asks:
+  Google's four-color G on white with its outline and its dark variant, Microsoft's four squares, Apple, GitHub,
+  GitLab, Okta; any other provider gets a generic icon and who's display name; `icon` and `label` override),
+  `EmailLinkLanding` (the `/signin/link` page), and `useSignInReturn` with `rememberSignInReturn` (the page
+  the visitor asked for, moved from the dojo). A sign-in ends in a full page load. New peer dependency:
+  `@jwcarman/who-client`.
 - `@jwcarman/roux-web/theme`: `ThemeProvider` (Chakra's provider with the page's theme, the bundled font, and
   Emotion's cache under the page's CSP nonce, so an app cannot forget the nonce), `useShellTheme`,
   `createThemeSystem` (a Chakra system for a `ShellTheme`) and `<AppearanceSettings />` (the owner's form with
