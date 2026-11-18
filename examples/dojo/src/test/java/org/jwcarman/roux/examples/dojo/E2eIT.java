@@ -47,14 +47,6 @@ class E2eIT {
   static final String OWNER_EMAIL = "owner@dojo.test";
   static final String OWNER_NAME = "Olive Owner";
 
-  /**
-   * Chosen before the app starts: the passkey origin and the links' base URL must name it, and a
-   * random port is only known once the server is up.
-   */
-  static final int PORT = freePort();
-
-  static final String BASE_URL = "http://localhost:" + PORT;
-
   static final File LOG = new File("target/playwright.log");
 
   static final File APP_LOG = new File("target/app.log");
@@ -64,6 +56,15 @@ class E2eIT {
   static final TestDatabase.Database DATABASE = TestDatabase.create();
 
   static final TestMail.Mail MAIL = TestMail.get();
+
+  /**
+   * Chosen before the app starts: the passkey origin and the links' base URL must name it, and a
+   * random port is only known once the server is up. Chosen after the containers above start (the
+   * fields initialise in order), so Docker cannot hand the same port to one of them.
+   */
+  static final int PORT = freePort();
+
+  static final String BASE_URL = "http://localhost:" + PORT;
 
   static ConfigurableApplicationContext context;
 
