@@ -22,7 +22,7 @@ Playwright.
 ## Peer dependencies
 
 The app supplies `@chakra-ui/react`, `@emotion/react`, `@tanstack/react-form`, `@tanstack/react-query`,
-`@tanstack/react-table`, `react`, `react-icons` and `zod` (`^4.6.7`).
+`@tanstack/react-table`, `date-fns` (`^4.4.0`), `react`, `react-icons` and `zod` (`^4.6.7`).
 
 `/form` calls `z.config({ jitless: true })` when it loads, so Zod never probes `eval` and a Content-Security-Policy
 without `unsafe-eval` stays quiet. `package.json` lists that file in `sideEffects`; a bundler must keep it.

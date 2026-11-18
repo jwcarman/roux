@@ -126,13 +126,13 @@ The full list of who's settings is in who's configuration guide
 
 ```
 npm install @jwcarman/roux-web@0.2.0
-npm install @chakra-ui/react @emotion/react @tanstack/react-form @tanstack/react-query @tanstack/react-table react react-icons zod
+npm install @chakra-ui/react @emotion/react @tanstack/react-form @tanstack/react-query @tanstack/react-table date-fns react react-icons zod
 ```
 
 The Java and web versions must match: use the same version for `roux.version` and `@jwcarman/roux-web`
 (here `0.2.0`). The second line is the peer dependencies; the app supplies them (`react` `^19.3.1`,
 `@chakra-ui/react` `^3.38.0`, `@tanstack/react-query` `^5.107.1`, `@tanstack/react-form` `^1.33.5`,
-`@tanstack/react-table` `^8.21.3`, `zod` `^4.6.7`, `@emotion/react` `^11.14.0`, `react-icons`
+`@tanstack/react-table` `^8.21.3`, `date-fns` `^4.4.0`, `zod` `^4.6.7`, `@emotion/react` `^11.14.0`, `react-icons`
 `^5.7.0`). The package is ESM only.
 
 Import from a subpath; there is no root import:
@@ -145,6 +145,7 @@ Import from a subpath; there is no root import:
 | `@jwcarman/roux-web/table` | `QueryTable` and its parts, search inputs | [Tables and paging](tables-and-paging.md) |
 | `@jwcarman/roux-web/feedback` | toasts (`notify`), confirmations, error and not-found pages | [Feedback](feedback.md) |
 | `@jwcarman/roux-web/form` | Zod rule helpers, `useSchemaForm`, fields, `FormDialog` | [Forms](forms.md) |
+| `@jwcarman/roux-web/dates` | ISO strings to and from date-fns Dates (`parseIsoDate`, `formatIsoDate`, `parseIsoTime`, `formatIsoTime`) | [Forms](forms.md#dates-and-times) |
 
 ## Set up the app root
 

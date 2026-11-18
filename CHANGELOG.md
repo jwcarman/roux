@@ -14,6 +14,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- roux-web's date library is date-fns, a new peer dependency (`^4.4.0`; `npm install date-fns`). The
+  new `@jwcarman/roux-web/dates` subpath has `parseIsoDate`, `formatIsoDate`, `parseIsoTime` and
+  `formatIsoTime`, which go between the wire's ISO strings (`2026-11-17`, `18:30`) and date-fns Dates,
+  strictly; `date().notInFuture()` uses them.
 - roux-spa serves a single-page app's shell for any page URL, so a route is written once,
   in the frontend. With `static/index.html` on the classpath, a GET or HEAD that accepts `text/html`,
   has no file extension and is not under `/api`, `/who`, `/assets`, `/actuator`, `/.well-known` or

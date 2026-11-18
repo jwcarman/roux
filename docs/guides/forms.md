@@ -129,6 +129,27 @@ export const termSchema = z
   .refine((term) => term.endsOn >= term.startsOn, { path: ["endsOn"], error: "Must not be before the start" });
 ```
 
+### Dates and times
+
+roux-web's date library is date-fns (a peer dependency). The wire format stays an ISO string: a
+`LocalDate` is `2026-11-17`, a `LocalTime` is `18:30` (what a `type="time"` input holds; Jackson
+writes `18:30:00` and reads either), an instant is an ISO string. Use date-fns directly for
+arithmetic and display (`addDays`, `isAfter`, `format`, `startOfWeek`); do not write your own date
+arithmetic. To go between the strings and Dates, `@jwcarman/roux-web/dates` has four strict helpers
+(`undefined` when the text is not a real date or time, never a rolled-over one):
+
+```ts
+import { formatIsoDate, formatIsoTime, parseIsoDate, parseIsoTime } from "@jwcarman/roux-web/dates";
+
+function parseIsoDate(iso: string): Date | undefined; // "2026-11-17" as local midnight; "2026-02-30" is undefined
+function formatIsoDate(date: Date): string; // the local calendar day, "2026-11-17"
+function parseIsoTime(iso: string): Date | undefined; // "18:30" or "18:30:00", on an arbitrary day
+function formatIsoTime(date: Date): string; // "18:30"
+```
+
+For example, the most recent Tuesday, as a date input holds it: `formatIsoDate(previousTuesday(new Date()))`
+with date-fns's `previousTuesday` (or `startOfToday()` for today).
+
 ### Write a rule the helpers lack
 
 A choice among ids loaded at run time (a select of ranks from a query) is `id()`: `rankId: id()`. There

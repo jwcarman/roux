@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formatIsoDate, parseIsoDate } from "../dates/dates";
 
 /*
  * Rule helpers for a form's Zod schema, in the server's words: each message is the one in
@@ -167,24 +168,16 @@ export type DateRule<Out extends string | null = string> = Rule<
   }
 >;
 
-/** Today in the browser's time zone, as a date input writes it. */
-function localToday(): string {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
-}
-
 /** The checks on a date input's value that `state` asks for; `""` passes unless `required`. */
 function dateSchema(state: DateState): z.ZodString {
   let schema = state.required ? z.string().min(1, { error: NOT_EMPTY, abort: true }) : z.string();
   // `abort`: a value that is not a date reports only that, not also that it is in the future.
-  schema = schema.refine((value) => value === "" || z.regexes.date.test(value), {
+  schema = schema.refine((value) => value === "" || parseIsoDate(value) !== undefined, {
     error: NOT_EXPECTED_FORMAT,
     abort: true,
   });
   if (state.notInFuture) {
-    schema = schema.refine((value) => value <= localToday(), { error: NOT_IN_FUTURE });
+    schema = schema.refine((value) => value <= formatIsoDate(new Date()), { error: NOT_IN_FUTURE });
   }
   return schema;
 }
