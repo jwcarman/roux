@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { notify } from "@jwcarman/roux-web/feedback";
-import { FormDialog, useSchemaForm } from "@jwcarman/roux-web/form";
+import { FormDialog, inputOf, timeInputOf, useSchemaForm } from "@jwcarman/roux-web/form";
 import {
   classRequestSchema,
   createClass,
@@ -21,9 +21,9 @@ export function ClassFormDialog({ schoolClass, trigger }: { schoolClass?: School
       ? {
           name: schoolClass.name,
           weekday: schoolClass.weekday,
-          startsAt: schoolClass.startsAt,
-          endsAt: schoolClass.endsAt,
-          instructorId: schoolClass.instructorId ?? "",
+          startsAt: timeInputOf(schoolClass.startsAt),
+          endsAt: timeInputOf(schoolClass.endsAt),
+          instructorId: inputOf(schoolClass.instructorId),
         }
       : { name: "", weekday: "", startsAt: "", endsAt: "", instructorId: "" },
     mutation: schoolClass ? updateClass(schoolClass.id, schoolClass.version) : createClass,

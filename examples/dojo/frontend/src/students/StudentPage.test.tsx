@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { toaster } from "@jwcarman/roux-web/feedback";
 import { PROMOTIONS_MANAGE, STUDENTS_MANAGE, STUDENTS_READ } from "../api";
 import type { Rank } from "../ranks/ranks";
-import { todayIso } from "../shell/dates";
+import { formatIsoDate } from "@jwcarman/roux-web/dates";
 import { invalidFields } from "../testing/problems";
 import { renderRoute } from "../testing/route";
 import { server } from "../testing/server";
@@ -92,7 +92,7 @@ describe("StudentPage", () => {
         student = {
           ...ADA,
           currentRank: WHITE,
-          promotions: [{ id: "p3", rank: WHITE, date: todayIso() }, ...ADA.promotions],
+          promotions: [{ id: "p3", rank: WHITE, date: formatIsoDate(new Date()) }, ...ADA.promotions],
         };
         return HttpResponse.json(student, { status: 201 });
       }),
@@ -102,12 +102,12 @@ describe("StudentPage", () => {
 
     await user.click(await screen.findByRole("button", { name: "Promote" }));
     const dialog = await screen.findByRole("dialog", { name: "Promote Ada Lovelace" });
-    expect(within(dialog).getByLabelText(/^Date/)).toHaveValue(todayIso());
+    expect(within(dialog).getByLabelText(/^Date/)).toHaveValue(formatIsoDate(new Date()));
     await user.selectOptions(await within(dialog).findByLabelText(/^Rank/), "r1");
     await user.click(within(dialog).getByRole("button", { name: "Promote" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent("Ada Lovelace was promoted");
-    expect(sent).toEqual({ rankId: "r1", date: todayIso() });
+    expect(sent).toEqual({ rankId: "r1", date: formatIsoDate(new Date()) });
     await waitFor(() => expect(screen.getByText("Current rank").nextElementSibling).toHaveTextContent("White"));
   });
 

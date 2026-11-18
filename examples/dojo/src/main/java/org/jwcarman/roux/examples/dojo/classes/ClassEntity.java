@@ -2,7 +2,6 @@ package org.jwcarman.roux.examples.dojo.classes;
 
 import java.time.DayOfWeek;
 import java.time.LocalTime;
-import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import jakarta.persistence.Entity;
@@ -45,7 +44,7 @@ public class ClassEntity extends AuditableEntity {
     apply(request);
   }
 
-  /** Replaces the class's details with those of {@code request}; times are kept to the minute. */
+  /** Replaces the class's details with those of {@code request}. */
   public void change(ClassRequest request) {
     apply(request);
   }
@@ -53,8 +52,8 @@ public class ClassEntity extends AuditableEntity {
   private void apply(ClassRequest request) {
     this.name = request.name();
     this.weekday = request.weekday();
-    this.startsAt = request.startsAt().truncatedTo(ChronoUnit.MINUTES);
-    this.endsAt = request.endsAt().truncatedTo(ChronoUnit.MINUTES);
+    this.startsAt = request.startsAt();
+    this.endsAt = request.endsAt();
     this.instructorId = request.instructorId();
   }
 }

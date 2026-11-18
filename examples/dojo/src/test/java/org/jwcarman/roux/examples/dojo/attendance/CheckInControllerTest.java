@@ -305,7 +305,7 @@ class CheckInControllerTest {
     owner
         .perform(send(put(CLASSES + "/" + tuesdayClass), change))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.endsAt").value("18:30"));
+        .andExpect(jsonPath("$.endsAt").value("18:30:00"));
 
     // with the mark taken back, the class may move
     mark(tuesdayClass, ada, TUESDAY, false);

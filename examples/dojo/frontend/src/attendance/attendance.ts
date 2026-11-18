@@ -1,5 +1,5 @@
-import { mutationOptions, queryOptions, useMutationState } from "@tanstack/react-query";
-import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
+import { queryOptions } from "@tanstack/react-query";
+import { getJson, optimisticMutation, path, sendJson } from "@jwcarman/roux-web/api";
 import { pageQuery, type PageDto } from "@jwcarman/roux-web/paging";
 import { queryKeys } from "../queryKeys";
 
@@ -73,28 +73,14 @@ export function checkInQuery(classId: string, date: string) {
 /**
  * Marks the student `studentId` present at the class on `date` (`true`) or takes the mark back
  * (`false`). It sends the wanted state, not a toggle, so the server answers a repeat the same way.
- * Marks for one student run one after another (`scope`), so fast taps reach the server in order;
- * the check-in list and the student's own page refresh once each settles, whether it worked or not,
- * which is how a screen that guessed wrong ends up showing the server's truth.
+ * `optimisticMutation` keys it by the student, so fast taps reach the server in order and the row
+ * can show the latest one before the server answers; the check-in list and the student's own page
+ * refresh once each settles, which is how a screen that guessed wrong ends up showing the server's
+ * truth.
  */
 export function markAttendance(classId: string, date: string, studentId: string) {
-  return mutationOptions({
-    mutationKey: queryKeys.attendance.mark(classId, date, studentId),
+  return optimisticMutation(queryKeys.attendance.mark(classId, date, studentId), {
     mutationFn: (present: boolean) => attendanceApi.mark(classId, { studentId, date, present }),
-    scope: { id: queryKeys.attendance.mark(classId, date, studentId).join("/") },
     meta: { refreshes: [queryKeys.attendance.checkIn(classId, date), queryKeys.students.detail(studentId)] },
   });
-}
-
-/**
- * What the student's last mark still waiting for its answer asks for, or undefined when none is.
- * A row shows this before the server answers (an optimistic toggle), and falls back to what the
- * server said when nothing is waiting.
- */
-export function usePendingPresence(classId: string, date: string, studentId: string): boolean | undefined {
-  const asked = useMutationState({
-    filters: { mutationKey: queryKeys.attendance.mark(classId, date, studentId), status: "pending" },
-    select: (mutation) => mutation.state.variables,
-  });
-  return asked.filter((variables): variables is boolean => typeof variables === "boolean").at(-1);
 }

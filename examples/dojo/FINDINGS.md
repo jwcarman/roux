@@ -238,7 +238,8 @@ What building the dojo showed about roux: one entry per finding, in the order fo
 - roux could: a `time()` rule (`HH:mm`, `Must not be empty` / `Is not in the expected format`), say
   in the forms guide how a `LocalTime` travels (`HH:mm`, with the `@JsonFormat`), and answer an
   unreadable time as a field error as it does for an enum.
-- Outcome: deferred (a roux rule helper: the user decides).
+- Outcome: fixed in 6686534 (`time()`, `timeInputOf`, a malformed date or time in a body is a field error) and
+  13f0650 (`/dates`, date-fns).
 
 ## A rule across two fields lives twice, in two shapes
 - Where: `classes/classes.ts` (`classRequestSchema.refine`), `classes/ClassService.requireValid`
@@ -249,7 +250,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   nothing to keep them equal.
 - roux could: say so in the forms guide's cross-field section (the server half is missing there), or
   offer a constant both sides share, as `Phone.PATTERN` does for the phone rule.
-- Outcome: deferred (guide gap; not a code change).
+- Outcome: fixed in 052292d (`@After` on the server, `after()` in the browser, one message, a contract test).
 
 ## An optional choice has no helper either
 - Where: `classes/classes.ts` (`optionalId`), `ClassFormDialog` (instructor)
@@ -259,7 +260,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   form's input and output types differ by hand.
 - roux could: `id().optional()` and `oneOf(...).optional()` giving `null` for the placeholder, like
   the text helpers.
-- Outcome: deferred (small roux addition: the user decides).
+- Outcome: fixed in 61b3a62 (`id().optional()`, `oneOf(...).optional()`).
 
 ## A week grid is plain Chakra plus constants the app writes
 - Where: `classes/TimetablePage.tsx`, `classes/classes.ts` (`WEEKDAYS`, `WEEKDAY_LABELS`)
@@ -292,7 +293,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
 - roux could: a short "An optimistic toggle" section in queries-and-mutations.md with this recipe
   (scope, wanted-state variable, `useMutationState`), or `useServerAction` returning the pending
   variables.
-- Outcome: deferred (a guide section, maybe a hook: the user decides).
+- Outcome: fixed in e92952e (`optimisticMutation`, `useOptimisticToggle`, `useOptimisticValue`, with a guide section).
 
 ## A unique constraint that means "already done" needs a service without a transaction
 - Where: `attendance/AttendanceService.markPresent`
@@ -305,7 +306,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   a violation as a 409 or a field error, never as success.
 - roux could: say so in the errors guide ("a violation you will swallow cannot be caught inside the
   transaction that caused it"), with this shape.
-- Outcome: deferred (guide note).
+- Outcome: fixed in 4f0a720 (`Idempotent.insert` keeps the service transactional; the errors guide says why a lock).
 
 ## A client-side filter is written by hand each time
 - Where: `attendance/CheckInPage.tsx` (`matches`)
@@ -323,7 +324,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   `tableSearchOf`, `enumSearchOf` and `idSearchOf` cover everything but a date. A made-up
   `?date=2026-02-30` reached the server as a 400 until the route checked it by hand.
 - roux could: `dateSearchOf(raw)` (a real `YYYY-MM-DD` or undefined) in `/paging`.
-- Outcome: deferred (small roux addition: the user decides).
+- Outcome: fixed in 1d9da43 (`dateSearchOf`).
 
 ## A list in a fixed order has no way to say so
 - Where: `attendance/StudentAttendanceService` (`NewestFirst`), `attendance/attendance.ts` (`attendancePage`)

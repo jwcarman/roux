@@ -4,8 +4,6 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.UUID;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-
 /**
  * A class as the API answers it; {@code instructorName} is null when there is no instructor, or the
  * member is no longer in the directory.
@@ -14,8 +12,8 @@ public record SchoolClass(
     UUID id,
     String name,
     DayOfWeek weekday,
-    @JsonFormat(pattern = "HH:mm") LocalTime startsAt,
-    @JsonFormat(pattern = "HH:mm") LocalTime endsAt,
+    LocalTime startsAt,
+    LocalTime endsAt,
     UUID instructorId,
     String instructorName,
     long version) {

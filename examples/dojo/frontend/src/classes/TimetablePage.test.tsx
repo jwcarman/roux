@@ -16,8 +16,8 @@ const EARLY: SchoolClass = {
   id: "c1",
   name: "Early bird",
   weekday: "MONDAY",
-  startsAt: "06:30",
-  endsAt: "07:30",
+  startsAt: "06:30:00",
+  endsAt: "07:30:00",
   instructorId: null,
   instructorName: null,
   version: 0,
@@ -26,8 +26,8 @@ const KIDS: SchoolClass = {
   id: "c2",
   name: "Kids Karate",
   weekday: "MONDAY",
-  startsAt: "17:00",
-  endsAt: "18:00",
+  startsAt: "17:00:00",
+  endsAt: "18:00:00",
   instructorId: "i1",
   instructorName: "Ivy Instructor",
   version: 3,
@@ -36,8 +36,8 @@ const OPEN_MAT: SchoolClass = {
   id: "c3",
   name: "Open mat",
   weekday: "SUNDAY",
-  startsAt: "10:00",
-  endsAt: "12:00",
+  startsAt: "10:00:00",
+  endsAt: "12:00:00",
   instructorId: null,
   instructorName: null,
   version: 0,
@@ -239,6 +239,7 @@ describe("TimetablePage", () => {
 
     await user.click(await screen.findByRole("button", { name: "Edit Kids Karate" }));
     const dialog = await screen.findByRole("dialog", { name: "Edit Kids Karate" });
+    // the server writes 17:00:00; the time input holds 17:00
     expect(within(dialog).getByLabelText(/^Starts/)).toHaveValue("17:00");
     expect(within(dialog).getByLabelText(/^Day/)).toHaveValue("MONDAY");
     const name = within(dialog).getByLabelText(/^Name/);
@@ -331,6 +332,30 @@ describe("the classes module", () => {
     });
     expect(parsed.success).toBe(false);
     expect(parsed.error?.issues.map((issue) => issue.message)).toContain("Is not in the expected format");
+  });
+
+  it("refuses a class that ends when it starts or before, on the end, in the server's words", () => {
+    for (const endsAt of ["17:00", "16:59"]) {
+      const parsed = classRequestSchema.safeParse({
+        name: "Kids",
+        weekday: "MONDAY",
+        startsAt: "17:00",
+        endsAt,
+        instructorId: "",
+      });
+      expect(parsed.error?.issues).toMatchObject([{ path: ["endsAt"], message: "Must be after the start time" }]);
+    }
+  });
+
+  it("sends no instructor as null", () => {
+    const parsed = classRequestSchema.parse({
+      name: "Kids",
+      weekday: "MONDAY",
+      startsAt: "17:00",
+      endsAt: "18:00",
+      instructorId: "",
+    });
+    expect(parsed.instructorId).toBeNull();
   });
 
   it("each mutation refreshes the timetable", () => {

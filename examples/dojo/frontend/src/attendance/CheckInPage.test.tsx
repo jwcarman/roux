@@ -3,10 +3,10 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { formatIsoDate } from "@jwcarman/roux-web/dates";
 import { toaster } from "@jwcarman/roux-web/feedback";
 import { ATTENDANCE_RECORD, CLASSES_READ } from "../api";
 import type { SchoolClass } from "../classes/classes";
-import { todayIso } from "../shell/dates";
 import { invalidFields } from "../testing/problems";
 import { renderRoute } from "../testing/route";
 import { server } from "../testing/server";
@@ -17,8 +17,8 @@ const KARATE: SchoolClass = {
   id: "c1",
   name: "Tuesday Karate",
   weekday: "TUESDAY",
-  startsAt: "17:00",
-  endsAt: "18:00",
+  startsAt: "17:00:00",
+  endsAt: "18:00:00",
   instructorId: null,
   instructorName: null,
   version: 0,
@@ -101,8 +101,8 @@ describe("CheckInPage", () => {
     for (const name of ["Ada Lovelace", "Alan Turing", "Grace Hopper"]) {
       expect(await toggle(name)).toHaveAttribute("aria-pressed", "false");
     }
-    expect(screen.getByLabelText("Date")).toHaveValue(todayIso());
-    expect(asked).toEqual([todayIso()]);
+    expect(screen.getByLabelText("Date")).toHaveValue(formatIsoDate(new Date()));
+    expect(asked).toEqual([formatIsoDate(new Date())]);
     expect(screen.getByRole("status")).toHaveTextContent("0 of 3 present");
   });
 
@@ -120,7 +120,7 @@ describe("CheckInPage", () => {
     renderRoute("/classes/c1/check-in?date=2026-02-30", STAFF);
 
     await toggle("Ada Lovelace");
-    expect(asked).toEqual([todayIso()]);
+    expect(asked).toEqual([formatIsoDate(new Date())]);
   });
 
   it("marks present as soon as it is tapped, before the server answers, then shows the server's list", async () => {
@@ -160,7 +160,7 @@ describe("CheckInPage", () => {
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("0 of 3 present"));
     expect(sent.map((request) => request.present)).toEqual([true, false]);
     expect(marks.get("s1")).toBe(false);
-    expect(sent[0]).toEqual({ studentId: "s1", date: todayIso(), present: true });
+    expect(sent[0]).toEqual({ studentId: "s1", date: formatIsoDate(new Date()), present: true });
   });
 
   it("a double tap sends present then not present, one after the other, and ends as the server has it", async () => {
@@ -396,7 +396,8 @@ describe("markAttendance", () => {
       queryKeys.attendance.checkIn("c1", "2026-03-10"),
       queryKeys.students.detail("s1"),
     ]);
-    expect(mutation.scope?.id).toBe(queryKeys.attendance.mark("c1", "2026-03-10", "s1").join("/"));
+    expect(mutation.mutationKey).toEqual(queryKeys.attendance.mark("c1", "2026-03-10", "s1"));
+    expect(mutation.scope?.id).toBe(JSON.stringify(queryKeys.attendance.mark("c1", "2026-03-10", "s1")));
     expect(markAttendance("c1", "2026-03-10", "s2").scope?.id).not.toBe(mutation.scope?.id);
   });
 

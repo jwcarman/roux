@@ -9,7 +9,8 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
-import org.hibernate.exception.ConstraintViolationException;
+import jakarta.persistence.EntityManager;
+
 import org.jwcarman.roux.examples.dojo.classes.ClassEntity;
 import org.jwcarman.roux.examples.dojo.classes.ClassNotFoundException;
 import org.jwcarman.roux.examples.dojo.classes.ClassRepository;
@@ -17,18 +18,16 @@ import org.jwcarman.roux.examples.dojo.students.StudentEntity;
 import org.jwcarman.roux.examples.dojo.students.StudentNotFoundException;
 import org.jwcarman.roux.examples.dojo.students.StudentRepository;
 import org.jwcarman.roux.examples.dojo.students.StudentStatus;
+import org.jwcarman.roux.jpa.Idempotent;
 import org.jwcarman.roux.problems.ConflictException;
 import org.jwcarman.roux.problems.InvalidFieldException;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Check-in: who is on a class's list for a date, and marking students present or not. */
 @Service
+@Transactional
 public class AttendanceService {
-
-  /** The unique constraint on (class, student, date) (attendance.xml). */
-  static final String ONCE_PER_DAY = "attendance_class_student_day_key";
 
   private static final Comparator<StudentEntity> BY_NAME =
       Comparator.comparing((StudentEntity s) -> s.getLastName().toLowerCase(Locale.ROOT))
@@ -38,12 +37,17 @@ public class AttendanceService {
   private final ClassRepository classes;
   private final StudentRepository students;
   private final AttendanceRepository attendance;
+  private final EntityManager entityManager;
 
   public AttendanceService(
-      ClassRepository classes, StudentRepository students, AttendanceRepository attendance) {
+      ClassRepository classes,
+      StudentRepository students,
+      AttendanceRepository attendance,
+      EntityManager entityManager) {
     this.classes = classes;
     this.students = students;
     this.attendance = attendance;
+    this.entityManager = entityManager;
   }
 
   /**
@@ -75,10 +79,10 @@ public class AttendanceService {
    * marking present twice (a double tap, two devices) leaves one mark, and taking back what is not
    * there is not an error.
    *
-   * <p>Not transactional on purpose. Two requests can both find no mark and both insert; the unique
-   * constraint {@value #ONCE_PER_DAY} refuses the second, which must read as "already present".
-   * That refusal ends a transaction it happens in, so each repository call here is its own, and the
-   * one that lost is answered like the one that won.
+   * <p>Two requests can both find no mark and both insert, and the unique constraint would refuse
+   * the second inside a transaction it then ruins. {@link Idempotent#insert} serialises them by the
+   * mark's key instead, so the one that comes second finds the first's mark and is answered like
+   * the one that won.
    *
    * @throws ClassNotFoundException if there is no such class
    * @throws StudentNotFoundException if there is no such student
@@ -106,18 +110,13 @@ public class AttendanceService {
       throw new ConflictException(
           "%s is not active", student.getFirstName() + " " + student.getLastName());
     }
-    if (attendance.existsBySchoolClassIdAndStudentIdAndAttendedOn(
-        schoolClass.getId(), student.getId(), date)) {
-      return;
-    }
-    try {
-      attendance.saveAndFlush(new AttendanceEntity(schoolClass, student.getId(), date));
-    } catch (DataIntegrityViolationException e) {
-      if (!(e.getCause() instanceof ConstraintViolationException violation
-          && ONCE_PER_DAY.equals(violation.getConstraintName()))) {
-        throw e;
-      }
-    }
+    Idempotent.insert(
+        entityManager,
+        List.of("attendance", schoolClass.getId(), student.getId(), date),
+        () ->
+            attendance.existsBySchoolClassIdAndStudentIdAndAttendedOn(
+                schoolClass.getId(), student.getId(), date),
+        () -> attendance.saveAndFlush(new AttendanceEntity(schoolClass, student.getId(), date)));
   }
 
   private static void requireClassDay(ClassEntity schoolClass, LocalDate date) {

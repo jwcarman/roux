@@ -62,8 +62,8 @@ class ClassesControllerTest {
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.name").value("Kids Karate"))
         .andExpect(jsonPath("$.weekday").value("MONDAY"))
-        .andExpect(jsonPath("$.startsAt").value("16:00"))
-        .andExpect(jsonPath("$.endsAt").value("17:00"))
+        .andExpect(jsonPath("$.startsAt").value("16:00:00"))
+        .andExpect(jsonPath("$.endsAt").value("17:00:00"))
         .andExpect(jsonPath("$.instructorName").value("Ivy Instructor"))
         .andExpect(jsonPath("$.version").value(0));
   }
@@ -125,7 +125,9 @@ class ClassesControllerTest {
   void aTimeThatIsNotAClockTimeIs400NotA500() throws Exception {
     owner
         .perform(send(post(CLASSES), karate("Kids", "MONDAY", "6pm", "17:00")))
-        .andExpect(status().isBadRequest());
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("startsAt"))
+        .andExpect(jsonPath("$.errors[0].message").value("Is not in the expected format"));
     owner
         .perform(send(post(CLASSES), karate("Kids", "FUNDAY", "16:00", "17:00")))
         .andExpect(status().isBadRequest())

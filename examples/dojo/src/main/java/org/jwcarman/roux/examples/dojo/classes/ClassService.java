@@ -77,8 +77,8 @@ public class ClassService {
   /**
    * Adds a class.
    *
-   * @throws InvalidFieldException on {@code endsAt} if it is not after {@code startsAt}, or on
-   *     {@code instructorId} if that member is not an owner or an instructor
+   * @throws InvalidFieldException on {@code instructorId} if that member is not an owner or an
+   *     instructor
    */
   public SchoolClass create(ClassRequest request) {
     requireValid(request);
@@ -119,9 +119,6 @@ public class ClassService {
   }
 
   private void requireValid(ClassRequest request) {
-    if (!request.endsAt().isAfter(request.startsAt())) {
-      throw new InvalidFieldException("endsAt", "Must be after the start time");
-    }
     UUID instructorId = request.instructorId();
     if (instructorId != null
         && directory

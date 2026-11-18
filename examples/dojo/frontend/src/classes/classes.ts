@@ -1,6 +1,8 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
-import { fieldRules, oneOf, text } from "@jwcarman/roux-web/form";
+import { formatIsoDate } from "@jwcarman/roux-web/dates";
+import { after, id, oneOf, text, time } from "@jwcarman/roux-web/form";
+import { addDays, format, getDay, previousDay, type Day } from "date-fns";
 import { z } from "zod";
 import { queryKeys } from "../queryKeys";
 
@@ -8,18 +10,32 @@ import { queryKeys } from "../queryKeys";
 export const WEEKDAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"] as const;
 export type Weekday = (typeof WEEKDAYS)[number];
 
-/** Each weekday as people write it. */
-export const WEEKDAY_LABELS: Record<Weekday, string> = {
-  MONDAY: "Monday",
-  TUESDAY: "Tuesday",
-  WEDNESDAY: "Wednesday",
-  THURSDAY: "Thursday",
-  FRIDAY: "Friday",
-  SATURDAY: "Saturday",
-  SUNDAY: "Sunday",
-};
+/** A Monday, to count the weekdays from. */
+const A_MONDAY = new Date(2024, 0, 1);
 
-/** A class as `/api/classes` answers it: times are `HH:mm` on the school's clock. */
+/** Each weekday as people write it ("Monday"). */
+export const WEEKDAY_LABELS = Object.fromEntries(
+  WEEKDAYS.map((weekday, index) => [weekday, format(addDays(A_MONDAY, index), "EEEE")]),
+) as Record<Weekday, string>;
+
+/** The weekdays as date-fns numbers them (Sunday is 0). */
+const DAY_NUMBERS = {
+  MONDAY: 1,
+  TUESDAY: 2,
+  WEDNESDAY: 3,
+  THURSDAY: 4,
+  FRIDAY: 5,
+  SATURDAY: 6,
+  SUNDAY: 0,
+} as const satisfies Record<Weekday, Day>;
+
+/** The most recent day, up to and including `today`, that falls on `weekday`, as a date input holds it. */
+export function latestOn(weekday: Weekday, today: Date = new Date()): string {
+  const dayNumber = DAY_NUMBERS[weekday];
+  return formatIsoDate(getDay(today) === dayNumber ? today : previousDay(today, dayNumber));
+}
+
+/** A class as `/api/classes` answers it: times are `HH:mm:ss` on the school's clock. */
 export interface SchoolClass {
   id: string;
   name: string;
@@ -37,30 +53,17 @@ export interface Instructor {
   name: string;
 }
 
-/** A required time of day, as a `type="time"` input holds it (`HH:mm`): `@NotNull LocalTime`. */
-const time = z
-  .string()
-  .trim()
-  .min(1, { error: "Must not be empty", abort: true })
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, { error: "Is not in the expected format" })
-  .register(fieldRules, { required: true });
-
-/** An optional choice among ids loaded at run time: `""` (nothing chosen) is sent as null. */
-const optionalId = z.string().transform((value) => (value === "" ? null : value));
-
 /** ClassRequest's rules (without the version), in the server's words. */
-export const classRequestSchema = z
-  .object({
+export const classRequestSchema = after(
+  z.object({
     name: text().max(60),
     weekday: oneOf(WEEKDAYS),
-    startsAt: time,
-    endsAt: time,
-    instructorId: optionalId,
-  })
-  .refine((request) => request.endsAt > request.startsAt, {
-    path: ["endsAt"],
-    error: "Must be after the start time",
-  });
+    startsAt: time(),
+    endsAt: time(),
+    instructorId: id().optional(),
+  }),
+  { field: "endsAt", other: "startsAt", otherLabel: "the start time" },
+);
 
 /** What a class form sends: the name trimmed, no instructor as null. */
 export type ClassRequest = z.output<typeof classRequestSchema>;

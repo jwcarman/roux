@@ -27,6 +27,15 @@ describe("display formats", () => {
     );
   });
 
+  it("show a time the server writes with seconds the same way", () => {
+    expect(formatTime("16:30:00")).toBe(formatTime("16:30"));
+  });
+
+  it("show text that is not a date or a time as it is, so the mistake is seen", () => {
+    expect(formatDate("soon")).toBe("soon");
+    expect(formatTime("6pm")).toBe("6pm");
+  });
+
   it("show a number in the reader's format", () => {
     expect(formatNumber(1234.5)).toBe(new Intl.NumberFormat().format(1234.5));
     expect(formatNumber(0)).toBe(new Intl.NumberFormat().format(0));
