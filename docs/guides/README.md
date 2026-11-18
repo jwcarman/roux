@@ -7,5 +7,5 @@
 - [Forms](forms.md)
 - [Tables and paging](tables-and-paging.md)
 - [Feedback](feedback.md)
-- [The shell: theme and sign-in](shell.md)
+- [The shell: theme, sign-in and navigation](shell.md)
 - [Testing](testing.md)

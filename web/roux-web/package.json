@@ -52,6 +52,10 @@
     "./signin": {
       "types": "./dist/signin/index.d.ts",
       "import": "./dist/signin/index.js"
+    },
+    "./navigation": {
+      "types": "./dist/navigation/index.d.ts",
+      "import": "./dist/navigation/index.js"
     }
   },
   "scripts": {

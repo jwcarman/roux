@@ -14,6 +14,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- `@jwcarman/roux-web/navigation`: the navigation, typed. `defineNav(permissions, items)` takes entries whose
+  `to` is a route the router knows (a misspelt route is a type error), `icon` a component (not a name looked up
+  in a hand-kept map) and `permission` one of the app's declared permissions: TypeScript checks it, and
+  `defineNav` throws when the module loads for a typo that gets past it, a duplicate place or label, two start
+  places, or a Home item beside a start place elsewhere. `navItemsFor`, `startPathFor` and `openingRedirect`
+  work from the session's permissions. `AppShell` (sidebar, icon rail and drawer, with the app's own account
+  area) and `NavLinks` moved from the dojo. New peer dependency: `@tanstack/react-router`.
 - `@jwcarman/roux-web/signin`: the sign-in pieces, ported from who's example app into Chakra. `EmailSignIn`
   (email me a link, then "open the link, or type the code from the email" with `autoComplete="one-time-code"`,
   who's refusal under the field), `PasskeySignInButton`, `ProviderSignInButtons` / `ProviderSignInButton`

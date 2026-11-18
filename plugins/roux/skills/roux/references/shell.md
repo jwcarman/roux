@@ -1,8 +1,8 @@
-# The shell: theme and sign-in
+# The shell: theme, sign-in and navigation
 
 roux serves the app's shell (`index.html`, with its nonce, its Content-Security-Policy and the theme in
 place: [Getting started](getting-started.md#the-shell)) and ships the pieces every shell needs, from
-`@jwcarman/roux-web/theme`. The pages are the app's: the sign-in page and the appearance page stay app code, composed from roux's components.
+`@jwcarman/roux-web/theme`. The pages are the app's: the sign-in page, the appearance page and the navigation declaration stay app code, composed from roux's components.
 
 ## The theme
 
@@ -98,9 +98,42 @@ export function SignIn() {
   (`isReturnable` says which paths count: never Home, sign-in, `/api` or `/who`; `takeSignInReturn` reads it once).
   After a sign-in of your own, call `useSignInReturn()()`.
 
+## Navigation
+
+`@jwcarman/roux-web/navigation` owns the sidebar. The app declares its places in a typed module:
+
+```ts
+// nav.ts
+import { LuHouse, LuUsers } from "react-icons/lu";
+import { defineNav } from "@jwcarman/roux-web/navigation";
+import { PERMISSIONS } from "./api"; // ["members.read", ...] as const
+
+export const nav = defineNav(PERMISSIONS, [
+  { label: "Home", to: "/", icon: LuHouse, description: "A welcome page." },
+  { label: "Members", to: "/members", icon: LuUsers, permission: "members.read", description: "Who can use the app." },
+]);
+```
+
+`to` is a route the router knows (a misspelt route is a type error), `icon` is a component, and
+`permission` must be one of the app's declared permissions: TypeScript checks it, and `defineNav` throws
+when the module loads for a typo that gets past it, for two items with one place or label, two start places,
+and a Home item beside a start place elsewhere. A renamed server permission therefore fails at once, in dev
+and in tests (import `nav` in a test), instead of hiding a page from everyone.
+
+`navItemsFor(nav, permissions)` is what a person may open (`me.permissions`, a `Permissions` list; none when
+signed out); `startPathFor` and `openingRedirect(nav, permissions, home)` say where `/` sends them. The
+types are `Nav` (what `defineNav` returns), `NavEntry` (one item) and `NavTo` (a route the router knows).
+
+`<AppShell>` is the signed-in frame (`AppShellProps`: `nav`, `permissions`, `appName`, `logo`, `account`): a sidebar
+from `lg`, an icon rail at `md`, and a drawer opened by "Open navigation" below. The page is its `children`
+(`<Outlet />`), and `account` draws the person's area under the links, given an `AccountLayout`
+(`({ compact, close }) => ...`: `compact` in the rail, `close` closes the drawer). `<NavLinks>`
+(`NavLinksProps`) is the link list alone, and `RAIL_LABELS` hides labels in the rail. Needs
+`@tanstack/react-router`.
+
 ## Don't
 
 - Don't mount `ChakraProvider` or Emotion's `CacheProvider` yourself next to `ThemeProvider`.
 - Don't write the theme, the nonce or the page's title into `index.html` by hand: the server does.
 - Don't call `/api/theme` from the app; `AppearanceSettings` is the only caller.
-- Don't hand-write sign-in calls to who: use the components.
+- Don't hand-write sign-in calls to who or a navigation list of strings: use the components and `defineNav`.
