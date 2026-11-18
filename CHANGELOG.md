@@ -14,6 +14,12 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- `@jwcarman/roux-web/theme`: `ThemeProvider` (Chakra's provider with the page's theme, the bundled font, and
+  Emotion's cache under the page's CSP nonce, so an app cannot forget the nonce), `useShellTheme`,
+  `createThemeSystem` (a Chakra system for a `ShellTheme`) and `<AppearanceSettings />` (the owner's form with
+  live preview, Undo and conflict handling, saving through roux-theme's `/api/theme`). Moved from the dojo.
+  A page theme the app has no look for throws at startup instead of falling back. New peer dependencies:
+  `culori`, `@emotion/cache` and the three `@fontsource-variable` fonts (`inter`, `lora`, `nunito`).
 - `roux-theme`, the owner's theme in roux's own table (`roux_theme`, from the changelog the jar ships:
   `classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml`, which the app includes as it includes who's).
   `GET /api/theme` (open to anyone: the shell needs it signed out), `PUT /api/theme` (`theme.manage`, with the

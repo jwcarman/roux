@@ -148,20 +148,21 @@ Import from a subpath; there is no root import:
 | `@jwcarman/roux-web/feedback` | toasts (`notify`), confirmations, error and not-found pages | [Feedback](feedback.md) |
 | `@jwcarman/roux-web/form` | Zod rule helpers, `useSchemaForm`, fields, `FormDialog` | [Forms](forms.md) |
 | `@jwcarman/roux-web/dates` | ISO strings to and from date-fns Dates (`parseIsoDate`, `formatIsoDate`, `parseIsoTime`, `formatIsoTime`) | [Forms](forms.md#dates-and-times) |
+| `@jwcarman/roux-web/theme` | `ThemeProvider` (Chakra, the page's theme and the CSP nonce), `useShellTheme`, `createThemeSystem`, `AppearanceSettings` | [The shell](shell.md) |
 
 ## Set up the app root
 
 `main.tsx` builds one query client with `createQueryClient()` and mounts, once each: the
-`QueryClientProvider`, Chakra's provider, `ConfirmProvider` (for `useConfirm`) around the app, and
+`QueryClientProvider`, `ThemeProvider` (Chakra's provider with the app's theme, [The shell](shell.md)), `ConfirmProvider` (for `useConfirm`) around the app, and
 `Toaster` (where `notify` toasts appear) beside it.
 
 ```tsx
-import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createQueryClient } from "@jwcarman/roux-web/api";
 import { ConfirmProvider, Toaster } from "@jwcarman/roux-web/feedback";
+import { ThemeProvider } from "@jwcarman/roux-web/theme";
 import { SessionProvider } from "./session";
 import { App } from "./App";
 
@@ -170,14 +171,14 @@ const queryClient = createQueryClient();
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ChakraProvider value={defaultSystem}>
+      <ThemeProvider>
         <ConfirmProvider>
           <SessionProvider>
             <App />
           </SessionProvider>
         </ConfirmProvider>
         <Toaster />
-      </ChakraProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   </StrictMode>,
 );
@@ -186,7 +187,7 @@ createRoot(document.getElementById("root")!).render(
 - Use `createQueryClient()`, never `new QueryClient()`: mutations' `meta.refreshes` only work with
   roux's client, and `useSchemaForm` and `useServerAction` throw when a mutation names
   `meta.refreshes` on another client. `createQueryClient(): QueryClient` takes no options.
-- `Toaster` and `ConfirmProvider` render Chakra components, so they go inside `ChakraProvider`.
+- `Toaster` and `ConfirmProvider` render Chakra components, so they go inside `ThemeProvider`.
   `useConfirm` throws outside `ConfirmProvider`.
 - Pass the same `queryClient` to TanStack Router's context if route loaders prefetch.
 
