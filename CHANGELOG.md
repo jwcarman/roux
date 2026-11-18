@@ -14,6 +14,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- roux serves the app's shell. `roux-spa` answers the page request with `index.html` carrying the request's
+  nonce, the theme and the app's name, `Cache-Control: no-store` and a strict Content-Security-Policy
+  (`ContentSecurityPolicy`), extended only by explicit per-directive `roux.spa.csp.*` properties that append to
+  the defaults (a wildcard or an unsafe keyword stops the app from starting). The theme comes from the
+  `ShellThemeSource` seam: an app's own bean, or the `roux.theme.*` properties (Chakra's stock look and
+  `spring.application.name`), which a value the frontend has no look for refuses at startup. An `index.html`
+  without the three placeholders does not start. An app deletes its `ShellController` and header writer.
 - An insert that may already have been done stays transactional. roux-jpa's `Idempotent.insert(entityManager, key,
   exists, insert)` takes a transaction-scoped PostgreSQL advisory lock on the key, then checks and inserts, so a
   race never meets the unique constraint (a violation would mark the transaction rollback-only). Proven

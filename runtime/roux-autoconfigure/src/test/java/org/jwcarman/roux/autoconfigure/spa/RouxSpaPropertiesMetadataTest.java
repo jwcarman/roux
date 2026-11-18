@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.RecordComponent;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test;
 import com.jayway.jsonpath.JsonPath;
 
 /** The hand-written metadata describes each of {@code roux.spa}'s properties. */
-class RouxSpaPropertiesMetadataTest {
+public class RouxSpaPropertiesMetadataTest {
 
   @Test
   void metadataDescribesEveryComponentOfTheRecord() throws IOException {
@@ -43,11 +43,23 @@ class RouxSpaPropertiesMetadataTest {
     }
 
     List<String> names = JsonPath.read(json, "$.properties[?(@.name =~ /roux\\.spa\\..*/)].name");
-    List<String> expected =
-        Arrays.stream(RouxSpaProperties.class.getRecordComponents())
-            .map(RecordComponent::getName)
-            .map(name -> "roux.spa." + name.replaceAll("([A-Z])", "-$1").toLowerCase(Locale.ROOT))
-            .toList();
+    List<String> expected = new ArrayList<>();
+    expected.addAll(names(RouxSpaProperties.class, "roux.spa."));
     assertThat(names).containsExactlyInAnyOrderElementsOf(expected);
+  }
+
+  /** The kebab-case property names a record binds, nested records flattened. */
+  public static List<String> names(Class<? extends Record> type, String prefix) {
+    List<String> names = new ArrayList<>();
+    for (RecordComponent component : type.getRecordComponents()) {
+      String name =
+          prefix + component.getName().replaceAll("([A-Z])", "-$1").toLowerCase(Locale.ROOT);
+      if (component.getType().isRecord()) {
+        names.addAll(names(component.getType().asSubclass(Record.class), name + "."));
+      } else {
+        names.add(name);
+      }
+    }
+    return names;
   }
 }

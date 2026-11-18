@@ -18,10 +18,19 @@ package org.jwcarman.roux.autoconfigure.spa;
 import java.time.Duration;
 import java.util.List;
 
+import org.jwcarman.roux.autoconfigure.theme.RouxThemeProperties;
+import org.jwcarman.roux.spa.ContentSecurityPolicy;
+import org.jwcarman.roux.spa.ShellPage;
+import org.jwcarman.roux.spa.ShellRoutes;
+import org.jwcarman.roux.spa.ShellTheme;
+import org.jwcarman.roux.spa.ShellThemeSource;
 import org.jwcarman.roux.spa.SpaFallbackFilter;
 import org.jwcarman.who.spring.security.WhoPublicPathContributor;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnResource;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
@@ -29,24 +38,36 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.function.RouterFunction;
+import org.springframework.web.servlet.function.ServerResponse;
+
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Serves a single-page app: the shell for any page URL ({@link SpaFallbackFilter}) and the hashed
- * assets for a year. On when a servlet application has {@code static/index.html} on its classpath
- * (the frontend build puts it there), and roux-spa, the module with {@link SpaFallbackFilter}, is
- * on the class path: leave the jar out to turn it off. With who on the classpath, the shell and
- * {@code /assets/**} are also public paths (a {@code WhoPublicPathContributor} bean, beside
- * whatever the app and other libraries contribute), so a signed-out visitor loads the app from any
- * URL without the application listing its pages.
+ * assets for a year. The shell is {@code index.html} with each response's nonce, the app's theme
+ * and name in place, {@code Cache-Control: no-store} and a strict Content-Security-Policy ({@link
+ * ContentSecurityPolicy}, extended only by {@code roux.spa.csp.*}); the theme comes from the {@link
+ * ShellThemeSource} bean (roux-theme's, an app's own, or the {@code roux.theme.*} properties). The
+ * page must hold the placeholders the frontend build leaves ({@link ShellPage}), or the app does
+ * not start. On when a servlet application has {@code static/index.html} on its classpath (the
+ * frontend build puts it there), and roux-spa, the module with {@link SpaFallbackFilter}, is on the
+ * class path: leave the jar out to turn it off. With who on the classpath, the shell and {@code
+ * /assets/**} are also public paths (a {@code WhoPublicPathContributor} bean, beside whatever the
+ * app and other libraries contribute), so a signed-out visitor loads the app from any URL without
+ * the application listing its pages.
  */
-@AutoConfiguration
+@AutoConfiguration(afterName = "org.jwcarman.roux.autoconfigure.theme.RouxThemeAutoConfiguration")
 @ConditionalOnClass(SpaFallbackFilter.class)
 @ConditionalOnWebApplication(type = Type.SERVLET)
 @ConditionalOnResource(resources = "classpath:/static" + SpaFallbackFilter.SHELL)
-@EnableConfigurationProperties(RouxSpaProperties.class)
+@EnableConfigurationProperties({RouxSpaProperties.class, RouxThemeProperties.class})
+@RegisterReflectionForBinding(ShellTheme.class)
 public class RouxSpaAutoConfiguration {
 
   /** Just ahead of Spring Security's filter chain, which is ordered at -100. */
@@ -68,9 +89,36 @@ public class RouxSpaAutoConfiguration {
     return registration;
   }
 
+  /** The look from {@code roux.theme.*}, unless roux-theme or the app supplies its own source. */
+  @Bean
+  @ConditionalOnMissingBean(ShellThemeSource.class)
+  ShellThemeSource propertyShellTheme(RouxThemeProperties properties, Environment environment) {
+    ShellTheme theme = properties.theme(environment.getProperty("spring.application.name"));
+    return () -> theme;
+  }
+
+  /** The shell, read from the classpath at startup: a page without the placeholders fails here. */
+  @Bean
+  ShellPage shellPage(
+      RouxSpaProperties properties,
+      ShellThemeSource themes,
+      ObjectProvider<JsonMapper> json,
+      ResourceLoader resources) {
+    return new ShellPage(
+        ShellPage.read(resources.getResource("classpath:/static" + SpaFallbackFilter.SHELL)),
+        ContentSecurityPolicy.strict().extendedBy(properties.csp().sources()),
+        themes,
+        json.getIfAvailable(() -> JsonMapper.builder().build()));
+  }
+
+  @Bean
+  RouterFunction<ServerResponse> rouxShellRoutes(ShellPage page) {
+    return ShellRoutes.of(page);
+  }
+
   /**
    * Caches the hashed assets forever. Every other static file keeps Spring Boot's handler; the
-   * shell is the application's to cache or not.
+   * shell is served by {@link #rouxShellRoutes}, never stored.
    */
   @Bean
   WebMvcConfigurer spaAssets() {

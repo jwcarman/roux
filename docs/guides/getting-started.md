@@ -268,9 +268,9 @@ supported:
    API path (a missing one is still a `404` problem) and a request for a file never get the shell.
    The filter is `SpaFallbackFilter` (in `roux-spa`, which switches it on by being on the class
    path: leave the jar out to turn it off); add paths it must leave alone (a server-rendered page) to
-   `roux.spa.excluded-paths` (`RouxSpaProperties`). An app that serves the shell itself (to render the theme or
-   a nonce into it, say) keeps doing that: roux presents the page URL to it as a request for
-   `/index.html`, so its own `/index.html` handler and headers apply. An app with its own
+   `roux.spa.excluded-paths` (`RouxSpaProperties`). roux also serves the shell itself, with a
+   nonce, a Content-Security-Policy and the theme in place ([The shell](#the-shell)), so an app
+   writes no controller, header writer or `ErrorViewResolver` for it. An app with its own
    `SecurityFilterChain` must permit `/index.html` and `/assets/**`, which roux contributes with a
    `WhoPublicPathContributor` bean. who adds a contributor's paths to `who.security.public-paths`
    and every other contributor's, so an app that needs more public paths contributes its own bean
@@ -302,10 +302,55 @@ Every who endpoint (`/who/me`, `/who/email/send`, `/who/logout`, `/who/passkey/s
 `/who`, so these two entries cover the app's API and its sign-in. Add an entry only for another
 server path the app calls.
 
-## Content-Security-Policy
+## The shell
 
-`@jwcarman/roux-web/form` calls `z.config({ jitless: true })` when it loads, so Zod never probes
-`eval` and a Content-Security-Policy without `unsafe-eval` raises no violation. The package's
+roux serves `index.html` (`ShellRoutes`, from `roux-spa`; no code in the app). Each response is
+the built page with three placeholders filled, `Cache-Control: no-store` (a stored copy's nonce
+would not match the next response's policy) and its own `Content-Security-Policy` header. The
+frontend build leaves the placeholders; the app does not start if one is missing (`ShellPage`
+says which):
+
+```html
+<title>__APP_NAME__</title>
+<script type="application/json" id="app-theme">__APP_THEME__</script>
+```
+
+and `html: { cspNonce: "__CSP_NONCE__" }` in `vite.config.ts`, which makes Vite write
+`nonce="__CSP_NONCE__"` on every script and style tag it emits. The name is HTML-escaped into the
+title; the theme is JSON with every `<` escaped, so nothing in it can end the element. One pass
+fills them, so an app named `__APP_THEME__` shows that name.
+
+**The policy** (`ContentSecurityPolicy.strict()`): `default-src 'self'`; `script-src` and
+`style-src` `'self'` plus the response's nonce; `img-src 'self' data:`; `font-src`, `connect-src`,
+`frame-src`, `media-src` and `form-action` `'self'`; `object-src 'none'`; `base-uri 'self'`;
+`frame-ancestors 'none'`. It never holds `'unsafe-inline'` or `'unsafe-eval'`. To allow more,
+add sources to a directive with `roux.spa.csp.<directive>` (`script-src`, `style-src`, `img-src`,
+`font-src`, `connect-src`, `frame-src`, `media-src`, `form-action`; `RouxSpaProperties`):
+
+```yaml
+roux:
+  spa:
+    csp:
+      img-src: https://images.example.com
+      connect-src: https://api.example.com, wss://live.example.com
+```
+
+Sources are appended after the defaults, never replacing them. There is no setting for
+`default-src`, `object-src`, `base-uri` or `frame-ancestors`, and a source that would loosen the
+policy (`*`, `'unsafe-inline'`, `'unsafe-eval'`, a bare scheme such as `https:` for scripts or
+styles, or anything holding a space, `;` or `,`) stops the app from starting with a message naming
+the setting.
+
+**The theme** (`ShellTheme`: `appName`, `palette`, `brandColor`, `shape`, `headingFont`,
+`bodyFont`) comes from a `ShellThemeSource` bean, read for every page. Without one, roux reads
+`roux.theme.*` (`RouxThemeProperties`): `app-name` (default `spring.application.name`; an app with
+neither does not start), `palette` (`gray`), `brand-color` (`#3b82f6`), `shape` (`medium`),
+`heading-font` and `body-font` (`standard`). A value the frontend has no look for (a palette
+`mauve`) stops the app from starting. An app that keeps its look elsewhere declares its own
+`ShellThemeSource` bean; `roux-theme` (owner-editable, in roux's own table) provides one.
+
+`@jwcarman/roux-web` runs under this policy: `@jwcarman/roux-web/form` calls
+`z.config({ jitless: true })` when it loads, so Zod never probes `eval`. The package's
 `package.json` marks that file in `sideEffects` so bundlers keep it; do not override `sideEffects`
 for the package or tree-shake it away.
 

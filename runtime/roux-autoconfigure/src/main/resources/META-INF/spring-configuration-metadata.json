@@ -9,6 +9,16 @@
       "name": "roux.spa",
       "type": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties",
       "sourceType": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties"
+    },
+    {
+      "name": "roux.spa.csp",
+      "type": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties$Csp",
+      "sourceType": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties"
+    },
+    {
+      "name": "roux.theme",
+      "type": "org.jwcarman.roux.autoconfigure.theme.RouxThemeProperties",
+      "sourceType": "org.jwcarman.roux.autoconfigure.theme.RouxThemeProperties"
     }
   ],
   "properties": [
@@ -31,6 +41,95 @@
       "type": "java.util.List<java.lang.String>",
       "description": "Path patterns, besides /api/**, /who/**, /assets/**, /actuator/**, /.well-known/** and /error, that are never answered with the shell.",
       "sourceType": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties"
+    },
+    {
+      "name": "roux.spa.csp.script-src",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Hosts scripts may load from, added after 'self' and the response's nonce. A wildcard or an unsafe keyword stops the app from starting.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties$Csp"
+    },
+    {
+      "name": "roux.spa.csp.style-src",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Hosts styles may load from, added after 'self' and the response's nonce. A wildcard or an unsafe keyword stops the app from starting.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties$Csp"
+    },
+    {
+      "name": "roux.spa.csp.img-src",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Where images may load from, added after 'self' and data:. A wildcard or an unsafe keyword stops the app from starting.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties$Csp"
+    },
+    {
+      "name": "roux.spa.csp.font-src",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Where fonts may load from, added after 'self'. A wildcard or an unsafe keyword stops the app from starting.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties$Csp"
+    },
+    {
+      "name": "roux.spa.csp.connect-src",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Where the app may call (fetch, WebSocket), added after 'self'. A wildcard or an unsafe keyword stops the app from starting.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties$Csp"
+    },
+    {
+      "name": "roux.spa.csp.frame-src",
+      "type": "java.util.List<java.lang.String>",
+      "description": "What the app may embed, added after 'self'. A wildcard or an unsafe keyword stops the app from starting.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties$Csp"
+    },
+    {
+      "name": "roux.spa.csp.media-src",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Where audio and video may load from, added after 'self'. A wildcard or an unsafe keyword stops the app from starting.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties$Csp"
+    },
+    {
+      "name": "roux.spa.csp.form-action",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Where a form may submit to, added after 'self'. A wildcard or an unsafe keyword stops the app from starting.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.spa.RouxSpaProperties$Csp"
+    },
+    {
+      "name": "roux.theme.app-name",
+      "type": "java.lang.String",
+      "description": "What the app is called (the page title and the header); defaults to spring.application.name.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.theme.RouxThemeProperties"
+    },
+    {
+      "name": "roux.theme.palette",
+      "type": "java.lang.String",
+      "description": "A Chakra palette (gray, red, orange, yellow, green, teal, blue, cyan, purple, pink), or brand to generate one from brand-color.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.theme.RouxThemeProperties",
+      "defaultValue": "gray"
+    },
+    {
+      "name": "roux.theme.brand-color",
+      "type": "java.lang.String",
+      "description": "The brand colour: # and six hex digits.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.theme.RouxThemeProperties",
+      "defaultValue": "#3b82f6"
+    },
+    {
+      "name": "roux.theme.shape",
+      "type": "java.lang.String",
+      "description": "How round corners are: square, slight, medium, round or extra-round.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.theme.RouxThemeProperties",
+      "defaultValue": "medium"
+    },
+    {
+      "name": "roux.theme.heading-font",
+      "type": "java.lang.String",
+      "description": "The lettering of headings: standard, modern, friendly or classic.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.theme.RouxThemeProperties",
+      "defaultValue": "standard"
+    },
+    {
+      "name": "roux.theme.body-font",
+      "type": "java.lang.String",
+      "description": "The lettering of text: standard, modern, friendly or classic.",
+      "sourceType": "org.jwcarman.roux.autoconfigure.theme.RouxThemeProperties",
+      "defaultValue": "standard"
     }
   ]
 }

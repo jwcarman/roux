@@ -718,9 +718,9 @@ domain). Requests a test intercepts are who's, under `/who` (`/who/me/passkeys/o
 ### The Content-Security-Policy test
 
 roux's browser code runs under a strict policy (`script-src 'self' 'nonce-...'`, no `unsafe-eval`;
-see [Getting started](getting-started.md#content-security-policy)). The suite proves it: it records
+see [Getting started](getting-started.md#the-shell)). The suite proves it: it records
 every violation from before the page's own code runs, uses the app, and expects none. The policy
-header itself is the app's (the template's `ShellController` writes it with a fresh nonce):
+header is roux's (it writes one with a fresh nonce on every response of the shell):
 
 ```ts
 import { expect, test, type Page } from "@playwright/test";

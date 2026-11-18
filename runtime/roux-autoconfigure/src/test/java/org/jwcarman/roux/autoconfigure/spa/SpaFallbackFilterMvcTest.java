@@ -15,6 +15,7 @@
  */
 package org.jwcarman.roux.autoconfigure.spa;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
@@ -42,7 +43,12 @@ import org.springframework.test.web.servlet.MockMvc;
 @DisplayNameGeneration(ReplaceUnderscores.class)
 @SpringBootTest(classes = SpaTestApplication.class)
 @AutoConfigureMockMvc
-@TestPropertySource(properties = "roux.spa.excluded-paths=/legacy/**")
+@TestPropertySource(
+    properties = {
+      "roux.spa.excluded-paths=/legacy/**",
+      "roux.theme.app-name=Roux Test",
+      "roux.theme.palette=teal"
+    })
 class SpaFallbackFilterMvcTest {
 
   private static final String SHELL = "<div id=\"root\"></div>";
@@ -92,6 +98,50 @@ class SpaFallbackFilterMvcTest {
       mvc.perform(get("/settings").accept(MediaType.TEXT_HTML))
           .andExpect(content().string(containsString(SHELL)))
           .andExpect(header().string("Content-Type", startsWith("text/html")));
+    }
+  }
+
+  @Nested
+  class The_shell {
+
+    @Test
+    void is_never_stored_and_has_its_own_policy_with_the_nonce_it_carries() throws Exception {
+      var response =
+          mvc.perform(get("/settings").accept(MediaType.TEXT_HTML))
+              .andExpect(header().string("Cache-Control", "no-store"))
+              .andReturn()
+              .getResponse();
+
+      String policy = response.getHeader("Content-Security-Policy");
+      assertThat(policy)
+          .startsWith("default-src 'self'; script-src 'self' 'nonce-")
+          .contains("object-src 'none'", "frame-ancestors 'none'")
+          .doesNotContain("unsafe", "*");
+      String nonce = policy.replaceAll(".*script-src 'self' 'nonce-([^']+)'.*", "$1");
+      assertThat(response.getContentAsString())
+          .contains("<script type=\"module\" nonce=\"" + nonce + "\"")
+          .doesNotContain("__CSP_NONCE__", "__APP_NAME__", "__APP_THEME__");
+    }
+
+    @Test
+    void carries_the_theme_and_the_name_the_properties_give() throws Exception {
+      mvc.perform(get("/settings").accept(MediaType.TEXT_HTML))
+          .andExpect(content().string(containsString("<title>Roux Test</title>")))
+          .andExpect(
+              content()
+                  .string(
+                      containsString(
+                          ">{\"appName\":\"Roux Test\",\"palette\":\"teal\",\"brandColor\":\"#3b82f6\","
+                              + "\"shape\":\"medium\",\"headingFont\":\"standard\","
+                              + "\"bodyFont\":\"standard\"}</script>")));
+    }
+
+    @Test
+    void has_the_headers_when_asked_for_directly() throws Exception {
+      mvc.perform(get("/index.html").accept(MediaType.TEXT_HTML))
+          .andExpect(status().isOk())
+          .andExpect(header().string("Cache-Control", "no-store"))
+          .andExpect(header().exists("Content-Security-Policy"));
     }
   }
 
