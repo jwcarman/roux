@@ -188,6 +188,57 @@ class PromotionRankRemovalCheck implements RankRemovalCheck {
 adds nothing. Keep the database's foreign key as the last line of defence (a refusal there is the
 generic `This conflicts with existing data`), and the check as the one that says why.
 
+## Treat "already done" as success
+
+Some requests mean "make it so", and a repeat is not an error: marking a student present twice (a
+double tap, two devices), adding someone to a group they are in. The unique constraint on the row is
+right to refuse a second insert, but a violation you mean to swallow cannot be caught inside the
+transaction that caused it: it marks the transaction rollback-only (and Hibernate's session), so
+the commit answers 500. The way out used to be a service with no transaction, which is a trap for
+the next change. `Idempotent.insert` (`org.jwcarman.roux.jpa`, `roux-jpa`) keeps the service
+`@Transactional`:
+
+```java
+@Service
+public class AttendanceService {
+  @PersistenceContext private EntityManager entityManager;
+
+  @Transactional
+  public Attendee mark(UUID classId, AttendanceRequest request) {
+    // ... find the class and the student ...
+    Idempotent.insert(
+        entityManager,
+        List.of("attendance", classId, student.getId(), request.date()),
+        () -> attendance.existsBySchoolClassIdAndStudentIdAndAttendedOn(classId, student.getId(), request.date()),
+        () -> attendance.saveAndFlush(new AttendanceEntity(schoolClass, student.getId(), request.date())));
+    return new Attendee(...);
+  }
+}
+```
+
+It answers `true` if it inserted and `false` if the row was there; the second request of a race gets
+`false` and the service answers success.
+
+Why this and not the alternatives:
+
+- **A transaction-scoped advisory lock on the key** (what `Idempotent.insert` takes), then the
+  existence check, then the insert. Requests for one key run one after another, the later one sees the
+  earlier one's row, and no violation ever happens, so the transaction stays healthy. The entity is
+  saved as usual, so ids, versions and audit columns are filled in as everywhere else.
+- `INSERT ... ON CONFLICT DO NOTHING` also avoids the violation, but it bypasses the entity: the app
+  writes the id, version and audit columns by hand, and an audit date left null breaks ordering
+  that relies on it.
+- A savepoint cannot help: Hibernate marks its own transaction rollback-only on the failed flush,
+  whatever the database rolls back to.
+- Catching the violation and moving on works only with no transaction around it.
+
+Rules: call it inside a transaction (it throws `IllegalStateException` without one, because the lock
+would be released at once); start the key with a name for the kind of row (`"attendance"`) and add
+what makes the row the same row, matching the unique constraint's columns; pass the check and the
+insert as above, and flush in the insert (`saveAndFlush`). Keep the unique constraint: it is the
+backstop that makes an insert made any other way fail as a 409. It is PostgreSQL's (advisory locks),
+like the rest of roux's persistence.
+
 ## What else is answered for you
 
 Nothing here needs app code. The answers below come from roux's advices.

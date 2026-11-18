@@ -14,6 +14,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- An insert that may already have been done stays transactional. roux-jpa's `Idempotent.insert(entityManager, key,
+  exists, insert)` takes a transaction-scoped PostgreSQL advisory lock on the key, then checks and inserts, so a
+  race never meets the unique constraint (a violation would mark the transaction rollback-only). Proven
+  against PostgreSQL in the contract tests; the errors guide says why a lock and not `ON CONFLICT DO NOTHING`.
 - A control that saves on change shows the change at once. `optimisticMutation(key, options)`, `useOptimisticValue`
   and `useOptimisticToggle` in `@jwcarman/roux-web/api`: the key becomes the mutation's key and scope (saves
   queue in order, the hook finds the pending value), a plain `mutationOptions` is a type error, a double tap
