@@ -16,12 +16,13 @@
 package org.jwcarman.roux.contracts;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import jakarta.servlet.http.Cookie;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -66,10 +67,22 @@ class ThemeContractTest {
         .content(BODY.formatted(version));
   }
 
-  private static MockHttpServletRequestBuilder asOwner(MockHttpServletRequestBuilder request) {
-    return request
-        .with(user("owner").authorities(new SimpleGrantedAuthority("theme.manage")))
-        .with(csrf());
+  private MockHttpServletRequestBuilder asOwner(MockHttpServletRequestBuilder request)
+      throws Exception {
+    return withCsrf(
+        request.with(user("owner").authorities(new SimpleGrantedAuthority("theme.manage"))));
+  }
+
+  /**
+   * Adds the CSRF cookie and header a browser would send, read from a real response. Not Spring
+   * Security's {@code csrf()}: that swaps the token store inside the cached context, and every test
+   * class that runs after it in the same context then gets no {@code XSRF-TOKEN} cookie.
+   */
+  private MockHttpServletRequestBuilder withCsrf(MockHttpServletRequestBuilder request)
+      throws Exception {
+    Cookie cookie = mvc.perform(get("/who/me")).andReturn().getResponse().getCookie("XSRF-TOKEN");
+    assertThat(cookie).isNotNull();
+    return request.cookie(cookie).header("X-XSRF-TOKEN", cookie.getValue());
   }
 
   @Test
@@ -129,7 +142,7 @@ class ThemeContractTest {
 
   @Test
   void onlyWhoHoldsThemeManageMayChangeItAndSignedOutIsRefused() throws Exception {
-    mvc.perform(save(0).with(user("member")).with(csrf())).andExpect(status().isForbidden());
-    mvc.perform(save(0).with(csrf())).andExpect(status().isUnauthorized());
+    mvc.perform(withCsrf(save(0).with(user("member")))).andExpect(status().isForbidden());
+    mvc.perform(withCsrf(save(0))).andExpect(status().isUnauthorized());
   }
 }

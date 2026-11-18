@@ -410,7 +410,8 @@ describe("AppearanceSettings", () => {
     await user.click(screen.getByRole("button", { name: "Clean" }));
     await user.click(screen.getByRole("button", { name: "Modern text" }));
     expect(pressed()).toEqual([]);
-  });
+    // About twenty clicks through the whole form: more than the default 5 s on a slow CI runner.
+  }, 20_000);
 
   it("offers every palette but the owner's own as a swatch, and presses only the one in use", async () => {
     serve();
