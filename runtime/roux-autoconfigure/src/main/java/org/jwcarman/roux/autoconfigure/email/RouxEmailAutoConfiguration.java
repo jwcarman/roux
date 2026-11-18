@@ -60,6 +60,7 @@ public class RouxEmailAutoConfiguration {
     @Override
     public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
       hints.resources().registerPattern("org/jwcarman/roux/email/*");
+      hints.resources().registerResourceBundle(RouxEmail.MESSAGES.replace('/', '.'));
     }
   }
 }

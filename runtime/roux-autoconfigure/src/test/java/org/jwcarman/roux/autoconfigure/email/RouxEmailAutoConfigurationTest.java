@@ -92,6 +92,9 @@ class RouxEmailAutoConfigurationTest {
             RuntimeHintsPredicates.resource()
                 .forResource("org/jwcarman/roux/email/email-messages.properties"))
         .accepts(hints);
+    assertThat(
+            RuntimeHintsPredicates.resource().forBundle("org.jwcarman.roux.email.email-messages"))
+        .accepts(hints);
     assertThat(RuntimeHintsPredicates.resource().forResource("org/jwcarman/who/email/other.txt"))
         .rejects(hints);
   }

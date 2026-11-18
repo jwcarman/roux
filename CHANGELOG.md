@@ -8,7 +8,7 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
-- who 0.23.0 (was 0.22.0), and `@jwcarman/who-client` 0.23.0. What changes for a roux app:
+- who 0.24.0 (was 0.22.0; 0.23.0 then 0.24.0), and `@jwcarman/who-client` 0.24.0. What changes for a roux app:
   - The starter brings `who-email` (it renders who's emails). SMTP delivery stays the app's choice, as
     `spring-boot-starter-mail` did: add `who-email-smtp` beside it (the dojo and the getting-started
     guide's pom do), or write a `WhoEmailSender`, which now only delivers a rendered `OutgoingEmail`
@@ -38,8 +38,7 @@ All notable changes to this project are documented in this file. The format foll
   `RouxEmailModelContributor` gives every email `extra.roux.appName`, `extra.roux.brandColor` (`#rrggbb`; the
   brand colour, or a fixed colour per Chakra palette) and `extra.roux.buttonText` (white or near-black, by WCAG
   contrast), read from the shell's theme at each send. An app replaces one email, or one subject, with its own
-  file or message (`docs/guides/email.md`). Needs who 0.24.0's library templates; until it ships, who is
-  `0.24.0-SNAPSHOT`.
+  file or message (`docs/guides/email.md`). Needs who 0.24.0 (library templates, subjects with values).
 - `@jwcarman/roux-web/navigation`: the navigation, typed. `defineNav(permissions, items)` takes entries whose
   `to` is a route the router knows (a misspelt route is a type error), `icon` a component (not a name looked up
   in a hand-kept map) and `permission` one of the app's declared permissions: TypeScript checks it, and
