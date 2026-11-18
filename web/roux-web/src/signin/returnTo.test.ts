@@ -63,17 +63,28 @@ describe("returnTo", () => {
     "/who/me",
     "/\\evil.example",
     "/students\\..\\evil",
+    "/\t/evil.example",
+    "/students\nx",
+    "/students\u007f",
+    "/\u0000x",
+    "https:",
+    "https:/evil.example",
     "",
   ])("never sends anyone to %j", (path) => {
     expect(isReturnable(path)).toBe(false);
   });
 
-  it.each(["/students", "/students/abc", "/timetable", "/classes/c1/check-in?date=2026-03-10", "/signing-days"])(
-    "may send someone to %s",
-    (path) => {
-      expect(isReturnable(path)).toBe(true);
-    },
-  );
+  it.each([
+    "/students",
+    "/students/abc",
+    "/timetable",
+    "/classes/c1/check-in?date=2026-03-10",
+    "/signing-days",
+    "/%5c",
+    "/%2f",
+  ])("may send someone to %s", (path) => {
+    expect(isReturnable(path)).toBe(true);
+  });
 
   it("forgets the last place when told of one it may not use", () => {
     rememberReturn("/students");

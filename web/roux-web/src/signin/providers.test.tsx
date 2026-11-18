@@ -25,6 +25,12 @@ describe("ProviderSignInButton", () => {
     expect(link(label).querySelector("svg")).not.toBeNull();
   });
 
+  it("encodes the provider's id in the authorize URL", () => {
+    renderWithProviders(<ProviderSignInButton provider="a/b?x" name="Odd" />);
+
+    expect(link("Continue with Odd")).toHaveAttribute("href", "/who/oidc/authorize/a%2Fb%3Fx");
+  });
+
   it("knows a provider by its id in any case", () => {
     renderWithProviders(<ProviderSignInButton provider="Google" />);
 

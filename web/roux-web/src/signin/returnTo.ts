@@ -8,14 +8,21 @@ import { useState } from "react";
 
 const KEY = "roux.returnTo";
 
-/** Whether `path` is a page of the app that sign-in may send someone to: not Home, sign-in, the API or who. */
+/**
+ * Whether `path` is a page of this app that sign-in may send someone to: not Home, sign-in, the API
+ * or who, and exactly what a browser reads it as, on this origin. The path is resolved against the
+ * origin the way `location.replace` will, and refused unless that gives the origin followed by the
+ * path unchanged. That one test refuses everything a URL parser would quietly rewrite into another
+ * place: no leading `/`, a scheme (`https:`), `//host` (a different site, or this one by another
+ * route), a backslash (read as `/`), and any control character or DEL (a tab or newline is dropped,
+ * so `/\t/evil.example` would become `//evil.example`).
+ */
 export function isReturnable(path: string): boolean {
   return (
-    path.startsWith("/") &&
-    !path.startsWith("//") &&
-    !path.includes("\\") &&
     path !== "/" &&
-    !/^\/(signin|api|who)(\/|\?|#|$)/.test(path)
+    !/^\/(signin|api|who)(\/|\?|#|$)/.test(path) &&
+    URL.canParse(path, location.origin) &&
+    new URL(path, location.origin).href === location.origin + path
   );
 }
 

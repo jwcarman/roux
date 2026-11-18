@@ -50,6 +50,7 @@ class ShellRoutesTest {
         .andExpect(status().isOk())
         .andExpect(header().string("Content-Type", "text/html;charset=UTF-8"))
         .andExpect(header().string("Cache-Control", "no-store"))
+        .andExpect(header().string("X-Content-Type-Options", "nosniff"))
         .andExpect(
             header()
                 .string(
@@ -82,6 +83,7 @@ class ShellRoutesTest {
         .andExpect(status().isOk())
         .andExpect(header().string("Cache-Control", "no-store"))
         .andExpect(header().exists("Content-Security-Policy"))
+        .andExpect(header().string("X-Content-Type-Options", "nosniff"))
         .andExpect(content().string(""));
   }
 

@@ -32,7 +32,8 @@ import org.springframework.web.servlet.function.ServerResponse;
  * Serves {@link ShellPage} at {@value SpaFallbackFilter#SHELL}, which {@link SpaFallbackFilter}
  * makes of every page URL. Each response is HTML, {@code Cache-Control: no-store} (a stored copy
  * would carry a nonce the next response's policy does not allow) and carries its own {@code
- * Content-Security-Policy}.
+ * Content-Security-Policy} and {@code X-Content-Type-Options: nosniff} (stated here, not left to a
+ * default that something upstream may drop).
  */
 public final class ShellRoutes {
 
@@ -52,6 +53,7 @@ public final class ShellRoutes {
         ServerResponse.ok()
             .contentType(HTML)
             .cacheControl(CacheControl.noStore())
+            .header("X-Content-Type-Options", "nosniff")
             .header(ContentSecurityPolicy.HEADER, page.policyFor(request.servletRequest()));
     return request.method() == HttpMethod.HEAD
         ? response.build()
