@@ -287,6 +287,89 @@ What it does:
 A form's save is not a button: use `useSchemaForm`, which also places field errors
 ([Forms](forms.md)).
 
+## A control that saves on change
+
+A toggle, a switch, a rating, a row's dropdown or a reorder button saves the moment it changes, so it
+should show the change at once and still end up showing what the server holds. That is
+`optimisticMutation` with `useOptimisticToggle` (a boolean) or `useOptimisticValue` (any value), from
+`@jwcarman/roux-web/api`. Do not build it from `onMutate` plus `setQueryData`: `meta.refreshes`
+refetches after every answer, so the first answer overwrites the guess while a queued second change is
+still waiting, and the control flickers back.
+
+```ts
+function optimisticMutation<TData, TVariables>(
+  key: MutationKey, // names the control: one per thing it changes
+  options: OptimisticMutationOptions<TData, TVariables>, // mutationFn, and meta.refreshes (required, at least one key)
+): OptimisticMutation<TData, TVariables>;
+
+function useOptimisticValue<TData, TVariables>(
+  mutation: OptimisticMutation<TData, TVariables>,
+  serverValue: TVariables, // what the query holds
+  options?: OptimisticOptions<TData, TVariables>, // { failure } as useServerAction's
+): [shown: TVariables, set: (value: TVariables) => Promise<boolean>];
+
+function useOptimisticToggle<TData>(
+  mutation: OptimisticMutation<TData, boolean>,
+  serverValue: boolean,
+  options?: OptimisticOptions<TData, boolean>,
+): [shown: boolean, toggle: () => Promise<boolean>];
+```
+
+```ts
+// attendance.ts: the key names this student's mark; the mutation sends the wanted state
+export const markAttendance = (classId: string, date: string, studentId: string) =>
+  optimisticMutation(queryKeys.attendance.mark(classId, date, studentId), {
+    mutationFn: (present: boolean) => attendanceApi.mark(classId, { studentId, date, present }),
+    meta: { refreshes: [queryKeys.attendance.checkIn(classId, date)] },
+  });
+```
+
+```tsx
+function AttendeeToggle({ classId, date, attendee }: { classId: string; date: string; attendee: Attendee }) {
+  const [present, toggle] = useOptimisticToggle(
+    markAttendance(classId, date, attendee.studentId),
+    attendee.present, // from the check-in query
+    { failure: `Could not mark ${attendee.firstName}` },
+  );
+  return (
+    <Button aria-pressed={present} onClick={() => void toggle()}>
+      {attendee.firstName}
+    </Button>
+  );
+}
+```
+
+The types, for annotating your own helpers: `OptimisticMutation<TData, TVariables>` (what
+`optimisticMutation` returns), `OptimisticMutationOptions<TData, TVariables>` (what it takes) and
+`OptimisticOptions<TData, TVariables>` (the hooks' `{ failure }`).
+
+What it does:
+
+- `optimisticMutation` sets the mutation's `mutationKey` to `key` and its `scope` from it, so the
+  control's saves reach the server one at a time, in the order they were made, and the hook finds the
+  control's pending value. Nothing for the module to forget: the hooks take only what it made (a plain
+  `mutationOptions` is a type error), and `meta.refreshes` is required, so the control goes back to
+  the query's value when the saves settle.
+- `shown` is the variables of the control's latest save still waiting for the server, else
+  `serverValue`. After a refusal, the toast says why (`failure`, the server's `detail` under it, as
+  `useServerAction` does) and `shown` is the server's value again. `set` and `toggle` answer whether
+  the save succeeded.
+- Two taps in the same instant (a double tap, before React has shown the first) are not lost:
+  `toggle()` asks for the opposite of what was last asked, not of what is rendered, so a quick
+  double tap sends `true` then `false`.
+- Send the wanted value (`present: boolean`), never "flip it": the server then answers a repeat the
+  same way, and a request that is retried is harmless.
+- `key` must be as specific as the thing the control changes (class, date and student), or two
+  controls share a queue and a pending value.
+- Leaving the page drops the saves still queued: each waits for the one before it to be answered and
+  refetched. Fine for a toggle; a control that must not lose a change is not this.
+
+What fits: a control with one value that saves on change and is shown again from a query (toggles,
+switches, ratings, a row's dropdown, reorder). What does not: a form with a Save button
+(`useSchemaForm`), a create (there is nothing to show yet), a value the server computes (it would
+show a guess), and typing into a field continuously (a request per keystroke: debounce it, or
+make it a form).
+
 ## Don't
 
 - Don't create a `QueryClient` yourself, in the app or in a test's provider; use

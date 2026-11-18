@@ -14,6 +14,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- A control that saves on change shows the change at once. `optimisticMutation(key, options)`, `useOptimisticValue`
+  and `useOptimisticToggle` in `@jwcarman/roux-web/api`: the key becomes the mutation's key and scope (saves
+  queue in order, the hook finds the pending value), a plain `mutationOptions` is a type error, a double tap
+  asks `true` then `false`, and a refusal toasts and falls back to the server's value.
 - `dateSearchOf(raw)` in `@jwcarman/roux-web/paging`, beside `enumSearchOf` and `idSearchOf`: a URL's date is a real
   `YYYY-MM-DD` or absent.
 - An optional choice. `oneOf(values).optional()` and `id().optional()` (roux-web): a select at its
