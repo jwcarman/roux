@@ -83,8 +83,13 @@ Before changing anything, find out what is there:
   installed) for them; roux only wires the session into the client (`onSessionLost`,
   `useClearQueriesOnIdentityChange`). The browser calls who (sign-in, sign-out, the person's own
   passkeys and sessions) go through `@jwcarman/who-client`, not hand-written fetches. To invite
-  someone, call who's `InvitationService.invite` outside a transaction and create the app's own
-  rows in a plain `@EventListener` for `IdentityInvited`; a public path is a `WhoPublicPathContributor`
+  someone, call who's `InvitationService.invite(email, roleNames, identity -> ...)` outside a
+  transaction and write the app's own rows (a profile, an activity entry) in the callback: it runs
+  in the invitation's transaction on the caller's thread, and if it throws everything rolls back and
+  nothing is sent. Its writes must use the same transaction manager and join (no `REQUIRES_NEW`),
+  an exception from a `@Transactional` call inside it must not be swallowed, and the `Identity`
+  carries no address (take it from the request). An `@EventListener` for `IdentityInvited` is the
+  place for a policy check on every invitation; a public path is a `WhoPublicPathContributor`
   bean, never a replaced `WhoPublicPaths`; an email sender is a `WhoEmailSender` with an exhaustive
   `switch` and no `default`.
 

@@ -25,7 +25,6 @@ import org.jwcarman.who.emaillink.EmailCredential;
 import org.jwcarman.who.emaillink.EmailCredentialService;
 import org.jwcarman.who.emaillink.EmailLinkIssuer;
 import org.jwcarman.who.emaillink.EmailLinkOutcome;
-import org.jwcarman.who.emaillink.Invitation;
 import org.jwcarman.who.emaillink.InvitationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -246,11 +245,26 @@ class InviteControllerTest {
   }
 
   @Test
-  void anInvitationWithoutANameGetsTheAddressAsItsName() {
-    Invitation invitation = invitations.invite("grace.hopper@example.org", Set.of("MEMBER"));
+  void aFailureInTheCallbackRollsTheInvitationBackAndSendsNothing() {
+    int identities = count("who_identity");
+    long profilesBefore = profiles.count();
 
-    assertThat(profiles.findById(invitation.identityId()).orElseThrow().getDisplayName())
-        .isEqualTo("grace.hopper");
+    assertThatThrownBy(
+            () ->
+                invitations.invite(
+                    "grace@example.org",
+                    Set.of("MEMBER"),
+                    identity -> {
+                      profiles.save(new MemberProfile(identity.id(), "Grace", "grace@example.org"));
+                      throw new IllegalArgumentException("callback failed");
+                    }))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("callback failed");
+
+    assertThat(mail.sent()).isEmpty();
+    assertThat(count("who_identity")).isEqualTo(identities);
+    assertThat(profiles.count()).isEqualTo(profilesBefore);
+    assertThat(emailCredentials.findByAddress("grace@example.org")).isEmpty();
   }
 
   @Test

@@ -257,15 +257,16 @@ can serve it; no sticky sessions are needed.
 ## Known limits
 
 - **Invitations.** `POST /api/members/invitations` (`InviteController`) is a thin endpoint over
-  who's `InvitationService.invite(email, roleNames)`, called outside any transaction: it keeps the
+  who's `InvitationService.invite(email, roleNames, callback)`, called outside any transaction: it keeps the
   dojo's rules (a name, and only the roles in `InvitableRole`, so an invitation never makes an
   owner) in front of who's, which creates the identity, registers the address, assigns the role and
   publishes `IdentityInvited` in one transaction, then sends the link after it commits.
-  `MemberProfileOnInvite` is a plain `@EventListener` for that event, so the member's profile row
-  and activity entry are made in the same transaction (a failure rolls the invitation back and no
-  email is sent). The event carries no name, so the controller passes the form's name to the
-  listener in a `ScopedValue`; an invitation made through who's own `POST /who/invitations` gets the
-  address's local part as its name. An invitation is a who sign-in link, so it expires with who's token TTL (5
+  The callback runs inside who's transaction, on the caller's thread, after the identity, address
+  and roles exist and before `IdentityInvited` is published: it saves the member's profile (with the
+  form's name) and writes the activity entry, so a failure rolls the invitation back and no email is
+  sent. `InvitableRolesGuard`, an `@EventListener` for `IdentityInvited`, refuses any role but
+  member and instructor for an invitation made any other way (who's own `POST /who/invitations`),
+  which gets no profile. An invitation is a who sign-in link, so it expires with who's token TTL (5
   minutes by default); an invited member who opens it later is sent to sign in, which works because
   the address is registered. If the email cannot be sent, the member is still added and the answer
   says so (`{"linkSent": false}`): the owner is told to have them sign in from the sign-in page, and

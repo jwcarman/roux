@@ -372,7 +372,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   dojo keeps a thin endpoint for its own rules and a listener for the profile row. What the
   invitation cannot carry (the form's name) is the next entry.
 
-## An invitation carries no app data, so the form's name travels in a ScopedValue
+## An invitation carries no app data, so the form's name travelled in a ScopedValue
 - Where: `members/MemberProfileOnInvite`, `members/InviteController`
 - What was clunky: who's `IdentityInvited` has the identity, address and roles but nothing the app
   supplied, so the listener that creates the profile row cannot see the name typed in the invite
@@ -385,7 +385,9 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   `invite(email, roleNames, Consumer<Identity> inTransaction)`, which makes the ScopedValue, the
   fallback name and the allow-list guard in the listener unnecessary (the allow-list stays in the
   controller, where the request is).
-- Outcome: deferred, until who's release; then the ScopedValue and the listener's guard go.
+- Outcome: fixed in this commit (who 0.22.0's callback): the controller's callback saves the profile and
+  writes the activity entry; the ScopedValue and the fallback name are gone, and the listener is
+  now only the role backstop (`InvitableRolesGuard`).
 
 ## Listing a member's passkeys needed an app endpoint
 - Where: `passkeys/PasskeysController` (removed)

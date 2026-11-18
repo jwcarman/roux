@@ -6,6 +6,12 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+
+- who 0.22.0 (was 0.21.0): `InvitationService.invite(email, roleNames, callback)` runs the app's
+  own writes in the invitation's transaction. The dojo's invite form uses it for the member's
+  profile and activity entry.
+
 ### Added
 
 - roux-spa serves a single-page app's shell for any page URL, so a route is written once,
