@@ -28,19 +28,21 @@ the last-owner guard, invitable roles, and the permission list copied into `perm
 
 ## who's part (proposed 2026-11-18)
 
-`WhoRoles` / `DeclaredRole`; a startup sync after Liquibase under a lock (create, add, remove,
-rename with merge, retire); strict startup failures (undeclared role, a grant no
-`@RequiresPermission` method uses, bad rename/retire targets); declared mode turning off
-`RbacService`'s role-changing methods and who-admin's role-writing endpoints; the permission set
-(every `@RequiresPermission` value) exposed as a bean.
+`WhoRoles` / `DeclaredRole`; a startup sync after Liquibase under a lock (create, add, remove and log,
+rename with merge, retire); startup failures for an undeclared role and bad rename/retire targets;
+declared mode turning off `RbacService`'s role-changing methods and who-admin's role-writing
+endpoints; `allOf(Class<?>...)`, every `public static final String` of the classes given (private
+constants are helpers, ignored). No check that a granted permission is used anywhere: permissions
+are legitimately checked outside `@RequiresPermission` (in code, in the browser, by API-key scopes).
 
 ## roux's part (after who ships it)
 
-- **Owner is a roux opinion** (who has none): every roux app has an `OWNER` role holding every
-  permission in who's set, including ones a later module adds; the first owner is created from
+- **Owner is a roux opinion** (who has none): every roux app has an `OWNER` role,
+  `OWNER(allOf(Permissions.class, RouxThemePermissions.class, WhoAdminPermissions.class))` in the
+  template, so a constant a module adds reaches it; the first owner is created from
   `roux.owner.email` / `roux.owner.name` on first start; the last active owner cannot be removed.
 - **Invitable roles:** which declared roles an invitation may give, enforced on the server.
-- **Generated frontend types:** the permission set and role names served by roux, so `defineNav`
+- **Generated frontend types:** the declared roles' permissions and names served by roux, so `defineNav`
   and the invite form are typed from the server, and no app keeps a copy.
 - `theme.manage` moves to `RouxThemePermissions`.
 - The dojo moves onto all of it; the new-app template is cut after.
