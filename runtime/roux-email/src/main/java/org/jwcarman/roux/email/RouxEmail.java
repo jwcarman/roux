@@ -18,7 +18,7 @@ package org.jwcarman.roux.email;
 /** Where roux's finished emails are, on the class path. */
 public final class RouxEmail {
 
-  /** The templates, as {@code WhoEmailTemplates} takes the location. */
+  /** The templates, as {@code WhoEmailTemplatesContributor} takes the location. */
   public static final String TEMPLATES = "classpath:/org/jwcarman/roux/email/";
 
   /** The bundle with the five subjects, as {@code ResourceBundle} spells it. */

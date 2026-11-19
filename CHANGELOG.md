@@ -8,6 +8,18 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- who 0.25.0 (was 0.24.0), and libraries' tables through [migratory](https://github.com/jwcarman/migratory),
+  which who brings. What changes for a roux app:
+  - Remove the includes of who's changelog (`classpath:org/jwcarman/who/db/who-changelog.xml`, gone in who
+    0.25.0) and roux-theme's (`classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml`) from the master
+    changelog, and the `who.initialize-schema` setting. Each library declares its changelog in
+    `META-INF/migratory.properties` (roux-theme: `name=roux-theme`, `after=who-jdbc`); migratory runs them in
+    order before the app's changelog. Paths are unchanged, so an existing database runs nothing again.
+  - `spring.liquibase.enabled=false` turns off only the app's changelog; `spring.liquibase.drop-first` fails
+    startup; `migratory.enabled=false` turns off the libraries' runs (the app then includes their changelogs). A
+    test profile that used `spring.liquibase.enabled=false` to keep Liquibase off the database also sets
+    `migratory.enabled=false`.
+  - who's `WhoEmailTemplates` is `WhoEmailTemplatesContributor`.
 - who 0.24.0 (was 0.22.0; 0.23.0 then 0.24.0), and `@jwcarman/who-client` 0.24.0. What changes for a roux app:
   - The starter brings `who-email` (it renders who's emails). SMTP delivery stays the app's choice, as
     `spring-boot-starter-mail` did: add `who-email-smtp` beside it (the dojo and the getting-started
@@ -62,7 +74,7 @@ All notable changes to this project are documented in this file. The format foll
   A page theme the app has no look for throws at startup instead of falling back. New peer dependencies:
   `culori`, `@emotion/cache` and the three `@fontsource-variable` fonts (`inter`, `lora`, `nunito`).
 - `roux-theme`, the owner's theme in roux's own table (`roux_theme`, from the changelog the jar ships:
-  `classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml`, which the app includes as it includes who's).
+  `classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml`, run by migratory before the app's changelog).
   `GET /api/theme` (open to anyone: the shell needs it signed out), `PUT /api/theme` (`theme.manage`, with the
   `version` read; a stale one is a 409), values validated against the shell's own sets, and the
   `ShellThemeSource` bean that makes the shell show it. Each part the owner has not chosen is the `roux.theme.*`

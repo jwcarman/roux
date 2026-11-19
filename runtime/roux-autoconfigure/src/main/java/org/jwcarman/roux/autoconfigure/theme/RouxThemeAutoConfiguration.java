@@ -51,8 +51,9 @@ import org.springframework.core.env.Environment;
  * {@code /api/theme} is a public path, so the sign-in page, which the signed-out see, has its look;
  * {@code PUT} is open only to {@value ThemeController#MANAGE}.
  *
- * <p>The table comes from the jar's Liquibase changelog, which the app includes ({@code
- * classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml}), as it includes who's.
+ * <p>The table comes from the jar's Liquibase changelog ({@code
+ * classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml}), which migratory runs before the
+ * app's own, as it runs who's.
  */
 @AutoConfiguration(
     before = RouxSpaAutoConfiguration.class,

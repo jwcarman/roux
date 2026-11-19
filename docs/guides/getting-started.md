@@ -98,7 +98,6 @@ spring:
     port: 1025
 
 who:
-  initialize-schema: never   # Liquibase creates who's tables (below)
   security:
     public-paths:            # what a signed-out browser may load besides the shell and /assets/**
       - /favicon.svg
@@ -121,19 +120,23 @@ who:
 | `who.passkey.rp-id` | The app's own host (`localhost` in development, `app.example.com` in production). Required. |
 | `who.passkey.allowed-origins` | The origins passkey sign-in may come from. Defaults to `https://<rp-id>`, which does not match `http://localhost:8080`, so set it in development. |
 | `who.security.public-paths` | Paths of the app open to signed-out requests besides who's sign-in endpoints and what roux opens (the shell, `/index.html`, and `/assets/**`, with a built frontend). Every page URL reaches the shell, so no page is listed; list only the files a signed-out browser loads from elsewhere, such as an icon at the root. Anything else answers `401` to a signed-out request. |
-| `who.initialize-schema` | `never` with Liquibase, which then creates who's tables. |
 
-Include who's changelog first in the app's Liquibase master changelog:
+who's and roux's tables need no include. Each library declares its own changelog to
+[migratory](https://github.com/jwcarman/migratory), which who brings, and migratory runs them in
+order (who's, then roux-theme's when the app has it) before the app's own master changelog. The app's
+changelog holds only its own changesets, and may refer to who's and roux's tables. Three things
+follow:
 
-```yaml
-databaseChangeLog:
-  - include:
-      file: classpath:org/jwcarman/who/db/who-changelog.xml
-  - include:
-      file: classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml
-```
+- `spring.liquibase.enabled=false` turns off only the app's own changelog; who's and roux's tables
+  are still created.
+- `spring.liquibase.drop-first` fails startup.
+- `migratory.enabled=false` turns off who's and roux's migrations; the app then includes their
+  changelogs in its own master, in migratory's order. A test profile that used
+  `spring.liquibase.enabled=false` to keep Liquibase off the database sets `migratory.enabled=false` too.
 
-(The second is roux-theme's table, below; include it when the app has `roux-theme`, which then does not start without it.) The full list of who's settings is in who's configuration guide
+migratory comes with who's starter (who-autoconfigure), which roux's starter brings.
+
+The full list of who's settings is in who's configuration guide
 (`docs/guides/configuration.md` in who's repository, at tag `0.20.0`).
 
 ## Add the web side
@@ -367,7 +370,7 @@ neither does not start), `palette` (`gray`), `brand-color` (`#3b82f6`), `shape` 
 ### The owner's theme
 
 `roux-theme` (added beside the starter) keeps the theme in roux's own table, `roux_theme`: one row, from the
-changelog above, whose columns are null until the owner chooses (`roux.theme.*` stands for every part
+changelog the jar ships (migratory runs it), whose columns are null until the owner chooses (`roux.theme.*` stands for every part
 not chosen, so the answer is always a whole theme). It brings:
 
 - `GET /api/theme`, open to anyone, signed out too (the sign-in page needs its look): the whole
@@ -387,8 +390,7 @@ The pieces behind them are `AppTheme` (the entity), `AppThemeRepository` and `Th
 that carries the app's name, say).
 
 An app that keeps its look elsewhere declares its own `ShellThemeSource` bean (the API stays); an
-app that wants no owner theme leaves `roux-theme` out of its dependencies and does not include the
-changelog. Entities and repositories are found without any entity
+app that wants no owner theme leaves `roux-theme` out of its dependencies. Entities and repositories are found without any entity
 scan or `@EnableJpaRepositories` of the app's; an app that sets its own `@EnableJpaRepositories`
 must still reach `org.jwcarman.roux.theme`.
 

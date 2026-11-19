@@ -15,7 +15,7 @@ It builds in roux's reactor (`./mvnw verify` from the repository's root) and is 
   revocation. who's own security chain is the app's: a signed-out request gets `401` unless its path
   is in `who.security.public-paths` (application.yml), which lists the icons at the root; roux opens
   the SPA's shell and assets.
-- **PostgreSQL** with a **Liquibase XML** schema (who's changelog first, then the app's), and
+- **PostgreSQL** with a **Liquibase XML** schema (who's and roux-theme's tables from their own changelogs, run by migratory, then the app's), and
   **Spring Data JPA** with [jpa-utils](https://github.com/jwcarman/jpa-utils) for the app's own
   tables (Hibernate validates its mappings against the schema at startup).
 - **Spring Session JDBC**: HTTP sessions live in that PostgreSQL database.
@@ -247,7 +247,7 @@ can serve it; no sticky sessions are needed.
   in `application.yml`; Spring Session uses it because `spring.session.timeout` is unset). Spring
   Session deletes expired rows every minute (its default `spring.session.jdbc.cleanup-cron`).
 - **Tables.** `SPRING_SESSION` and `SPRING_SESSION_ATTRIBUTES` are created by Liquibase
-  (`db/changelog/spring-session.xml`, after who's changelog), with Spring Session's own PostgreSQL
+  (`db/changelog/spring-session.xml`), with Spring Session's own PostgreSQL
   DDL and default table names. Spring Session's own initializer is off
   (`spring.session.jdbc.initialize-schema: never`).
 - **Cookie.** The session cookie is Spring Session's `SESSION` (its value is the base64-encoded

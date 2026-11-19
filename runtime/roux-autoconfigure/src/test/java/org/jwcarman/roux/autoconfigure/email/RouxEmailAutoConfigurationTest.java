@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.email.RouxEmailModelContributor;
 import org.jwcarman.roux.spa.ShellTheme;
 import org.jwcarman.roux.spa.ShellThemeSource;
-import org.jwcarman.who.email.WhoEmailTemplates;
+import org.jwcarman.who.email.WhoEmailTemplatesContributor;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.predicate.RuntimeHintsPredicates;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -43,9 +43,9 @@ class RouxEmailAutoConfigurationTest {
     runner.run(
         context -> {
           assertThat(context).hasSingleBean(RouxEmailModelContributor.class);
-          assertThat(context.getBean(WhoEmailTemplates.class))
+          assertThat(context.getBean(WhoEmailTemplatesContributor.class))
               .isEqualTo(
-                  new WhoEmailTemplates(
+                  new WhoEmailTemplatesContributor(
                       "classpath:/org/jwcarman/roux/email/",
                       "org/jwcarman/roux/email/email-messages"));
         });
@@ -67,13 +67,13 @@ class RouxEmailAutoConfigurationTest {
             context ->
                 assertThat(context)
                     .doesNotHaveBean(RouxEmailModelContributor.class)
-                    .doesNotHaveBean(WhoEmailTemplates.class));
+                    .doesNotHaveBean(WhoEmailTemplatesContributor.class));
   }
 
   @Test
   void without_who_email_nothing_is_registered() {
     runner
-        .withClassLoader(new FilteredClassLoader(WhoEmailTemplates.class))
+        .withClassLoader(new FilteredClassLoader(WhoEmailTemplatesContributor.class))
         .run(context -> assertThat(context).doesNotHaveBean(RouxEmailModelContributor.class));
   }
 

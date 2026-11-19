@@ -68,7 +68,8 @@ public class ThemeService {
         .orElseThrow(
             () ->
                 new IllegalStateException(
-                    "roux_theme has no row: include roux-theme's changelog"
-                        + " (classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml)"));
+                    "roux_theme has no row: roux-theme's changelog has not run (migratory runs it;"
+                        + " with migratory.enabled=false, include"
+                        + " classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml)"));
   }
 }

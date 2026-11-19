@@ -52,7 +52,7 @@ and in the frontend's `package.json`, as dev dependencies: `vitest`, `jsdom`, `m
 ## Java: the whole app on PostgreSQL
 
 Tests run the real app: who's security chain, roux's problem answers, the app's Liquibase changelog
-(who's tables included), on a PostgreSQL that Testcontainers starts (Docker must be running). Nothing
+(after who's and roux's tables, which migratory creates), on a PostgreSQL that Testcontainers starts (Docker must be running). Nothing
 is mocked; the app's `application.yml` applies, so its required settings
 ([Getting started](getting-started.md#required-settings)) are already there, and no mail is sent
 because tests sign in through who-test, not by email.

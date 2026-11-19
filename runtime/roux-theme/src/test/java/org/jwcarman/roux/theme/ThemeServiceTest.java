@@ -111,6 +111,7 @@ class ThemeServiceTest {
     assertThatThrownBy(service::current)
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("roux_theme has no row")
+        .hasMessageContaining("migratory.enabled=false")
         .hasMessageContaining("classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml");
     assertThatThrownBy(() -> service.update(request(0L))).isInstanceOf(IllegalStateException.class);
   }

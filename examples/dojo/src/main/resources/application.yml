@@ -52,8 +52,6 @@ roux:
     app-name: Dojo
 
 who:
-  # Liquibase creates who's tables (db.changelog-master.xml includes who's changelog).
-  initialize-schema: never
   security:
     # What a signed-out browser may load besides what roux opens (the shell, /index.html, which
     # roux's SPA filter serves for every client route, and /assets/**): the icons at the root.

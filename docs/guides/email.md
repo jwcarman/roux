@@ -69,7 +69,7 @@ who.email.sign-in.subject=Your {{extra.roux.appName}} sign-in link
 ## Where they are
 
 The templates are at `RouxEmail.TEMPLATES` (`classpath:/org/jwcarman/roux/email/`) and the subjects in the bundle
-`RouxEmail.MESSAGES`; the auto-configuration registers both with who as a `WhoEmailTemplates` library. A library of
+`RouxEmail.MESSAGES`; the auto-configuration registers both with who as a `WhoEmailTemplatesContributor` library. A library of
 your own registers one the same way (who's email guide), after roux's if it should win over it.
 
 ## Native images

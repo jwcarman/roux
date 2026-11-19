@@ -68,7 +68,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <!-- runs roux-theme's changelog, as an app includes it -->
+            <!-- Liquibase, for migratory: it runs who's and roux-theme's changelogs -->
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-liquibase</artifactId>
             <scope>test</scope>
