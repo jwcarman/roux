@@ -450,7 +450,8 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   starts its membership a week back so it holds in any time zone.
 - roux could: a school time zone (and locale) setting, with "today" and "this month" from it, on the
   server and in the browser alike.
-- Outcome: deferred (decided in the round-3 design).
+- Outcome: fixed in round 4 (`roux.organization.time-zone` and `.locale`, `OrganizationCalendar`, the
+  context in the page, `today()` and the formatters; `docs/guides/dates-and-time.md`).
 
 ## Money text written by the server had no helper
 - Where: `memberships/MembershipService` (history entries)
@@ -473,7 +474,8 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   it has them, and each dialog takes `settings` as a prop.
 - roux could: let the rule and field read the settings themselves (a provider, or a suspense query in
   roux-web), so a money schema is written like any other.
-- Outcome: open.
+- Outcome: fixed in round 4 (the context carries the currency; `money()`, `f.MoneyField` and
+  `moneyInputOf` take no settings, and `planSchema` is a module constant).
 
 ## Fields shown only with a permission are checked by hand in the controller
 - Where: `students/StudentsController.list`
@@ -500,5 +502,28 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   150,000: 100 times too much. The dojo is in USD and unaffected. Found by round 3's final review.
 - roux could: format with the server's digits (`formatMoney` taking the settings, or a money context
   the field and the formatter share), which also answers "A money form waits for the currency".
-- Outcome: deferred (no app uses such a currency; the money guide says so).
+- Outcome: fixed in round 4 (`formatMoney` uses the context's digits for the app's currency).
 
+## Tests that move the app clock lose their session
+- Where: `StudentListPaymentTest`, `PaymentsControllerTest`, `StudentsControllerTest`,
+  `PromotionsControllerTest`, `CheckInControllerTest` (round 4's school-day cases)
+- What was clunky: who's session expires on the app's `Clock`, so a test that sets the clock a few hours
+  or weeks ahead gets `401` on its next request and must sign the owner in again
+  (`owner = members.owner()`). Nothing says so; the first failure looks like a permissions bug.
+- roux could: say it in the testing guide, or give the test clock a helper that moves time and keeps
+  the session.
+- Outcome: open.
+
+## A test of the member export's date could not use the clock
+- Where: `members/MembersExportTest`
+- What was clunky: the joined date is who's `created_at`, stamped by the database's `now()`, not the
+  app's `Clock`; the test sets it with SQL to check the date is the school's.
+- roux could: nothing yet (who's column); worth knowing for any date that comes from who.
+- Outcome: open.
+
+## roux-web's build lists its entries in two places
+- Where: `web/roux-web/vite.config.ts` and `package.json` `exports` (and `check-guides.mjs`)
+- What was clunky: the new `./organization` entry was in `package.json` but not in the build's list, so
+  the dojo could not import it; the guide checker has its own list too.
+- roux could: read the entries from `package.json` in the build and the checker.
+- Outcome: open.

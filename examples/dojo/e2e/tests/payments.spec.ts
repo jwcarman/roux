@@ -6,17 +6,16 @@ const plan = `Monthly ${tag}`;
 const maya = { first: "Maya", last: `Chen ${tag}` };
 const mayaName = `${maya.first} ${maya.last}`;
 
-/** A date as the browser's date inputs write it, in this machine's time zone. */
-function isoDate(date: Date): string {
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${day}`;
+/**
+ * A week before the school's today, as a date input holds it. Today is the server's, read from the
+ * context it wrote into the page, so a start a week back is overdue whatever this machine's zone.
+ */
+async function aWeekBeforeToday(page: Page): Promise<string> {
+  const context = JSON.parse((await page.locator("#app-context").textContent()) ?? "") as { today: string };
+  const day = new Date(`${context.today}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() - 7);
+  return day.toISOString().slice(0, 10);
 }
-
-// A week ago, not today: the server's "today" is UTC's and the browser's is local, so a start a
-// week back is overdue whatever this machine's time zone (FINDINGS: roux has no school time zone).
-const weekAgo = new Date();
-weekAgo.setDate(weekAgo.getDate() - 7);
 
 function nav(page: Page, place: string) {
   return page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: place });
@@ -58,7 +57,7 @@ test("the owner records a payment, and paid through moves", async ({ page, reque
 
   const start = await openDialog(page, "Start membership", `Start a membership for ${mayaName}`);
   await start.getByLabel("Plan").selectOption({ label: `${plan} ($150.00 / month)` });
-  await start.getByLabel("Start date").fill(isoDate(weekAgo));
+  await start.getByLabel("Start date").fill(await aWeekBeforeToday(page));
   await start.getByRole("button", { name: "Start" }).click();
   await expect(page.getByText("Overdue")).toBeVisible();
 

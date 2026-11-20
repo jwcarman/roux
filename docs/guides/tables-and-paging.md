@@ -418,7 +418,7 @@ How it fits together:
   values are ids loaded at run time (a rank, a class), `idSearchOf(raw)` keeps a value only if it is
   shaped like a UUID, so the route never needs its own `typeof` check. A date that is URL state (a
   page for one day, a report's start) is `dateSearchOf(raw)`: a real `YYYY-MM-DD` (`2026-02-30` is
-  not one) or absent; the page falls back to today with date-fns (`formatIsoDate(new Date())`). A typed URL past the
+  not one) or absent; the page falls back to the organization's `today()` ([Dates and time](dates-and-time.md)). A typed URL past the
   last page moves to the last page.
 - **The previous page stays on screen** while the next one loads (TanStack's `keepPreviousData`).
 - Without `params`, the table keeps its own page and sort, starting from `initialSort` and

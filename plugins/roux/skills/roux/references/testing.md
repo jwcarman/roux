@@ -351,15 +351,19 @@ export function checkAllAnswered(): void {
 }
 ```
 
-`src/testing/setup.ts` starts it, resets it after each test, and gives jsdom what Chakra needs:
+`src/testing/setup.ts` starts it, resets it after each test, sets the organization's context (one
+fixed school and day, [Dates and time](dates-and-time.md#test)), and gives jsdom what Chakra needs:
 
 ```ts
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
+import { setOrganization, testOrganization } from "@jwcarman/roux-web/organization";
 import { checkAllAnswered, listen, server } from "./server";
 
 beforeAll(listen);
+
+beforeEach(() => setOrganization(testOrganization()));
 
 afterEach(() => {
   cleanup();

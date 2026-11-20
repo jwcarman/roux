@@ -17,8 +17,11 @@ package org.jwcarman.roux.problems;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Locale;
 
+import org.jwcarman.roux.organization.OrganizationCalendar;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -58,10 +61,16 @@ class ProblemsTestApplication {
     return new ProblemsAdvice(prefix);
   }
 
-  /** The application's clock, which {@code @NotInFuture} reads: the 15th of June, 2026. */
+  /** The application's clock: noon UTC on the 15th of June, 2026. */
   @Bean
   Clock clock() {
     return Clock.fixed(Instant.parse("2026-06-15T12:00:00Z"), ZoneOffset.UTC);
+  }
+
+  /** The organization's calendar, which {@code @NotInFuture} reads: today is the 15th of June. */
+  @Bean
+  OrganizationCalendar organizationCalendar(Clock clock) {
+    return new OrganizationCalendar(clock, ZoneId.of("America/New_York"), Locale.US);
   }
 
   @Bean

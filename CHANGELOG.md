@@ -8,6 +8,12 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- Money reads the organization's context (roux-money is unreleased, so this changes the unreleased
+  API): `money()`, `f.MoneyField` and `moneyInputOf(money)` take no settings; `formatMoney(money)` takes
+  no locale and uses the server's digits; `moneySettingsQuery`, roux-web's `MoneySettings` and
+  `GET /api/money` (`MoneyController`) are gone. A money schema is a module constant.
+- `@NotInFuture` checks against the organization's today (`OrganizationCalendar.today()`), exactly; the
+  one-day allowance remains only outside a roux app. `date().notInFuture()` compares with `today()`.
 - Roles and permissions (`docs/guides/roles.md`). What changes for a roux app:
   - Set `roux.owner.email` and `roux.owner.name` (both required; startup fails naming the missing one). While
     no active identity holds `OWNER`, roux creates one at startup and publishes `OwnerCreated` in its
@@ -62,13 +68,21 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- `roux-organization`, in the starter: `OrganizationCalendar` (`today()`, `thisMonth()`, `now()`,
+  `todayEndsAt()`, `zone()`, `locale()`, from the app's `Clock` in the organization's zone),
+  `OrganizationContext`, `OrganizationContextSource` and `GET /api/organization`
+  (`OrganizationController`); the settings are `RouxOrganizationProperties`. The shell writes the context
+  into the page (`#app-context`).
+- roux-web: `@jwcarman/roux-web/organization` (`loadOrganization`, `readPageOrganization`,
+  `fetchOrganization`, `today`, `useToday`, `startDayWatch`, `organization`, `setOrganization`,
+  `testOrganization`, ...), and in `/dates` the formatters `formatDate`, `formatTime`, `formatDateTime`
+  and `formatNumber`, in the organization's locale and zone.
 - `roux-money`, in the starter: `Money(minorUnits, currency)`, an `@Embeddable` record (`times`, `plus`,
   `isPositive`, `format(Locale)`), sent as `{ "minorUnits": 15000, "currency": "USD" }`; the constraints
   `@InCurrency`, `@PositiveMoney` and `@PositiveOrZeroMoney`; and, with `roux.money.currency` set, the
-  `MoneySettings` bean and `GET /api/money` (`{ "currency": "USD", "fractionDigits": 2 }`). See
-  `docs/guides/money.md`.
-- roux-web money: `@jwcarman/roux-web/money` (`Money`, `MoneySettings`, `moneySettingsQuery`, `formatMoney`,
-  `timesMoney`, `currencySymbol`), and in `/form` the `money(settings)` rule, `f.MoneyField` and
+  `MoneySettings` bean. See `docs/guides/money.md`.
+- roux-web money: `@jwcarman/roux-web/money` (`Money`, `formatMoney`, `timesMoney`, `currencySymbol`,
+  `digitsOf`, `organizationCurrency`), and in `/form` the `money()` rule, `f.MoneyField` and
   `moneyInputOf`. Typed amounts are parsed without floating point; `contracts/money.json` keeps the
   browser's parsing and the server's rules the same.
 
@@ -156,6 +170,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Breaking changes
 
+- The organization's time zone and locale (`docs/guides/dates-and-time.md`). What changes for a roux app:
+  - Set `roux.organization.time-zone` (an IANA zone, `America/New_York`) and `roux.organization.locale`
+    (a BCP 47 tag, `en-US`). Both are required; startup fails naming a missing or unknown one.
+  - Add `<script type="application/json" id="app-context">__APP_CONTEXT__</script>` to `index.html`,
+    after `#app-theme`. A built page without it fails startup (`ShellPage`).
+  - In `main.tsx`, `await loadOrganization()` and `startDayWatch(queryClient)` before `render`; in the
+    Vitest setup, `beforeEach(() => setOrganization(testOrganization()))`.
 - roux's features are in their own modules, switched on by their jars (every auto-configuration
   stays in roux-autoconfigure, with optional dependencies on the modules). The starter and roux-bom
   carry all of them, so an app on the starter needs only the new imports.

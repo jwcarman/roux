@@ -10,10 +10,10 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const guidesDir = join(root, "docs/guides");
 const referencesDir = join(root, "plugins/roux/skills/roux/references");
-const webEntries = ["problem", "api", "paging", "table", "feedback", "form", "dates", "theme", "signin", "navigation", "money"];
+const webEntries = ["problem", "api", "paging", "table", "feedback", "form", "dates", "theme", "signin", "navigation", "money", "organization"];
 
 // Public but not API: wiring that users never reference by name.
-const excludedJava = new Set(["ProblemsRuntimeHints", "ValidationRuntimeHints", "RouxProblemsAutoConfiguration", "RouxAuditingAutoConfiguration", "RouxSpaAutoConfiguration", "RouxThemeAutoConfiguration", "RouxThemePersistenceAutoConfiguration", "RouxEmailAutoConfiguration", "RouxRolesAutoConfiguration", "RouxMoneyAutoConfiguration"]);
+const excludedJava = new Set(["ProblemsRuntimeHints", "ValidationRuntimeHints", "RouxProblemsAutoConfiguration", "RouxAuditingAutoConfiguration", "RouxSpaAutoConfiguration", "RouxThemeAutoConfiguration", "RouxThemePersistenceAutoConfiguration", "RouxEmailAutoConfiguration", "RouxRolesAutoConfiguration", "RouxMoneyAutoConfiguration", "RouxOrganizationAutoConfiguration"]);
 
 const problems = [];
 const rel = (file) => relative(root, file);

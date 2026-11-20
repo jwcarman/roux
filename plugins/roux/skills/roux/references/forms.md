@@ -94,17 +94,17 @@ Their methods:
 | `.max(n)` | `text`, `email`, `url`, `phone` | at most `n` characters once trimmed; the input gets `maxLength={n}` | `Must be between 0 and {n} characters` | `@Size(max = n)` |
 | `.min(n)` | `number`, `integer` | at least `n` | `Must be at least {n}` | `@Min(n)` |
 | `.max(n)` | `number`, `integer` | at most `n` | `Must be at most {n}` | `@Max(n)` |
-| `.notInFuture()` | `date` | not after the browser's today | `Must not be in the future` | `@NotInFuture` (roux-validation) |
+| `.notInFuture()` | `date` | not after the organization's `today()` | `Must not be in the future` | `@NotInFuture` (roux-validation) |
 | `.optional()` | all | may be left empty (a select at its placeholder); empty gives `null` | none | no `@NotBlank`/`@NotNull` |
 
 - **A date that may not be in the future** is `date().notInFuture()` in the browser and `@NotInFuture`
   on the server's `LocalDate`, with the one message `Must not be in the future`. Use them, never
-  `@PastOrPresent`: that compares with the server's exact today in the server's zone, and a browser in
-  another zone (up to UTC+14, ahead of the server) is refused for choosing its own today.
-  `@NotInFuture` reads the application's `Clock` bean (the system clock when there is none) and
-  allows one day past the server's today, so what `notInFuture()` accepts is never refused. Neither
+  `@PastOrPresent`: that compares with today in the server's own zone, not the organization's. Both
+  compare with the organization's today (`today()` in the browser, `OrganizationCalendar.today()` on
+  the server; [Dates and time](dates-and-time.md)), so they never disagree. Neither
   needs wiring: annotate the request's field (`@NotNull @NotInFuture LocalDate birthDate`; `null` is
-  left to `@NotNull`). A test that sets the `Clock` bean sets the rule's today. (`AfterValidator`, `NotInFutureValidator` and `PhoneValidator`
+  left to `@NotNull`). A test that sets the `Clock` bean sets the server's today; a browser test sets
+  `setOrganization(testOrganization({ today }))`. (`AfterValidator`, `NotInFutureValidator` and `PhoneValidator`
   are the constraints' validators; you never reference them.)
 - **A phone number** is `phone()` and `@Phone` (`@NotBlank @Phone String phone`): one pattern,
   `Phone.PATTERN`, with `contracts/phone.json` and a contract test on each side keeping them
@@ -170,7 +170,9 @@ roux-web's date library is date-fns (a peer dependency). The wire format stays a
 `LocalDate` is `2026-11-17`, a `LocalTime` is `18:30` (what a `type="time"` input holds; Jackson
 writes `18:30:00` and reads either), an instant is an ISO string. Use date-fns directly for
 arithmetic and display (`addDays`, `isAfter`, `format`, `startOfWeek`); do not write your own date
-arithmetic. To go between the strings and Dates, `@jwcarman/roux-web/dates` has four strict helpers
+arithmetic. A business date's "today" is the organization's `today()`, never `new Date()`, and
+display goes through `formatDate`, `formatTime` and `formatDateTime` ([Dates and time](dates-and-time.md)).
+To go between the strings and Dates, `@jwcarman/roux-web/dates` has four strict helpers
 (`undefined` when the text is not a real date or time, never a rolled-over one):
 
 ```ts
@@ -185,7 +187,7 @@ function formatIsoTime(date: Date): string; // "18:30"
 A time of day is `time()` with a `type="time"` input. On the server it is a plain `LocalTime`
 (`@NotNull LocalTime startsAt`, no `@JsonFormat`): Jackson reads `18:30` and `18:30:00` and writes
 `18:30:00`, so start the form with `timeInputOf(record.startsAt)` (`18:30:00` as `18:30`; `null` as
-`""`) and show it with date-fns (`format(parseIsoTime(iso), "p")`). A time the server cannot read
+`""`) and show it with `formatTime(iso)`. A time the server cannot read
 (`6pm`) is a field error, `Is not in the expected format`, as the browser's rule says
 (`contracts/time.json` holds the two together):
 
@@ -195,8 +197,9 @@ const classSchema = z.object({ name: text().max(60), startsAt: time(), endsAt: t
 <form.AppField name="startsAt">{(f) => <f.InputField label="Starts" type="time" />}</form.AppField>;
 ```
 
-For example, the most recent Tuesday, as a date input holds it: `formatIsoDate(previousTuesday(new Date()))`
-with date-fns's `previousTuesday` (or `startOfToday()` for today).
+For example, the most recent Tuesday up to today, as a date input holds it:
+`formatIsoDate(previousTuesday(parseIsoDate(today())!))` with date-fns's `previousTuesday` (`today()`
+itself for today).
 
 ### Write a rule the helpers lack
 

@@ -180,15 +180,15 @@ class ProblemsAdviceTest {
   }
 
   @Test
-  void aDateOneDayPastTheServersTodayIsAllowedForAFarEasternBrowser() throws Exception {
-    postJson("/booking", "{\"day\":\"2026-06-16\",\"phone\":\"+1 (555) 123-4567\"}")
+  void theOrganizationsTodayIsNotInTheFuture() throws Exception {
+    postJson("/booking", "{\"day\":\"2026-06-15\",\"phone\":\"+1 (555) 123-4567\"}")
         .andExpect(status().isOk());
   }
 
   @Test
-  void aDateBeyondThatIsNotInTheFutureAndAMalformedPhoneAreFieldErrors() throws Exception {
+  void tomorrowIsInTheFutureAndAMalformedPhoneAreFieldErrors() throws Exception {
     isProblem(
-            postJson("/booking", "{\"day\":\"2026-06-17\",\"phone\":\"call me\"}"),
+            postJson("/booking", "{\"day\":\"2026-06-16\",\"phone\":\"call me\"}"),
             400,
             "Bad Request")
         .andExpect(jsonPath("$.errors.length()").value(2))

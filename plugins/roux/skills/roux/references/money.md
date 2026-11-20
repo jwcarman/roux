@@ -15,14 +15,10 @@ roux:
     currency: USD
 ```
 
-roux then serves `GET /api/money`:
-
-```json
-{ "currency": "USD", "fractionDigits": 2 }
-```
-
-and the `MoneySettings` bean (`currency()`, `fractionDigits()`) is there to inject. Without the
-setting, neither exists, and `@InCurrency` fails with
+The `MoneySettings` bean (`currency()`, `fractionDigits()`) is then there to inject, and the
+organization's context carries the currency and its digits to the browser (`"currency": "USD",
+"fractionDigits": 2`; [Dates and time](dates-and-time.md)). Without the setting, there is no bean, the
+context's currency is `null`, and `@InCurrency` fails with
 `roux.money.currency must be set to check @InCurrency`. `RouxMoneyProperties` holds the setting.
 
 ## The value: `Money`
@@ -34,7 +30,7 @@ setting, neither exists, and `@InCurrency` fails with
 - `plus(Money other)`: same currency only, else `IllegalArgumentException` (`Cannot add EUR to USD`);
 - `isPositive()`;
 - `format(Locale locale)`: `"$150.00"` in `Locale.US`, for text the server writes (a history entry, an
-  email). The browser formats its own (`formatMoney`).
+  email); pass the organization's (`calendar.locale()`). The browser formats its own (`formatMoney`).
 
 Its JSON is `{ "minorUnits": 15000, "currency": "USD" }`, both ways.
 
@@ -72,48 +68,41 @@ public record PlanRequest(
 - `@PositiveMoney`: `Must be more than 0`. `@PositiveOrZeroMoney`: `Must not be negative`.
 
 Each is a field error on the field (`price`), like `@Phone`. Their validators are
-`InCurrencyValidator`, `PositiveMoneyValidator` and `PositiveOrZeroMoneyValidator`; `MoneyController`
-serves `GET /api/money`.
+`InCurrencyValidator`, `PositiveMoneyValidator` and `PositiveOrZeroMoneyValidator`.
 
 ## In the browser
 
 `@jwcarman/roux-web/money` has the type and display:
 
-- `Money`, `MoneySettings` (the wire shapes);
-- `moneySettingsQuery`: `GET /api/money` (cached for the session);
-- `formatMoney(money, locale?)`: `"$150.00"` in the reader's locale, right-aligned in a table cell;
+- `Money` (the wire shape);
+- `formatMoney(money)`: `"$150.00"` in the organization's locale, right-aligned in a table cell; the
+  app's own currency with the server's digits (`digitsOf(currency)`; `organizationCurrency()` is the
+  app's currency from the context);
 - `timesMoney(money, n)`: `n` periods' price, in minor units, for a total shown before saving;
 - `currencySymbol(currency)`: `"$"`.
 
 `@jwcarman/roux-web/form` has the input:
 
-- `money(settings)`: the rule (a `MoneyRule`). The user types `150`, `150.5`, `150.50`, `1,500` or
+- `money()`: the rule (a `MoneyRule`), in the context's currency and digits. The user types `150`, `150.5`, `150.50`, `1,500` or
   `$150`; the output is `Money` in the app's currency. Too many decimals, a negative or text is a field
   error in the server's words. `.positive()` matches `@PositiveMoney`; `.optional()` makes an empty
   field `null`.
-- `f.MoneyField` (`MoneyFieldProps`: `label`, `settings`): a text input with the currency's symbol
-  before it.
-- `moneyInputOf(money, settings)`: an amount as the field's text (`"150.00"`), for an edit form's
-  defaults.
+- `f.MoneyField` (`MoneyFieldProps`: `label`): a text input with the currency's symbol before it.
+- `moneyInputOf(money)`: an amount as the field's text (`"150.00"`), for an edit form's defaults.
 
-The form needs the settings before its schema exists, so the page loads them first:
+The currency is in the page before any code runs, so a money schema is an ordinary module constant:
 
 ```tsx
-export function planSchema(settings: MoneySettings) {
-  return z.object({ name: text().max(60), price: money(settings).positive(), ... });
-}
-
-const settings = useQuery(moneySettingsQuery).data;
-{settings && <PlanFormDialog settings={settings} trigger={<Button>New plan</Button>} />}
+export const planSchema = z.object({ name: text().max(60), price: money().positive(), ... });
 
 // in the dialog
-defaultValues: plan ? { price: moneyInputOf(plan.price, settings), ... } : { price: "", ... },
-<form.AppField name="price">{(f) => <f.MoneyField label="Price" settings={settings} />}</form.AppField>
+defaultValues: plan ? { price: moneyInputOf(plan.price), ... } : { price: "", ... },
+<form.AppField name="price">{(f) => <f.MoneyField label="Price" />}</form.AppField>
 ```
 
-`formatMoney` takes its digits from the browser (CLDR), and `money()` from the server
-(`fractionDigits`, ISO 4217). They agree for USD, EUR, GBP, CAD, AUD, JPY and most currencies, but
-not for HUF, IDR, COP, LBP or IQD: an app in one of those is not supported yet.
+The digits come from the server on both sides (`fractionDigits`, ISO 4217), for parsing and for
+display, so HUF, IDR, COP and the rest are written as the server counts them. Grouping and symbols are
+the browser's (CLDR) and may differ slightly from the server's text.
 
 `contracts/money.json` lists typed inputs and what each becomes; a contract test on each side keeps
 the browser's parsing and the server's rules the same.

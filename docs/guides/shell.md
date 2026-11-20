@@ -1,7 +1,8 @@
 # The shell: theme, sign-in and navigation
 
-roux serves the app's shell (`index.html`, with its nonce, its Content-Security-Policy and the theme in
-place: [Getting started](getting-started.md#the-shell)) and ships the pieces every shell needs, from
+roux serves the app's shell (`index.html`, with its nonce, its Content-Security-Policy, the theme and the
+organization's context (`#app-context`, [Dates and time](dates-and-time.md)) in place:
+[Getting started](getting-started.md#the-shell)) and ships the pieces every shell needs, from
 `@jwcarman/roux-web/theme`. The pages are the app's: the sign-in page, the appearance page and the navigation declaration stay app code, composed from roux's components.
 
 ## The theme

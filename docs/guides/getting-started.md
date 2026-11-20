@@ -74,7 +74,7 @@ Boot's BOM, so Spring Boot's managed versions stay the parent's.
 </dependencies>
 ```
 
-The starter brings `roux-problems`, `roux-validation` (`@Phone`, `@NotInFuture` and roux's validation messages), `roux-spa` (the shell for any page URL), `roux-jpa` (`Versions`), `roux-money` (`Money`, its constraints and `GET /api/money`: see [Money](money.md)), `roux-roles` (the `OWNER` role, the first owner and invitable roles: see
+The starter brings `roux-problems`, `roux-validation` (`@Phone`, `@NotInFuture` and roux's validation messages), `roux-spa` (the shell for any page URL), `roux-jpa` (`Versions`), `roux-money` (`Money` and its constraints: see [Money](money.md)), `roux-organization` (the time zone, locale and today: see [Dates and time](dates-and-time.md)), `roux-roles` (the `OWNER` role, the first owner and invitable roles: see
 [Roles and permissions](roles.md)), `roux-autoconfigure`, who (`who-spring-boot-starter`, with
 email-link sign-in, `who-email-link`, which renders its mail with `who-email`, and passkeys, `who-passkey`),
 `who-admin` (who's endpoints for managing people, `/who/identities` and `/who/invitations`, open to
@@ -96,6 +96,9 @@ message names the missing setting. In `application.yml`, for development on `htt
 
 ```yaml
 roux:
+  organization:              # where the organization is: its day and how it writes (dates-and-time.md)
+    time-zone: America/New_York
+    locale: en-US
   owner:                     # the first owner, made at startup while no active owner exists
     email: you@example.com
     name: You
@@ -123,8 +126,9 @@ who:
 
 | Setting | What it is |
 | --- | --- |
+| `roux.organization.time-zone`, `roux.organization.locale` | The organization's IANA time zone (`America/New_York`) and BCP 47 locale (`en-US`): where its day starts and ends ("today", "this month", `@NotInFuture`) and how dates, numbers and amounts are written. Required; a missing or unknown one fails startup naming it. See `dates-and-time.md`. |
 | `roux.owner.email`, `roux.owner.name` | The first owner: while no active identity holds `OWNER`, roux creates one at startup with this address and display name, and publishes `OwnerCreated` in its transaction (an app adds its own data for the owner by listening). Once an active owner exists these change nothing. Required. See `roles.md`. |
-| `roux.money.currency` | The app's one currency, an ISO 4217 code (`USD`). Needed once the app has money: it turns on `GET /api/money` and the `MoneySettings` bean, and `@InCurrency` checks against it. See `money.md`. |
+| `roux.money.currency` | The app's one currency, an ISO 4217 code (`USD`). Needed once the app has money: it turns on the `MoneySettings` bean and the currency in the organization's context, and `@InCurrency` checks against it. See `money.md`. |
 | `roux.roles.invitable` | The roles an invitation may give, in the order an invite form offers them (`GET /api/roles/invitable`). Each must be a role the app's own changelog creates (roux creates only `OWNER`; see `roles.md`), or every invitation giving it fails. Empty by default, so no invitation passes until it is set; listing `OWNER` fails startup. |
 | `spring.mail.host` | The SMTP server who's emails go through (`who-email-smtp`, over Spring Boot's `JavaMailSender`). Instead of SMTP, an app may register its own `WhoEmailSender` bean (leave out `who-email-smtp`, keep `who-email`): it only delivers, receiving every who email already rendered as an `OutgoingEmail` (`to`, `subject`, `text`, an optional `html`, and the `source` record it was rendered from). Send `text` as `text/plain`, never inside HTML: it is not escaped. roux ships the five emails finished, naming the app and wearing its brand colour; an app replaces one by dropping its own template file, and a subject is the message `who.email.<template>.subject` (see `email.md`). |
 | `who.email-link.link-base-url` | The app's page that receives sign-in links; who appends `#token=...`. Required. |
@@ -185,7 +189,9 @@ Import from a subpath; there is no root import:
 
 `main.tsx` builds one query client with `createQueryClient()` and mounts, once each: the
 `QueryClientProvider`, `ThemeProvider` (Chakra's provider with the app's theme, [The shell](shell.md)), `ConfirmProvider` (for `useConfirm`) around the app, and
-`Toaster` (where `notify` toasts appear) beside it.
+`Toaster` (where `notify` toasts appear) beside it. Before rendering it loads the organization's
+context and starts the day watch ([Dates and time](dates-and-time.md)): without the context, `today()`,
+the formatters and money throw.
 
 ```tsx
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -193,11 +199,15 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createQueryClient } from "@jwcarman/roux-web/api";
 import { ConfirmProvider, Toaster } from "@jwcarman/roux-web/feedback";
+import { loadOrganization, startDayWatch } from "@jwcarman/roux-web/organization";
 import { ThemeProvider } from "@jwcarman/roux-web/theme";
 import { SessionProvider } from "./session";
 import { App } from "./App";
 
 const queryClient = createQueryClient();
+
+await loadOrganization();
+startDayWatch(queryClient);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -339,7 +349,7 @@ server path the app calls.
 ## The shell
 
 roux serves `index.html` (`ShellRoutes`, from `roux-spa`; no code in the app). Each response is
-the built page with three placeholders filled, `Cache-Control: no-store` (a stored copy's nonce
+the built page with four placeholders filled, `Cache-Control: no-store` (a stored copy's nonce
 would not match the next response's policy) and its own `Content-Security-Policy` header. The
 frontend build leaves the placeholders; the app does not start if one is missing (`ShellPage`
 says which):
@@ -347,11 +357,12 @@ says which):
 ```html
 <title>__APP_NAME__</title>
 <script type="application/json" id="app-theme">__APP_THEME__</script>
+<script type="application/json" id="app-context">__APP_CONTEXT__</script>
 ```
 
 and `html: { cspNonce: "__CSP_NONCE__" }` in `vite.config.ts`, which makes Vite write
 `nonce="__CSP_NONCE__"` on every script and style tag it emits. The name is HTML-escaped into the
-title; the theme is JSON with every `<` escaped, so nothing in it can end the element. One pass
+title; the theme and the organization's context ([Dates and time](dates-and-time.md)) are JSON with every `<` escaped, so nothing in it can end the element. One pass
 fills them, so an app named `__APP_THEME__` shows that name.
 
 **The policy** (`ContentSecurityPolicy.strict()`): `default-src 'self'`; `script-src` and
@@ -426,7 +437,8 @@ for the package or tree-shake it away.
   `ClockDateTimeProvider`, registered for you), so a test that
   sets the clock sets them (an ordering by `created_date` can be tested without waiting). Write no
   `DateTimeProvider` and no `dateTimeProviderRef`; with no `Clock` bean the system clock is used.
-  The same `Clock` is the one `@NotInFuture` reads ([Forms](forms.md#the-rule-helpers)).
+  The same `Clock` is the one `OrganizationCalendar` reads for today, and with it `@NotInFuture`
+  ([Dates and time](dates-and-time.md)).
 
 ## Next
 

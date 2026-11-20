@@ -118,7 +118,8 @@ sections you need.
 | A short list, a list that grows (`InfiniteList`), a picker over a long list (`InfiniteSelect`), an export link | `references/tables-and-paging.md` |
 | A dialog in a table cell closes by itself, or a test passes alone and fails after another | `references/tables-and-paging.md` (Things to know: define columns once) |
 | Money: an amount on an entity, its columns, `@InCurrency` and `@PositiveMoney`, `money()` and `MoneyField`, `formatMoney`, `roux.money.currency` | `references/money.md` |
-| A valid date is refused as in the future | `references/forms.md` (`@NotInFuture`, `date().notInFuture()`) |
+| Today, this month, a default date, showing a date, time or number; `roux.organization.*`, `OrganizationCalendar`, `today()`, the formatters | `references/dates-and-time.md` |
+| A valid date is refused as in the future | `references/dates-and-time.md` (`@NotInFuture`, `today()`) |
 | A view-backed list or detail misses a row just saved | `references/tables-and-paging.md` (a read-model view: flush first) |
 | Reorder rows (move up/down) | `references/tables-and-paging.md` (An ordered list) |
 | One feature must refuse another's removal | `references/errors.md` (Refuse because of what another feature holds) |
