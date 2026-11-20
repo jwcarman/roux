@@ -24,6 +24,7 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.jpa.ClockDateTimeProvider;
+import org.jwcarman.roux.jpa.IdentityAuditor;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -34,7 +35,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.auditing.AuditingHandler;
 import org.springframework.data.auditing.DateTimeProvider;
 import org.springframework.data.domain.Auditable;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.mapping.context.PersistentEntities;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 class RouxAuditingAutoConfigurationTest {
 
@@ -64,6 +68,15 @@ class RouxAuditingAutoConfigurationTest {
     }
   }
 
+  @Configuration(proxyBeanMethods = false)
+  static class WithAnAuditorOfItsOwn {
+
+    @Bean
+    AuditorAware<String> ownAuditor() {
+      return () -> Optional.of("own");
+    }
+  }
+
   /** What {@code @EnableJpaAuditing} registers: a handler whose properties are set by type. */
   @Configuration(proxyBeanMethods = false)
   static class WithAnAuditingHandler {
@@ -89,6 +102,7 @@ class RouxAuditingAutoConfigurationTest {
   /** The simplest thing the auditing handler stamps: it needs no mapping context. */
   static class Visit implements Auditable<String, Long, Instant> {
 
+    private String createdBy;
     private Instant createdDate;
     private Instant lastModifiedDate;
 
@@ -104,12 +118,12 @@ class RouxAuditingAutoConfigurationTest {
 
     @Override
     public Optional<String> getCreatedBy() {
-      return Optional.empty();
+      return Optional.ofNullable(createdBy);
     }
 
     @Override
     public void setCreatedBy(String createdBy) {
-      // the test records no auditor
+      this.createdBy = createdBy;
     }
 
     @Override
@@ -198,5 +212,82 @@ class RouxAuditingAutoConfigurationTest {
         .withUserConfiguration(WithAClock.class)
         .withClassLoader(new FilteredClassLoader(ClockDateTimeProvider.class))
         .run(context -> assertThat(context).doesNotHaveBean(DateTimeProvider.class));
+  }
+
+  @Test
+  void theAuditorIsTheSignedInIdentity() {
+    runner.run(
+        context -> {
+          SecurityContextHolder.getContext()
+              .setAuthentication(new TestingAuthenticationToken("identity-1", null, "ROLE_MEMBER"));
+          try {
+            assertThat(context.getBean(AuditorAware.class)).isInstanceOf(IdentityAuditor.class);
+            assertThat(context.getBean(AuditorAware.class).getCurrentAuditor())
+                .contains("identity-1");
+          } finally {
+            SecurityContextHolder.clearContext();
+          }
+        });
+  }
+
+  @Test
+  void anAuditingHandlerStampsTheAuditor() {
+    runner
+        .withUserConfiguration(WithAnAuditingHandler.class)
+        .run(
+            context -> {
+              Visit visit = new Visit();
+
+              context.getBean(AuditingHandler.class).markCreated(visit);
+
+              assertThat(visit.getCreatedBy()).contains(IdentityAuditor.DEFAULT_SYSTEM_AUDITOR);
+            });
+  }
+
+  @Test
+  void anApplicationsOwnAuditorStays() {
+    runner
+        .withUserConfiguration(WithAnAuditorOfItsOwn.class)
+        .run(
+            context ->
+                assertThat(context.getBean(AuditorAware.class).getCurrentAuditor())
+                    .contains("own"));
+  }
+
+  @Test
+  void withoutSpringSecurityThereIsNoAuditor() {
+    runner
+        .withClassLoader(new FilteredClassLoader(SecurityContextHolder.class))
+        .run(context -> assertThat(context).doesNotHaveBean(AuditorAware.class));
+  }
+
+  @Test
+  void theSystemAuditorIsNamedBySetting() {
+    runner
+        .withPropertyValues("roux.auditing.system-auditor=scheduler")
+        .run(
+            context ->
+                assertThat(context.getBean(AuditorAware.class).getCurrentAuditor())
+                    .contains("scheduler"));
+  }
+
+  @Test
+  void theSystemAuditorIsSystemUnlessSet() {
+    runner.run(
+        context ->
+            assertThat(context.getBean(RouxAuditingProperties.class).systemAuditor())
+                .isEqualTo("system"));
+  }
+
+  @Test
+  void aBlankSystemAuditorIsRefusedAtStartup() {
+    runner
+        .withPropertyValues("roux.auditing.system-auditor= ")
+        .run(
+            context ->
+                assertThat(context)
+                    .getFailure()
+                    .rootCause()
+                    .hasMessage("roux.auditing.system-auditor must not be blank"));
   }
 }

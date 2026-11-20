@@ -69,6 +69,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- roux-jpa: `IdentityAuditor`, registered for you, records the signed-in identity's id (or
+  `"system"`, or the name set in `roux.auditing.system-auditor`) in `@CreatedBy` and
+  `@LastModifiedBy`. An app writes a plain `@EnableJpaAuditing`, with no `auditorAwareRef` and no
+  auditor of its own; one it defines (any `AuditorAware` bean) is kept.
 - `roux-test` (in the BOM, not the starter; add it with test scope): the Java test kit an app copied
   before. `@AppTest` (the whole app on PostgreSQL, a database per context), `TestMembers` (`reset`,
   `signedIn(name, email, role)`, `owner()`, `anonymous()`), `TestMember`, `TestClock`, `TestDatabase`,

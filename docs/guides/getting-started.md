@@ -432,13 +432,19 @@ for the package or tree-shake it away.
   every sign-in method mounted, CSRF for the SPA, and `401` (no redirect) for a signed-out request
   outside `who.security.public-paths`. Defining any `SecurityFilterChain` makes who's back off; the
   app's own chain must then mount who with `WhoSecurity.all()` (see who's getting-started guide).
-- **Audit dates follow the app's `Clock`.** With `@EnableJpaAuditing(auditorAwareRef = ...)` and a
-  `Clock` bean, `@CreatedDate` and `@LastModifiedDate` are stamped from that clock (roux-jpa's
-  `ClockDateTimeProvider`, registered for you), so a test that
-  sets the clock sets them (an ordering by `created_date` can be tested without waiting). Write no
-  `DateTimeProvider` and no `dateTimeProviderRef`; with no `Clock` bean the system clock is used.
-  The same `Clock` is the one `OrganizationCalendar` reads for today, and with it `@NotInFuture`
-  ([Dates and time](dates-and-time.md)).
+- **Auditing is one annotation.** Write `@EnableJpaAuditing` on a configuration class, with no
+  `auditorAwareRef` and no `dateTimeProviderRef`; roux fills in the rest of every jpa-utils
+  `AuditableEntity`'s audit columns:
+  - `@CreatedBy` and `@LastModifiedBy` are the signed-in identity's id, or `"system"`
+    (`IdentityAuditor.DEFAULT_SYSTEM_AUDITOR`) for work nobody signed in did (startup, a scheduled
+    job). Name the system something else with `roux.auditing.system-auditor` (`RouxAuditingProperties`;
+    blank is refused at startup). roux-jpa's `IdentityAuditor` is registered unless the app defines an
+    `AuditorAware` of its own.
+  - `@CreatedDate` and `@LastModifiedDate` follow the app's `Clock` (roux-jpa's
+    `ClockDateTimeProvider`, registered for you), so a test that sets the clock sets them (an
+    ordering by `created_date` can be tested without waiting); with no `Clock` bean the system clock
+    is used. The same `Clock` is the one `OrganizationCalendar` reads for today, and with it
+    `@NotInFuture` ([Dates and time](dates-and-time.md)).
 
 ## Next
 
