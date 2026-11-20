@@ -114,6 +114,41 @@ class RouxOrganizationAutoConfigurationTest {
   }
 
   @Test
+  void a_fixed_offset_is_not_a_time_zone() {
+    for (String zone : new String[] {"Z", "+05:00", "UTC+3", "GMT-04:00"}) {
+      runner
+          .withPropertyValues("roux.organization.time-zone=" + zone, LOCALE)
+          .run(
+              context ->
+                  assertThat(context.getStartupFailure())
+                      .rootCause()
+                      .hasMessageStartingWith(
+                          "roux.organization.time-zone must be a place's time zone, not a fixed"
+                              + " offset"));
+    }
+  }
+
+  @Test
+  void utc_and_an_etc_zone_are_time_zones() {
+    for (String zone : new String[] {"UTC", "Etc/GMT+5"}) {
+      runner
+          .withPropertyValues("roux.organization.time-zone=" + zone, LOCALE)
+          .run(context -> assertThat(context).hasNotFailed());
+    }
+  }
+
+  @Test
+  void a_locale_written_another_way_says_how_to_write_it() {
+    runner
+        .withPropertyValues(ZONE, "roux.organization.locale=en-us")
+        .run(
+            context ->
+                assertThat(context.getStartupFailure())
+                    .rootCause()
+                    .hasMessage("roux.organization.locale must be written en-US, not en-us"));
+  }
+
+  @Test
   void a_malformed_or_unknown_locale_fails_startup() {
     for (String tag : new String[] {"en_US", "xx-YY"}) {
       runner

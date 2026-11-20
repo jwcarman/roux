@@ -142,6 +142,19 @@ describe("startDayWatch", () => {
     stop();
   });
 
+  it("waits out a day end further away than a timer can wait, without asking early", async () => {
+    // A device clock a month behind: the day ends further away than setTimeout's 2^31 - 1 ms.
+    vi.setSystemTime(END - 30 * 24 * 60 * 60 * 1000);
+    const fetchContext = vi.fn(async () => NEXT);
+    const stop = startDayWatch(queryClient, fetchContext);
+
+    await vi.advanceTimersByTimeAsync(2 ** 31 - 1);
+    expect(fetchContext).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(30 * 24 * 60 * 60 * 1000 - (2 ** 31 - 1));
+    expect(fetchContext).toHaveBeenCalledOnce();
+    stop();
+  });
+
   it("asks when a tab becomes visible exactly as the day ends", async () => {
     const fetchContext = vi.fn(async () => NEXT);
     const stop = startDayWatch(queryClient, fetchContext);

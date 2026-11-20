@@ -41,13 +41,18 @@ public record OrganizationContext(
     @Nullable String currency,
     @Nullable Integer fractionDigits) {
 
-  /** The context now, from the calendar and the app's currency ({@code null} for none). */
+  /**
+   * The context now, from the calendar and the app's currency ({@code null} for none). Today and
+   * its end come from one reading of the clock, so a midnight between two readings cannot pair a
+   * day with the next day's end.
+   */
   public static OrganizationContext of(OrganizationCalendar calendar, @Nullable Currency currency) {
+    LocalDate today = calendar.now().toLocalDate();
     return new OrganizationContext(
         calendar.zone().getId(),
         calendar.locale().toLanguageTag(),
-        calendar.today(),
-        calendar.todayEndsAt(),
+        today,
+        today.plusDays(1).atStartOfDay(calendar.zone()).toInstant(),
         currency == null ? null : currency.getCurrencyCode(),
         currency == null ? null : currency.getDefaultFractionDigits());
   }

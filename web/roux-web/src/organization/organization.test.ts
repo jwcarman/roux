@@ -80,6 +80,16 @@ describe("readPageOrganization", () => {
     expect(read({ currency: null })).toThrow("has a currency without its fractionDigits");
   });
 
+  it("refuses a time zone this browser does not know", () => {
+    expect(read({ timeZone: "America/Nwe_York" })).toThrow("has a time zone this browser does not know: America/Nwe_York");
+  });
+
+  it("refuses a today that is not a date, and an end that is not a moment", () => {
+    expect(read({ today: "2026-02-30" })).toThrow("has a today that is not a date: 2026-02-30");
+    expect(read({ today: "tomorrow" })).toThrow("has a today that is not a date: tomorrow");
+    expect(read({ todayEndsAt: "midnight" })).toThrow("has a todayEndsAt that is not a moment: midnight");
+  });
+
   it("refuses a locale this browser does not know", () => {
     expect(read({ locale: "xx-YY" })).toThrow("has a locale this browser does not know: xx-YY");
     expect(read({ locale: "not a locale!" })).toThrow("has a locale this browser does not know: not a locale!");

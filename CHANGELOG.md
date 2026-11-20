@@ -172,7 +172,8 @@ All notable changes to this project are documented in this file. The format foll
 
 - The organization's time zone and locale (`docs/guides/dates-and-time.md`). What changes for a roux app:
   - Set `roux.organization.time-zone` (an IANA zone, `America/New_York`) and `roux.organization.locale`
-    (a BCP 47 tag, `en-US`). Both are required; startup fails naming a missing or unknown one.
+    (a BCP 47 tag, `en-US`). Both are required; startup fails naming a missing or unknown one, a fixed
+    offset (`+05:00`, `UTC+3`) for the zone, or a tag written another way (`en-us`).
   - Add `<script type="application/json" id="app-context">__APP_CONTEXT__</script>` to `index.html`,
     after `#app-theme`. A built page without it fails startup (`ShellPage`).
   - In `main.tsx`, `await loadOrganization()` and `startDayWatch(queryClient)` before `render`; in the

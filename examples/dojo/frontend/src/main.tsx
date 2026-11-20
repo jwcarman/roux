@@ -47,8 +47,12 @@ function App() {
 }
 
 // The school's zone, locale, currency and today: in the page the server sent, or (Vite's dev server)
-// asked for before anything renders. Then the app moves to the next day when the school's day ends.
-await loadOrganization();
+// asked for before anything renders (a failure says why on the page, not only in the console). Then the
+// app moves to the next day when the school's day ends.
+await loadOrganization().catch((error: unknown) => {
+  document.getElementById("root")!.textContent = `The app could not start: ${String(error)}`;
+  throw error;
+});
 startDayWatch(queryClient);
 
 createRoot(document.getElementById("root")!).render(

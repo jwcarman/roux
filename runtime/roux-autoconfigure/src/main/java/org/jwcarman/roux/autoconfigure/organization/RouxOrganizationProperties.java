@@ -16,8 +16,10 @@
 package org.jwcarman.roux.autoconfigure.organization;
 
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -34,6 +36,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("roux.organization")
 public record RouxOrganizationProperties(@Nullable ZoneId timeZone, @Nullable String locale) {
 
+  /** A zone that is an offset from UTC, GMT or UT ({@code UTC+3}), not a place. */
+  private static final Pattern FIXED_OFFSET = Pattern.compile("(UTC|GMT|UT)[+-].*");
+
   /**
    * Checks both settings are set and the locale is one this server has.
    *
@@ -45,14 +50,26 @@ public record RouxOrganizationProperties(@Nullable ZoneId timeZone, @Nullable St
           "roux.organization.time-zone must be set to the organization's time zone"
               + " (an IANA name such as America/New_York)");
     }
+    if (timeZone instanceof ZoneOffset || FIXED_OFFSET.matcher(timeZone.getId()).matches()) {
+      throw new IllegalArgumentException(
+          "roux.organization.time-zone must be a place's time zone, not a fixed offset"
+              + " (an IANA name such as America/New_York): "
+              + timeZone.getId());
+    }
     if (locale == null || locale.isBlank()) {
       throw new IllegalArgumentException(
           "roux.organization.locale must be set to the organization's locale"
               + " (a BCP 47 tag such as en-US)");
     }
     Locale parsed = Locale.forLanguageTag(locale);
-    if (!parsed.toLanguageTag().equals(locale)
-        || !Arrays.asList(Locale.getAvailableLocales()).contains(parsed)) {
+    boolean known = Arrays.asList(Locale.getAvailableLocales()).contains(parsed);
+    if (known
+        && !parsed.toLanguageTag().equals(locale)
+        && parsed.toLanguageTag().equalsIgnoreCase(locale)) {
+      throw new IllegalArgumentException(
+          "roux.organization.locale must be written " + parsed.toLanguageTag() + ", not " + locale);
+    }
+    if (!known || !parsed.toLanguageTag().equals(locale)) {
       throw new IllegalArgumentException(
           "roux.organization.locale is not a locale this server knows: " + locale);
     }

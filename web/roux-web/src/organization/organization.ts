@@ -1,3 +1,4 @@
+import { parseIsoDate } from "../dates/dates";
 import { getJson } from "../api/client";
 
 /**
@@ -54,6 +55,18 @@ function checked(raw: unknown, where: string): OrganizationContext {
   }
   if ((context.currency === null) !== (context.fractionDigits === null)) {
     refuse("has a currency without its fractionDigits, or digits without a currency");
+  }
+  const timeZone = context.timeZone as string;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone });
+  } catch {
+    refuse(`has a time zone this browser does not know: ${timeZone}`);
+  }
+  if (parseIsoDate(context.today as string) === undefined) {
+    refuse(`has a today that is not a date: ${String(context.today)}`);
+  }
+  if (Number.isNaN(Date.parse(context.todayEndsAt as string))) {
+    refuse(`has a todayEndsAt that is not a moment: ${String(context.todayEndsAt)}`);
   }
   const locale = context.locale as string;
   let known: string[];

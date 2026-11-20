@@ -69,6 +69,19 @@ describe("CheckInPage", () => {
     act(() => toaster.remove());
   });
 
+  it("moves to the new day when the school's day changes while the page is open", async () => {
+    const { asked } = school();
+    renderRoute("/classes/c1/check-in", STAFF);
+    await toggle("Ada Lovelace");
+    expect(screen.getByLabelText("Date")).toHaveValue("2026-11-17");
+
+    // A week later at the school (the day watch sets each new day); nothing else re-renders the page.
+    act(() => setOrganization(testOrganization({ today: "2026-11-24" })));
+
+    await waitFor(() => expect(screen.getByLabelText("Date")).toHaveValue("2026-11-24"));
+    expect(asked).toContain("2026-11-24");
+  });
+
   it("defaults to the most recent day the class runs when it does not run today", async () => {
     setOrganization(testOrganization({ today: "2026-11-19" })); // the Thursday after
     const { asked } = school();

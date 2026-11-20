@@ -512,18 +512,18 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   (`owner = members.owner()`). Nothing says so; the first failure looks like a permissions bug.
 - roux could: say it in the testing guide, or give the test clock a helper that moves time and keeps
   the session.
-- Outcome: open.
+- Outcome: fixed in the round 4 cleanup (`docs/guides/dates-and-time.md`, Test).
 
 ## A test of the member export's date could not use the clock
 - Where: `members/MembersExportTest`
 - What was clunky: the joined date is who's `created_at`, stamped by the database's `now()`, not the
   app's `Clock`; the test sets it with SQL to check the date is the school's.
 - roux could: nothing yet (who's column); worth knowing for any date that comes from who.
-- Outcome: open.
+- Outcome: not roux's (who's column); the dates-and-time guide's Test section says so.
 
 ## roux-web's build lists its entries in two places
 - Where: `web/roux-web/vite.config.ts` and `package.json` `exports` (and `check-guides.mjs`)
 - What was clunky: the new `./organization` entry was in `package.json` but not in the build's list, so
   the dojo could not import it; the guide checker has its own list too.
 - roux could: read the entries from `package.json` in the build and the checker.
-- Outcome: open.
+- Outcome: fixed in the round 4 cleanup (the build and the guide checker read `package.json`'s `exports`).

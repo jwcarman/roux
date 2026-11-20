@@ -20,7 +20,10 @@ roux:
 Both are required (`RouxOrganizationProperties`). There is no default: a missing setting fails
 startup with `roux.organization.time-zone must be set to the organization's time zone` (or
 `roux.organization.locale must be set to the organization's locale`); an unknown zone fails binding
-`roux.organization.time-zone`, and a malformed tag or one the JVM has no locale for fails with
+`roux.organization.time-zone`, and a fixed offset (`+05:00`, `UTC+3`) is refused: a place's zone
+knows its daylight saving time, an offset does not (`UTC` and `Etc/GMT+5` are fine). A tag written
+another way says how to write it (`roux.organization.locale must be written en-US, not en-us`), and a
+malformed tag or one the JVM has no locale for fails with
 `roux.organization.locale is not a locale this server knows: <tag>`.
 
 ### What changing a setting does
@@ -96,9 +99,15 @@ In `main.tsx`, before `render`:
 ```tsx
 import { loadOrganization, startDayWatch } from "@jwcarman/roux-web/organization";
 
-await loadOrganization();
+await loadOrganization().catch((error: unknown) => {
+  document.getElementById("root")!.textContent = `The app could not start: ${String(error)}`;
+  throw error;
+});
 startDayWatch(queryClient);
 ```
+
+The `catch` puts a failure (no server in development, a malformed context) on the page; without it the
+page stays blank and the reason is only in the console.
 
 - `loadOrganization()` takes the page's context (`readPageOrganization()`), at once; when the page
   has none or the unfilled placeholder (`CONTEXT_PLACEHOLDER`: Vite's dev server serves the page
@@ -146,6 +155,13 @@ fakes the device's clock to move today, and none answers `GET /api/organization`
 
 On the server, set the `Clock` bean (a test clock) to an instant; today is that instant's date in the
 organization's zone (`2026-04-15T03:00:00Z` is still April 14 in New York).
+
+- **who's sessions expire on that clock.** Moving it hours or weeks ahead signs everyone out: the next
+  request is `401`, which reads like a permissions bug. Sign the person in again after moving it (a
+  fresh browser from `TestMembers`, [Testing](testing.md#signed-in-people-testmembers)).
+- **who stamps its own rows with the database's time, not the clock.** An identity's `created_at` (a
+  member's joined moment) is PostgreSQL's `now()`; a test of the date shown for it sets the column with
+  SQL rather than moving the clock.
 
 ## Don't
 

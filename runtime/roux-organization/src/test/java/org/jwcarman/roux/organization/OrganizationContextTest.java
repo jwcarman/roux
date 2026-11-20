@@ -68,6 +68,41 @@ class OrganizationContextTest {
   }
 
   @Test
+  void today_and_its_end_come_from_one_reading_of_the_clock() {
+    // A clock read at the last instant of the 20th in New York, then again just after midnight.
+    Instant[] readings = {
+      Instant.parse("2026-11-21T04:59:59.999Z"), Instant.parse("2026-11-21T05:00:00Z")
+    };
+    Clock crossingMidnight =
+        new Clock() {
+          private int read;
+
+          @Override
+          public ZoneId getZone() {
+            return ZoneOffset.UTC;
+          }
+
+          @Override
+          public Clock withZone(ZoneId zone) {
+            return this;
+          }
+
+          @Override
+          public Instant instant() {
+            return readings[Math.min(read++, readings.length - 1)];
+          }
+        };
+    OrganizationCalendar calendar =
+        new OrganizationCalendar(
+            crossingMidnight, ZoneId.of("America/New_York"), Locale.forLanguageTag("en-US"));
+
+    OrganizationContext context = OrganizationContext.of(calendar, null);
+
+    assertThat(context.today()).hasToString("2026-11-20");
+    assertThat(context.todayEndsAt()).isEqualTo(Instant.parse("2026-11-21T05:00:00Z"));
+  }
+
+  @Test
   void the_endpoint_answers_the_sources_context() throws Exception {
     MockMvc mvc =
         MockMvcBuilders.standaloneSetup(

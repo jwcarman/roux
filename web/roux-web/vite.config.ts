@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import { defineConfig } from "vitest/config";
 
-// One entry per subpath export: adding a subpath is one name here and one entry in package.json's "exports".
-const entries = ["problem", "api", "paging", "table", "feedback", "form", "dates", "theme", "signin", "navigation", "money", "organization"];
-
-const { peerDependencies } = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as {
+const { exports, peerDependencies } = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as {
+  exports: Record<string, unknown>;
   peerDependencies: Record<string, string>;
 };
+// One entry per subpath export ("./money" builds src/money/index.ts): adding a subpath is one entry in
+// package.json's "exports", which the guide checker reads too.
+const entries = Object.keys(exports).map((subpath) => subpath.replace(/^\.\//, ""));
 const peers = Object.keys(peerDependencies);
 
 export default defineConfig({

@@ -9,6 +9,7 @@ import { fieldErrorsOf } from "@jwcarman/roux-web/form";
 import { SearchInput } from "@jwcarman/roux-web/table";
 import { classQuery, latestOn, WEEKDAY_LABELS } from "../classes/classes";
 import { formatTime } from "@jwcarman/roux-web/dates";
+import { useToday } from "@jwcarman/roux-web/organization";
 import { checkInQuery, type Attendee } from "./attendance";
 import { AttendeeToggle } from "./AttendeeToggle";
 
@@ -30,7 +31,8 @@ export function CheckInPage() {
   const { date: searched } = route.useSearch();
   const navigate = route.useNavigate();
   const { data: schoolClass } = useSuspenseQuery(classQuery(classId));
-  const date = searched ?? latestOn(schoolClass.weekday);
+  const today = useToday(); // the school's, re-rendering when the day changes
+  const date = searched ?? latestOn(schoolClass.weekday, today);
   const list = useQuery(checkInQuery(classId, date));
   const [term, setTerm] = useState("");
 

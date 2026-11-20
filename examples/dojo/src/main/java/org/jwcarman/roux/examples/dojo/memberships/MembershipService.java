@@ -30,9 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class MembershipService {
 
-  /** History entries are written in one locale; the school has no locale setting yet. */
   private final MembershipRepository memberships;
-
   private final PaymentRepository payments;
   private final PlanRepository plans;
   private final StudentRepository students;

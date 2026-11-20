@@ -10,7 +10,10 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const guidesDir = join(root, "docs/guides");
 const referencesDir = join(root, "plugins/roux/skills/roux/references");
-const webEntries = ["problem", "api", "paging", "table", "feedback", "form", "dates", "theme", "signin", "navigation", "money", "organization"];
+// roux-web's entries are its package's subpath exports ("./money" is src/money/index.ts).
+const webEntries = Object.keys(JSON.parse(readFileSync(join(root, "web/roux-web/package.json"), "utf8")).exports).map(
+  (subpath) => subpath.replace(/^\.\//, ""),
+);
 
 // Public but not API: wiring that users never reference by name.
 const excludedJava = new Set(["ProblemsRuntimeHints", "ValidationRuntimeHints", "RouxProblemsAutoConfiguration", "RouxAuditingAutoConfiguration", "RouxSpaAutoConfiguration", "RouxThemeAutoConfiguration", "RouxThemePersistenceAutoConfiguration", "RouxEmailAutoConfiguration", "RouxRolesAutoConfiguration", "RouxMoneyAutoConfiguration", "RouxOrganizationAutoConfiguration"]);
