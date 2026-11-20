@@ -17,13 +17,23 @@ export function startDayWatch(
 ): () => void {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let stopped = false;
+  // One question at a time: on waking, the overdue timer and the tab becoming visible fire together,
+  // and a second answer of "the same day" would start a minute's retry beside the next day's timer.
+  let asking: Promise<void> | undefined;
 
   const schedule = (delay: number) => {
     timer = setTimeout(() => void check(), Math.max(0, delay));
   };
   const untilDayEnds = () => Date.parse(organization().todayEndsAt) - Date.now();
 
-  async function check() {
+  function check(): Promise<void> {
+    asking ??= ask().finally(() => {
+      asking = undefined;
+    });
+    return asking;
+  }
+
+  async function ask() {
     clearTimeout(timer);
     try {
       const next = await fetchContext();

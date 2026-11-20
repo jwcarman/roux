@@ -526,6 +526,10 @@ describe("money()", () => {
     );
   });
 
+  it("refuses an amount too large to count exactly", () => {
+    expect(money().safeParse("99999999999999999").error?.issues[0]?.message).toBe("Must be an amount");
+  });
+
   it("treats blank as empty", () => {
     expect(money().safeParse("   ").error?.issues[0]?.message).toBe("Must not be empty");
     expect(money().optional().safeParse("   ")).toEqual({ success: true, data: null });

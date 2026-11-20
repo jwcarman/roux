@@ -3,16 +3,24 @@ import { useCallback, useEffect, useState } from "react";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { useAppForm } from "@jwcarman/roux-web/form";
 import type { Passkey } from "@jwcarman/who-client";
-import { listPasskeys, PASSKEY_LABEL_MAX, passkeyLabelError, registerPasskey, removePasskey } from "../members/passkeys";
+import {
+  listPasskeys,
+  PASSKEY_LABEL_MAX,
+  passkeyLabelError,
+  registerPasskey,
+  removePasskey,
+} from "../members/passkeys";
 import { useSession } from "./session";
 import { ProfileForm } from "../members/ProfileForm";
+import { formatDateTime } from "@jwcarman/roux-web/dates";
 
 function labelError({ value }: { value: string }) {
   return passkeyLabelError(value);
 }
 
-function formatDate(value: string | null): string {
-  return value ? new Date(value).toLocaleString() : "Never";
+/** A passkey's moment where the school is, or "Never". */
+function formatUse(value: string | null): string {
+  return value ? formatDateTime(value) : "Never";
 }
 
 export function Settings() {
@@ -97,8 +105,17 @@ export function Settings() {
       <addForm.AppForm>
         <addForm.Form>
           <Stack gap="4">
-            <addForm.AppField name="label" validators={{ onBlur: labelError, onSubmit: labelError }}>
-              {(field) => <field.InputField label="Passkey label" placeholder="Work laptop" maxLength={PASSKEY_LABEL_MAX} />}
+            <addForm.AppField
+              name="label"
+              validators={{ onBlur: labelError, onSubmit: labelError }}
+            >
+              {(field) => (
+                <field.InputField
+                  label="Passkey label"
+                  placeholder="Work laptop"
+                  maxLength={PASSKEY_LABEL_MAX}
+                />
+              )}
             </addForm.AppField>
             <addForm.SubmitButton>Add a passkey</addForm.SubmitButton>
           </Stack>
@@ -125,8 +142,8 @@ export function Settings() {
             {passkeys.map((passkey) => (
               <Table.Row key={passkey.credentialId}>
                 <Table.Cell>{passkey.label}</Table.Cell>
-                <Table.Cell>{formatDate(passkey.createdAt)}</Table.Cell>
-                <Table.Cell>{formatDate(passkey.lastUsedAt)}</Table.Cell>
+                <Table.Cell>{formatUse(passkey.createdAt)}</Table.Cell>
+                <Table.Cell>{formatUse(passkey.lastUsedAt)}</Table.Cell>
                 <Table.Cell>
                   <Button
                     size="xs"

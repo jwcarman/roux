@@ -2,6 +2,7 @@ import { Box, Stack, Text } from "@chakra-ui/react";
 import type { Activity } from "../api";
 import { InfiniteList, type PageQuery } from "@jwcarman/roux-web/paging";
 import { relativeTime } from "./relativeTime";
+import { formatDateTime } from "@jwcarman/roux-web/dates";
 
 export interface ActivityListProps {
   "aria-label": string;
@@ -12,7 +13,11 @@ export interface ActivityListProps {
 }
 
 /** A record's history, newest first, a page at a time: what changed, who changed it, and when. */
-export function ActivityList({ "aria-label": label, query, now }: ActivityListProps) {
+export function ActivityList({
+  "aria-label": label,
+  query,
+  now,
+}: ActivityListProps) {
   return (
     <InfiniteList
       aria-label={label}
@@ -25,7 +30,10 @@ export function ActivityList({ "aria-label": label, query, now }: ActivityListPr
           <Text>{entry.summary}</Text>
           <Stack direction="row" gap="1" fontSize="sm" color="fg.muted">
             <Text as="span">by {entry.actorName} ·</Text>
-            <time dateTime={entry.occurredAt} title={new Date(entry.occurredAt).toLocaleString()}>
+            <time
+              dateTime={entry.occurredAt}
+              title={formatDateTime(entry.occurredAt)}
+            >
               {relativeTime(new Date(entry.occurredAt), now)}
             </time>
           </Stack>

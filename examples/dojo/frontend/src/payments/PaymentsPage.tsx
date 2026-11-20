@@ -6,18 +6,30 @@ import { formatMoney } from "@jwcarman/roux-web/money";
 import { QueryTable } from "@jwcarman/roux-web/table";
 import { PAYMENT_METHOD_LABELS } from "../memberships/memberships";
 import { formatDate } from "@jwcarman/roux-web/dates";
-import { formatMonth, monthlyTotalsQuery, thisMonthsPayments, type PaymentListEntry } from "./payments";
+import {
+  formatMonth,
+  monthlyTotalsQuery,
+  thisMonthsPayments,
+  type PaymentListEntry,
+} from "./payments";
 
 const column = createColumnHelper<PaymentListEntry>();
 
 const COLUMNS: ColumnDef<PaymentListEntry, unknown>[] = [
-  column.accessor("takenOn", { header: "Taken on", enableSorting: false, cell: (info) => formatDate(info.getValue()) }),
+  column.accessor("takenOn", {
+    header: "Taken on",
+    enableSorting: false,
+    cell: (info) => formatDate(info.getValue()),
+  }),
   column.accessor("studentName", {
     header: "Student",
     enableSorting: false,
     cell: (info) => (
       <Link asChild>
-        <RouterLink to="/students/$studentId" params={{ studentId: info.row.original.studentId }}>
+        <RouterLink
+          to="/students/$studentId"
+          params={{ studentId: info.row.original.studentId }}
+        >
           {info.getValue()}
         </RouterLink>
       </Link>
@@ -28,14 +40,19 @@ const COLUMNS: ColumnDef<PaymentListEntry, unknown>[] = [
   column.accessor("amount", {
     header: () => <Text textAlign="end">Amount</Text>,
     enableSorting: false,
-    cell: (info) => <Text textAlign="end">{formatMoney(info.row.original.amount)}</Text>,
+    cell: (info) => (
+      <Text textAlign="end">{formatMoney(info.row.original.amount)}</Text>
+    ),
   }),
   column.accessor("method", {
     header: "Method",
     enableSorting: false,
     cell: (info) => PAYMENT_METHOD_LABELS[info.row.original.method],
   }),
-  column.accessor("recordedByName", { header: "Recorded by", enableSorting: false }),
+  column.accessor("recordedByName", {
+    header: "Recorded by",
+    enableSorting: false,
+  }),
 ];
 
 /** Money taken: each of the last twelve months, and this month's payments. */
@@ -68,7 +85,9 @@ function MonthlyTotals() {
       <Heading as="h3" size="md">
         By month
       </Heading>
-      {totals.isError && <Text color="fg.error">The monthly totals could not be loaded.</Text>}
+      {totals.isError && (
+        <Text color="fg.error">The monthly totals could not be loaded.</Text>
+      )}
       {totals.data && (
         <Table.Root aria-label="Money taken by month" size="sm" maxW="sm">
           <Table.Header>
@@ -81,7 +100,9 @@ function MonthlyTotals() {
             {[...totals.data].reverse().map((month) => (
               <Table.Row key={month.month}>
                 <Table.Cell>{formatMonth(month.month)}</Table.Cell>
-                <Table.Cell textAlign="end">{formatMoney(month.total)}</Table.Cell>
+                <Table.Cell textAlign="end">
+                  {formatMoney(month.total)}
+                </Table.Cell>
               </Table.Row>
             ))}
           </Table.Body>

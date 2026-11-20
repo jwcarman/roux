@@ -39,7 +39,7 @@ describe("ActivityList", () => {
     const time = within(item).getByText("3 days ago");
     expect(time.tagName).toBe("TIME");
     expect(time).toHaveAttribute("datetime", "2026-11-05T12:00:00Z");
-    expect(time.getAttribute("title")).toBeTruthy();
+    expect(time).toHaveAttribute("title", "Nov 5, 2026, 7:00 AM"); // the moment where the school is
   });
 
   it("says when there is no history yet", async () => {
@@ -59,6 +59,8 @@ describe("ActivityList", () => {
         }))}
       />,
     );
-    expect(await screen.findByText("Nothing has happened yet.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Nothing has happened yet."),
+    ).toBeInTheDocument();
   });
 });

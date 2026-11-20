@@ -54,6 +54,13 @@ describe("MemberDetailView", () => {
     act(() => toaster.remove());
   });
 
+  it("shows when the member joined where the school is", () => {
+    answer(() => HttpResponse.json(GRACE));
+    // 03:00 UTC on Nov 21 is still the evening of Nov 20 in New York, the test school's zone.
+    show({ ...GRACE, joinedAt: "2026-11-21T03:00:00Z" }, false);
+    expect(screen.getByText("Nov 20, 2026, 10:00 PM")).toBeInTheDocument();
+  });
+
   it("shows an instructor's role by name", () => {
     answer(() => HttpResponse.json(GRACE));
     show({ ...GRACE, role: "INSTRUCTOR" }, false);

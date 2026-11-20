@@ -117,6 +117,31 @@ describe("startDayWatch", () => {
     stop();
   });
 
+  it("waking after the day ended asks once, then waits for the next day's end", async () => {
+    let answer: (context: OrganizationContext) => void = () => undefined;
+    const fetchContext = vi.fn(
+      () =>
+        new Promise<OrganizationContext>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const stop = startDayWatch(queryClient, fetchContext);
+
+    // The device slept through the end of the day: on waking, the overdue timer and the tab becoming
+    // visible both fire while the first request is still out.
+    await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
+    visibility("visible");
+    answer(NEXT);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(fetchContext).toHaveBeenCalledOnce();
+    expect(today()).toBe("2026-06-16");
+    expect(vi.getTimerCount()).toBe(1);
+    await vi.advanceTimersByTimeAsync(RETRY_MS * 10);
+    expect(fetchContext).toHaveBeenCalledOnce();
+    stop();
+  });
+
   it("asks when a tab becomes visible exactly as the day ends", async () => {
     const fetchContext = vi.fn(async () => NEXT);
     const stop = startDayWatch(queryClient, fetchContext);
