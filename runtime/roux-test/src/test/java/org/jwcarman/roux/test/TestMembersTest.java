@@ -25,15 +25,21 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.roles.MemberJoined;
+import org.jwcarman.roux.roles.OwnerBootstrap;
 import org.jwcarman.roux.roles.RouxRoles;
+import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailAddressTakenException;
 import org.jwcarman.who.emaillink.EmailCredentialService;
+import org.jwcarman.who.rbac.RbacService;
 import org.jwcarman.who.rbac.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
 
 /** Test people are made as real members are: one transaction, one {@link MemberJoined}. */
 @AppTest
@@ -44,6 +50,13 @@ class TestMembersTest {
   @Autowired Joined joined;
   @Autowired JdbcTemplate jdbc;
   @Autowired EmailCredentialService emails;
+  @Autowired OwnerBootstrap bootstrap;
+  @Autowired TestClock clock;
+  @Autowired MockMvc mvc;
+  @Autowired WhoService who;
+  @Autowired RbacService rbac;
+  @Autowired ApplicationEventPublisher events;
+  @Autowired PlatformTransactionManager transactions;
 
   /** Records every {@link MemberJoined}, and refuses it when told to. */
   @TestConfiguration(proxyBeanMethods = false)
@@ -74,6 +87,31 @@ class TestMembersTest {
   private boolean roleExists(String name) {
     return jdbc.queryForObject(
         "select exists (select 1 from who_role where name = ?)", Boolean.class, name);
+  }
+
+  @Test
+  void a_signed_in_member_holds_the_role() {
+    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", "MEMBER");
+
+    assertThat(
+            jdbc.queryForList(
+                "select r.name from who_identity_role ir join who_role r on r.id = ir.role_id"
+                    + " where ir.identity_id = ?",
+                String.class,
+                ada.id()))
+        .containsExactly("MEMBER");
+  }
+
+  @Test
+  void members_made_later_keep_the_roles_present_when_they_were_made() {
+    TestMembers later =
+        new TestMembers(jdbc, bootstrap, clock, mvc, who, rbac, emails, events, transactions);
+    jdbc.update("insert into who_role (id, name) values (?, 'TEMP')", UUID.randomUUID());
+
+    later.reset();
+
+    assertThat(roleExists("TEMP")).isFalse();
+    assertThat(roleExists("MEMBER")).isTrue();
   }
 
   @Test

@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.context.support.GenericApplicationContext;
 
 class TestDatabaseTest {
 
@@ -125,5 +126,17 @@ class TestDatabaseTest {
         .isInstanceOf(IllegalStateException.class)
         .hasMessageStartingWith("could not create test database app_test_")
         .hasCauseInstanceOf(SQLException.class);
+  }
+
+  @Test
+  void theInitializerGivesTheContextANewDatabaseFirst() {
+    try (GenericApplicationContext context = new GenericApplicationContext()) {
+      new TestDatabase.Initializer().initialize(context);
+
+      var sources = context.getEnvironment().getPropertySources();
+      assertThat(sources.iterator().next().getName()).isEqualTo("testDatabase");
+      assertThat(context.getEnvironment().getProperty("spring.datasource.url"))
+          .contains("/app_test_");
+    }
   }
 }

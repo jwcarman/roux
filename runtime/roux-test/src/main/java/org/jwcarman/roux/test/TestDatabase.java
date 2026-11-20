@@ -174,10 +174,9 @@ public final class TestDatabase {
 
   /** Replaces the database in {@code jdbc:postgresql://host:port/db[?params]}. */
   static String withDatabase(String url, String name) {
-    int query = url.indexOf('?');
-    String base = query < 0 ? url : url.substring(0, query);
-    String params = query < 0 ? "" : url.substring(query);
-    return base.substring(0, base.lastIndexOf('/') + 1) + name + params;
+    String[] parts = url.split("\\?", 2);
+    String params = parts.length == 2 ? "?" + parts[1] : "";
+    return parts[0].substring(0, parts[0].lastIndexOf('/') + 1) + name + params;
   }
 
   /** Initialized on first use: the environment's server, or a container that Ryuk stops. */

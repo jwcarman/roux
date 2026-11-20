@@ -78,4 +78,16 @@ class RecordingWhoEmailSenderTest {
     sender.send(any);
     assertThat(sender.sent()).isEmpty();
   }
+
+  @Test
+  void clearForgetsWhatWasSent() {
+    sender.send(
+        email(
+            new EmailLinkMessage(
+                "ada@example.org", "https://x/link", "111111", Instant.EPOCH, Duration.ZERO)));
+
+    sender.clear();
+
+    assertThat(sender.sent()).isEmpty();
+  }
 }
