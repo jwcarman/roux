@@ -41,7 +41,7 @@
 
         <!-- Dependency Versions -->
         <spring-boot.version>4.1.2</spring-boot.version>
-        <who.version>0.25.0-SNAPSHOT</who.version>
+        <who.version>0.25.0</who.version>
         <jpa-utils.version>0.2.0</jpa-utils.version>
 
         <!-- Plugin Versions -->

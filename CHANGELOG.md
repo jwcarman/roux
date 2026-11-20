@@ -8,15 +8,15 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
-- who 0.25.0 (was 0.24.0), and libraries' tables through [migratory](https://github.com/jwcarman/migratory),
-  which who brings. What changes for a roux app:
+- who 0.25.0 (was 0.24.0), `@jwcarman/who-client` 0.25.0, and libraries' tables through
+  [migratory](https://github.com/jwcarman/migratory) 0.1.0, which who brings. What changes for a roux app:
   - Remove the includes of who's changelog (`classpath:org/jwcarman/who/db/who-changelog.xml`, gone in who
     0.25.0) and roux-theme's (`classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml`) from the master
     changelog, and the `who.initialize-schema` setting. Each library declares its changelog in
     `META-INF/migratory.properties` (roux-theme: `name=roux-theme`, `after=who-jdbc`); migratory runs them in
     order before the app's changelog. Paths are unchanged, so an existing database runs nothing again.
   - `spring.liquibase.enabled=false` turns off only the app's changelog; `spring.liquibase.drop-first` fails
-    startup; `migratory.enabled=false` turns off the libraries' runs (the app then includes their changelogs). A
+    startup (`migratory.drop-first=true` rebuilds a development database instead); `migratory.enabled=false` turns off the libraries' runs (the app then includes their changelogs). A
     test profile that used `spring.liquibase.enabled=false` to keep Liquibase off the database also sets
     `migratory.enabled=false`.
   - who's `WhoEmailTemplates` is `WhoEmailTemplatesContributor`.

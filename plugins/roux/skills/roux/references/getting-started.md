@@ -129,7 +129,9 @@ follow:
 
 - `spring.liquibase.enabled=false` turns off only the app's own changelog; who's and roux's tables
   are still created.
-- `spring.liquibase.drop-first` fails startup.
+- `spring.liquibase.drop-first` fails startup. To rebuild a development database, set
+  `migratory.drop-first=true`: it drops everything in the default schema, the app's tables included,
+  before who's, roux's and the app's changelogs run.
 - `migratory.enabled=false` turns off who's and roux's migrations; the app then includes their
   changelogs in its own master, in migratory's order. A test profile that used
   `spring.liquibase.enabled=false` to keep Liquibase off the database sets `migratory.enabled=false` too.
