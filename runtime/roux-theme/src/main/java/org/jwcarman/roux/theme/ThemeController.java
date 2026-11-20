@@ -26,7 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * {@code GET /api/theme}: the theme, for anyone, signed out too (the page needs it before sign-in).
- * {@code PUT /api/theme}: the owner's change, for whoever holds {@value #MANAGE}.
+ * {@code PUT /api/theme}: the owner's change, for whoever holds {@value
+ * RouxThemePermissions#THEME_MANAGE}.
  */
 @RestController
 @RequestMapping(ThemeController.PATH)
@@ -34,9 +35,6 @@ public class ThemeController {
 
   /** Where the API is. */
   public static final String PATH = "/api/theme";
-
-  /** The permission that lets someone change the theme. */
-  public static final String MANAGE = "theme.manage";
 
   private final ThemeService themes;
 
@@ -51,7 +49,7 @@ public class ThemeController {
   }
 
   @PutMapping
-  @RequiresPermission(MANAGE)
+  @RequiresPermission(RouxThemePermissions.THEME_MANAGE)
   public ThemeResponse update(@Valid @RequestBody ThemeRequest request) {
     return themes.update(request);
   }

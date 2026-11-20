@@ -43,7 +43,8 @@ class ThemeControllerTest {
   @Test
   void the_path_and_the_permission_are_roux_themes() {
     org.assertj.core.api.Assertions.assertThat(ThemeController.PATH).isEqualTo("/api/theme");
-    org.assertj.core.api.Assertions.assertThat(ThemeController.MANAGE).isEqualTo("theme.manage");
+    org.assertj.core.api.Assertions.assertThat(RouxThemePermissions.THEME_MANAGE)
+        .isEqualTo("theme.manage");
   }
 
   @Test

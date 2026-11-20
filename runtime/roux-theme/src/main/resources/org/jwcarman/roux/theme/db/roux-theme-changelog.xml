@@ -44,4 +44,14 @@
             <column name="version" valueNumeric="0"/>
         </insert>
     </changeSet>
+
+    <!-- roux-theme's permission for OWNER, which roux-roles' changelog creates: by name, and only if
+         missing, so a database whose OWNER already holds it gains nothing twice. -->
+    <changeSet id="roux-theme-2" author="roux">
+        <sql>
+            INSERT INTO who_role_permission (role_id, permission)
+              SELECT r.id, 'theme.manage' FROM who_role r WHERE r.name = 'OWNER'
+              ON CONFLICT DO NOTHING;
+        </sql>
+    </changeSet>
 </databaseChangeLog>

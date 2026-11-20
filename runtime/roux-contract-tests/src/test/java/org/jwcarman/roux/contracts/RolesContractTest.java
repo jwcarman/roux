@@ -62,6 +62,11 @@ class RolesContractTest {
   }
 
   @Test
+  void ownerHoldsThemeManage() {
+    assertThat(ownerPermissions()).contains("theme.manage");
+  }
+
+  @Test
   void onlyOwnerMayManageIdentities() {
     assertThat(
             jdbc.sql(

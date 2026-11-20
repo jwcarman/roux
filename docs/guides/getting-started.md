@@ -377,8 +377,8 @@ not chosen, so the answer is always a whole theme). It brings:
 
 - `GET /api/theme`, open to anyone, signed out too (the sign-in page needs its look): the whole
   theme and its `version`, 0 until the first save.
-- `PUT /api/theme`, for whoever holds the `theme.manage` permission (`ThemeController.MANAGE`; grant
-  it to the owner's role in who): a `ThemeRequest` with the `version` the owner read. A stale one is a
+- `PUT /api/theme`, for whoever holds the `theme.manage` permission
+  (`RouxThemePermissions.THEME_MANAGE`; roux-theme's changelog grants it to `OWNER`): a `ThemeRequest` with the `version` the owner read. A stale one is a
   `409`, a missing one a `400` on `version` (`Versions.require`). The values are the shell's own
   (`ShellTheme.PALETTES`, `SHAPES`, `FONTS`, `COLOR`): palette `gray|red|orange|yellow|green|teal|blue|cyan|purple|pink|brand`,
   shape `square|slight|medium|round|extra-round`, fonts `standard|modern|friendly|classic`, a

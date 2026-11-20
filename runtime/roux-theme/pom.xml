@@ -35,6 +35,12 @@
     <description>The owner's theme: how the app looks and what it is called, in roux's own table, served to the shell</description>
 
     <dependencies>
+        <!-- OWNER, which roux-theme's changelog grants theme.manage to -->
+        <dependency>
+            <groupId>org.jwcarman.roux</groupId>
+            <artifactId>roux-roles</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.jwcarman.roux</groupId>
             <artifactId>roux-spa</artifactId>

@@ -24,6 +24,7 @@ import org.jwcarman.roux.spa.ShellTheme;
 import org.jwcarman.roux.spa.ShellThemeSource;
 import org.jwcarman.roux.theme.AppThemeRepository;
 import org.jwcarman.roux.theme.OwnerShellTheme;
+import org.jwcarman.roux.theme.RouxThemePermissions;
 import org.jwcarman.roux.theme.ThemeController;
 import org.jwcarman.roux.theme.ThemeRequest;
 import org.jwcarman.roux.theme.ThemeResponse;
@@ -49,7 +50,7 @@ import org.springframework.core.env.Environment;
  * chosen is the app's {@code roux.theme.*} setting. An app's own {@code ShellThemeSource} bean
  * replaces the shell's source (the API stays); leave the jar out to turn all of it off. With who,
  * {@code /api/theme} is a public path, so the sign-in page, which the signed-out see, has its look;
- * {@code PUT} is open only to {@value ThemeController#MANAGE}.
+ * {@code PUT} is open only to {@value RouxThemePermissions#THEME_MANAGE}.
  *
  * <p>The table comes from the jar's Liquibase changelog ({@code
  * classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml}), which migratory runs before the
