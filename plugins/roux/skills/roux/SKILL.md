@@ -120,7 +120,7 @@ sections you need.
 | Money: an amount on an entity, its columns, `@InCurrency` and `@PositiveMoney`, `money()` and `MoneyField`, `formatMoney`, `roux.money.currency` | `references/money.md` |
 | Today, this month, a default date, showing a date, time or number; `roux.organization.*`, `OrganizationCalendar`, `today()`, the formatters | `references/dates-and-time.md` |
 | A valid date is refused as in the future | `references/dates-and-time.md` (`@NotInFuture`, `today()`) |
-| A record's history: who did what, when (`ActivityLog`, `BusinessActivity`, `ActorNames`, `ActivityList`, `formatRelativeTime`) | `references/activity-log.md` |
+| A record's history: who did what, when (`ActivityLog`, `BusinessActivity`, `ActorNames`, `ActivityList`, `historyQuery`, `formatRelativeTime`) | `references/activity-log.md` |
 | A view-backed list or detail misses a row just saved | `references/tables-and-paging.md` (a read-model view: flush first) |
 | Reorder rows (move up/down) | `references/tables-and-paging.md` (An ordered list) |
 | One feature must refuse another's removal | `references/errors.md` (Refuse because of what another feature holds) |

@@ -3,7 +3,7 @@ import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
 import { email, text } from "@jwcarman/roux-web/form";
 import { pageQuery, type PageDto, type PageParams } from "@jwcarman/roux-web/paging";
 import { z } from "zod";
-import type { Activity } from "@jwcarman/roux-web/activity";
+import { historyQuery } from "@jwcarman/roux-web/activity";
 import type { Member, MemberDetail, Profile } from "../api";
 import { queryKeys } from "../queryKeys";
 
@@ -47,8 +47,6 @@ export const membersApi = {
   list: (params: PageParams & MemberFilters, signal?: AbortSignal) =>
     getJson<PageDto<Member>>("members", { params, signal }),
   get: (id: string, signal?: AbortSignal) => getJson<MemberDetail>(path`members/${id}`, { signal }),
-  activities: (id: string, pageIndex: number, signal?: AbortSignal) =>
-    getJson<PageDto<Activity>>(path`members/${id}/activities`, { params: { pageIndex }, signal }),
   invite: (invitation: Invitation) => sendJson<InvitationResult>("POST", "members/invitations", invitation),
   changeStatus: (id: string, action: MemberStatusAction) =>
     sendJson<MemberDetail>("POST", path`members/${id}/${action}`),
@@ -78,9 +76,7 @@ export function membersPage(filters: MemberFilters) {
 
 /** A member's history, newest first, as an ActivityList takes it. */
 export function activitiesPage(id: string) {
-  return pageQuery(queryKeys.members.activities(id), ({ pageIndex = 0 }, signal) =>
-    membersApi.activities(id, pageIndex, signal),
-  );
+  return historyQuery(queryKeys.members.activities(id), path`members/${id}/activities`);
 }
 
 /** Invites a member; the directory refreshes. */

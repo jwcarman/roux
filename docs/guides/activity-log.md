@@ -130,21 +130,20 @@ activity with no actor is `Activity.SYSTEM` ("System").
 
 ## The browser: `ActivityList`
 
-`@jwcarman/roux-web/activity` has the wire type, `Activity`, and `ActivityList`: each entry's
+`@jwcarman/roux-web/activity` has the wire type, `Activity`, `historyQuery` and `ActivityList`.
+`historyQuery(key, url)` is the page query for the app's history endpoint, which `ActivityList` takes.
+`ActivityList` shows each entry's
 description, who did it and when ("3 days ago", with the moment in the organization's zone as its
 title), "Show more" for the next page, and a line when there is nothing yet.
 
 ```ts
 // students.ts, the resource module
-export function studentActivitiesPage(id: string) {
-  return pageQuery(queryKeys.students.activities(id), ({ pageIndex = 0 }, signal) =>
-    getJson<PageDto<Activity>>(path`students/${id}/activities`, { params: { pageIndex }, signal }),
-  );
-}
+export const studentHistory = (id: string) =>
+  historyQuery(queryKeys.students.activities(id), path`students/${id}/activities`);
 ```
 
 ```tsx
-<ActivityList aria-label="History" query={studentActivitiesPage(student.id)} />
+<ActivityList aria-label="History" query={studentHistory(student.id)} />
 ```
 
 `ActivityListProps`: `aria-label`, `query`, `emptyText` ("Nothing has happened yet." unless given) and
