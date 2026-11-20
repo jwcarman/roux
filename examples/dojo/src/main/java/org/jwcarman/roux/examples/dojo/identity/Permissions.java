@@ -21,5 +21,14 @@ public final class Permissions {
   public static final String ATTENDANCE_RECORD = "attendance.record";
   public static final String ATTENDANCE_READ = "attendance.read";
 
+  /** Keep the plans the school offers and their prices. */
+  public static final String PLANS_MANAGE = "plans.manage";
+
+  /** Start a student's membership and record (or remove) their payments. */
+  public static final String PAYMENTS_RECORD = "payments.record";
+
+  /** See money taken each month and this month's payments. */
+  public static final String PAYMENTS_READ = "payments.read";
+
   private Permissions() {}
 }

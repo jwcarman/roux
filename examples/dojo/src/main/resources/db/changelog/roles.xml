@@ -67,4 +67,18 @@
               ON CONFLICT DO NOTHING;
         </sql>
   </changeSet>
+  <!-- Round 3: plans and payments. A new changeset: dojo-roles-1 has run. -->
+  <changeSet id="dojo-roles-2" author="dojo">
+    <sql>
+        INSERT INTO who_role_permission (role_id, permission)
+          SELECT r.id, p.permission FROM who_role r
+          CROSS JOIN (VALUES ('plans.manage'), ('payments.record'), ('payments.read')) AS p(permission)
+          WHERE r.name = 'OWNER'
+          ON CONFLICT DO NOTHING;
+        INSERT INTO who_role_permission (role_id, permission)
+          SELECT r.id, 'payments.record' FROM who_role r WHERE r.name = 'INSTRUCTOR'
+          ON CONFLICT DO NOTHING;
+    </sql>
+  </changeSet>
+
 </databaseChangeLog>

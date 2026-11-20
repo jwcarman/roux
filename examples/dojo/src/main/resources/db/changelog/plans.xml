@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <!-- The membership plans the school offers. Names are unique ignoring case; a price is roux money. -->
+  <changeSet id="plan" author="dojo">
+    <createTable tableName="plan">
+      <column name="id" type="uuid"><constraints primaryKey="true" nullable="false"/></column>
+      <column name="version" type="bigint"><constraints nullable="false"/></column>
+      <column name="name" type="varchar(60)"><constraints nullable="false"/></column>
+      <column name="price_minor_units" type="bigint"><constraints nullable="false"/></column>
+      <column name="price_currency" type="varchar(3)"><constraints nullable="false"/></column>
+      <column name="period" type="varchar(10)"><constraints nullable="false"/></column>
+      <column name="active" type="boolean" defaultValueBoolean="true"><constraints nullable="false"/></column>
+      <column name="created_date" type="timestamptz"/>
+      <column name="modified_date" type="timestamptz"/>
+      <column name="created_by" type="varchar(64)"/>
+      <column name="modified_by" type="varchar(64)"/>
+    </createTable>
+    <sql>create unique index plan_name_key on plan (lower(name))</sql>
+  </changeSet>
+</databaseChangeLog>

@@ -46,6 +46,9 @@ spring:
     port: ${MAILPIT_SMTP_PORT:1025}
 
 roux:
+  money:
+    # The school's one currency: every price and payment is in it.
+    currency: USD
   roles:
     # The roles an invitation may give, in the order the invite form offers them. Never OWNER:
     # roux makes the first owner from roux.owner.*.

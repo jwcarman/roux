@@ -13,11 +13,14 @@ export const CLASSES_READ = "classes.read";
 export const CLASSES_MANAGE = "classes.manage";
 export const ATTENDANCE_RECORD = "attendance.record";
 export const ATTENDANCE_READ = "attendance.read";
+export const PLANS_MANAGE = "plans.manage";
+export const PAYMENTS_RECORD = "payments.record";
+export const PAYMENTS_READ = "payments.read";
 export const THEME_MANAGE = "theme.manage";
 export const IDENTITIES_READ = "who.identities.read";
 export const IDENTITIES_MANAGE = "who.identities.manage";
 
 /** Every permission there is: what the navigation's items may need. */
-export const PERMISSIONS = [MEMBERS_INVITE, MEMBERS_READ, MEMBERS_PROFILE, MEMBERS_MANAGE, RANKS_READ, RANKS_MANAGE, STUDENTS_READ, STUDENTS_MANAGE, PROMOTIONS_MANAGE, CLASSES_READ, CLASSES_MANAGE, ATTENDANCE_RECORD, ATTENDANCE_READ, THEME_MANAGE, IDENTITIES_READ, IDENTITIES_MANAGE] as const;
+export const PERMISSIONS = [MEMBERS_INVITE, MEMBERS_READ, MEMBERS_PROFILE, MEMBERS_MANAGE, RANKS_READ, RANKS_MANAGE, STUDENTS_READ, STUDENTS_MANAGE, PROMOTIONS_MANAGE, CLASSES_READ, CLASSES_MANAGE, ATTENDANCE_RECORD, ATTENDANCE_READ, PLANS_MANAGE, PAYMENTS_RECORD, PAYMENTS_READ, THEME_MANAGE, IDENTITIES_READ, IDENTITIES_MANAGE] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
