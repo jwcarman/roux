@@ -24,9 +24,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
+import java.time.LocalDate;
+
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Test;
+import org.jwcarman.roux.organization.OrganizationContext;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -37,9 +41,11 @@ class ShellRoutesTest {
 
   private final ShellPage page =
       new ShellPage(
-          "<title>__APP_NAME__</title><i>__APP_THEME__</i><b nonce=\"__CSP_NONCE__\"></b>",
+          "<title>__APP_NAME__</title><i>__APP_THEME__</i><u>__APP_CONTEXT__</u>"
+              + "<b nonce=\"__CSP_NONCE__\"></b>",
           ContentSecurityPolicy.strict(),
           () -> ShellTheme.stock("Dojo"),
+          () -> new OrganizationContext("UTC", "en", LocalDate.EPOCH, Instant.EPOCH, null, null),
           JsonMapper.builder().build());
 
   private final MockMvc mvc = MockMvcBuilders.routerFunctions(ShellRoutes.of(page)).build();

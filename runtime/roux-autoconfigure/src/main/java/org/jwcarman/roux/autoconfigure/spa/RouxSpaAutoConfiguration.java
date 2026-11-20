@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.util.List;
 
 import org.jwcarman.roux.autoconfigure.theme.RouxThemeProperties;
+import org.jwcarman.roux.organization.OrganizationContextSource;
 import org.jwcarman.roux.spa.ContentSecurityPolicy;
 import org.jwcarman.roux.spa.ShellPage;
 import org.jwcarman.roux.spa.ShellRoutes;
@@ -62,7 +63,11 @@ import tools.jackson.databind.json.JsonMapper;
  * app and other libraries contribute), so a signed-out visitor loads the app from any URL without
  * the application listing its pages.
  */
-@AutoConfiguration(afterName = "org.jwcarman.roux.autoconfigure.theme.RouxThemeAutoConfiguration")
+@AutoConfiguration(
+    afterName = {
+      "org.jwcarman.roux.autoconfigure.theme.RouxThemeAutoConfiguration",
+      "org.jwcarman.roux.autoconfigure.organization.RouxOrganizationAutoConfiguration"
+    })
 @ConditionalOnClass(SpaFallbackFilter.class)
 @ConditionalOnWebApplication(type = Type.SERVLET)
 @ConditionalOnResource(resources = "classpath:/static" + SpaFallbackFilter.SHELL)
@@ -102,12 +107,14 @@ public class RouxSpaAutoConfiguration {
   ShellPage shellPage(
       RouxSpaProperties properties,
       ShellThemeSource themes,
+      OrganizationContextSource contexts,
       ObjectProvider<JsonMapper> json,
       ResourceLoader resources) {
     return new ShellPage(
         ShellPage.read(resources.getResource("classpath:/static" + SpaFallbackFilter.SHELL)),
         ContentSecurityPolicy.strict().extendedBy(properties.csp().sources()),
         themes,
+        contexts,
         json.getIfAvailable(() -> JsonMapper.builder().build()));
   }
 

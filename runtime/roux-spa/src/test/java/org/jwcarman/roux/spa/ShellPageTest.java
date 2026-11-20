@@ -21,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.IntStream;
@@ -30,6 +32,8 @@ import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.jwcarman.roux.organization.OrganizationContext;
+import org.jwcarman.roux.organization.OrganizationContextSource;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -41,12 +45,27 @@ class ShellPageTest {
 
   private static final String TEMPLATE =
       "<title>__APP_NAME__</title><script type=\"application/json\" id=\"app-theme\">__APP_THEME__</script>"
+          + "<script type=\"application/json\" id=\"app-context\">__APP_CONTEXT__</script>"
           + "<script nonce=\"__CSP_NONCE__\"></script><style nonce=\"__CSP_NONCE__\"></style>";
 
   private final JsonMapper json = JsonMapper.builder().build();
 
+  private static final OrganizationContext CONTEXT =
+      new OrganizationContext(
+          "America/New_York",
+          "en-US",
+          LocalDate.parse("2026-11-20"),
+          Instant.parse("2026-11-21T05:00:00Z"),
+          "USD",
+          2);
+
   private ShellPage page(ShellThemeSource source) {
-    return new ShellPage(TEMPLATE, ContentSecurityPolicy.strict(), source, json);
+    return new ShellPage(TEMPLATE, ContentSecurityPolicy.strict(), source, () -> CONTEXT, json);
+  }
+
+  private ShellPage page(OrganizationContextSource contexts) {
+    return new ShellPage(
+        TEMPLATE, ContentSecurityPolicy.strict(), () -> ShellTheme.stock("x"), contexts, json);
   }
 
   private ShellPage page(ShellTheme theme) {
@@ -99,6 +118,59 @@ class ShellPageTest {
   }
 
   @Test
+  void writes_the_context_into_the_page() {
+    assertThat(page(() -> CONTEXT).render(new MockHttpServletRequest()))
+        .contains(
+            "id=\"app-context\">{\"timeZone\":\"America/New_York\",\"locale\":\"en-US\","
+                + "\"today\":\"2026-11-20\",\"todayEndsAt\":\"2026-11-21T05:00:00Z\","
+                + "\"currency\":\"USD\",\"fractionDigits\":2}</script>");
+  }
+
+  @Test
+  void the_context_is_read_for_every_page() {
+    int[] reads = {0};
+    ShellPage page =
+        page(
+            () ->
+                new OrganizationContext(
+                    "UTC", "en", LocalDate.EPOCH.plusDays(++reads[0]), Instant.EPOCH, null, null));
+
+    assertThat(page.render(new MockHttpServletRequest())).contains("\"today\":\"1970-01-02\"");
+    assertThat(page.render(new MockHttpServletRequest())).contains("\"today\":\"1970-01-03\"");
+  }
+
+  @Test
+  void the_context_is_escaped() {
+    String rendered =
+        page(() ->
+                new OrganizationContext(
+                    "</script><script>x", "en", LocalDate.EPOCH, Instant.EPOCH, null, null))
+            .render(new MockHttpServletRequest());
+
+    assertThat(rendered).doesNotContain("</script><script>x").contains("\\u003c/script>");
+  }
+
+  @Test
+  void a_placeholder_inside_the_context_is_not_filled_again() {
+    String rendered =
+        page(() ->
+                new OrganizationContext(
+                    "__APP_NAME__ __CSP_NONCE__", "en", LocalDate.EPOCH, Instant.EPOCH, null, null))
+            .render(new MockHttpServletRequest());
+
+    assertThat(rendered).contains("\"timeZone\":\"__APP_NAME__ __CSP_NONCE__\"");
+  }
+
+  @Test
+  void a_source_with_no_context_fails_loudly() {
+    ShellPage page = page((OrganizationContextSource) () -> null);
+
+    assertThatThrownBy(() -> page.render(new MockHttpServletRequest()))
+        .isInstanceOf(NullPointerException.class)
+        .hasMessage("OrganizationContextSource.current()");
+  }
+
+  @Test
   void the_theme_is_read_for_every_page() {
     int[] reads = {0};
     ShellPage page = page(() -> ShellTheme.stock("Read " + ++reads[0]));
@@ -130,7 +202,7 @@ class ShellPageTest {
 
   @Test
   void a_source_with_no_theme_fails_loudly() {
-    ShellPage page = page(() -> null);
+    ShellPage page = page((ShellThemeSource) () -> null);
 
     assertThatThrownBy(() -> page.render(new MockHttpServletRequest()))
         .isInstanceOf(NullPointerException.class)
@@ -138,26 +210,36 @@ class ShellPageTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"__CSP_NONCE__", "__APP_NAME__", "__APP_THEME__"})
+  @ValueSource(strings = {"__CSP_NONCE__", "__APP_NAME__", "__APP_THEME__", "__APP_CONTEXT__"})
   void a_page_missing_a_placeholder_is_refused_naming_it(String placeholder) {
     String template = TEMPLATE.replace(placeholder, "");
 
     assertThatThrownBy(
             () ->
                 new ShellPage(
-                    template, ContentSecurityPolicy.strict(), () -> ShellTheme.stock("x"), json))
+                    template,
+                    ContentSecurityPolicy.strict(),
+                    () -> ShellTheme.stock("x"),
+                    () -> CONTEXT,
+                    json))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("index.html has no " + placeholder);
   }
 
   @Test
-  void a_page_needs_a_policy_a_source_and_a_mapper() {
+  void a_page_needs_a_policy_its_sources_and_a_mapper() {
     ShellThemeSource source = () -> ShellTheme.stock("x");
+    OrganizationContextSource contexts = () -> CONTEXT;
     ContentSecurityPolicy policy = ContentSecurityPolicy.strict();
 
-    assertThatThrownBy(() -> new ShellPage(TEMPLATE, null, source, json)).hasMessage("policy");
-    assertThatThrownBy(() -> new ShellPage(TEMPLATE, policy, null, json)).hasMessage("themes");
-    assertThatThrownBy(() -> new ShellPage(TEMPLATE, policy, source, null)).hasMessage("json");
+    assertThatThrownBy(() -> new ShellPage(TEMPLATE, null, source, contexts, json))
+        .hasMessage("policy");
+    assertThatThrownBy(() -> new ShellPage(TEMPLATE, policy, null, contexts, json))
+        .hasMessage("themes");
+    assertThatThrownBy(() -> new ShellPage(TEMPLATE, policy, source, null, json))
+        .hasMessage("contexts");
+    assertThatThrownBy(() -> new ShellPage(TEMPLATE, policy, source, contexts, null))
+        .hasMessage("json");
   }
 
   @Test

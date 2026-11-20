@@ -25,6 +25,7 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Test;
+import org.jwcarman.roux.autoconfigure.organization.RouxOrganizationAutoConfiguration;
 import org.jwcarman.roux.autoconfigure.spa.RouxSpaAutoConfiguration;
 import org.jwcarman.roux.spa.ShellTheme;
 import org.jwcarman.roux.spa.ShellThemeSource;
@@ -50,9 +51,16 @@ class RouxThemeAutoConfigurationTest {
   private static WebApplicationContextRunner runner(AppThemeRepository themes) {
     return new WebApplicationContextRunner()
         .withConfiguration(
-            AutoConfigurations.of(RouxThemeAutoConfiguration.class, RouxSpaAutoConfiguration.class))
+            AutoConfigurations.of(
+                RouxThemeAutoConfiguration.class,
+                RouxOrganizationAutoConfiguration.class,
+                RouxSpaAutoConfiguration.class))
         .withBean(AppThemeRepository.class, () -> themes)
-        .withPropertyValues("spring.application.name=dojo", "roux.theme.palette=teal");
+        .withPropertyValues(
+            "spring.application.name=dojo",
+            "roux.theme.palette=teal",
+            "roux.organization.time-zone=America/New_York",
+            "roux.organization.locale=en-US");
   }
 
   @Test

@@ -28,6 +28,8 @@ import java.util.regex.Pattern;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.jwcarman.roux.organization.OrganizationContext;
+import org.jwcarman.roux.organization.OrganizationContextSource;
 import org.springframework.core.io.Resource;
 import org.springframework.web.util.HtmlUtils;
 
@@ -42,7 +44,10 @@ import tools.jackson.databind.json.JsonMapper;
  *       vite.config.ts}): this request's nonce, the one its Content-Security-Policy allows;
  *   <li>{@value #APP_NAME_PLACEHOLDER}, in {@code <title>}: the app's name, HTML-escaped;
  *   <li>{@value #THEME_PLACEHOLDER}, inside {@code <script type="application/json">}: the theme as
- *       JSON, with every {@code <} escaped so nothing in it can end the element.
+ *       JSON, with every {@code <} escaped so nothing in it can end the element;
+ *   <li>{@value #CONTEXT_PLACEHOLDER}, inside {@code <script type="application/json"
+ *       id="app-context">}: the organization's context (its zone, locale, today and currency) as
+ *       JSON, escaped the same way.
  * </ul>
  *
  * <p>The page is filled in one pass, so a value that looks like a placeholder (an app named {@code
@@ -60,8 +65,11 @@ public final class ShellPage {
   /** What {@code index.html} holds where the app's name goes, in the title. */
   public static final String APP_NAME_PLACEHOLDER = "__APP_NAME__";
 
+  /** What {@code index.html} holds where the organization's context goes. */
+  public static final String CONTEXT_PLACEHOLDER = "__APP_CONTEXT__";
+
   private static final List<String> PLACEHOLDERS =
-      List.of(NONCE_PLACEHOLDER, APP_NAME_PLACEHOLDER, THEME_PLACEHOLDER);
+      List.of(NONCE_PLACEHOLDER, APP_NAME_PLACEHOLDER, THEME_PLACEHOLDER, CONTEXT_PLACEHOLDER);
 
   private static final Pattern PLACEHOLDER =
       Pattern.compile(String.join("|", PLACEHOLDERS.stream().map(Pattern::quote).toList()));
@@ -72,6 +80,7 @@ public final class ShellPage {
   private final String template;
   private final ContentSecurityPolicy policy;
   private final ShellThemeSource themes;
+  private final OrganizationContextSource contexts;
   private final JsonMapper json;
 
   /**
@@ -80,7 +89,11 @@ public final class ShellPage {
    * @throws IllegalStateException if the page lacks one of the placeholders, naming it
    */
   public ShellPage(
-      String template, ContentSecurityPolicy policy, ShellThemeSource themes, JsonMapper json) {
+      String template,
+      ContentSecurityPolicy policy,
+      ShellThemeSource themes,
+      OrganizationContextSource contexts,
+      JsonMapper json) {
     for (String placeholder : PLACEHOLDERS) {
       if (!template.contains(placeholder)) {
         throw new IllegalStateException(
@@ -92,6 +105,7 @@ public final class ShellPage {
     this.template = template;
     this.policy = Objects.requireNonNull(policy, "policy");
     this.themes = Objects.requireNonNull(themes, "themes");
+    this.contexts = Objects.requireNonNull(contexts, "contexts");
     this.json = Objects.requireNonNull(json, "json");
   }
 
@@ -128,22 +142,31 @@ public final class ShellPage {
   /** The page for {@code request}, with its nonce, the current theme and the app's name. */
   public String render(HttpServletRequest request) {
     ShellTheme theme = Objects.requireNonNull(themes.current(), "ShellThemeSource.current()");
+    OrganizationContext context =
+        Objects.requireNonNull(contexts.current(), "OrganizationContextSource.current()");
     String nonce = nonce(request);
     Matcher matcher = PLACEHOLDER.matcher(template);
     StringBuilder page = new StringBuilder(template.length() + 512);
     while (matcher.find()) {
       matcher.appendReplacement(
-          page, Matcher.quoteReplacement(value(matcher.group(), nonce, theme)));
+          page, Matcher.quoteReplacement(value(matcher.group(), nonce, theme, context)));
     }
     matcher.appendTail(page);
     return page.toString();
   }
 
-  private String value(String placeholder, String nonce, ShellTheme theme) {
+  private String value(
+      String placeholder, String nonce, ShellTheme theme, OrganizationContext context) {
     return switch (placeholder) {
       case NONCE_PLACEHOLDER -> nonce;
       case APP_NAME_PLACEHOLDER -> HtmlUtils.htmlEscape(theme.appName());
-      default -> json.writeValueAsString(theme).replace("<", "\\u003c");
+      case THEME_PLACEHOLDER -> jsonIn(theme);
+      default -> jsonIn(context);
     };
+  }
+
+  /** As JSON inside a {@code <script>} element: every {@code <} escaped. */
+  private String jsonIn(Object value) {
+    return json.writeValueAsString(value).replace("<", "\\u003c");
   }
 }

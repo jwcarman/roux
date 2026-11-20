@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Test;
+import org.jwcarman.roux.autoconfigure.organization.RouxOrganizationAutoConfiguration;
 import org.jwcarman.roux.spa.ShellPage;
 import org.jwcarman.roux.spa.ShellTheme;
 import org.jwcarman.roux.spa.ShellThemeSource;
@@ -47,8 +48,13 @@ class RouxSpaAutoConfigurationTest {
 
   private final WebApplicationContextRunner web =
       new WebApplicationContextRunner()
-          .withConfiguration(AutoConfigurations.of(RouxSpaAutoConfiguration.class))
-          .withPropertyValues("spring.application.name=dojo");
+          .withConfiguration(
+              AutoConfigurations.of(
+                  RouxOrganizationAutoConfiguration.class, RouxSpaAutoConfiguration.class))
+          .withPropertyValues(
+              "spring.application.name=dojo",
+              "roux.organization.time-zone=America/New_York",
+              "roux.organization.locale=en-US");
 
   @Test
   void a_servlet_app_with_a_built_frontend_serves_the_shell() {
@@ -75,7 +81,7 @@ class RouxSpaAutoConfigurationTest {
             context ->
                 assertThat(context)
                     .doesNotHaveBean("spaFallbackFilter")
-                    .doesNotHaveBean(WhoPublicPathContributor.class));
+                    .doesNotHaveBean("spaPublicPaths"));
   }
 
   @Test
@@ -95,8 +101,8 @@ class RouxSpaAutoConfigurationTest {
   void the_shell_and_assets_are_contributed_as_public_paths() {
     web.run(
         context ->
-            assertThat(context.getBeansOfType(WhoPublicPathContributor.class).values())
-                .flatMap(WhoPublicPathContributor::publicPaths)
+            assertThat(
+                    context.getBean("spaPublicPaths", WhoPublicPathContributor.class).publicPaths())
                 .containsExactly("/index.html", "/assets/**"));
   }
 

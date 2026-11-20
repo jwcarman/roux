@@ -120,7 +120,7 @@ class SpaFallbackFilterMvcTest {
       String nonce = policy.replaceAll(".*script-src 'self' 'nonce-([^']+)'.*", "$1");
       assertThat(response.getContentAsString())
           .contains("<script type=\"module\" nonce=\"" + nonce + "\"")
-          .doesNotContain("__CSP_NONCE__", "__APP_NAME__", "__APP_THEME__");
+          .doesNotContain("__CSP_NONCE__", "__APP_NAME__", "__APP_THEME__", "__APP_CONTEXT__");
     }
 
     @Test
