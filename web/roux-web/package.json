@@ -61,6 +61,10 @@
       "types": "./dist/money/index.d.ts",
       "import": "./dist/money/index.js"
     },
+    "./activity": {
+      "types": "./dist/activity/index.d.ts",
+      "import": "./dist/activity/index.js"
+    },
     "./organization": {
       "types": "./dist/organization/index.d.ts",
       "import": "./dist/organization/index.js"
