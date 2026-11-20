@@ -1,6 +1,7 @@
 # Roles and permissions
 
-**Status:** redesigned 2026-11-20, after who declined declared roles; waits on the user's approval.
+**Status:** redesigned 2026-11-20, after who declined declared roles; the last-owner guard reuses
+who-admin's `LastAdminGuard` (2026-11-20); waits on the user's approval.
 The 2026-11-18 version (roles declared in code, synced at startup) is withdrawn: see "Why not a
 startup sync".
 
@@ -34,10 +35,10 @@ drift test on each side. A new app would copy all of it, and an agent would get 
 ### `roux-roles`, a new module in the starter
 
 - **Its changelog** (`classpath:org/jwcarman/roux/roles/db/roux-roles-changelog.xml`, declared
-  `name=roux-roles`, `after=who-rbac`) creates `OWNER`. who grants nothing (its modules are the
-  app's choice, and so are their permissions): an app with who-admin grants
-  `WhoAdminPermissions` to OWNER in its own changelog, and its test lists that class. It refers to roles by name, never by id, and inserts only what is missing (`ON CONFLICT
-  DO NOTHING`), so a database whose OWNER the dojo's bootstrap made long ago gains nothing twice.
+  `name=roux-roles`, `after=who-rbac`) creates `OWNER` and grants it `WhoAdminPermissions` (who
+  grants nothing itself; the starter brings who-admin, so roux does). It refers to roles by name,
+  never by id, and inserts only what is missing (`ON CONFLICT DO NOTHING`), so a database whose
+  OWNER the dojo's bootstrap made long ago gains nothing twice.
 - **Other roux modules grant their own permissions to OWNER** in their own changelogs, declared
   `after=roux-roles`: roux-theme grants `theme.manage`. A module the app leaves out grants nothing,
   and its permission is then no constant the app's test expects.
@@ -50,12 +51,26 @@ drift test on each side. A new app would copy all of it, and an agent would get 
   whether the address is free. Once an owner exists, the settings change nothing. The app adds its
   own data for the new owner (the dojo's member profile) by listening for roux's `OwnerCreated`
   event, published in the owner's transaction.
-- **The last active owner stays.** Removing OWNER from, or deactivating, the last active identity
-  that holds it is refused, whichever path does it (the app's service, who-admin). My call: roux
-  listens for who's role-removed and deactivated events and refuses inside the change's
-  transaction, as the dojo's `InvitableRolesGuard` does for invitations. This needs who to promise
-  those events are published inside the change's transaction; to confirm with who-28 before the
-  plan. If who will not, roux instead offers a guard the app's service calls.
+- **Someone can always manage people.** roux reuses who-admin's `LastAdminGuard` rather than
+  writing its own. The guard refuses (`LastAdminException`) a role removal or deactivation that
+  would leave no active identity holding `who.identities.manage`; it locks the `who_role` rows
+  granting that permission, so two concurrent demotions cannot both pass. who-admin's endpoints
+  already go through it. So:
+  - the starter brings who-admin (every roux app manages people, and gets who's admin endpoints);
+  - roux-roles' changelog grants `WhoAdminPermissions` to OWNER, and no other roux role holds
+    `who.identities.manage`, so "the last one who can manage people" is the last owner;
+  - the app's own service wraps its role removals and deactivations in
+    `lastAdminGuard.removeRole(...)` / `deactivate(...)` (who's docs say direct `RbacService` or
+    `WhoService.deactivate` calls are not guarded); the guide shows it;
+  - roux maps `LastAdminException` to a 409 problem.
+
+  The invariant is "someone can still manage people", not "an identity named OWNER": an app that
+  also grants `who.identities.manage` to an ADMIN role may remove the last owner while an admin
+  remains. That is the invariant that matters (keeping control of the app), and it needs nothing
+  new from who.
+- **Recovery.** The bootstrap counts only *active* owners: if none is active (someone changed the
+  database by hand), the next start creates one from `roux.owner.email`, or, when who reports that
+  address taken, fails naming the setting.
 - **Invitable roles.** `roux.roles.invitable` (a list; default empty) names the roles an
   invitation may give. OWNER can never be listed (startup fails). roux's listener refuses any
   invitation outside the list, inside the invitation's transaction, whatever endpoint sent it.
@@ -78,7 +93,8 @@ drift test on each side. A new app would copy all of it, and an agent would get 
 ## The dojo after
 
 `AppRoles` becomes `Permissions` (constants only); its roles move to `db/changelog/roles.xml`;
-`OwnerBootstrap`, `InvitableRole`, `InvitableRolesGuard` and the check in `MemberService` go;
+`OwnerBootstrap`, `InvitableRole` and `InvitableRolesGuard` go; `MemberService`'s owner count
+gives way to `LastAdminGuard`;
 `app.owner-*` becomes `roux.owner.*`; a listener for `OwnerCreated` makes the profile. An existing
 dojo database upgrades with nothing run twice, proved the way the migratory move was (migrate with
 main, start the branch).
@@ -93,8 +109,9 @@ main, start the branch).
 ## Proving it
 
 - roux-roles: `allOf` (public, private, duplicates, a class with none); the bootstrap (first
-  start, concurrent starts, owner exists, address held by another, settings missing); the
-  last-owner refusal on each path; invitable roles (listed, unlisted, OWNER listed); the changelog
+  start, concurrent starts, owner exists, only a deactivated owner exists, address held by
+  another, settings missing); the dojo's service refusing to demote or deactivate the last owner
+  (409), and allowing it while a second owner is active; invitable roles (listed, unlisted, OWNER listed); the changelog
   against a database whose OWNER already exists.
 - Contract tests: OWNER holds who's and roux-theme's permissions after migratory runs.
 - The dojo: its suite and end-to-end test unchanged in behaviour; the completeness test; the
