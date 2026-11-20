@@ -5,7 +5,7 @@ import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, removal, useConfirm } from "@jwcarman/roux-web/feedback";
 import { formatMoney } from "@jwcarman/roux-web/money";
 import { pricePerPeriod } from "../plans/plans";
-import { formatDate } from "../shell/format";
+import { formatDate } from "@jwcarman/roux-web/dates";
 import type { StudentDetail } from "../students/students";
 import {
   membershipsQuery,

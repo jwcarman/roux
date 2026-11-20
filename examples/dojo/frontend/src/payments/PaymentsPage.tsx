@@ -5,7 +5,7 @@ import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { formatMoney } from "@jwcarman/roux-web/money";
 import { QueryTable } from "@jwcarman/roux-web/table";
 import { PAYMENT_METHOD_LABELS } from "../memberships/memberships";
-import { formatDate } from "../shell/format";
+import { formatDate } from "@jwcarman/roux-web/dates";
 import { formatMonth, monthlyTotalsQuery, thisMonthsPayments, type PaymentListEntry } from "./payments";
 
 const column = createColumnHelper<PaymentListEntry>();

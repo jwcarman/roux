@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { toaster } from "@jwcarman/roux-web/feedback";
 import { PROMOTIONS_MANAGE, STUDENTS_MANAGE, STUDENTS_READ } from "../permissions.gen";
 import type { Rank } from "../ranks/ranks";
-import { formatIsoDate } from "@jwcarman/roux-web/dates";
 import { invalidFields } from "../testing/problems";
 import { renderRoute } from "../testing/route";
 import { server } from "../testing/server";
@@ -92,7 +91,7 @@ describe("StudentPage", () => {
         student = {
           ...ADA,
           currentRank: WHITE,
-          promotions: [{ id: "p3", rank: WHITE, date: formatIsoDate(new Date()) }, ...ADA.promotions],
+          promotions: [{ id: "p3", rank: WHITE, date: "2026-06-15" }, ...ADA.promotions],
         };
         return HttpResponse.json(student, { status: 201 });
       }),
@@ -102,12 +101,12 @@ describe("StudentPage", () => {
 
     await user.click(await screen.findByRole("button", { name: "Promote" }));
     const dialog = await screen.findByRole("dialog", { name: "Promote Ada Lovelace" });
-    expect(within(dialog).getByLabelText(/^Date/)).toHaveValue(formatIsoDate(new Date()));
+    expect(within(dialog).getByLabelText(/^Date/)).toHaveValue("2026-06-15");
     await user.selectOptions(await within(dialog).findByLabelText(/^Rank/), "r1");
     await user.click(within(dialog).getByRole("button", { name: "Promote" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent("Ada Lovelace was promoted");
-    expect(sent).toEqual({ rankId: "r1", date: formatIsoDate(new Date()) });
+    expect(sent).toEqual({ rankId: "r1", date: "2026-06-15" });
     await waitFor(() => expect(screen.getByText("Current rank").nextElementSibling).toHaveTextContent("White"));
   });
 
@@ -121,7 +120,7 @@ describe("StudentPage", () => {
     await user.selectOptions(await within(dialog).findByLabelText(/^Rank/), "r1");
     const date = within(dialog).getByLabelText(/^Date/);
     await user.clear(date);
-    await user.type(date, "2999-01-01");
+    await user.type(date, "2026-06-16"); // the school's tomorrow
     await user.click(within(dialog).getByRole("button", { name: "Promote" }));
 
     expect(await within(dialog).findByText("Must not be in the future")).toBeInTheDocument();

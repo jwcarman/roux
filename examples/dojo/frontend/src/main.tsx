@@ -8,6 +8,7 @@ import { ColorModeProvider } from "./shell/colorMode";
 import { ConfirmProvider, Toaster } from "@jwcarman/roux-web/feedback";
 import { routeTree } from "./routeTree.gen";
 import { SessionProvider, useSession } from "./shell/session";
+import { loadOrganization, startDayWatch } from "@jwcarman/roux-web/organization";
 import { ThemeProvider } from "@jwcarman/roux-web/theme";
 
 const queryClient = createQueryClient();
@@ -44,6 +45,11 @@ function App() {
   }
   return <RouterProvider router={router} context={{ session }} />;
 }
+
+// The school's zone, locale, currency and today: in the page the server sent, or (Vite's dev server)
+// asked for before anything renders. Then the app moves to the next day when the school's day ends.
+await loadOrganization();
+startDayWatch(queryClient);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -10,7 +10,6 @@ import { pageOf } from "../testing/fakeServer";
 import { invalidFields } from "../testing/problems";
 import { renderRoute } from "../testing/route";
 import { server } from "../testing/server";
-import { formatIsoDate } from "@jwcarman/roux-web/dates";
 import type { Student } from "./students";
 
 const WHITE: Rank = { id: "00000000-0000-4000-8000-000000000001", name: "White", colour: "WHITE", position: 1, version: 0 };
@@ -119,7 +118,7 @@ describe("StudentsPage", () => {
     await userEvent.setup().click(await screen.findByRole("button", { name: "New student" }));
 
     const dialog = await screen.findByRole("dialog", { name: "New student" });
-    expect(within(dialog).getByLabelText(/^Start date/)).toHaveValue(formatIsoDate(new Date()));
+    expect(within(dialog).getByLabelText(/^Start date/)).toHaveValue("2026-06-15");
   });
 
   it("shows the server's refusal of an email under the Email field", async () => {

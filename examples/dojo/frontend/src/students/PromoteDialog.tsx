@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { FormDialog, useSchemaForm } from "@jwcarman/roux-web/form";
 import { ranksQuery } from "../ranks/ranks";
-import { formatIsoDate } from "@jwcarman/roux-web/dates";
+import { today } from "@jwcarman/roux-web/organization";
 import { promoteStudent, promotionRequestSchema, type StudentDetail } from "./students";
 
 /** Promote `student` to a rank on a date (today unless changed), in a dialog. */
@@ -12,7 +12,7 @@ export function PromoteDialog({ student, trigger }: { student: StudentDetail; tr
   const name = `${student.firstName} ${student.lastName}`;
   const form = useSchemaForm({
     schema: promotionRequestSchema,
-    defaultValues: { rankId: "", date: formatIsoDate(new Date()) },
+    defaultValues: { rankId: "", date: today() },
     mutation: promoteStudent(student.id),
     onSuccess: () => notify.success(`${name} was promoted`),
     failure: `Could not promote ${name}`,

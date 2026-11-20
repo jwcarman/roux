@@ -1,12 +1,11 @@
 import { Button, HStack } from "@chakra-ui/react";
 import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, removal, useConfirm } from "@jwcarman/roux-web/feedback";
-import type { MoneySettings } from "@jwcarman/roux-web/money";
 import { PlanFormDialog } from "./PlanFormDialog";
 import { removePlan, type Plan } from "./plans";
 
 /** Edit for one plan, and Remove while no membership has used it. */
-export function PlanActions({ plan, settings }: { plan: Plan; settings: MoneySettings }) {
+export function PlanActions({ plan }: { plan: Plan }) {
   const confirm = useConfirm();
   const remove = useServerAction(removePlan, {
     failure: `Could not remove ${plan.name}`,
@@ -14,7 +13,11 @@ export function PlanActions({ plan, settings }: { plan: Plan; settings: MoneySet
   });
 
   async function onRemove() {
-    if (await confirm(removal(`Remove ${plan.name}?`, "It will no longer be offered."))) {
+    if (
+      await confirm(
+        removal(`Remove ${plan.name}?`, "It will no longer be offered."),
+      )
+    ) {
       await remove.run(plan.id);
     }
   }
@@ -23,7 +26,6 @@ export function PlanActions({ plan, settings }: { plan: Plan; settings: MoneySet
     <HStack gap="2" justify="flex-end">
       <PlanFormDialog
         plan={plan}
-        settings={settings}
         trigger={
           <Button size="sm" variant="outline">
             Edit
@@ -31,7 +33,13 @@ export function PlanActions({ plan, settings }: { plan: Plan; settings: MoneySet
         }
       />
       {!plan.inUse && (
-        <Button size="sm" variant="outline" colorPalette="red" loading={remove.pending} onClick={onRemove}>
+        <Button
+          size="sm"
+          variant="outline"
+          colorPalette="red"
+          loading={remove.pending}
+          onClick={onRemove}
+        >
           Remove
         </Button>
       )}

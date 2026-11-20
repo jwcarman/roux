@@ -1,7 +1,7 @@
 import { DataList, Heading, HStack, Stack, Text } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { InfiniteList } from "@jwcarman/roux-web/paging";
-import { formatDate } from "../shell/format";
+import { formatDate } from "@jwcarman/roux-web/dates";
 import { attendancePage, sincePromotionQuery } from "./attendance";
 
 /** "Classes since last promotion", as one more line of a student's details. */

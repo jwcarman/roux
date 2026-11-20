@@ -19,13 +19,17 @@ const MONTHLY: Plan = {
   inUse: false,
   version: 0,
 };
-const OLD: Plan = { ...MONTHLY, id: "p2", name: "Old yearly", period: "YEARLY", active: false, inUse: true };
+const OLD: Plan = {
+  ...MONTHLY,
+  id: "p2",
+  name: "Old yearly",
+  period: "YEARLY",
+  active: false,
+  inUse: true,
+};
 
 function plans(...list: Plan[]) {
-  server.use(
-    http.get("/api/money", () => HttpResponse.json({ currency: "USD", fractionDigits: 2 })),
-    http.get("/api/plans", () => HttpResponse.json(list)),
-  );
+  server.use(http.get("/api/plans", () => HttpResponse.json(list)));
 }
 
 describe("PlansPage", () => {
@@ -42,7 +46,9 @@ describe("PlansPage", () => {
     renderRoute("/plans", { permissions: [PLANS_MANAGE] });
 
     const table = await screen.findByRole("table", { name: "Plans" });
-    expect(await within(table).findByText("$150.00 / month")).toBeInTheDocument();
+    expect(
+      await within(table).findByText("$150.00 / month"),
+    ).toBeInTheDocument();
     expect(within(table).getByText("$150.00 / year")).toBeInTheDocument();
     expect(within(table).getByText("Inactive")).toBeInTheDocument();
   });
@@ -61,12 +67,20 @@ describe("PlansPage", () => {
 
     await user.click(await screen.findByRole("button", { name: "New plan" }));
     const dialog = await screen.findByRole("dialog", { name: "New plan" });
-    await user.type(within(dialog).getByLabelText(/^Name/), "Monthly unlimited");
+    await user.type(
+      within(dialog).getByLabelText(/^Name/),
+      "Monthly unlimited",
+    );
     await user.type(within(dialog).getByLabelText(/^Price/), "150");
-    await user.selectOptions(within(dialog).getByLabelText(/^Period/), "MONTHLY");
+    await user.selectOptions(
+      within(dialog).getByLabelText(/^Period/),
+      "MONTHLY",
+    );
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Monthly unlimited was saved");
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Monthly unlimited was saved",
+    );
     expect(sent).toEqual({
       name: "Monthly unlimited",
       price: { minorUnits: 15000, currency: "USD" },
@@ -77,18 +91,30 @@ describe("PlansPage", () => {
 
   it("shows the server's refusal of a name under the Name field", async () => {
     plans();
-    server.use(http.post("/api/plans", () => invalidFields({ name: "Another plan has this name" })));
+    server.use(
+      http.post("/api/plans", () =>
+        invalidFields({ name: "Another plan has this name" }),
+      ),
+    );
     renderRoute("/plans", { permissions: [PLANS_MANAGE] });
     const user = userEvent.setup();
 
     await user.click(await screen.findByRole("button", { name: "New plan" }));
     const dialog = await screen.findByRole("dialog", { name: "New plan" });
-    await user.type(within(dialog).getByLabelText(/^Name/), "monthly unlimited");
+    await user.type(
+      within(dialog).getByLabelText(/^Name/),
+      "monthly unlimited",
+    );
     await user.type(within(dialog).getByLabelText(/^Price/), "150");
-    await user.selectOptions(within(dialog).getByLabelText(/^Period/), "MONTHLY");
+    await user.selectOptions(
+      within(dialog).getByLabelText(/^Period/),
+      "MONTHLY",
+    );
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
-    expect(await within(dialog).findByText("Another plan has this name")).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText("Another plan has this name"),
+    ).toBeInTheDocument();
   });
 
   it("edits a plan with its price filled in", async () => {
@@ -97,7 +123,9 @@ describe("PlansPage", () => {
     const user = userEvent.setup();
 
     await user.click(await screen.findByRole("button", { name: "Edit" }));
-    const dialog = await screen.findByRole("dialog", { name: "Edit Monthly unlimited" });
+    const dialog = await screen.findByRole("dialog", {
+      name: "Edit Monthly unlimited",
+    });
     expect(within(dialog).getByLabelText(/^Price/)).toHaveValue("150.00");
   });
 
@@ -105,14 +133,17 @@ describe("PlansPage", () => {
     plans(OLD);
     renderRoute("/plans", { permissions: [PLANS_MANAGE] });
 
-    expect(await screen.findByRole("button", { name: "Edit" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Edit" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Remove" }),
+    ).not.toBeInTheDocument();
   });
 
   it("asks before removing, then removes", async () => {
     let removed = false;
     server.use(
-      http.get("/api/money", () => HttpResponse.json({ currency: "USD", fractionDigits: 2 })),
       http.get("/api/plans", () => HttpResponse.json(removed ? [] : [MONTHLY])),
       http.delete("/api/plans/p1", () => {
         removed = true;
@@ -123,11 +154,15 @@ describe("PlansPage", () => {
     const user = userEvent.setup();
 
     await user.click(await screen.findByRole("button", { name: "Remove" }));
-    const confirm = await screen.findByRole("alertdialog", { name: "Remove Monthly unlimited?" });
+    const confirm = await screen.findByRole("alertdialog", {
+      name: "Remove Monthly unlimited?",
+    });
     expect(removed).toBe(false);
     await user.click(within(confirm).getByRole("button", { name: "Remove" }));
 
     expect(await screen.findByText("No plans yet.")).toBeInTheDocument();
-    expect(await screen.findByRole("status")).toHaveTextContent("Monthly unlimited was removed");
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Monthly unlimited was removed",
+    );
   });
 });

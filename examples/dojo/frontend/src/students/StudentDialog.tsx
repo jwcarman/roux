@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { FormDialog, inputOf, useSchemaForm } from "@jwcarman/roux-web/form";
-import { formatIsoDate } from "@jwcarman/roux-web/dates";
+import { today } from "@jwcarman/roux-web/organization";
 import { createStudent, studentRequestSchema, updateStudent, type Student } from "./students";
 
 /** "New student", or "Edit" for the student given (at the version shown), in a dialog. */
@@ -17,7 +17,7 @@ export function StudentDialog({ student, trigger }: { student?: Student; trigger
           birthDate: inputOf(student.birthDate),
           startDate: student.startDate,
         }
-      : { firstName: "", lastName: "", email: "", phone: "", birthDate: "", startDate: formatIsoDate(new Date()) },
+      : { firstName: "", lastName: "", email: "", phone: "", birthDate: "", startDate: today() },
     mutation: student ? updateStudent(student.id, student.version) : createStudent,
     onSuccess: (saved) => notify.success(`${saved.firstName} ${saved.lastName} was saved`),
     failure: "Could not save the student",

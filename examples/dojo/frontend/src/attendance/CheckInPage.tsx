@@ -8,7 +8,7 @@ import { ErrorMessage } from "@jwcarman/roux-web/feedback";
 import { fieldErrorsOf } from "@jwcarman/roux-web/form";
 import { SearchInput } from "@jwcarman/roux-web/table";
 import { classQuery, latestOn, WEEKDAY_LABELS } from "../classes/classes";
-import { formatTime } from "../shell/format";
+import { formatTime } from "@jwcarman/roux-web/dates";
 import { checkInQuery, type Attendee } from "./attendance";
 import { AttendeeToggle } from "./AttendeeToggle";
 

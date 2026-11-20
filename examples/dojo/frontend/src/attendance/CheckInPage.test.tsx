@@ -3,8 +3,8 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { formatIsoDate } from "@jwcarman/roux-web/dates";
 import { toaster } from "@jwcarman/roux-web/feedback";
+import { setOrganization, testOrganization } from "@jwcarman/roux-web/organization";
 import { ATTENDANCE_RECORD, CLASSES_READ } from "../permissions.gen";
 import type { SchoolClass } from "../classes/classes";
 import { invalidFields } from "../testing/problems";
@@ -61,18 +61,16 @@ function toggle(name: string) {
 describe("CheckInPage", () => {
   beforeEach(() => {
     document.cookie = "XSRF-TOKEN=token";
-    // Tuesday, the day Tuesday Karate runs; only the clock's date is faked.
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date(2026, 10, 17, 12));
+    // Tuesday, the day Tuesday Karate runs, at the school.
+    setOrganization(testOrganization({ today: "2026-11-17" }));
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     act(() => toaster.remove());
   });
 
   it("defaults to the most recent day the class runs when it does not run today", async () => {
-    vi.setSystemTime(new Date(2026, 10, 19, 12)); // the Thursday after
+    setOrganization(testOrganization({ today: "2026-11-19" })); // the Thursday after
     const { asked } = school();
     renderRoute("/classes/c1/check-in", STAFF);
 
@@ -83,7 +81,7 @@ describe("CheckInPage", () => {
   });
 
   it("defaults to a week back on the day before the class runs", async () => {
-    vi.setSystemTime(new Date(2026, 10, 16, 12)); // the Monday before
+    setOrganization(testOrganization({ today: "2026-11-16" })); // the Monday before
     const { asked } = school();
     renderRoute("/classes/c1/check-in", STAFF);
 
@@ -101,8 +99,8 @@ describe("CheckInPage", () => {
     for (const name of ["Ada Lovelace", "Alan Turing", "Grace Hopper"]) {
       expect(await toggle(name)).toHaveAttribute("aria-pressed", "false");
     }
-    expect(screen.getByLabelText("Date")).toHaveValue(formatIsoDate(new Date()));
-    expect(asked).toEqual([formatIsoDate(new Date())]);
+    expect(screen.getByLabelText("Date")).toHaveValue("2026-11-17");
+    expect(asked).toEqual(["2026-11-17"]);
     expect(screen.getByRole("status")).toHaveTextContent("0 of 3 present");
   });
 
@@ -120,7 +118,7 @@ describe("CheckInPage", () => {
     renderRoute("/classes/c1/check-in?date=2026-02-30", STAFF);
 
     await toggle("Ada Lovelace");
-    expect(asked).toEqual([formatIsoDate(new Date())]);
+    expect(asked).toEqual(["2026-11-17"]);
   });
 
   it("marks present as soon as it is tapped, before the server answers, then shows the server's list", async () => {
@@ -160,7 +158,7 @@ describe("CheckInPage", () => {
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("0 of 3 present"));
     expect(sent.map((request) => request.present)).toEqual([true, false]);
     expect(marks.get("s1")).toBe(false);
-    expect(sent[0]).toEqual({ studentId: "s1", date: formatIsoDate(new Date()), present: true });
+    expect(sent[0]).toEqual({ studentId: "s1", date: "2026-11-17", present: true });
   });
 
   it("a double tap sends present then not present, one after the other, and ends as the server has it", async () => {

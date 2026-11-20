@@ -5,7 +5,7 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { toaster } from "@jwcarman/roux-web/feedback";
 import { ATTENDANCE_RECORD, CLASSES_MANAGE, CLASSES_READ } from "../permissions.gen";
-import { formatTime } from "../shell/format";
+import { formatTime } from "@jwcarman/roux-web/dates";
 import { invalidFields, stale } from "../testing/problems";
 import { renderRoute } from "../testing/route";
 import { server } from "../testing/server";

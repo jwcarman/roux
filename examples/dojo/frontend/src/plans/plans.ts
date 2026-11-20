@@ -1,7 +1,7 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
 import { money, oneOf, text } from "@jwcarman/roux-web/form";
-import { formatMoney, type Money, type MoneySettings } from "@jwcarman/roux-web/money";
+import { formatMoney, type Money } from "@jwcarman/roux-web/money";
 import { z } from "zod";
 import { queryKeys } from "../queryKeys";
 
@@ -26,24 +26,23 @@ export function pricePerPeriod(plan: Pick<Plan, "price" | "period">): string {
 }
 
 /** PlanRequest's rules (without the version), in the server's words, in the school's currency. */
-export function planSchema(settings: MoneySettings) {
-  return z.object({
-    name: text().max(60),
-    price: money(settings).positive(),
-    period: oneOf(PLAN_PERIODS),
-    active: z.boolean(),
-  });
-}
+export const planSchema = z.object({
+  name: text().max(60),
+  price: money().positive(),
+  period: oneOf(PLAN_PERIODS),
+  active: z.boolean(),
+});
 
 /** What a plan form sends. */
-export type PlanRequest = z.output<ReturnType<typeof planSchema>>;
+export type PlanRequest = z.output<typeof planSchema>;
 
 /** `/api/plans`: one function per endpoint. */
 export const plansApi = {
   list: (signal?: AbortSignal) => getJson<Plan[]>("plans", { signal }),
   active: (signal?: AbortSignal) => getJson<Plan[]>("plans/active", { signal }),
   create: (request: PlanRequest) => sendJson<Plan>("POST", "plans", request),
-  update: (id: string, request: PlanRequest & { version: number }) => sendJson<Plan>("PUT", path`plans/${id}`, request),
+  update: (id: string, request: PlanRequest & { version: number }) =>
+    sendJson<Plan>("PUT", path`plans/${id}`, request),
   remove: (id: string) => sendJson<void>("DELETE", path`plans/${id}`),
 };
 
@@ -63,7 +62,9 @@ export const activePlansQuery = queryOptions({
  * What a plan's change refreshes: the plans, and the students' memberships, which show each plan's
  * name and price as they were fetched.
  */
-const refreshesPlans = { refreshes: [queryKeys.plans.all, queryKeys.students.all] };
+const refreshesPlans = {
+  refreshes: [queryKeys.plans.all, queryKeys.students.all],
+};
 
 /** Adds a plan. */
 export const createPlan = mutationOptions({
@@ -74,9 +75,13 @@ export const createPlan = mutationOptions({
 /** Saves a plan at the `version` it was read at; a change made since answers 409. */
 export const updatePlan = (id: string, version: number) =>
   mutationOptions({
-    mutationFn: (request: PlanRequest) => plansApi.update(id, { ...request, version }),
+    mutationFn: (request: PlanRequest) =>
+      plansApi.update(id, { ...request, version }),
     meta: refreshesPlans,
   });
 
 /** Removes a plan no membership has used; a used one is refused (400). */
-export const removePlan = mutationOptions({ mutationFn: (id: string) => plansApi.remove(id), meta: refreshesPlans });
+export const removePlan = mutationOptions({
+  mutationFn: (id: string) => plansApi.remove(id),
+  meta: refreshesPlans,
+});

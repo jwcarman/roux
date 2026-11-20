@@ -7,7 +7,7 @@ import { DEFAULT_PAGE_SIZE, DebouncedSearchInput, FilterChips, QueryTable } from
 import { PAYMENTS_RECORD, STUDENTS_MANAGE } from "../permissions.gen";
 import { RankSwatch } from "../ranks/RankSwatch";
 import { ranksQuery } from "../ranks/ranks";
-import { formatDate } from "../shell/format";
+import { formatDate } from "@jwcarman/roux-web/dates";
 import { useSession } from "../shell/session";
 import { StudentActions } from "./StudentActions";
 import { StudentDialog } from "./StudentDialog";

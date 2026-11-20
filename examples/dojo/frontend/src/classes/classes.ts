@@ -1,7 +1,8 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
-import { formatIsoDate } from "@jwcarman/roux-web/dates";
+import { formatIsoDate, parseIsoDate } from "@jwcarman/roux-web/dates";
 import { after, id, oneOf, text, time } from "@jwcarman/roux-web/form";
+import { today as schoolToday } from "@jwcarman/roux-web/organization";
 import { addDays, format, getDay, previousDay, type Day } from "date-fns";
 import { z } from "zod";
 import { queryKeys } from "../queryKeys";
@@ -29,10 +30,14 @@ const DAY_NUMBERS = {
   SUNDAY: 0,
 } as const satisfies Record<Weekday, Day>;
 
-/** The most recent day, up to and including `today`, that falls on `weekday`, as a date input holds it. */
-export function latestOn(weekday: Weekday, today: Date = new Date()): string {
+/**
+ * The most recent day, up to and including `today` (the school's, by default), that falls on
+ * `weekday`, as a date input holds it.
+ */
+export function latestOn(weekday: Weekday, today: string = schoolToday()): string {
+  const day = parseIsoDate(today)!;
   const dayNumber = DAY_NUMBERS[weekday];
-  return formatIsoDate(getDay(today) === dayNumber ? today : previousDay(today, dayNumber));
+  return getDay(day) === dayNumber ? today : formatIsoDate(previousDay(day, dayNumber));
 }
 
 /** A class as `/api/classes` answers it: times are `HH:mm:ss` on the school's clock. */

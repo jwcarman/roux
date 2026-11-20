@@ -3,7 +3,6 @@ import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { formatIsoDate } from "@jwcarman/roux-web/dates";
 import { toaster } from "@jwcarman/roux-web/feedback";
 import { PAYMENTS_RECORD, STUDENTS_READ } from "../permissions.gen";
 import type { Plan } from "../plans/plans";
@@ -63,7 +62,6 @@ const RECORDS = { permissions: [STUDENTS_READ, PAYMENTS_RECORD] };
 function serve(memberships: () => StudentMemberships) {
   server.use(
     http.get("/api/students/s1", () => HttpResponse.json(MAYA)),
-    http.get("/api/money", () => HttpResponse.json({ currency: "USD", fractionDigits: 2 })),
     http.get("/api/plans/active", () => HttpResponse.json([MONTHLY])),
     http.get("/api/students/s1/memberships", () => HttpResponse.json(memberships())),
   );
@@ -154,7 +152,7 @@ describe("MembershipSection", () => {
 
     await user.click(await screen.findByRole("button", { name: "Start membership" }));
     const dialog = await screen.findByRole("dialog", { name: "Start a membership for Maya Chen" });
-    expect(within(dialog).getByLabelText(/^Start date/)).toHaveValue(formatIsoDate(new Date()));
+    expect(within(dialog).getByLabelText(/^Start date/)).toHaveValue("2026-06-15");
     await user.selectOptions(within(dialog).getByLabelText(/^Plan/), "p1");
     await user.click(within(dialog).getByRole("button", { name: "Start" }));
 
@@ -186,7 +184,7 @@ describe("MembershipSection", () => {
     await user.click(within(dialog).getByRole("button", { name: "Record" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent("The payment was recorded");
-    expect(sent).toEqual({ periods: 2, takenOn: formatIsoDate(new Date()), method: "CARD", note: null });
+    expect(sent).toEqual({ periods: 2, takenOn: "2026-06-15", method: "CARD", note: null });
   });
 
   it("asks before removing a payment, then removes it", async () => {

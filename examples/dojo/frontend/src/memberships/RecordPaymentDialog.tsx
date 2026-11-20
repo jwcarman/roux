@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { Text } from "@chakra-ui/react";
 import { useStore } from "@tanstack/react-form";
-import { formatIsoDate } from "@jwcarman/roux-web/dates";
+import { today } from "@jwcarman/roux-web/organization";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { FormDialog, useSchemaForm } from "@jwcarman/roux-web/form";
 import { formatMoney, timesMoney } from "@jwcarman/roux-web/money";
@@ -27,7 +27,7 @@ export function RecordPaymentDialog({
   const name = `${student.firstName} ${student.lastName}`;
   const form = useSchemaForm({
     schema: paymentRequestSchema,
-    defaultValues: { periods: 1, takenOn: formatIsoDate(new Date()), method: "", note: "" },
+    defaultValues: { periods: 1, takenOn: today(), method: "", note: "" },
     mutation: recordPayment(student.id),
     onSuccess: () => notify.success("The payment was recorded"),
     failure: `Could not record the payment from ${name}`,

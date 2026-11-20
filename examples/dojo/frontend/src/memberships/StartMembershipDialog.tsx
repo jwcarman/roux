@@ -2,11 +2,11 @@ import type { ReactElement } from "react";
 import { Alert } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { useStore } from "@tanstack/react-form";
-import { formatIsoDate } from "@jwcarman/roux-web/dates";
+import { today } from "@jwcarman/roux-web/organization";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { FormDialog, useSchemaForm } from "@jwcarman/roux-web/form";
 import { activePlansQuery, pricePerPeriod } from "../plans/plans";
-import { formatDate } from "../shell/format";
+import { formatDate } from "@jwcarman/roux-web/dates";
 import type { StudentDetail } from "../students/students";
 import { defaultStartDate, membershipRequestSchema, startMembership, type MembershipView } from "./memberships";
 
@@ -24,7 +24,7 @@ export function StartMembershipDialog({
   const name = `${student.firstName} ${student.lastName}`;
   const form = useSchemaForm({
     schema: membershipRequestSchema,
-    defaultValues: { planId: "", startDate: defaultStartDate(current, formatIsoDate(new Date())) },
+    defaultValues: { planId: "", startDate: defaultStartDate(current, today()) },
     mutation: startMembership(student.id),
     onSuccess: (membership) => notify.success(`${student.firstName} is on ${membership.plan.name}`),
     failure: `Could not start a membership for ${name}`,

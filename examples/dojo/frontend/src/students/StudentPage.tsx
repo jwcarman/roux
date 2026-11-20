@@ -8,7 +8,7 @@ import { ATTENDANCE_READ, PAYMENTS_RECORD, PROMOTIONS_MANAGE, STUDENTS_MANAGE } 
 import { MembershipSection } from "../memberships/MembershipSection";
 import { ClassesSincePromotion, StudentAttendanceList } from "../attendance/StudentAttendanceList";
 import { RankSwatch } from "../ranks/RankSwatch";
-import { formatDate } from "../shell/format";
+import { formatDate } from "@jwcarman/roux-web/dates";
 import { useSession } from "../shell/session";
 import { PromoteDialog } from "./PromoteDialog";
 import { StudentActions } from "./StudentActions";
