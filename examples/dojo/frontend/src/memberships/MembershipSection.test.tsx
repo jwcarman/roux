@@ -77,6 +77,17 @@ describe("defaultStartDate", () => {
     expect(defaultStartDate(null, "2026-04-01")).toBe("2026-04-01");
   });
 
+  it("is never on or before the current membership's start, which the server refuses", () => {
+    // Started today, nothing paid (paid through yesterday): a correction starts tomorrow.
+    expect(
+      defaultStartDate({ ...CURRENT, startDate: "2026-04-01", paidThrough: "2026-03-31" }, "2026-04-01"),
+    ).toBe("2026-04-02");
+    // Starts ahead, nothing paid (paid through the day before it): the day after its start.
+    expect(
+      defaultStartDate({ ...CURRENT, startDate: "2026-05-01", paidThrough: "2026-04-30" }, "2026-04-01"),
+    ).toBe("2026-05-02");
+  });
+
   it("crosses a month end", () => {
     expect(defaultStartDate({ ...CURRENT, paidThrough: "2026-04-30" }, "2026-04-01")).toBe("2026-05-01");
   });

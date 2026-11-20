@@ -27,6 +27,7 @@ import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Test;
 
+import tools.jackson.databind.DatabindException;
 import tools.jackson.databind.json.JsonMapper;
 
 @DisplayNameGeneration(ReplaceUnderscores.class)
@@ -122,5 +123,17 @@ class MoneyTest {
         .isEqualTo("￥1,500");
     assertThat(Money.of(123456, Currency.getInstance("EUR")).format(Locale.GERMANY))
         .isEqualTo("1.234,56\u00a0€");
+  }
+
+  @Test
+  void json_refuses_a_fractional_or_missing_amount() {
+    JsonMapper json = JsonMapper.builder().build();
+    assertThatExceptionOfType(DatabindException.class)
+        .isThrownBy(
+            () -> json.readValue("{\"minorUnits\":150.5,\"currency\":\"USD\"}", Money.class));
+    assertThatExceptionOfType(DatabindException.class)
+        .isThrownBy(() -> json.readValue("{\"currency\":\"USD\"}", Money.class));
+    assertThat(json.readValue("{\"minorUnits\":150.0,\"currency\":\"USD\"}", Money.class))
+        .isEqualTo(Money.of(150, USD));
   }
 }

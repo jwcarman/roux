@@ -55,10 +55,15 @@ function nextDay(iso: string): string {
 
 /**
  * A new membership's start: the day after the current one's paid through when the student is paid
- * through today or later (a change of plan takes effect when the paid time runs out), else today.
+ * through today or later (a change of plan takes effect when the paid time runs out), else today;
+ * and never on or before the current one's start, which the server refuses.
  */
 export function defaultStartDate(current: MembershipView | null, today: string): string {
-  return current !== null && current.paidThrough >= today ? nextDay(current.paidThrough) : today;
+  if (current === null) {
+    return today;
+  }
+  const candidates = [today, nextDay(current.paidThrough), nextDay(current.startDate)];
+  return candidates.reduce((latest, day) => (day > latest ? day : latest));
 }
 
 /** MembershipRequest's rules, in the server's words. */

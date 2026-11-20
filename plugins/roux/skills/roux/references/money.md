@@ -111,6 +111,10 @@ defaultValues: plan ? { price: moneyInputOf(plan.price, settings), ... } : { pri
 <form.AppField name="price">{(f) => <f.MoneyField label="Price" settings={settings} />}</form.AppField>
 ```
 
+`formatMoney` takes its digits from the browser (CLDR), and `money()` from the server
+(`fractionDigits`, ISO 4217). They agree for USD, EUR, GBP, CAD, AUD, JPY and most currencies, but
+not for HUF, IDR, COP, LBP or IQD: an app in one of those is not supported yet.
+
 `contracts/money.json` lists typed inputs and what each becomes; a contract test on each side keeps
 the browser's parsing and the server's rules the same.
 

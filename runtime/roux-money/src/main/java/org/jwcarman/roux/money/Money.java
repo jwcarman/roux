@@ -23,7 +23,9 @@ import java.util.Objects;
 
 import jakarta.persistence.Embeddable;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * An amount of money: whole minor units of its currency (cents for USD, yen for JPY), never a
@@ -55,6 +57,25 @@ public record Money(long minorUnits, Currency currency) {
    */
   public static Money of(long minorUnits, Currency currency) {
     return new Money(minorUnits, currency);
+  }
+
+  /**
+   * An amount as JSON gives it: {@code minorUnits} must be a whole number. A fraction (a client
+   * doing float arithmetic) or a missing amount is refused rather than truncated to a wrong price.
+   *
+   * @param minorUnits the amount in minor units, as JSON gives it
+   * @param currency its currency
+   * @return the money
+   * @throws IllegalArgumentException if {@code minorUnits} is missing or not a whole number
+   */
+  @JsonCreator
+  static Money fromJson(
+      @JsonProperty("minorUnits") BigDecimal minorUnits,
+      @JsonProperty("currency") Currency currency) {
+    if (minorUnits == null || minorUnits.stripTrailingZeros().scale() > 0) {
+      throw new IllegalArgumentException("minorUnits must be a whole number");
+    }
+    return new Money(minorUnits.longValueExact(), currency);
   }
 
   /**

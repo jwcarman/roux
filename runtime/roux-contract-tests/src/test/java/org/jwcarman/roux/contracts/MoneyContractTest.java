@@ -135,6 +135,17 @@ class MoneyContractTest {
   }
 
   @Test
+  void aFractionalAmountIsABadRequestNotATruncatedPrice() throws Exception {
+    mvc.perform(
+            post("/api/test/prices")
+                .with(user("someone"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"price\":{\"minorUnits\":150.5,\"currency\":\"USD\"}}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
   void aZeroPriceInAnotherCurrencyIsTwoFieldErrors() throws Exception {
     mvc.perform(
             post("/api/test/prices")

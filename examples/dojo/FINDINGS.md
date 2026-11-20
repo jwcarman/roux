@@ -491,3 +491,14 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   nothing, so it failed whenever that request landed before the test ended.
 - roux could: nothing (the dojo's test).
 - Outcome: fixed in this round.
+
+## The browser and the server can disagree on a currency's digits
+- Where: `web/roux-web/src/money/money.ts` (`formatMoney` against `money()` and `moneyInputOf`)
+- What was clunky: `formatMoney` formats with Intl's (CLDR's) digits for the currency, while typed
+  amounts become minor units with the server's ISO 4217 digits (`GET /api/money`). For HUF, IDR, COP
+  and LBP (ISO 2, CLDR 0) and IQD (3 against 0), "1500" is stored as 150000 minor units and shown as
+  150,000: 100 times too much. The dojo is in USD and unaffected. Found by round 3's final review.
+- roux could: format with the server's digits (`formatMoney` taking the settings, or a money context
+  the field and the formatter share), which also answers "A money form waits for the currency".
+- Outcome: deferred (no app uses such a currency; the money guide says so).
+
