@@ -108,13 +108,13 @@ public class SpaFallbackFilter extends OncePerRequestFilter {
     try {
       return MediaType.parseMediaTypes(accept).stream()
           .anyMatch(MediaType.TEXT_HTML::equalsTypeAndSubtype);
-    } catch (InvalidMediaTypeException e) {
+    } catch (InvalidMediaTypeException _) {
       return false;
     }
   }
 
   private static boolean hasFileExtension(String path) {
-    return path.substring(path.lastIndexOf('/') + 1).indexOf('.') >= 0;
+    return path.indexOf('.', path.lastIndexOf('/') + 1) != -1;
   }
 
   /** The request as one for {@link #SHELL}, so security, headers and the handler all see that. */

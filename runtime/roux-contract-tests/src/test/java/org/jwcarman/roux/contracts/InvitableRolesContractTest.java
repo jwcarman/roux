@@ -59,7 +59,9 @@ class InvitableRolesContractTest {
 
   @Test
   void anInvitationGivingOwnerIsRolledBack() {
-    assertThatThrownBy(() -> invitations.invite("x@roux.test", Set.of("OWNER")))
+    Set<String> owner = Set.of("OWNER");
+
+    assertThatThrownBy(() -> invitations.invite("x@roux.test", owner))
         .isInstanceOf(InvalidInvitationException.class)
         .hasMessageContaining("An invitation may only give [MEMBER]");
 

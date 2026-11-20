@@ -46,7 +46,9 @@ class RoleGrantsCheckContractTest {
 
   @Test
   void aGrantNoConstantDeclaresFails() {
-    assertThatThrownBy(() -> RoleGrantsCheck.check(jdbc, List.of("who.identities.read")))
+    List<String> declared = List.of("who.identities.read");
+
+    assertThatThrownBy(() -> RoleGrantsCheck.check(jdbc, declared))
         .isInstanceOf(AssertionError.class)
         .hasMessageContaining("OWNER holds who.identities.manage, which no constant declares");
   }

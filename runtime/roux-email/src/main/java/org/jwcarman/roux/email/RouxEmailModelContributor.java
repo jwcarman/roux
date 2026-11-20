@@ -49,7 +49,7 @@ public final class RouxEmailModelContributor implements WhoEmailModelContributor
    */
   static final Map<String, String> PALETTE_COLORS =
       Map.ofEntries(
-          entry("gray", "#18181b"),
+          entry("gray", NEAR_BLACK),
           entry("red", "#dc2626"),
           entry("orange", "#ea580c"),
           entry("yellow", "#ca8a04"),

@@ -75,7 +75,9 @@ class VersionsTest {
 
   @Test
   void anEntityNeverSavedHasNoVersionToMatch() {
-    assertThatThrownBy(() -> Versions.require(new Rank(id, null), 3L))
+    Rank unsaved = new Rank(id, null);
+
+    assertThatThrownBy(() -> Versions.require(unsaved, 3L))
         .isInstanceOf(ObjectOptimisticLockingFailureException.class);
   }
 }

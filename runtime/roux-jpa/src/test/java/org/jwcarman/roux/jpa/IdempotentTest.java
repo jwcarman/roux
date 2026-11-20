@@ -105,11 +105,10 @@ class IdempotentTest {
   @Test
   void refusesWithoutATransactionBecauseTheLockWouldBeReleasedAtOnce() {
     TransactionSynchronizationManager.setActualTransactionActive(false);
+    List<String> tables = List.of("attendance");
 
     assertThatThrownBy(
-            () ->
-                Idempotent.insert(
-                    entityManager, List.of("attendance"), () -> false, () -> calls.add("insert")))
+            () -> Idempotent.insert(entityManager, tables, () -> false, () -> calls.add("insert")))
         .isInstanceOf(IllegalStateException.class)
         .hasMessage("Idempotent.insert needs a transaction: put @Transactional on the service");
 

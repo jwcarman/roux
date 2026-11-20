@@ -165,7 +165,9 @@ class ShellPageTest {
   void a_source_with_no_context_fails_loudly() {
     ShellPage page = page((OrganizationContextSource) () -> null);
 
-    assertThatThrownBy(() -> page.render(new MockHttpServletRequest()))
+    MockHttpServletRequest request = new MockHttpServletRequest();
+
+    assertThatThrownBy(() -> page.render(request))
         .isInstanceOf(NullPointerException.class)
         .hasMessage("OrganizationContextSource.current()");
   }
@@ -204,7 +206,9 @@ class ShellPageTest {
   void a_source_with_no_theme_fails_loudly() {
     ShellPage page = page((ShellThemeSource) () -> null);
 
-    assertThatThrownBy(() -> page.render(new MockHttpServletRequest()))
+    MockHttpServletRequest request = new MockHttpServletRequest();
+
+    assertThatThrownBy(() -> page.render(request))
         .isInstanceOf(NullPointerException.class)
         .hasMessage("ShellThemeSource.current()");
   }
@@ -213,15 +217,10 @@ class ShellPageTest {
   @ValueSource(strings = {"__CSP_NONCE__", "__APP_NAME__", "__APP_THEME__", "__APP_CONTEXT__"})
   void a_page_missing_a_placeholder_is_refused_naming_it(String placeholder) {
     String template = TEMPLATE.replace(placeholder, "");
+    ContentSecurityPolicy strict = ContentSecurityPolicy.strict();
 
     assertThatThrownBy(
-            () ->
-                new ShellPage(
-                    template,
-                    ContentSecurityPolicy.strict(),
-                    () -> ShellTheme.stock("x"),
-                    () -> CONTEXT,
-                    json))
+            () -> new ShellPage(template, strict, () -> ShellTheme.stock("x"), () -> CONTEXT, json))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("index.html has no " + placeholder);
   }

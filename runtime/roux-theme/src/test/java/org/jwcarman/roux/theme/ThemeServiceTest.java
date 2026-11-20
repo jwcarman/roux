@@ -89,7 +89,9 @@ class ThemeServiceTest {
   void saving_from_a_stale_version_is_a_conflict_and_changes_nothing() {
     AppTheme theme = row(2);
 
-    assertThatThrownBy(() -> service.update(request(1L)))
+    var stale = request(1L);
+
+    assertThatThrownBy(() -> service.update(stale))
         .isInstanceOf(ObjectOptimisticLockingFailureException.class);
 
     assertThat(ReflectionTestUtils.getField(theme, "appName")).isNull();
@@ -113,6 +115,7 @@ class ThemeServiceTest {
         .hasMessageContaining("roux_theme has no row")
         .hasMessageContaining("migratory.enabled=false")
         .hasMessageContaining("classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml");
-    assertThatThrownBy(() -> service.update(request(0L))).isInstanceOf(IllegalStateException.class);
+    var update = request(0L);
+    assertThatThrownBy(() -> service.update(update)).isInstanceOf(IllegalStateException.class);
   }
 }

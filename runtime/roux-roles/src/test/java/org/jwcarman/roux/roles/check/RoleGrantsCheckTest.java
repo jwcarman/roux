@@ -73,7 +73,9 @@ class RoleGrantsCheckTest {
 
   @Test
   void the_message_lists_every_problem() {
-    assertThatCode(() -> RoleGrantsCheck.fail(List.of("OWNER lacks a.read", "OWNER lacks a.write")))
+    List<String> problems = List.of("OWNER lacks a.read", "OWNER lacks a.write");
+
+    assertThatCode(() -> RoleGrantsCheck.fail(problems))
         .isInstanceOf(AssertionError.class)
         .hasMessage(
             "The roles' grants do not match the permission constants:\n  OWNER lacks a.read\n  OWNER lacks a.write");

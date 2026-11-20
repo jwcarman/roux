@@ -17,6 +17,7 @@ package org.jwcarman.roux.autoconfigure.theme;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 
@@ -35,7 +36,6 @@ import org.jwcarman.roux.theme.OwnerShellTheme;
 import org.jwcarman.roux.theme.ThemeController;
 import org.jwcarman.roux.theme.ThemeService;
 import org.jwcarman.who.spring.security.WhoPublicPathContributor;
-import org.mockito.Mockito;
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
@@ -82,7 +82,7 @@ class RouxThemeAutoConfigurationTest {
     AppThemeRepository themes = mock(AppThemeRepository.class);
     AppTheme row = new AppTheme() {};
     ReflectionTestUtils.setField(row, "version", 0L);
-    Mockito.when(themes.findById(AppTheme.ID)).thenReturn(Optional.of(row));
+    when(themes.findById(AppTheme.ID)).thenReturn(Optional.of(row));
     runner(themes)
         .run(
             context ->

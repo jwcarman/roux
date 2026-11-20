@@ -95,6 +95,7 @@ class SpaFallbackFilterTest {
   @Test
   void a_dot_in_an_earlier_segment_is_not_a_file_extension() throws Exception {
     assertThat(seenBy(page("/v1.2/members")).getRequestURI()).isEqualTo("/index.html");
+    assertThat(seenBy(page("/v1./members")).getRequestURI()).isEqualTo("/index.html");
     MockHttpServletRequest hidden = page("/.env");
     assertThat(seenBy(hidden)).isSameAs(hidden);
     MockHttpServletRequest file = page("/members/photo.png");

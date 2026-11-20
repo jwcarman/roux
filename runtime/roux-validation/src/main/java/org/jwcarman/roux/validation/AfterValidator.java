@@ -123,7 +123,7 @@ public class AfterValidator implements ConstraintValidator<After, Object> {
   private static @Nullable Method publicMethod(Class<?> type, String name) {
     try {
       return type.getMethod(name);
-    } catch (NoSuchMethodException e) {
+    } catch (NoSuchMethodException _) {
       return null;
     }
   }
@@ -132,8 +132,8 @@ public class AfterValidator implements ConstraintValidator<After, Object> {
     for (Class<?> c = type; c != null; c = c.getSuperclass()) {
       try {
         return c.getDeclaredField(name);
-      } catch (NoSuchFieldException e) {
-        continue;
+      } catch (NoSuchFieldException _) {
+        // not declared here: look in the superclass
       }
     }
     return null;

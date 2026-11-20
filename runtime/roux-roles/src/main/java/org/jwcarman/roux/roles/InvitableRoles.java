@@ -21,18 +21,17 @@ import java.util.List;
  * The roles an invitation may give, from {@code roux.roles.invitable}, in the order configured: the
  * invite form offers them in that order. {@link RouxRoles#OWNER} is never one: owners are made at
  * startup, never invited.
+ *
+ * @param names the roles' names, in the order configured; null for none
  */
-public final class InvitableRoles {
-
-  private final List<String> names;
+public record InvitableRoles(List<String> names) {
 
   /**
    * Checks the list.
    *
-   * @param names the roles' names; null for none
    * @throws IllegalArgumentException when an entry is blank or names {@link RouxRoles#OWNER}
    */
-  public InvitableRoles(List<String> names) {
+  public InvitableRoles {
     List<String> listed = names == null ? List.of() : List.copyOf(names);
     for (String name : listed) {
       if (name.isBlank()) {
@@ -43,12 +42,7 @@ public final class InvitableRoles {
             "roux.roles.invitable may not list OWNER: owners are never invited");
       }
     }
-    this.names = listed;
-  }
-
-  /** {@return the roles' names, in the order configured} */
-  public List<String> names() {
-    return names;
+    names = listed;
   }
 
   /**

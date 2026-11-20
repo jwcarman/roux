@@ -144,9 +144,10 @@ class ContentSecurityPolicyTest {
         " "
       })
   void a_source_that_loosens_the_policy_is_refused_for_every_directive(String source) {
+    ContentSecurityPolicy strict = ContentSecurityPolicy.strict();
     for (Extendable directive : Extendable.values()) {
-      assertThatThrownBy(
-              () -> ContentSecurityPolicy.strict().extendedBy(Map.of(directive, List.of(source))))
+      Map<Extendable, List<String>> extra = Map.of(directive, List.of(source));
+      assertThatThrownBy(() -> strict.extendedBy(extra))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("roux.spa.csp." + directive.directive())
           .hasMessageContaining("'" + source + "'");

@@ -16,6 +16,7 @@
 package org.jwcarman.roux.roles;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Set;
@@ -69,7 +70,8 @@ class CallerPermissionsTest {
   @Test
   void require_passes_for_a_held_permission() {
     signedInWith("payments.record");
-    caller.require("payments.record", "Filtering by payment");
+    assertThatCode(() -> caller.require("payments.record", "Filtering by payment"))
+        .doesNotThrowAnyException();
   }
 
   @Test

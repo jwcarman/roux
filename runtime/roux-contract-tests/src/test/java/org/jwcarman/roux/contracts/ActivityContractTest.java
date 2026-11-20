@@ -156,7 +156,9 @@ class ActivityContractTest {
 
   @Test
   void outside_a_transaction_it_is_refused() {
-    assertThatThrownBy(() -> log.append(UUID.randomUUID(), YELLOW))
+    UUID anchor = UUID.randomUUID();
+
+    assertThatThrownBy(() -> log.append(anchor, YELLOW))
         .isInstanceOf(IllegalTransactionStateException.class);
   }
 

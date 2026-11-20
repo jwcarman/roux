@@ -45,14 +45,15 @@ public class RecordingWhoEmailSender implements WhoEmailSender {
     if (failing) {
       throw new IllegalStateException("mail is down");
     }
-    // Only the emails that carry a way to sign in are kept; an address confirmed or changed, or a
-    // passkey added, is not a sign-in, and the app sends no other.
     switch (email.source()) {
       case EmailLinkMessage message ->
           sent.add(new Sent(message.address(), message.link(), message.code()));
       case InvitationMessage message ->
           sent.add(new Sent(message.address(), message.link(), message.code()));
-      default -> {}
+      default -> {
+        // Only the emails that carry a way to sign in are kept; an address confirmed or changed,
+        // or a passkey added, is not a sign-in, and the app sends no other.
+      }
     }
   }
 

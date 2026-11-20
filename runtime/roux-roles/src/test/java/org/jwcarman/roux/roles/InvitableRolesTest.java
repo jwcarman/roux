@@ -96,9 +96,10 @@ class InvitableRolesTest {
   @Test
   void the_guard_refuses_an_unlisted_role() {
     InvitableRolesGuard guard = new InvitableRolesGuard(roles);
+    var coach = invitation("COACH");
 
     assertThatExceptionOfType(InvalidInvitationException.class)
-        .isThrownBy(() -> guard.on(invitation("COACH")))
+        .isThrownBy(() -> guard.on(coach))
         .withMessage("An invitation may only give [MEMBER, INSTRUCTOR]");
   }
 }

@@ -108,7 +108,9 @@ class RouxAuditingAutoConfigurationTest {
     }
 
     @Override
-    public void setCreatedBy(String createdBy) {}
+    public void setCreatedBy(String createdBy) {
+      // the test records no auditor
+    }
 
     @Override
     public Optional<Instant> getCreatedDate() {
@@ -126,7 +128,9 @@ class RouxAuditingAutoConfigurationTest {
     }
 
     @Override
-    public void setLastModifiedBy(String lastModifiedBy) {}
+    public void setLastModifiedBy(String lastModifiedBy) {
+      // the test records no auditor
+    }
 
     @Override
     public Optional<Instant> getLastModifiedDate() {

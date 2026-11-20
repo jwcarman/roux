@@ -42,16 +42,19 @@ public final class ContentSecurityPolicy {
   /** The header's name. */
   public static final String HEADER = "Content-Security-Policy";
 
+  /** The page's own origin, the source every directive starts from. */
+  private static final String SELF = "'self'";
+
   /** The directives an app may add sources to, in the order they are written. */
   public enum Extendable {
-    SCRIPT_SRC("script-src", "'self'", true),
-    STYLE_SRC("style-src", "'self'", true),
-    IMG_SRC("img-src", "'self' data:", false),
-    FONT_SRC("font-src", "'self'", false),
-    CONNECT_SRC("connect-src", "'self'", false),
-    FRAME_SRC("frame-src", "'self'", false),
-    MEDIA_SRC("media-src", "'self'", false),
-    FORM_ACTION("form-action", "'self'", false);
+    SCRIPT_SRC("script-src", SELF, true),
+    STYLE_SRC("style-src", SELF, true),
+    IMG_SRC("img-src", SELF + " data:", false),
+    FONT_SRC("font-src", SELF, false),
+    CONNECT_SRC("connect-src", SELF, false),
+    FRAME_SRC("frame-src", SELF, false),
+    MEDIA_SRC("media-src", SELF, false),
+    FORM_ACTION("form-action", SELF, false);
 
     private final String directive;
     private final String base;
@@ -129,12 +132,12 @@ public final class ContentSecurityPolicy {
   public String forNonce(String nonce) {
     String nonced = "'nonce-" + nonce + "'";
     List<String> directives = new ArrayList<>();
-    directives.add("default-src 'self'");
+    directives.add("default-src " + SELF);
     for (Extendable directive : Extendable.values()) {
       directives.add(directive.directive + " " + sources(directive, nonced));
     }
     directives.add("object-src 'none'");
-    directives.add("base-uri 'self'");
+    directives.add("base-uri " + SELF);
     directives.add("frame-ancestors 'none'");
     return String.join("; ", directives);
   }

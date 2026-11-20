@@ -43,8 +43,9 @@ class MoneyTest {
 
   @Test
   void times_refuses_to_overflow() {
-    assertThatExceptionOfType(ArithmeticException.class)
-        .isThrownBy(() -> Money.of(Long.MAX_VALUE, USD).times(2));
+    Money most = Money.of(Long.MAX_VALUE, USD);
+
+    assertThatExceptionOfType(ArithmeticException.class).isThrownBy(() -> most.times(2));
   }
 
   @Test
@@ -61,8 +62,10 @@ class MoneyTest {
 
   @Test
   void plus_refuses_to_overflow() {
-    assertThatExceptionOfType(ArithmeticException.class)
-        .isThrownBy(() -> Money.of(Long.MAX_VALUE, USD).plus(Money.of(1, USD)));
+    Money most = Money.of(Long.MAX_VALUE, USD);
+    Money cent = Money.of(1, USD);
+
+    assertThatExceptionOfType(ArithmeticException.class).isThrownBy(() -> most.plus(cent));
   }
 
   @Test
