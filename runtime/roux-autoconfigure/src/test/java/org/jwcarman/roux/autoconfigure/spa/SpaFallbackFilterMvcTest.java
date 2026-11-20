@@ -28,6 +28,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Nested;
@@ -50,6 +53,8 @@ import org.springframework.test.web.servlet.MockMvc;
       "roux.theme.palette=teal"
     })
 class SpaFallbackFilterMvcTest {
+
+  private static final Pattern NONCE = Pattern.compile("script-src 'self' 'nonce-([^']++)'");
 
   private static final String SHELL = "<div id=\"root\"></div>";
 
@@ -117,7 +122,9 @@ class SpaFallbackFilterMvcTest {
           .startsWith("default-src 'self'; script-src 'self' 'nonce-")
           .contains("object-src 'none'", "frame-ancestors 'none'")
           .doesNotContain("unsafe", "*");
-      String nonce = policy.replaceAll(".*script-src 'self' 'nonce-([^']+)'.*", "$1");
+      Matcher nonceMatch = NONCE.matcher(policy);
+      assertThat(nonceMatch.find()).isTrue();
+      String nonce = nonceMatch.group(1);
       assertThat(response.getContentAsString())
           .contains("<script type=\"module\" nonce=\"" + nonce + "\"")
           .doesNotContain("__CSP_NONCE__", "__APP_NAME__", "__APP_THEME__", "__APP_CONTEXT__");

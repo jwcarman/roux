@@ -16,6 +16,7 @@
 package org.jwcarman.roux.validation;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.function.Supplier;
 
 import jakarta.validation.ConstraintValidator;
@@ -29,8 +30,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 /**
  * Checks {@link NotInFuture}. In a roux app, Spring builds it with the {@link
  * OrganizationCalendar}, and a date after the organization's today is in the future. Outside a roux
- * app (no calendar, or built without Spring) it falls back to the server's zone with a day's
- * allowance, since the server and the person's browser may then disagree on today.
+ * app (no calendar, or built without Spring) it falls back to today in UTC with a day's allowance:
+ * no zone's today is later than that, whatever the server's and the person's zones.
  */
 public class NotInFutureValidator implements ConstraintValidator<NotInFuture, LocalDate> {
 
@@ -49,7 +50,7 @@ public class NotInFutureValidator implements ConstraintValidator<NotInFuture, Lo
   }
 
   private static LocalDate fallback() {
-    return LocalDate.now().plusDays(1);
+    return LocalDate.now(ZoneOffset.UTC).plusDays(1);
   }
 
   @Override

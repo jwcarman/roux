@@ -68,15 +68,15 @@ class NotInFutureValidatorTest {
         new NotInFutureValidator(
             new StaticListableBeanFactory().getBeanProvider(OrganizationCalendar.class));
 
-    assertThat(validator.isValid(LocalDate.now().plusDays(1), null)).isTrue();
-    assertThat(validator.isValid(LocalDate.now().plusDays(3), null)).isFalse();
+    assertThat(validator.isValid(LocalDate.now(ZoneOffset.UTC).plusDays(1), null)).isTrue();
+    assertThat(validator.isValid(LocalDate.now(ZoneOffset.UTC).plusDays(2), null)).isFalse();
   }
 
   @Test
   void builtWithoutSpringTomorrowIsAllowed() {
     NotInFutureValidator validator = new NotInFutureValidator();
 
-    assertThat(validator.isValid(LocalDate.now().plusDays(1), null)).isTrue();
-    assertThat(validator.isValid(LocalDate.now().plusDays(3), null)).isFalse();
+    assertThat(validator.isValid(LocalDate.now(ZoneOffset.UTC).plusDays(1), null)).isTrue();
+    assertThat(validator.isValid(LocalDate.now(ZoneOffset.UTC).plusDays(2), null)).isFalse();
   }
 }

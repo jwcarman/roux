@@ -15,6 +15,7 @@
  */
 package org.jwcarman.roux.spa;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -26,6 +27,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
@@ -38,6 +41,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 @DisplayNameGeneration(ReplaceUnderscores.class)
 class ShellRoutesTest {
+
+  private static final Pattern NONCE = Pattern.compile("script-src 'self' 'nonce-([^']++)'");
 
   private final ShellPage page =
       new ShellPage(
@@ -70,9 +75,10 @@ class ShellRoutesTest {
     var response = mvc.perform(get("/index.html")).andReturn().getResponse();
 
     String policy = response.getHeader("Content-Security-Policy");
-    String nonce = policy.replaceAll(".*script-src 'self' 'nonce-([^']+)'.*", "$1");
-    org.assertj.core.api.Assertions.assertThat(response.getContentAsString())
-        .contains("<b nonce=\"" + nonce + "\">");
+    Matcher nonceMatch = NONCE.matcher(policy);
+    assertThat(nonceMatch.find()).isTrue();
+    String nonce = nonceMatch.group(1);
+    assertThat(response.getContentAsString()).contains("<b nonce=\"" + nonce + "\">");
   }
 
   @Test
@@ -80,7 +86,7 @@ class ShellRoutesTest {
     String first = mvc.perform(get("/index.html")).andReturn().getResponse().getContentAsString();
     String second = mvc.perform(get("/index.html")).andReturn().getResponse().getContentAsString();
 
-    org.assertj.core.api.Assertions.assertThat(first).isNotEqualTo(second);
+    assertThat(first).isNotEqualTo(second);
   }
 
   @Test

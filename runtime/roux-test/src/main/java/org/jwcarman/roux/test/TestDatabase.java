@@ -179,14 +179,13 @@ public final class TestDatabase {
     return parts[0].substring(0, parts[0].lastIndexOf('/') + 1) + name + params;
   }
 
-  /** Initialized on first use: the environment's server, or a container that Ryuk stops. */
+  /** Initialized on first use: the environment's server, or a container run until the JVM exits. */
   private static final class ServerHolder {
     static final Server SERVER =
         Server.fromEnvironment(System.getenv()).orElseGet(ServerHolder::startContainer);
 
     private static Server startContainer() {
-      PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16");
-      postgres.start();
+      PostgreSQLContainer postgres = Containers.started(new PostgreSQLContainer("postgres:16"));
       return new Server(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
     }
   }

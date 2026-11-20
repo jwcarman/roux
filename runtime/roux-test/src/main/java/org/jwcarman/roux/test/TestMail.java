@@ -89,19 +89,21 @@ public final class TestMail {
     }
   }
 
-  /** Initialized on first use; the container, if any, is stopped by Testcontainers' Ryuk. */
+  /**
+   * Initialized on first use: the environment's Mailpit, or a container run until the JVM exits.
+   */
   private static final class Holder {
     static final Mail MAIL = fromEnvironment(System.getenv()).orElseGet(Holder::startContainer);
 
     private static Mail startContainer() {
       GenericContainer<?> mailpit =
-          new GenericContainer<>(IMAGE)
-              .withExposedPorts(1025, 8025)
-              .waitingFor(
-                  Wait.forHttp("/api/v1/info")
-                      .forPort(8025)
-                      .withStartupTimeout(Duration.ofMinutes(2)));
-      mailpit.start();
+          Containers.started(
+              new GenericContainer<>(IMAGE)
+                  .withExposedPorts(1025, 8025)
+                  .waitingFor(
+                      Wait.forHttp("/api/v1/info")
+                          .forPort(8025)
+                          .withStartupTimeout(Duration.ofMinutes(2))));
       return new Mail(
           mailpit.getHost(),
           mailpit.getMappedPort(1025),

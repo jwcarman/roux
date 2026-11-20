@@ -63,14 +63,10 @@ class MemberJoinedContractTest {
   }
 
   @BeforeEach
-  void aRoleToInvite() {
+  void aRoleToInviteAndNoEventsYet() {
     jdbc.sql("insert into who_role (id, name) values (?, 'MEMBER') on conflict (name) do nothing")
         .param(UUID.randomUUID())
         .update();
-  }
-
-  @BeforeEach
-  void forget() {
     joined.events.clear();
     joined.refuse = false;
   }

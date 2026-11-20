@@ -45,7 +45,7 @@ import tools.jackson.databind.json.JsonMapper;
  */
 public class ActivityLog {
 
-  private static final Pattern TYPE = Pattern.compile("[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+");
+  private static final Pattern TYPE = Pattern.compile("[a-z][a-z0-9_]*+(?:\\.[a-z][a-z0-9_]*+)++");
   private static final int MAX_TYPE = 100;
   private static final int MAX_DESCRIPTION = 500;
 
