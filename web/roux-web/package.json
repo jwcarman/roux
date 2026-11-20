@@ -56,6 +56,10 @@
     "./navigation": {
       "types": "./dist/navigation/index.d.ts",
       "import": "./dist/navigation/index.js"
+    },
+    "./money": {
+      "types": "./dist/money/index.d.ts",
+      "import": "./dist/money/index.js"
     }
   },
   "scripts": {

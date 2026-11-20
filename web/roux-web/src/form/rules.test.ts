@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { z } from "zod";
-import { after, date, email, fieldRules, id, integer, number, oneOf, phone, text, time, url } from "./rules";
+import { after, date, email, fieldRules, id, integer, money, number, oneOf, phone, text, time, url } from "./rules";
 
 /** The messages a failed parse reports, in order. */
 function messagesOf(result: { success: boolean; error?: z.ZodError }): string[] {
@@ -486,5 +486,60 @@ describe("rules", () => {
       // @ts-expect-error `finish` is not a field of the schema
       after(z.object({ startsAt: time() }), { field: "finish", other: "startsAt" });
     });
+  });
+});
+
+describe("money()", () => {
+  const usd = { currency: "USD", fractionDigits: 2 };
+
+  it("counts decimal places by the currency's digits", () => {
+    const one = money({ currency: "USD", fractionDigits: 1 }).safeParse("1.55");
+    const three = money({ currency: "KWD", fractionDigits: 3 }).safeParse("1.5555");
+    expect(one.error?.issues[0]?.message).toBe("Must have at most 1 decimal place");
+    expect(three.error?.issues[0]?.message).toBe("Must have at most 3 decimal places");
+    expect(money({ currency: "KWD", fractionDigits: 3 }).safeParse("1.5")).toEqual({
+      success: true,
+      data: { minorUnits: 1500, currency: "KWD" },
+    });
+  });
+
+  it("reads a symbol followed by a space", () => {
+    expect(money(usd).safeParse("$ 150").data).toEqual({ minorUnits: 15000, currency: "USD" });
+  });
+
+  it("takes only its own currency's symbol", () => {
+    expect(money({ currency: "EUR", fractionDigits: 2 }).safeParse("€150").data).toEqual({
+      minorUnits: 15000,
+      currency: "EUR",
+    });
+    expect(money({ currency: "EUR", fractionDigits: 2 }).safeParse("$150").error?.issues[0]?.message).toBe(
+      "Must be an amount",
+    );
+  });
+
+  it("treats blank as empty", () => {
+    expect(money(usd).safeParse("   ").error?.issues[0]?.message).toBe("Must not be empty");
+    expect(money(usd).optional().safeParse("   ")).toEqual({ success: true, data: null });
+    expect(money(usd).optional().safeParse("")).toEqual({ success: true, data: null });
+  });
+
+  it("keeps an optional amount's checks", () => {
+    expect(money(usd).optional().positive().safeParse("0").error?.issues[0]?.message).toBe("Must be more than 0");
+    expect(money(usd).optional().safeParse("2.5").data).toEqual({ minorUnits: 250, currency: "USD" });
+  });
+
+  it("marks the field required unless optional", () => {
+    expect(fieldRules.get(money(usd))).toEqual({ required: true });
+    expect(fieldRules.get(money(usd).optional())).toEqual({ required: false });
+  });
+
+  it("reports each refusal as a custom issue on the field", () => {
+    for (const [rule, text] of [
+      [money(usd), ""],
+      [money(usd), "abc"],
+      [money(usd).positive(), "0"],
+    ] as const) {
+      expect(rule.safeParse(text).error?.issues[0]?.code).toBe("custom");
+    }
   });
 });

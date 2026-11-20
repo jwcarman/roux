@@ -10,6 +10,7 @@ export {
   fieldRules,
   id,
   integer,
+  money,
   number,
   oneOf,
   phone,
@@ -20,15 +21,17 @@ export {
   type ChoiceRule,
   type DateRule,
   type FieldRule,
+  type MoneyRule,
   type NumberRule,
   type TextRule,
   type TimeRule,
 } from "./rules";
-export { dateTimeInputOf, inputOf, numberInputOf, timeInputOf } from "./values";
+export { dateTimeInputOf, inputOf, moneyInputOf, numberInputOf, timeInputOf } from "./values";
 export { CheckboxField, type CheckboxFieldProps } from "./fields/CheckboxField";
 export { Form, ResetButton, SubmitButton, SubmittingIndicator } from "./fields/formComponents";
 export { FormField, type FormFieldProps } from "./fields/FormField";
 export { InputField, type InputFieldProps } from "./fields/InputField";
+export { MoneyField, type MoneyFieldProps } from "./fields/MoneyField";
 export { NumberField, type NumberFieldProps } from "./fields/NumberField";
 export { RadioGroupField, type RadioGroupFieldProps } from "./fields/RadioGroupField";
 export { SelectField, type Option, type SelectFieldProps, type SelectValue } from "./fields/SelectField";

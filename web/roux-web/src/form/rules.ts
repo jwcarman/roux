@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isValid, parseISO } from "date-fns";
 import { formatIsoDate, parseIsoDate, parseIsoTime } from "../dates/dates";
+import { currencySymbol, type Money, type MoneySettings } from "../money/money";
 
 /*
  * Rule helpers for a form's Zod schema, in the server's words: each message is the one in
@@ -23,6 +24,9 @@ const NOT_EMAIL = "Must be a valid email address";
 const NOT_WEB_ADDRESS = "Must be a valid web address";
 const NOT_WHOLE = "Must be a whole number";
 const NOT_IN_FUTURE = "Must not be in the future";
+const NOT_AN_AMOUNT = "Must be an amount";
+const NOT_NEGATIVE = "Must not be negative";
+const NOT_POSITIVE = "Must be more than 0";
 
 /** What a field's schema says about the field, for the field to show (an asterisk, a `maxLength`). */
 export interface FieldRule {
@@ -410,3 +414,95 @@ export function after<S extends z.ZodObject>(schema: S, rule: AfterRule<z.output
     { path: [rule.field], error: `Must be after ${label}` },
   );
 }
+
+// --- money ----------------------------------------------------------------------------------------
+
+/** A MoneyField's value (the typed text): `Money`, or `Money | null` once optional. */
+export type MoneyRule<Out extends Money | null = Money> = Rule<
+  Out,
+  string,
+  {
+    /** More than zero: `Must be more than 0` (the server's `@PositiveMoney`). */
+    positive(): MoneyRule<Out>;
+    /** May be left empty, which gives `null`. */
+    optional(): MoneyRule<Money | null>;
+  }
+>;
+
+interface MoneyState {
+  required: boolean;
+  positive: boolean;
+}
+
+/** Too many digits after the point for the currency. */
+function tooManyDecimals(fractionDigits: number): string {
+  if (fractionDigits === 0) {
+    return "Must be a whole amount";
+  }
+  return `Must have at most ${fractionDigits} decimal place${fractionDigits === 1 ? "" : "s"}`;
+}
+
+/**
+ * Typed text as minor units, or the message for why it is not an amount. A leading currency symbol
+ * and thousands commas are allowed; arithmetic is on the digits as text, never on a float.
+ */
+function readAmount(text: string, settings: MoneySettings): number | string {
+  let rest = text.trim();
+  const symbol = currencySymbol(settings.currency);
+  if (rest.startsWith(symbol)) {
+    rest = rest.slice(symbol.length).trim();
+  }
+  const negative = rest.startsWith("-");
+  const digits = (negative ? rest.slice(1) : rest).replaceAll(",", "");
+  if (!/^\d*(?:\.\d*)?$/.test(digits) || !/\d/.test(digits)) {
+    return NOT_AN_AMOUNT;
+  }
+  if (negative) {
+    return NOT_NEGATIVE;
+  }
+  const point = digits.indexOf(".");
+  const whole = point < 0 ? digits : digits.slice(0, point);
+  const fraction = point < 0 ? "" : digits.slice(point + 1);
+  if (fraction.length > settings.fractionDigits) {
+    return tooManyDecimals(settings.fractionDigits);
+  }
+  // Leading zeros are harmless: Number("0050") is 50.
+  const minorUnits = Number(whole + fraction.padEnd(settings.fractionDigits, "0"));
+  return Number.isSafeInteger(minorUnits) ? minorUnits : NOT_AN_AMOUNT;
+}
+
+function moneyRule(settings: MoneySettings, state: MoneyState): MoneyRule<Money | null> {
+  const schema = z.string().transform((value, ctx): Money | null => {
+    if (value.trim() === "") {
+      if (state.required) {
+        ctx.addIssue({ code: "custom", message: NOT_EMPTY });
+        return z.NEVER;
+      }
+      return null;
+    }
+    const amount = readAmount(value, settings);
+    if (typeof amount === "string") {
+      ctx.addIssue({ code: "custom", message: amount });
+      return z.NEVER;
+    }
+    if (state.positive && amount === 0) {
+      ctx.addIssue({ code: "custom", message: NOT_POSITIVE });
+      return z.NEVER;
+    }
+    return { minorUnits: amount, currency: settings.currency };
+  });
+  return rule(schema, { required: state.required }, {
+    positive: () => moneyRule(settings, { ...state, positive: true }),
+    optional: () => moneyRule(settings, { ...state, required: false }),
+  }) as unknown as MoneyRule<Money | null>;
+}
+
+/**
+ * A required amount in the app's currency (`settings` from `moneySettingsQuery`): `Must not be
+ * empty`, `Must be an amount`, `Must not be negative`, `Must have at most 2 decimal places`. Its
+ * output is `Money`; pair it with `f.MoneyField` and the server's `@InCurrency`.
+ */
+export function money(settings: MoneySettings): MoneyRule {
+  return moneyRule(settings, { required: true, positive: false }) as unknown as MoneyRule;
+}
+

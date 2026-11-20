@@ -1,3 +1,4 @@
+import { decimalTextOf, type Money, type MoneySettings } from "../money/money";
 import { formatIsoTime, parseIsoTime } from "../dates/dates";
 
 /**
@@ -37,3 +38,9 @@ export function timeInputOf(iso: string | null): string {
   const parsed = parseIsoTime(iso);
   return parsed === undefined ? iso : formatIsoTime(parsed);
 }
+
+/** A saved amount as a MoneyField's text (`15050` → `"150.50"`); nothing for `null`. */
+export function moneyInputOf(money: Money | null, settings: MoneySettings): string {
+  return money === null ? "" : decimalTextOf(money.minorUnits, settings.fractionDigits);
+}
+

@@ -1,0 +1,29 @@
+{
+  "parse": [
+    { "currency": "USD", "input": "150", "minorUnits": 15000 },
+    { "currency": "USD", "input": "150.5", "minorUnits": 15050 },
+    { "currency": "USD", "input": "150.50", "minorUnits": 15050 },
+    { "currency": "USD", "input": "$150", "minorUnits": 15000 },
+    { "currency": "USD", "input": "1,000.50", "minorUnits": 100050 },
+    { "currency": "USD", "input": " 150 ", "minorUnits": 15000 },
+    { "currency": "USD", "input": "150.", "minorUnits": 15000 },
+    { "currency": "USD", "input": ".5", "minorUnits": 50 },
+    { "currency": "USD", "input": "0", "minorUnits": 0 },
+    { "currency": "USD", "input": "", "message": "Must not be empty" },
+    { "currency": "USD", "input": "abc", "message": "Must be an amount" },
+    { "currency": "USD", "input": ".", "message": "Must be an amount" },
+    { "currency": "USD", "input": "1e3", "message": "Must be an amount" },
+    { "currency": "USD", "input": "1.2.3", "message": "Must be an amount" },
+    { "currency": "USD", "input": "-5", "message": "Must not be negative" },
+    { "currency": "USD", "input": "150.555", "message": "Must have at most 2 decimal places" },
+    { "currency": "JPY", "input": "150", "minorUnits": 150 },
+    { "currency": "JPY", "input": "150.5", "message": "Must be a whole amount" }
+  ],
+  "rules": [
+    { "money": { "minorUnits": 0, "currency": "USD" }, "positive": true, "message": "Must be more than 0" },
+    { "money": { "minorUnits": 1, "currency": "USD" }, "positive": true, "message": null },
+    { "money": { "minorUnits": -1, "currency": "USD" }, "positive": false, "message": "Must not be negative" },
+    { "money": { "minorUnits": 0, "currency": "USD" }, "positive": false, "message": null },
+    { "money": { "minorUnits": 100, "currency": "EUR" }, "positive": false, "message": "Must be in USD" }
+  ]
+}

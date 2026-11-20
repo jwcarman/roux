@@ -26,14 +26,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Currency;
+import java.util.List;
+import java.util.stream.Stream;
 
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Valid;
+import jakarta.validation.Validator;
 import jakarta.validation.constraints.NotNull;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.jwcarman.roux.money.InCurrency;
 import org.jwcarman.roux.money.Money;
 import org.jwcarman.roux.money.PositiveMoney;
+import org.jwcarman.roux.money.PositiveOrZeroMoney;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -44,6 +51,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /** Money as an app gets it from the starter: its JSON, {@code GET /api/money}, its constraints. */
@@ -54,6 +62,37 @@ class MoneyContractTest {
 
   @Autowired MockMvc mvc;
   @Autowired JsonMapper json;
+
+  @Autowired Validator validator;
+
+  record Positive(@PositiveMoney @InCurrency Money money) {}
+
+  record PositiveOrZero(@PositiveOrZeroMoney @InCurrency Money money) {}
+
+  static Stream<JsonNode> rules() {
+    return Fixtures.read("money.json").get("rules").valueStream();
+  }
+
+  /** contracts/money.json's "rules": the server's answer, which money() in the browser matches. */
+  @ParameterizedTest
+  @MethodSource("rules")
+  void everyRuleCaseGetsTheContractsMessage(JsonNode rule) {
+    JsonNode money = rule.get("money");
+    Money value =
+        Money.of(
+            money.get("minorUnits").asLong(),
+            Currency.getInstance(money.get("currency").asString()));
+    Object holder =
+        rule.get("positive").asBoolean() ? new Positive(value) : new PositiveOrZero(value);
+    List<String> messages =
+        validator.validate(holder).stream().map(ConstraintViolation::getMessage).toList();
+
+    if (rule.get("message").isNull()) {
+      assertThat(messages).isEmpty();
+    } else {
+      assertThat(messages).containsExactly(rule.get("message").asString());
+    }
+  }
 
   record PriceRequest(@NotNull @PositiveMoney @InCurrency Money price) {}
 

@@ -2,6 +2,7 @@ import { createFormHook, type AnyFormApi } from "@tanstack/react-form";
 import { CheckboxField } from "./fields/CheckboxField";
 import { Form, ResetButton, SubmitButton, SubmittingIndicator } from "./fields/formComponents";
 import { InputField } from "./fields/InputField";
+import { MoneyField } from "./fields/MoneyField";
 import { NumberField } from "./fields/NumberField";
 import { RadioGroupField } from "./fields/RadioGroupField";
 import { SelectField } from "./fields/SelectField";
@@ -30,7 +31,7 @@ import type { Problem } from "../problem/problem";
 export const { useAppForm, withForm } = createFormHook({
   fieldContext,
   formContext,
-  fieldComponents: { CheckboxField, InputField, NumberField, TextAreaField, SelectField, RadioGroupField },
+  fieldComponents: { CheckboxField, InputField, MoneyField, NumberField, TextAreaField, SelectField, RadioGroupField },
   formComponents: { Form, SubmitButton, ResetButton, SubmittingIndicator },
 });
 
