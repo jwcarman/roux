@@ -24,9 +24,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.jwcarman.roux.roles.MemberJoined;
 import org.jwcarman.roux.roles.OwnerBootstrap;
 import org.jwcarman.roux.roles.RouxRoles;
+import org.jwcarman.roux.roles.UserJoined;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailAddressTakenException;
 import org.jwcarman.who.emaillink.EmailCredentialService;
@@ -41,7 +41,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.PlatformTransactionManager;
 
-/** Test people are made as real members are: one transaction, one {@link MemberJoined}. */
+/** Test people are made as real members are: one transaction, one {@link UserJoined}. */
 @AppTest
 @Import(TestMembersTest.Joined.class)
 class TestMembersTest {
@@ -58,14 +58,14 @@ class TestMembersTest {
   @Autowired ApplicationEventPublisher events;
   @Autowired PlatformTransactionManager transactions;
 
-  /** Records every {@link MemberJoined}, and refuses it when told to. */
+  /** Records every {@link UserJoined}, and refuses it when told to. */
   @TestConfiguration(proxyBeanMethods = false)
   static class Joined {
-    final List<MemberJoined> events = new CopyOnWriteArrayList<>();
+    final List<UserJoined> events = new CopyOnWriteArrayList<>();
     volatile boolean refuse;
 
     @EventListener
-    void on(MemberJoined event) {
+    void on(UserJoined event) {
       if (refuse) {
         throw new IllegalStateException("refused by the test");
       }
@@ -119,7 +119,7 @@ class TestMembersTest {
     TestMember ada = members.signedIn("Ada Lovelace", " Ada@Example.org ", "MEMBER");
 
     assertThat(joined.events)
-        .containsExactly(new MemberJoined(ada.id(), "Ada Lovelace", "ada@example.org"));
+        .containsExactly(new UserJoined(ada.id(), "Ada Lovelace", "ada@example.org", "MEMBER"));
   }
 
   @Test

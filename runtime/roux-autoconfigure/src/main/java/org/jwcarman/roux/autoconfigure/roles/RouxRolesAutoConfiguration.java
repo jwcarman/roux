@@ -19,8 +19,8 @@ import org.jwcarman.roux.roles.CallerPermissions;
 import org.jwcarman.roux.roles.InvitableRoles;
 import org.jwcarman.roux.roles.InvitableRolesController;
 import org.jwcarman.roux.roles.InvitableRolesGuard;
-import org.jwcarman.roux.roles.MemberInvitations;
 import org.jwcarman.roux.roles.OwnerBootstrap;
+import org.jwcarman.roux.roles.UserInvitations;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailCredentialService;
 import org.jwcarman.who.emaillink.InvitationService;
@@ -60,7 +60,7 @@ public class RouxRolesAutoConfiguration {
    * @param rbac assigns OWNER
    * @param who creates the owner's identity
    * @param emailCredentials registers the owner's address
-   * @param events publishes {@code MemberJoined}
+   * @param events publishes {@code UserJoined}
    * @param transactionManager runs the owner's transaction
    * @param owner {@code roux.owner.*}
    * @return the bootstrap
@@ -103,17 +103,17 @@ public class RouxRolesAutoConfiguration {
   }
 
   /**
-   * Invites members by name, publishing {@code MemberJoined} inside who's invitation.
+   * Invites users by name, publishing {@code UserJoined} inside who's invitation.
    *
    * @param invitations who's invitations
-   * @param events publishes {@code MemberJoined}
+   * @param events publishes {@code UserJoined}
    * @return the service
    */
   @Bean
   @ConditionalOnMissingBean
-  public MemberInvitations rouxMemberInvitations(
+  public UserInvitations rouxUserInvitations(
       InvitationService invitations, ApplicationEventPublisher events) {
-    return new MemberInvitations(invitations, events);
+    return new UserInvitations(invitations, events);
   }
 
   /**

@@ -26,8 +26,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Test;
-import org.jwcarman.roux.roles.MemberInvitations;
-import org.jwcarman.roux.roles.MemberJoined;
+import org.jwcarman.roux.roles.UserInvitations;
+import org.jwcarman.roux.roles.UserJoined;
 import org.jwcarman.who.emaillink.EmailCredentialService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -38,23 +38,23 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 /** An invitation through roux: the member joins inside who's transaction, or not at all. */
 @SpringBootTest(classes = ContractTestApplication.class)
-@Import(MemberJoinedContractTest.Joined.class)
+@Import(UserJoinedContractTest.Joined.class)
 @DisplayNameGeneration(ReplaceUnderscores.class)
-class MemberJoinedContractTest {
+class UserJoinedContractTest {
 
-  @Autowired MemberInvitations invitations;
+  @Autowired UserInvitations invitations;
   @Autowired EmailCredentialService emails;
   @Autowired JdbcClient jdbc;
   @Autowired Joined joined;
 
-  /** Records every {@link MemberJoined}, and refuses it when told to. */
+  /** Records every {@link UserJoined}, and refuses it when told to. */
   @TestConfiguration(proxyBeanMethods = false)
   static class Joined {
-    final List<MemberJoined> events = new CopyOnWriteArrayList<>();
+    final List<UserJoined> events = new CopyOnWriteArrayList<>();
     volatile boolean refuse;
 
     @EventListener
-    void on(MemberJoined event) {
+    void on(UserJoined event) {
       if (refuse) {
         throw new IllegalStateException("refused by the test");
       }
@@ -78,9 +78,10 @@ class MemberJoinedContractTest {
     invitations.invite("Ada Lovelace", address, "MEMBER");
 
     assertThat(joined.events).hasSize(1);
-    MemberJoined ada = joined.events.getFirst();
+    UserJoined ada = joined.events.getFirst();
     assertThat(ada.name()).isEqualTo("Ada Lovelace");
     assertThat(ada.email()).isEqualTo(address);
+    assertThat(ada.role()).isEqualTo("MEMBER");
     assertThat(emails.findByAddress(address)).isPresent();
   }
 

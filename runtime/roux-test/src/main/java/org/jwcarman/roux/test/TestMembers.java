@@ -19,8 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.jwcarman.roux.roles.MemberJoined;
 import org.jwcarman.roux.roles.OwnerBootstrap;
+import org.jwcarman.roux.roles.UserJoined;
 import org.jwcarman.who.core.domain.Identity;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailCredential;
@@ -36,7 +36,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Members for an {@link AppTest}: a clean slate, and people signed in with a role. A person is made
- * as a real member is: who's identity, address and role, and {@link MemberJoined} in the same
+ * as a real member is: who's identity, address and role, and {@link UserJoined} in the same
  * transaction, so the app's listener makes its own data for them.
  */
 public class TestMembers {
@@ -70,7 +70,7 @@ public class TestMembers {
    * @param who creates identities
    * @param rbac finds and assigns roles
    * @param emailCredentials registers addresses
-   * @param events publishes {@link MemberJoined}
+   * @param events publishes {@link UserJoined}
    * @param transactionManager runs each new member's transaction
    */
   public TestMembers(
@@ -115,7 +115,7 @@ public class TestMembers {
   /**
    * A new member with {@code role}, signed in.
    *
-   * @param name the member's display name, as {@link MemberJoined} carries it
+   * @param name the member's display name, as {@link UserJoined} carries it
    * @param email the member's address
    * @param role the name of one of the app's roles
    * @return the member and their browser
@@ -134,7 +134,7 @@ public class TestMembers {
    * made in one transaction: an address already registered, or a listener that throws, leaves no
    * one behind.
    *
-   * @param name the member's display name, as {@link MemberJoined} carries it
+   * @param name the member's display name, as {@link UserJoined} carries it
    * @param email the member's address
    * @param role the role to assign
    * @return the member and their browser
@@ -147,7 +147,8 @@ public class TestMembers {
               Identity created = who.createIdentity();
               credential[0] = emailCredentials.register(created, email);
               rbac.assignRoleToIdentity(created, role);
-              events.publishEvent(new MemberJoined(created.id(), name, credential[0].address()));
+              events.publishEvent(
+                  new UserJoined(created.id(), name, credential[0].address(), role.name()));
               return created;
             });
     return new TestMember(identity.id(), browserFor(identity.id(), credential[0]));

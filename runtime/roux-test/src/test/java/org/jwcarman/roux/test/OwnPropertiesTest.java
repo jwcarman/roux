@@ -18,7 +18,7 @@ package org.jwcarman.roux.test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
-import org.jwcarman.roux.roles.MemberJoined;
+import org.jwcarman.roux.roles.UserJoined;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -42,6 +42,6 @@ class OwnPropertiesTest {
 
     assertThat(jdbc.queryForObject("select current_database()", String.class))
         .startsWith("app_test_");
-    assertThat(joined.events).extracting(MemberJoined::name).containsExactly("Another Owner");
+    assertThat(joined.events).extracting(UserJoined::name).containsExactly("Another Owner");
   }
 }

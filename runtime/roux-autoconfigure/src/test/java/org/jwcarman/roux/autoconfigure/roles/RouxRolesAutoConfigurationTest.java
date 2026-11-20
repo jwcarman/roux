@@ -25,8 +25,8 @@ import org.jwcarman.roux.roles.CallerPermissions;
 import org.jwcarman.roux.roles.InvitableRoles;
 import org.jwcarman.roux.roles.InvitableRolesController;
 import org.jwcarman.roux.roles.InvitableRolesGuard;
-import org.jwcarman.roux.roles.MemberInvitations;
 import org.jwcarman.roux.roles.OwnerBootstrap;
+import org.jwcarman.roux.roles.UserInvitations;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailCredentialService;
 import org.jwcarman.who.emaillink.InvitationService;
@@ -79,8 +79,8 @@ class RouxRolesAutoConfigurationTest {
         .run(
             context ->
                 assertThat(context)
-                    .getBean(MemberInvitations.class)
-                    .isInstanceOf(MemberInvitations.class));
+                    .getBean(UserInvitations.class)
+                    .isInstanceOf(UserInvitations.class));
   }
 
   @Test

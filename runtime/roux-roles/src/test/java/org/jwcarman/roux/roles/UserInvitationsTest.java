@@ -35,11 +35,11 @@ import org.jwcarman.who.emaillink.Invitation;
 import org.jwcarman.who.emaillink.InvitationService;
 
 @DisplayNameGeneration(ReplaceUnderscores.class)
-class MemberInvitationsTest {
+class UserInvitationsTest {
 
   private final InvitationService who = mock(InvitationService.class);
   private final List<Object> happened = new ArrayList<>();
-  private final MemberInvitations invitations = new MemberInvitations(who, happened::add);
+  private final UserInvitations invitations = new UserInvitations(who, happened::add);
   private final Identity ada = Identity.create();
 
   /** who's invitation: runs the callback with the new identity, inside its transaction. */
@@ -55,7 +55,7 @@ class MemberInvitationsTest {
   }
 
   @Test
-  void publishes_member_joined_inside_the_invitation_then_the_apps_work() {
+  void publishes_user_joined_inside_the_invitation_then_the_apps_work() {
     Invitation sent = whoInvites(new Invitation(ada.id(), EmailLinkOutcome.SENT));
 
     Invitation invitation =
@@ -64,7 +64,8 @@ class MemberInvitationsTest {
 
     assertThat(invitation).isSameAs(sent);
     assertThat(happened)
-        .containsExactly(new MemberJoined(ada.id(), "Ada Lovelace", "ada@example.org"), "app work");
+        .containsExactly(
+            new UserJoined(ada.id(), "Ada Lovelace", "ada@example.org", "MEMBER"), "app work");
   }
 
   @Test
@@ -74,6 +75,6 @@ class MemberInvitationsTest {
     assertThat(invitations.invite("Ada Lovelace", " Ada@Example.org ", "MEMBER")).isSameAs(sent);
 
     assertThat(happened)
-        .containsExactly(new MemberJoined(ada.id(), "Ada Lovelace", "ada@example.org"));
+        .containsExactly(new UserJoined(ada.id(), "Ada Lovelace", "ada@example.org", "MEMBER"));
   }
 }

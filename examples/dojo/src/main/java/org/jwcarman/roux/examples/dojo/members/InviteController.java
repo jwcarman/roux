@@ -10,7 +10,7 @@ import org.jwcarman.roux.examples.dojo.identity.Permissions;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.problems.InvalidFieldException;
 import org.jwcarman.roux.roles.InvitableRoles;
-import org.jwcarman.roux.roles.MemberInvitations;
+import org.jwcarman.roux.roles.UserInvitations;
 import org.jwcarman.who.core.domain.Identity;
 import org.jwcarman.who.emaillink.EmailAddressTakenException;
 import org.jwcarman.who.emaillink.Invitation;
@@ -26,8 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * The invite form's endpoint: the dojo's rules (a name, and only the roles in {@code
- * roux.roles.invitable}) in front of roux's {@link MemberInvitations}. The member's profile comes
- * from {@link MemberProfiles}, which hears {@code MemberJoined}; the "invited" activity entry is
+ * roux.roles.invitable}) in front of roux's {@link UserInvitations}. The member's profile comes
+ * from {@link MemberProfiles}, which hears {@code UserJoined}; the "invited" activity entry is
  * written in the same transaction, so both commit or roll back with the invitation. roux's guard
  * refuses any other role for invitations made any other way.
  */
@@ -37,13 +37,13 @@ public class InviteController {
 
   private static final Logger log = LoggerFactory.getLogger(InviteController.class);
 
-  private final MemberInvitations invitations;
+  private final UserInvitations invitations;
   private final MemberProfileRepository profiles;
   private final ActivityLog activityLog;
   private final InvitableRoles invitable;
 
   public InviteController(
-      MemberInvitations invitations,
+      UserInvitations invitations,
       MemberProfileRepository profiles,
       ActivityLog activityLog,
       InvitableRoles invitable) {

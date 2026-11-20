@@ -18,13 +18,14 @@ package org.jwcarman.roux.roles;
 import java.util.UUID;
 
 /**
- * A member joined: the first owner at startup, someone invited through {@link MemberInvitations},
- * or a test's person. Published inside the transaction that creates the member, so an app's
- * listener adds its own data for them (a profile) in the same commit, and a listener that throws
- * rolls the member back.
+ * A user joined: the first owner at startup, someone invited through {@link UserInvitations}, or a
+ * test's person. Published inside the transaction that creates the user, so an app's listener adds
+ * its own data for them in the same commit (an entity for one role only, by {@code role}), and a
+ * listener that throws rolls the user back.
  *
- * @param identityId the member's who identity
- * @param name the member's display name
- * @param email the member's address, as who registered it
+ * @param identityId the user's who identity
+ * @param name the user's display name
+ * @param email the user's address, as who registered it
+ * @param role the role the user joined with, by name ({@code OWNER} for the first owner)
  */
-public record MemberJoined(UUID identityId, String name, String email) {}
+public record UserJoined(UUID identityId, String name, String email, String role) {}

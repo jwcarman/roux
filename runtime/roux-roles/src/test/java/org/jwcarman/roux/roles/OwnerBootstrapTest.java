@@ -97,7 +97,7 @@ class OwnerBootstrapTest {
 
     bootstrap.run(null);
 
-    verify(events).publishEvent(new MemberJoined(id, "Pat", EMAIL));
+    verify(events).publishEvent(new UserJoined(id, "Pat", EMAIL, RouxRoles.OWNER));
     verify(rbac).assignRoleToIdentity(identity, owner);
   }
 

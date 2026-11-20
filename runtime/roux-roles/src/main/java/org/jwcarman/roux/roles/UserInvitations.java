@@ -25,11 +25,11 @@ import org.jwcarman.who.emaillink.InvitationService;
 import org.springframework.context.ApplicationEventPublisher;
 
 /**
- * Invites a member by name: who's invitation, with {@link MemberJoined} published inside it. The
- * role is checked as every invitation's is ({@link InvitableRolesGuard}); an address already
- * registered is refused as who refuses it ({@code EmailAddressTakenException}).
+ * Invites a user by name: who's invitation, with {@link UserJoined} published inside it. The role
+ * is checked as every invitation's is ({@link InvitableRolesGuard}); an address already registered
+ * is refused as who refuses it ({@code EmailAddressTakenException}).
  */
-public class MemberInvitations {
+public class UserInvitations {
 
   private final InvitationService invitations;
   private final ApplicationEventPublisher events;
@@ -38,19 +38,19 @@ public class MemberInvitations {
    * Creates the service.
    *
    * @param invitations who's invitations
-   * @param events publishes {@link MemberJoined}
+   * @param events publishes {@link UserJoined}
    */
-  public MemberInvitations(InvitationService invitations, ApplicationEventPublisher events) {
+  public UserInvitations(InvitationService invitations, ApplicationEventPublisher events) {
     this.invitations = invitations;
     this.events = events;
   }
 
   /**
-   * Invites a member.
+   * Invites a user.
    *
-   * @param name the member's display name
+   * @param name the user's display name
    * @param email the address to invite
-   * @param role the role the member gets
+   * @param role the role the user gets
    * @return who's invitation: the new identity, and whether the link was sent
    */
   public Invitation invite(String name, String email, String role) {
@@ -58,12 +58,12 @@ public class MemberInvitations {
   }
 
   /**
-   * Invites a member, with the app's other work in the invitation's transaction.
+   * Invites a user, with the app's other work in the invitation's transaction.
    *
-   * @param name the member's display name
+   * @param name the user's display name
    * @param email the address to invite
-   * @param role the role the member gets
-   * @param alsoInTransaction runs after {@link MemberJoined}, in the same transaction (the app's
+   * @param role the role the user gets
+   * @param alsoInTransaction runs after {@link UserJoined}, in the same transaction (the app's
    *     "Invited" activity); throwing rolls the invitation back
    * @return who's invitation: the new identity, and whether the link was sent
    */
@@ -74,7 +74,7 @@ public class MemberInvitations {
         email,
         Set.of(role),
         identity -> {
-          events.publishEvent(new MemberJoined(identity.id(), name, address));
+          events.publishEvent(new UserJoined(identity.id(), name, address, role));
           alsoInTransaction.accept(identity);
         });
   }

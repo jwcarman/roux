@@ -30,8 +30,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.jwcarman.roux.roles.MemberJoined;
 import org.jwcarman.roux.roles.OwnerBootstrap;
+import org.jwcarman.roux.roles.UserJoined;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailCredentialService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,14 +57,14 @@ class OwnerBootstrapContractTest {
   @Autowired EmailCredentialService emails;
   @Autowired Recorder recorder;
 
-  /** Records every {@link MemberJoined}, and refuses it when told to. */
+  /** Records every {@link UserJoined}, and refuses it when told to. */
   @TestConfiguration(proxyBeanMethods = false)
   static class Recorder {
-    final List<MemberJoined> events = new CopyOnWriteArrayList<>();
+    final List<UserJoined> events = new CopyOnWriteArrayList<>();
     volatile boolean refuse;
 
     @EventListener
-    void on(MemberJoined event) {
+    void on(UserJoined event) {
       if (refuse) {
         throw new IllegalStateException("refused by the test");
       }
@@ -109,7 +109,7 @@ class OwnerBootstrapContractTest {
     assertThat(emails.findOldestFor(owner))
         .hasValueSatisfying(c -> assertThat(c.address()).isEqualTo(OWNER_EMAIL));
     assertThat(recorder.events)
-        .containsExactly(new MemberJoined(owner, "Contract Owner", OWNER_EMAIL));
+        .containsExactly(new UserJoined(owner, "Contract Owner", OWNER_EMAIL, "OWNER"));
   }
 
   @Test
