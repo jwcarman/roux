@@ -4,7 +4,8 @@ import { act, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { QueryKey } from "@tanstack/react-query";
 import { pageQuery, type PageDto, type PageParams, type PageQuery, type TableSearch } from "../paging/paging";
-import { fakeEndpoint, pageOf, people, type Person } from "../testing/fakeServer";
+import { fakeEndpoint, people, type Person } from "../testing/fakeServer";
+import { pageOf } from "../testing/pages";
 import { renderHookWithProviders } from "../testing/render";
 import { useQueryTable, type TableParams, type UseQueryTableOptions } from "./useQueryTable";
 

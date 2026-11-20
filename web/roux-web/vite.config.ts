@@ -28,11 +28,15 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.{ts,tsx}"],
-    setupFiles: ["src/testing/setup.ts"],
+    setupFiles: ["src/testing/setup/index.ts"],
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],
-      exclude: ["src/testing/**", "src/**/index.ts", "src/**/*.test.*"],
+      exclude: [
+        "src/testing/{contracts,css,fakeServer,location,router,validationMessages}.*",
+        "src/**/index.ts",
+        "src/**/*.test.*",
+      ],
       thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 },
     },
   },

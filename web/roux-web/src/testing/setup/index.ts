@@ -1,8 +1,15 @@
+/**
+ * The test setup for an app on roux: list it in Vitest's `setupFiles`
+ * (`setupFiles: ["@jwcarman/roux-web/testing/setup"]`). It adds jest-dom's matchers, starts the fake
+ * network before the tests (a request no handler answers fails the test that sent it), sets the test
+ * organization before each test, and after each waits for requests in flight, unmounts, drops the
+ * test's handlers and checks every request was answered. It also gives jsdom what Chakra reaches for.
+ */
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
-import { setOrganization, testOrganization } from "../organization/organization";
-import { checkAllAnswered, listen, server, settle } from "./server";
+import { setOrganization, testOrganization } from "../../organization/organization";
+import { checkAllAnswered, listen, server, settle } from "../server";
 
 beforeAll(listen);
 

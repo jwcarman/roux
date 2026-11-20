@@ -14,5 +14,14 @@
     "outDir": "dist"
   },
   "include": ["src"],
-  "exclude": ["src/testing", "src/**/*.test.ts", "src/**/*.test.tsx"]
+  "exclude": [
+    "src/testing/contracts.ts",
+    "src/testing/css.ts",
+    "src/testing/fakeServer.ts",
+    "src/testing/location.ts",
+    "src/testing/router.tsx",
+    "src/testing/validationMessages.ts",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx"
+  ]
 }

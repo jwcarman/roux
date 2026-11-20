@@ -42,11 +42,11 @@ export function checkAllAnswered(): void {
  * given up on after the timeout.
  */
 export async function settle(timeout = 1000): Promise<void> {
-  const deadline = Date.now() + timeout;
+  const deadline = AbortSignal.timeout(timeout);
   // A request reaches MSW a turn after the app sends it, and the app handles the answer a turn after
   // it arrives: let each happen before looking.
   await nextTurn();
-  while (inFlight.size > 0 && Date.now() < deadline) {
+  while (inFlight.size > 0 && !deadline.aborted) {
     await nextTurn(10);
   }
   inFlight.clear();

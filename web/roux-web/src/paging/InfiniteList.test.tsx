@@ -4,7 +4,8 @@ import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pageQuery, type PageDto, type PageQuery } from "./paging";
-import { pageOf, people, type Person } from "../testing/fakeServer";
+import { people, type Person } from "../testing/fakeServer";
+import { pageOf } from "../testing/pages";
 import { renderWithProviders } from "../testing/render";
 import { InfiniteList, type InfiniteListProps } from "./InfiniteList";
 
