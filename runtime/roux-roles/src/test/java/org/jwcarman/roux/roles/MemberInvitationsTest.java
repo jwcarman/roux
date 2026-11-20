@@ -69,9 +69,9 @@ class MemberInvitationsTest {
 
   @Test
   void without_extra_work_it_only_publishes() {
-    whoInvites(new Invitation(ada.id(), EmailLinkOutcome.SENT));
+    Invitation sent = whoInvites(new Invitation(ada.id(), EmailLinkOutcome.SENT));
 
-    invitations.invite("Ada Lovelace", " Ada@Example.org ", "MEMBER");
+    assertThat(invitations.invite("Ada Lovelace", " Ada@Example.org ", "MEMBER")).isSameAs(sent);
 
     assertThat(happened)
         .containsExactly(new MemberJoined(ada.id(), "Ada Lovelace", "ada@example.org"));

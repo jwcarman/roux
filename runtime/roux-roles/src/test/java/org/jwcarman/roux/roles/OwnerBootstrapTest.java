@@ -15,6 +15,7 @@
  */
 package org.jwcarman.roux.roles;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,9 +40,11 @@ import org.jwcarman.who.emaillink.EmailCredential;
 import org.jwcarman.who.emaillink.EmailCredentialService;
 import org.jwcarman.who.rbac.RbacService;
 import org.jwcarman.who.rbac.Role;
+import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 
 /**
  * The bootstrap's decisions, with who and the database mocked; the contract tests run it on
@@ -57,9 +60,10 @@ class OwnerBootstrapTest {
   private final WhoService who = mock(WhoService.class);
   private final EmailCredentialService emails = mock(EmailCredentialService.class);
   private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
+  private final PlatformTransactionManager transactions = mock(PlatformTransactionManager.class);
   private final OwnerBootstrap bootstrap =
-      new OwnerBootstrap(
-          jdbc, rbac, who, emails, events, mock(PlatformTransactionManager.class), EMAIL, "Pat");
+      new OwnerBootstrap(jdbc, rbac, who, emails, events, transactions, EMAIL, "Pat");
+  private final Role owner = new Role(UUID.randomUUID(), RouxRoles.OWNER);
 
   private final UUID id = UUID.randomUUID();
   private final Identity identity =
@@ -72,8 +76,7 @@ class OwnerBootstrapTest {
 
   private void whoCreates() {
     when(who.createIdentity()).thenReturn(identity);
-    when(rbac.findRequiredRole(RouxRoles.OWNER))
-        .thenReturn(new Role(UUID.randomUUID(), RouxRoles.OWNER));
+    when(rbac.findRequiredRole(RouxRoles.OWNER)).thenReturn(owner);
   }
 
   @Test
@@ -95,6 +98,21 @@ class OwnerBootstrapTest {
     bootstrap.run(null);
 
     verify(events).publishEvent(new MemberJoined(id, "Pat", EMAIL));
+    verify(rbac).assignRoleToIdentity(identity, owner);
+  }
+
+  @Test
+  void the_owner_is_made_under_the_lock_in_a_transaction_of_its_own() {
+    activeOwner(true);
+
+    bootstrap.run(null);
+
+    verify(jdbc).sql(contains("pg_advisory_xact_lock"));
+    ArgumentCaptor<TransactionDefinition> definition =
+        ArgumentCaptor.forClass(TransactionDefinition.class);
+    verify(transactions).getTransaction(definition.capture());
+    assertThat(definition.getValue().getPropagationBehavior())
+        .isEqualTo(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
   }
 
   @Test
