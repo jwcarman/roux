@@ -11,10 +11,18 @@ export const STUDENT_STATUSES = ["ACTIVE", "INACTIVE"] as const;
 export type StudentStatus = (typeof STUDENT_STATUSES)[number];
 
 /** The list's sorts: the column ids, and `StudentSort`'s values on the server. */
-export const STUDENT_SORTS = ["NAME", "START_DATE", "RANK"] as const;
+export const STUDENT_SORTS = ["NAME", "START_DATE", "RANK", "PAID_THROUGH"] as const;
 export type StudentSort = (typeof STUDENT_SORTS)[number];
 
-/** A student as `/api/students` answers it; `currentRank` is the latest promotion's, or null. */
+/** Where a student stands on paying: the server's PaymentState. */
+export const PAYMENT_STATES = ["PAID", "OVERDUE", "NONE"] as const;
+export type PaymentState = (typeof PAYMENT_STATES)[number];
+
+/**
+ * A student as `/api/students` answers it; `currentRank` is the latest promotion's, or null. The
+ * list's rows carry `planName`, `paidThrough` and `payment` for a caller with `payments.record`
+ * (null otherwise); a student's own page has none of them.
+ */
 export interface Student {
   id: string;
   firstName: string;
@@ -26,6 +34,9 @@ export interface Student {
   status: StudentStatus;
   currentRank: Rank | null;
   version: number;
+  planName?: string | null;
+  paidThrough?: string | null;
+  payment?: PaymentState | null;
 }
 
 /** A promotion as `/api/students/{id}` lists it. */
@@ -45,6 +56,7 @@ export interface StudentFilters {
   search?: string;
   status?: StudentStatus;
   rankId?: string;
+  payment?: PaymentState;
 }
 
 /** StudentRequest's rules (without the version), in the server's words. */

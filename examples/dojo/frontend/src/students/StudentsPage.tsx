@@ -1,20 +1,31 @@
-import { Button, Flex, HStack, Heading, Link, Stack, Text, VisuallyHidden } from "@chakra-ui/react";
+import { Badge, Button, Flex, HStack, Heading, Link, Stack, Text, VisuallyHidden } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import type { TableSearch } from "@jwcarman/roux-web/paging";
 import { DEFAULT_PAGE_SIZE, DebouncedSearchInput, FilterChips, QueryTable } from "@jwcarman/roux-web/table";
-import { STUDENTS_MANAGE } from "../permissions.gen";
+import { PAYMENTS_RECORD, STUDENTS_MANAGE } from "../permissions.gen";
 import { RankSwatch } from "../ranks/RankSwatch";
 import { ranksQuery } from "../ranks/ranks";
 import { formatDate } from "../shell/format";
 import { useSession } from "../shell/session";
 import { StudentActions } from "./StudentActions";
 import { StudentDialog } from "./StudentDialog";
-import { STUDENT_SORTS, studentsPage, type Student, type StudentSort, type StudentStatus } from "./students";
+import {
+  STUDENT_SORTS,
+  studentsPage,
+  type PaymentState,
+  type Student,
+  type StudentSort,
+  type StudentStatus,
+} from "./students";
 
 /** The list's URL: page, sort and search, plus its filters (all optional). */
-export type StudentsSearch = TableSearch<StudentSort> & { status?: StudentStatus; rankId?: string };
+export type StudentsSearch = TableSearch<StudentSort> & {
+  status?: StudentStatus;
+  rankId?: string;
+  payment?: PaymentState;
+};
 
 /** The list's defaults, left out of the URL. */
 export const STUDENTS_SEARCH_DEFAULTS = {
@@ -27,6 +38,12 @@ export const STUDENTS_SEARCH_DEFAULTS = {
 const STATUS_CHIPS = [
   { value: "ACTIVE", label: "Active" },
   { value: "INACTIVE", label: "Inactive" },
+] as const;
+
+const PAYMENT_CHIPS = [
+  { value: "PAID", label: "Paid" },
+  { value: "OVERDUE", label: "Overdue" },
+  { value: "NONE", label: "No membership" },
 ] as const;
 
 const column = createColumnHelper<Student>();
@@ -66,16 +83,50 @@ const READ_COLUMNS: ColumnDef<Student, unknown>[] = [
   column.accessor("email", { header: "Email", enableSorting: false, cell: (info) => info.getValue() ?? "—" }),
 ];
 
-/** The managers' columns. Fixed, not built on each render: a new cell component would remount the
- * row's dialog and close it whenever the page re-renders (the rank chips arriving, say). */
-const MANAGE_COLUMNS: ColumnDef<Student, unknown>[] = [
-  ...READ_COLUMNS,
-  column.display({
-    id: "actions",
-    header: () => <VisuallyHidden>Actions</VisuallyHidden>,
-    cell: ({ row }) => <StudentActions student={row.original} />,
+/** The columns for whoever records payments: the plan, and paid through with an Overdue badge. */
+const PAYMENT_COLUMNS: ColumnDef<Student, unknown>[] = [
+  column.accessor((student) => student.planName ?? null, {
+    id: "plan",
+    header: "Plan",
+    enableSorting: false,
+    cell: (info) => info.getValue() ?? "—",
+  }),
+  column.accessor((student) => student.paidThrough ?? null, {
+    id: "PAID_THROUGH" satisfies StudentSort,
+    header: "Paid through",
+    cell: ({ row }) =>
+      row.original.paidThrough ? (
+        <HStack gap="2">
+          <Text>{formatDate(row.original.paidThrough)}</Text>
+          {row.original.payment === "OVERDUE" && <Badge colorPalette="red">Overdue</Badge>}
+        </HStack>
+      ) : (
+        "—"
+      ),
   }),
 ];
+
+const ACTIONS: ColumnDef<Student, unknown> = column.display({
+  id: "actions",
+  header: () => <VisuallyHidden>Actions</VisuallyHidden>,
+  cell: ({ row }) => <StudentActions student={row.original} />,
+});
+
+/** Each permission's columns. Fixed, not built on each render: a new cell component would remount
+ * the row's dialog and close it whenever the page re-renders (the rank chips arriving, say). */
+const COLUMNS = {
+  read: READ_COLUMNS,
+  manage: [...READ_COLUMNS, ACTIONS],
+  readWithPayments: [...READ_COLUMNS, ...PAYMENT_COLUMNS],
+  manageWithPayments: [...READ_COLUMNS, ...PAYMENT_COLUMNS, ACTIONS],
+};
+
+function columnsFor(manages: boolean, recordsPayments: boolean): ColumnDef<Student, unknown>[] {
+  if (recordsPayments) {
+    return manages ? COLUMNS.manageWithPayments : COLUMNS.readWithPayments;
+  }
+  return manages ? COLUMNS.manage : COLUMNS.read;
+}
 
 const route = getRouteApi("/_signedIn/students/");
 
@@ -83,6 +134,7 @@ const route = getRouteApi("/_signedIn/students/");
 export function StudentsPage() {
   const { me } = useSession();
   const manages = me?.permissions.includes(STUDENTS_MANAGE) ?? false;
+  const recordsPayments = me?.permissions.includes(PAYMENTS_RECORD) ?? false;
   const search = route.useSearch();
   const navigate = route.useNavigate();
   const ranks = useQuery(ranksQuery);
@@ -118,11 +170,25 @@ export function StudentsPage() {
           allLabel="All ranks"
           onChange={(rankId) => navigate({ search: (previous) => ({ ...previous, rankId, pageIndex: undefined }) })}
         />
+        {recordsPayments && (
+          <FilterChips
+            label="Payment"
+            options={PAYMENT_CHIPS}
+            value={search.payment}
+            allLabel="Any payment"
+            onChange={(payment) => navigate({ search: (previous) => ({ ...previous, payment, pageIndex: undefined }) })}
+          />
+        )}
       </Flex>
       <QueryTable
         aria-label="Students"
-        query={studentsPage({ search: search.search, status: search.status, rankId: search.rankId })}
-        columns={manages ? MANAGE_COLUMNS : READ_COLUMNS}
+        query={studentsPage({
+          search: search.search,
+          status: search.status,
+          rankId: search.rankId,
+          payment: recordsPayments ? search.payment : undefined,
+        })}
+        columns={columnsFor(manages, recordsPayments)}
         initialSort={{ id: STUDENTS_SEARCH_DEFAULTS.sortBy, desc: false }}
         params={search}
         onParamsChange={(next) =>

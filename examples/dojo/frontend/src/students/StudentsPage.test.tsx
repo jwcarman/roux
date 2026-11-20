@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { toaster } from "@jwcarman/roux-web/feedback";
-import { STUDENTS_MANAGE, STUDENTS_READ } from "../permissions.gen";
+import { PAYMENTS_RECORD, STUDENTS_MANAGE, STUDENTS_READ } from "../permissions.gen";
 import type { Rank } from "../ranks/ranks";
 import { pageOf } from "../testing/fakeServer";
 import { invalidFields } from "../testing/problems";
@@ -204,5 +204,35 @@ describe("StudentsPage", () => {
     await userEvent.setup().click(await screen.findByRole("button", { name: "Reactivate Ada Lovelace" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent("Ada Lovelace was reactivated");
+  });
+
+  it("shows plan and paid through, and filters by payment, with payments.record", async () => {
+    const queries = endpoints([
+      { ...ADA, planName: "Monthly unlimited", paidThrough: "2026-04-14", payment: "OVERDUE" },
+      { ...ALAN, planName: null, paidThrough: null, payment: "NONE" },
+    ]);
+    const { router } = renderRoute("/students", { permissions: [STUDENTS_READ, PAYMENTS_RECORD] });
+    const table = await screen.findByRole("table", { name: "Students" });
+    const ada = await within(table).findByRole("row", { name: /Ada Lovelace/ });
+    expect(ada).toHaveTextContent("Monthly unlimited");
+    expect(ada).toHaveTextContent("Apr 14, 2026");
+    expect(within(ada).getByText("Overdue")).toBeInTheDocument();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Overdue", pressed: false }));
+    await waitFor(() => expect(queries.at(-1)).toContain("payment=OVERDUE"));
+    expect(router.state.location.search).toMatchObject({ payment: "OVERDUE" });
+
+    await user.click(screen.getByRole("button", { name: /Paid through/ }));
+    await waitFor(() => expect(queries.at(-1)).toContain("sortBy=PAID_THROUGH"));
+  });
+
+  it("has no Payment filter or Paid through column without payments.record", async () => {
+    endpoints([ADA]);
+    renderRoute("/students", READ);
+
+    await screen.findByText("Ada Lovelace");
+    expect(screen.queryByRole("button", { name: "Overdue" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: /Paid through/ })).not.toBeInTheDocument();
   });
 });

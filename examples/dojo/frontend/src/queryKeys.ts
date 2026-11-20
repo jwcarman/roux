@@ -43,10 +43,11 @@ export const queryKeys = {
   students: {
     all: ["students"] as const,
     lists: () => [...queryKeys.students.all, "list"] as const,
-    list: (filters: { search?: string; status?: string; rankId?: string }) =>
+    list: (filters: { search?: string; status?: string; rankId?: string; payment?: string }) =>
       [...queryKeys.students.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.students.all, "detail", id] as const,
     attendance: (id: string) => [...queryKeys.students.detail(id), "attendance"] as const,
     sincePromotion: (id: string) => [...queryKeys.students.detail(id), "since-promotion"] as const,
+    memberships: (id: string) => [...queryKeys.students.detail(id), "memberships"] as const,
   },
 };

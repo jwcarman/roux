@@ -4,7 +4,8 @@ import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { LuArrowLeft, LuAward } from "react-icons/lu";
 import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, removal, useConfirm } from "@jwcarman/roux-web/feedback";
-import { ATTENDANCE_READ, PROMOTIONS_MANAGE, STUDENTS_MANAGE } from "../permissions.gen";
+import { ATTENDANCE_READ, PAYMENTS_RECORD, PROMOTIONS_MANAGE, STUDENTS_MANAGE } from "../permissions.gen";
+import { MembershipSection } from "../memberships/MembershipSection";
 import { ClassesSincePromotion, StudentAttendanceList } from "../attendance/StudentAttendanceList";
 import { RankSwatch } from "../ranks/RankSwatch";
 import { formatDate } from "../shell/format";
@@ -24,6 +25,7 @@ export function StudentPage() {
   const manages = me?.permissions.includes(STUDENTS_MANAGE) ?? false;
   const promotes = me?.permissions.includes(PROMOTIONS_MANAGE) ?? false;
   const readsAttendance = me?.permissions.includes(ATTENDANCE_READ) ?? false;
+  const recordsPayments = me?.permissions.includes(PAYMENTS_RECORD) ?? false;
 
   return (
     <Stack gap="6">
@@ -77,6 +79,7 @@ export function StudentPage() {
           <DataList.ItemValue>{formatDate(student.startDate)}</DataList.ItemValue>
         </DataList.Item>
       </DataList.Root>
+      {recordsPayments && <MembershipSection student={student} />}
       <Flex justify="space-between" align="center" gap="3" wrap="wrap">
         <Heading as="h3" size="md">
           Promotions
