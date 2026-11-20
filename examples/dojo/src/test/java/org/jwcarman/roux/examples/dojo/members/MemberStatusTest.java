@@ -25,8 +25,8 @@ import org.jwcarman.roux.examples.dojo.TestMembers;
 import org.jwcarman.roux.examples.dojo.activity.ActivityLog;
 import org.jwcarman.roux.examples.dojo.identity.Permissions;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
-import org.jwcarman.roux.problems.InvariantViolationException;
 import org.jwcarman.roux.roles.RouxRoles;
+import org.jwcarman.who.admin.LastAdminException;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.rbac.RbacService;
 import org.jwcarman.who.rbac.Role;
@@ -161,8 +161,17 @@ class MemberStatusTest {
 
     max.browser()
         .perform(post(path(owner.id()) + "/deactivate"))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.detail").value("The team needs at least one active owner"));
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("last-admin"))
+        .andExpect(
+            jsonPath("$.detail").value("The team needs someone active who can manage people"));
+  }
+
+  @Test
+  void anOwnerMayBeDeactivatedWhileAnotherIsActive() throws Exception {
+    TestMember olga = members.signedIn("Olga Owner", "olga@example.org", RouxRoles.OWNER);
+
+    olga.browser().perform(post(path(owner.id()) + "/deactivate")).andExpect(status().isOk());
   }
 
   @Test
@@ -194,9 +203,7 @@ class MemberStatusTest {
         try {
           change.get(10, TimeUnit.SECONDS);
         } catch (ExecutionException e) {
-          assertThat(e.getCause())
-              .isInstanceOf(InvariantViolationException.class)
-              .hasMessage("The team needs at least one active owner");
+          assertThat(e.getCause()).isInstanceOf(LastAdminException.class);
           conflicts++;
         }
       }

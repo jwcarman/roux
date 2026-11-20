@@ -9,7 +9,9 @@ import jakarta.validation.constraints.Size;
 
 import org.jwcarman.roux.examples.dojo.activity.ActivityLog;
 import org.jwcarman.roux.examples.dojo.identity.Permissions;
+import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.problems.InvalidFieldException;
+import org.jwcarman.roux.roles.InvitableRoles;
 import org.jwcarman.who.core.domain.Identity;
 import org.jwcarman.who.emaillink.EmailAddressTakenException;
 import org.jwcarman.who.emaillink.EmailCredential;
@@ -26,11 +28,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * The invite form's endpoint: the dojo's rules (a name, and only the roles in {@link
- * InvitableRole}) in front of who's {@link InvitationService}, which does the invitation. The
- * member's profile and the "invited" activity entry are written by a callback that runs inside
- * who's transaction, so they commit or roll back with the invitation. {@link InvitableRolesGuard}
- * is the backstop for invitations made any other way.
+ * The invite form's endpoint: the dojo's rules (a name, and only the roles in {@code
+ * roux.roles.invitable}) in front of who's {@link InvitationService}, which does the invitation.
+ * The member's profile and the "invited" activity entry are written by a callback that runs inside
+ * who's transaction, so they commit or roll back with the invitation. roux's guard refuses any
+ * other role for invitations made any other way.
  */
 @RestController
 @RequestMapping("/api/members/invitations")
@@ -41,12 +43,17 @@ public class InviteController {
   private final InvitationService invitations;
   private final MemberProfileRepository profiles;
   private final ActivityLog activityLog;
+  private final InvitableRoles invitable;
 
   public InviteController(
-      InvitationService invitations, MemberProfileRepository profiles, ActivityLog activityLog) {
+      InvitationService invitations,
+      MemberProfileRepository profiles,
+      ActivityLog activityLog,
+      InvitableRoles invitable) {
     this.invitations = invitations;
     this.profiles = profiles;
     this.activityLog = activityLog;
+    this.invitable = invitable;
   }
 
   /**
@@ -54,18 +61,22 @@ public class InviteController {
    * from the sign-in page), so the answer says whether it was. Runs outside any transaction, as who
    * requires.
    *
-   * @throws InvalidFieldException on {@code email} if the address is already registered
+   * @throws InvalidFieldException on {@code role} if an invitation may not give it, or on {@code
+   *     email} if the address is already registered
    */
   @PostMapping
   @ResponseStatus(HttpStatus.ACCEPTED)
   @RequiresPermission(Permissions.MEMBERS_INVITE)
   public InvitationResult invite(@Valid @RequestBody InvitationRequest request) {
+    if (!invitable.contains(request.role())) {
+      throw new InvalidFieldException("role", "An invitation cannot give that role");
+    }
     Invitation invitation;
     try {
       invitation =
           invitations.invite(
               request.email(),
-              Set.of(request.role().role()),
+              Set.of(request.role()),
               identity -> attachProfile(identity, request));
     } catch (EmailAddressTakenException _) {
       throw new InvalidFieldException("email", "That address is already a member");
@@ -102,17 +113,16 @@ public class InviteController {
 
   /**
    * The name and address are trimmed before they are checked; who normalizes the address further.
-   * No role means {@link InvitableRole#MEMBER}; a role outside {@link InvitableRole} is refused
-   * when the body is read (400, no field named: Spring's own answer to an enum it does not know).
+   * No role means {@link Roles#MEMBER}; a role an invitation may not give is a 400 on {@code role}.
    */
   public record InvitationRequest(
       @NotBlank @Size(max = MemberProfile.MAX_NAME) String name,
       @NotBlank @Email String email,
-      InvitableRole role) {
+      String role) {
     public InvitationRequest {
       name = name == null ? null : name.strip();
       email = email == null ? null : email.strip();
-      role = role == null ? InvitableRole.MEMBER : role;
+      role = role == null ? Roles.MEMBER : role;
     }
   }
 }

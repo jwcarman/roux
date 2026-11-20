@@ -19,7 +19,8 @@ import org.jwcarman.roux.examples.dojo.web.ExportTooLargeException;
 import org.jwcarman.roux.jpa.Versions;
 import org.jwcarman.roux.problems.InvalidFieldException;
 import org.jwcarman.roux.problems.InvariantViolationException;
-import org.jwcarman.roux.roles.RouxRoles;
+import org.jwcarman.who.admin.LastAdminException;
+import org.jwcarman.who.admin.LastAdminGuard;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.rbac.RbacService;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,8 +48,8 @@ public class MemberService {
           MemberDirectoryEntry.class, MemberSort.class, cfg -> cfg.defaultSort(MemberSort.NAME));
 
   /**
-   * Serializes status changes, so two of them cannot both pass the "at least one active owner"
-   * check (or both record the same change) before either commits.
+   * Serializes status changes, so two of them cannot both record the same change before either
+   * commits. The last-owner rule is who-admin's guard, which takes its own locks.
    */
   private static final long STATUS_LOCK_KEY = 0x6e6f6972_73746174L;
 
@@ -59,6 +60,7 @@ public class MemberService {
   private final int maxExportRows;
   private final JdbcTemplate jdbc;
   private final RbacService rbac;
+  private final LastAdminGuard lastAdmin;
 
   public MemberService(
       MemberProfileRepository profiles,
@@ -67,7 +69,8 @@ public class MemberService {
       WhoService who,
       @Value("${app.export.max-rows:10000}") int maxExportRows,
       JdbcTemplate jdbc,
-      RbacService rbac) {
+      RbacService rbac,
+      LastAdminGuard lastAdmin) {
     this.profiles = profiles;
     this.directory = directory;
     this.activityLog = activityLog;
@@ -75,6 +78,7 @@ public class MemberService {
     this.maxExportRows = maxExportRows;
     this.jdbc = jdbc;
     this.rbac = rbac;
+    this.lastAdmin = lastAdmin;
   }
 
   /** A member's own profile, as the API shows it. */
@@ -209,8 +213,8 @@ public class MemberService {
    *
    * @param actorId the identity doing it, which may not deactivate itself
    * @throws MemberProfileNotFoundException if there is no such member
-   * @throws InvariantViolationException if it is the actor, the last active owner, or already
-   *     deactivated
+   * @throws InvariantViolationException if it is the actor, or already deactivated
+   * @throws LastAdminException if it is the last active owner (no one else could manage people)
    */
   public MemberDetail deactivate(UUID actorId, UUID memberId) {
     lockStatusChanges();
@@ -221,13 +225,15 @@ public class MemberService {
     if (MemberStatus.DEACTIVATED.name().equals(member.getStatus())) {
       throw new InvariantViolationException("Already deactivated");
     }
-    if (RouxRoles.OWNER.equals(member.getRole())
-        && directory.countByRoleAndStatus(RouxRoles.OWNER, MemberStatus.ACTIVE.name()) <= 1) {
-      throw new InvariantViolationException("The team needs at least one active owner");
-    }
-    who.deactivate(memberId);
-    activityLog.record(MemberActivity.SUBJECT, memberId, MemberActivity.DEACTIVATED, "Deactivated");
-    return MemberDetail.of(member).withStatus(MemberStatus.DEACTIVATED.name());
+    // who-admin's guard: only owners may manage people, so it keeps an active owner
+    return lastAdmin.deactivate(
+        memberId,
+        () -> {
+          who.deactivate(memberId);
+          activityLog.record(
+              MemberActivity.SUBJECT, memberId, MemberActivity.DEACTIVATED, "Deactivated");
+          return MemberDetail.of(member).withStatus(MemberStatus.DEACTIVATED.name());
+        });
   }
 
   /**

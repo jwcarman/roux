@@ -115,8 +115,16 @@ class InviteControllerTest {
   void anOwnerIsNeverInvited() throws Exception {
     long before = profiles.count();
 
-    invite("Olive Again", "olive@example.org", "OWNER").andExpect(status().isBadRequest());
-    invite("Nobody", "nobody@example.org", "KING").andExpect(status().isBadRequest());
+    invite("Olive Again", "olive@example.org", "OWNER")
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            jsonPath("$.errors[?(@.field == 'role')].message")
+                .value("An invitation cannot give that role"));
+    invite("Nobody", "nobody@example.org", "KING")
+        .andExpect(status().isBadRequest())
+        .andExpect(
+            jsonPath("$.errors[?(@.field == 'role')].message")
+                .value("An invitation cannot give that role"));
 
     assertThat(emailCredentials.findByAddress("olive@example.org")).isEmpty();
     assertThat(profiles.count()).isEqualTo(before);

@@ -119,7 +119,10 @@ are the worked example. Copy their shape:
 - **Archive, don't delete.** Deactivate and Reactivate (`POST /api/members/{id}/deactivate`,
   `members.manage`) go through who; a deactivated member is signed out on their next request
   and cannot sign in. Refusals are an `InvariantViolationException`: a 400 whose detail is the
-  message for the user ("You cannot deactivate yourself", "The team needs at least one active owner").
+  message for the user ("You cannot deactivate yourself"). The last active owner is kept by
+  who-admin's `LastAdminGuard`, which the deactivation runs inside: only owners may manage people,
+  so deactivating the last one is a 409 problem with code `last-admin` ("The team needs someone
+  active who can manage people").
 - **A history of changes.** `ActivityLog.record(subject, id, action, summary)` writes in the
   changing transaction (it refuses to run outside one); `ActivityLog.history` pages it newest
   first with each actor's name. Members record invites, renames and status changes, shown by
@@ -262,22 +265,23 @@ can serve it; no sticky sessions are needed.
 
 - **Invitations.** `POST /api/members/invitations` (`InviteController`) is a thin endpoint over
   who's `InvitationService.invite(email, roleNames, callback)`, called outside any transaction: it keeps the
-  dojo's rules (a name, and only the roles in `InvitableRole`, so an invitation never makes an
-  owner) in front of who's, which creates the identity, registers the address, assigns the role and
+  dojo's rules (a name, and only the roles in `roux.roles.invitable`, so an invitation never makes
+  an owner) in front of who's, which creates the identity, registers the address, assigns the role and
   publishes `IdentityInvited` in one transaction, then sends the link after it commits.
   The callback runs inside who's transaction, on the caller's thread, after the identity, address
   and roles exist and before `IdentityInvited` is published: it saves the member's profile (with the
   form's name) and writes the activity entry, so a failure rolls the invitation back and no email is
-  sent. `InvitableRolesGuard`, an `@EventListener` for `IdentityInvited`, refuses any role but
-  member and instructor for an invitation made any other way (who's own `POST /who/invitations`),
-  which gets no profile. An invitation is a who sign-in link, so it expires with who's token TTL (5
+  sent. roux's guard, an `@EventListener` for `IdentityInvited`, refuses any role outside
+  `roux.roles.invitable` for an invitation made any other way (who's own `POST /who/invitations`),
+  which gets no profile. The invite form asks `GET /api/roles/invitable` for the roles to offer. An invitation is a who sign-in link, so it expires with who's token TTL (5
   minutes by default); an invited member who opens it later is sent to sign in, which works because
   the address is registered. If the email cannot be sent, the member is still added and the answer
   says so (`{"linkSent": false}`): the owner is told to have them sign in from the sign-in page, and
   the app logs a warning with who's `EmailLinkOutcome` (never the address). Deactivating and
-  reactivating stay in `MembersController` over `WhoService`, because the app's own rules (the last
-  active owner, the status lock) and its activity log belong to the same transaction; who's
-  `PATCH /who/identities/{id}` (who-admin) knows none of them.
+  reactivating stay in `MembersController` over `WhoService`, because the app's own rules (the
+  status lock, and the last owner through who-admin's guard) and its activity log belong to the
+  same transaction; who's `PATCH /who/identities/{id}` (who-admin) runs the same guard but writes
+  no activity.
 - **The owner.** `roux.owner.email` makes the first owner: roux creates one only while no active
   identity holds `OWNER`, and the dojo's `OwnerProfiles` gives it a profile in the same transaction.
   Once an active owner exists, changing `roux.owner.email` changes nothing; if none is active (the
