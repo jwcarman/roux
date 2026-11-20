@@ -22,6 +22,7 @@ import org.jwcarman.jpa.spring.web.PagingWebAutoConfiguration;
 import org.jwcarman.roux.problems.PagingProblemsAdvice;
 import org.jwcarman.roux.problems.ProblemsAdvice;
 import org.jwcarman.roux.problems.WhoProblemsAdvice;
+import org.jwcarman.who.admin.LastAdminGuard;
 import org.jwcarman.who.autoconfigure.WhoWebSecurityAutoConfiguration;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailLinkLoginMethod;
@@ -53,5 +54,10 @@ class StarterTest {
     assertThat(context.getBeanNamesForType(EmailLinkLoginMethod.class)).hasSize(1);
     assertThat(context.getBeanNamesForType(PasskeyLoginMethod.class)).hasSize(1);
     assertThat(context.getBeanNamesForType(WhoProblemsAdvice.class)).hasSize(1);
+  }
+
+  @Test
+  void starterBringsWhoAdmin() {
+    assertThat(context.getBeanNamesForType(LastAdminGuard.class)).hasSize(1);
   }
 }

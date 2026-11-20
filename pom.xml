@@ -102,6 +102,7 @@
         <module>runtime/roux-validation</module>
         <module>runtime/roux-spa</module>
         <module>runtime/roux-jpa</module>
+        <module>runtime/roux-roles</module>
         <module>runtime/roux-theme</module>
         <module>runtime/roux-email</module>
         <module>runtime/roux-autoconfigure</module>
@@ -146,6 +147,16 @@
             <dependency>
                 <groupId>org.jwcarman.who</groupId>
                 <artifactId>who-passkey</artifactId>
+                <version>${who.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jwcarman.who</groupId>
+                <artifactId>who-rbac</artifactId>
+                <version>${who.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jwcarman.who</groupId>
+                <artifactId>who-admin</artifactId>
                 <version>${who.version}</version>
             </dependency>
             <dependency>
