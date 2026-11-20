@@ -18,13 +18,19 @@ package org.jwcarman.roux.autoconfigure.users;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import java.util.Map;
+
 import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Test;
+import org.jwcarman.roux.activity.ActorNames;
+import org.jwcarman.roux.autoconfigure.activity.RouxActivityLogAutoConfiguration;
+import org.jwcarman.roux.users.AppUserActorNames;
 import org.jwcarman.roux.users.AppUserRepository;
 import org.jwcarman.roux.users.AppUsers;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
@@ -41,6 +47,27 @@ class RouxUsersAutoConfigurationTest {
   @Test
   void users_who_join_get_an_app_user() {
     runner.run(context -> assertThat(context).hasSingleBean(AppUsers.class));
+  }
+
+  @Test
+  void the_activity_logs_actors_are_named_after_the_users() {
+    runner.run(
+        context ->
+            assertThat(context.getBean(ActorNames.class)).isInstanceOf(AppUserActorNames.class));
+  }
+
+  @Test
+  void an_apps_own_actor_names_replace_rouxs() {
+    ActorNames mine = ids -> Map.of();
+    runner
+        .withBean(ActorNames.class, () -> mine)
+        .run(context -> assertThat(context.getBean(ActorNames.class)).isSameAs(mine));
+  }
+
+  @Test
+  void the_activity_log_names_actors_with_them() {
+    assertThat(RouxUsersAutoConfiguration.class.getAnnotation(AutoConfiguration.class).before())
+        .contains(RouxActivityLogAutoConfiguration.class);
   }
 
   @Test

@@ -17,11 +17,15 @@ package org.jwcarman.roux.autoconfigure.users;
 
 import jakarta.persistence.EntityManager;
 
+import org.jwcarman.roux.activity.ActorNames;
+import org.jwcarman.roux.autoconfigure.activity.RouxActivityLogAutoConfiguration;
+import org.jwcarman.roux.users.AppUserActorNames;
 import org.jwcarman.roux.users.AppUserRepository;
 import org.jwcarman.roux.users.AppUsers;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 
 /**
@@ -29,6 +33,7 @@ import org.springframework.context.annotation.Bean;
  * Data JPA has made roux-users' repositories, and only with them.
  */
 @AutoConfiguration(
+    before = RouxActivityLogAutoConfiguration.class,
     afterName =
         "org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration")
 @ConditionalOnClass({AppUsers.class, EntityManager.class})
@@ -38,5 +43,11 @@ public class RouxUsersAutoConfiguration {
   @Bean
   AppUsers rouxAppUsers(AppUserRepository users) {
     return new AppUsers(users);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(ActorNames.class)
+  AppUserActorNames rouxAppUserActorNames(AppUserRepository users) {
+    return new AppUserActorNames(users);
   }
 }

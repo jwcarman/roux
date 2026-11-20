@@ -40,4 +40,31 @@
             <column name="modified_by" type="varchar(64)"/>
         </createTable>
     </changeSet>
+    <!-- The directory: each user as the app shows them, read from who every time. The email is the
+         identity's oldest address (lowest credential id, as who's findOldestFor), the role the first
+         by name (roux keeps one), and a user is invited until who holds any session for them. -->
+    <changeSet id="roux-users-2" author="roux">
+        <createView viewName="roux_user_directory" replaceIfExists="true">
+            select u.id,
+                   u.version,
+                   u.display_name,
+                   (select e.address
+                      from who_credential_identity ci
+                      join who_email_credential e on e.id = ci.credential_id
+                     where ci.identity_id = u.id
+                     order by e.id
+                     limit 1) as email,
+                   (select r.name
+                      from who_identity_role ir
+                      join who_role r on r.id = ir.role_id
+                     where ir.identity_id = u.id
+                     order by r.name
+                     limit 1) as role,
+                   case when i.status = 'ACTIVE' then 'ACTIVE' else 'DEACTIVATED' end as status,
+                   i.created_at as joined_at,
+                   not exists (select 1 from who_session s where s.identity_id = u.id) as invited
+              from roux_user u
+              join who_identity i on i.id = u.id
+        </createView>
+    </changeSet>
 </databaseChangeLog>
