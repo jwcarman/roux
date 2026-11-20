@@ -7,3 +7,5 @@ org.jwcarman.roux.autoconfigure.email.RouxEmailAutoConfiguration
 org.jwcarman.roux.autoconfigure.roles.RouxRolesAutoConfiguration
 org.jwcarman.roux.autoconfigure.money.RouxMoneyAutoConfiguration
 org.jwcarman.roux.autoconfigure.organization.RouxOrganizationAutoConfiguration
+org.jwcarman.roux.autoconfigure.activity.RouxActivityLogPersistenceAutoConfiguration
+org.jwcarman.roux.autoconfigure.activity.RouxActivityLogAutoConfiguration

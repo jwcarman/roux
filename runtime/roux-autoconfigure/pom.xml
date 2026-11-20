@@ -99,6 +99,12 @@
         </dependency>
         <dependency>
             <groupId>org.jwcarman.roux</groupId>
+            <artifactId>roux-activity-log</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.jwcarman.roux</groupId>
             <artifactId>roux-organization</artifactId>
             <version>${project.version}</version>
             <optional>true</optional>
