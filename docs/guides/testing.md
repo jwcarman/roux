@@ -9,9 +9,9 @@ A roux app is tested at three levels, each against the real thing as far as it c
 - **Playwright:** the built app in a browser, signing in by email link, including a
   Content-Security-Policy test.
 
-The Java helpers come from `roux-test`, roux's test kit; the browser helpers below are the app's own
-files (the template has them). roux-web's own test helpers are internal; do not import from roux's
-source.
+The helpers come from roux: `roux-test` for Java and `@jwcarman/roux-web/testing` for the browser.
+The app keeps one helper of its own, `renderRoute`, because it needs the app's route tree. Do not
+import from roux's source.
 
 ## Dependencies
 
@@ -251,168 +251,89 @@ setup (`csrf.spa()`) refuses it; `WhoMockMvcBrowser` sends the cookie's value, a
 ## Vitest with MSW
 
 Component, form and route tests run in Vitest. They render the real component with roux's query
-client and answer its requests with MSW (Mock Service Worker); nothing in the app is mocked. The test
-section of `vite.config.ts`:
+client and answer its requests with MSW (Mock Service Worker); nothing in the app is mocked. The kit
+is `@jwcarman/roux-web/testing`: `msw`, `@testing-library/react`, `@testing-library/jest-dom` and
+`vitest` are its optional peers, the dev dependencies above, and no other roux-web entry imports them,
+so none of it reaches the app's bundle.
+
+The app's setup file is one line, `src/testing/setup.ts`:
+
+```ts
+import "@jwcarman/roux-web/testing/setup";
+```
+
+and the test section of `vite.config.ts` lists it (import roux's setup from a file of the app's, not by
+its package name in `setupFiles`: so it shares the app's modules, and TypeScript sees jest-dom's
+matchers):
 
 ```ts
 // Tests run in Node; a component or route test opts into jsdom with a `@vitest-environment jsdom` docblock.
 test: { environment: "node", include: ["src/**/*.test.{ts,tsx}"], setupFiles: ["src/testing/setup.ts"] },
 ```
 
+roux's setup adds jest-dom's matchers, starts the fake network before the tests, sets the organization's
+context before each test (one fixed school and day, [Dates and time](dates-and-time.md#test)), and
+after each test waits for the requests still in flight, unmounts, drops the test's handlers and fails
+the test if a request went unanswered. It also gives jsdom what Chakra reaches for (`matchMedia`,
+`ResizeObserver`, `scrollTo`).
+
 ### The fake network
 
-`src/testing/server.ts` starts MSW with no handlers. A request no handler answers fails the test that
-sent it, so a test cannot pass on a screen that silently failed to load:
+`server` is MSW with no handlers. A test answers what it expects; the handlers go after each test:
 
 ```ts
-import { setupServer } from "msw/node";
+import { http, HttpResponse } from "msw";
+import { server } from "@jwcarman/roux-web/testing";
 
-/**
- * The fake network every test runs against. It starts with no handlers: a test answers what it
- * expects with `server.use(http.get(...))`, and the handlers go after each test.
- */
-export const server = setupServer();
-
-const unanswered: string[] = [];
-
-/** Starts the fake network; a request no handler answers is remembered, and fails its test. */
-export function listen(): void {
-  server.events.on("request:unhandled", ({ request }) => {
-    unanswered.push(`${request.method} ${new URL(request.url).pathname}`);
-  });
-  server.listen({ onUnhandledFrame: "error" });
-}
-
-/** Throws if the test sent a request no handler answered (TanStack Query would hide it). */
-export function checkAllAnswered(): void {
-  const requests = unanswered.splice(0);
-  if (requests.length > 0) {
-    throw new Error(`No handler answered: ${requests.join(", ")}`);
-  }
-}
+server.use(http.get("/api/ranks", () => HttpResponse.json([{ id: "r1", name: "White" }])));
 ```
 
-`src/testing/setup.ts` starts it, resets it after each test, sets the organization's context (one
-fixed school and day, [Dates and time](dates-and-time.md#test)), and gives jsdom what Chakra needs:
-
-```ts
-import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
-import { setOrganization, testOrganization } from "@jwcarman/roux-web/organization";
-import { checkAllAnswered, listen, server } from "./server";
-
-beforeAll(listen);
-
-beforeEach(() => setOrganization(testOrganization()));
-
-afterEach(() => {
-  cleanup();
-  server.resetHandlers();
-  checkAllAnswered();
-});
-
-afterAll(() => server.close());
-
-// What Chakra's components reach for that jsdom does not provide (tests run in Node unless they ask
-// for jsdom).
-if (typeof window !== "undefined") {
-  window.matchMedia ??= (query: string) =>
-    ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: () => undefined,
-      removeListener: () => undefined,
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-      dispatchEvent: () => false,
-    }) as MediaQueryList;
-  globalThis.ResizeObserver ??= class {
-    observe(): void {}
-    unobserve(): void {}
-    disconnect(): void {}
-  };
-  Element.prototype.scrollTo ??= () => undefined;
-  Element.prototype.scrollIntoView ??= () => undefined;
-}
-```
+- A request no handler answers never reaches the real network, and fails the test that sent it
+  ("No handler answered: GET /api/ranks"), so a test cannot pass on a screen that silently failed to
+  load. `checkAllAnswered()` is that check, which the setup runs after each test.
+- `settle(timeout = 1000)` waits until every request in flight has its answer (the setup runs it
+  after each test, so an answer never lands after the test environment is gone); a request held open
+  on purpose (`delay("infinite")`) is given up on after the timeout.
+- `listen()` starts the fake network; the setup calls it.
 
 ### Rendering
 
-`src/testing/render.tsx` renders inside the app's providers, with roux's query client (never
-`new QueryClient()`: `meta.refreshes` needs roux's) and no retries, so a failure shows at once:
+`renderWithProviders(ui, client?)` renders inside roux's providers: the query client and the theme.
+`testQueryClient()` is roux's query client (so `meta.refreshes` works; never `new QueryClient()`)
+without retries, so a failure shows at once. `renderHookWithProviders(hook, client?, initialProps?)`
+does the same for a hook. Both return the `client` with Testing Library's result.
+
+A component that asks for confirmation or shows a toast needs those mounted in the test, as the app's
+shell mounts them:
 
 ```tsx
-import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
-import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
-import { render } from "@testing-library/react";
-import type { ReactElement, ReactNode } from "react";
-import { createQueryClient } from "@jwcarman/roux-web/api";
 import { ConfirmProvider, Toaster } from "@jwcarman/roux-web/feedback";
+import { renderWithProviders } from "@jwcarman/roux-web/testing";
 
-/** roux's query client (so `meta.refreshes` works), without retries: a failure shows at once. */
-export function testQueryClient(): QueryClient {
-  const client = createQueryClient();
-  client.setDefaultOptions({ queries: { retry: false } });
-  return client;
-}
-
-/** Renders `ui` inside the app's providers, with the toaster, and a fresh query client unless one is given. */
-export function renderWithProviders(ui: ReactElement, client = testQueryClient()) {
-  function Providers({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={client}>
-        <ChakraProvider value={defaultSystem}>
-          <ConfirmProvider>{children}</ConfirmProvider>
-          <Toaster />
-        </ChakraProvider>
-      </QueryClientProvider>
-    );
-  }
-  return { client, ...render(ui, { wrapper: Providers }) };
-}
+renderWithProviders(
+  <ConfirmProvider>
+    <RankFormDialog open onClose={vi.fn()} />
+    <Toaster />
+  </ConfirmProvider>,
+);
 ```
 
 ### Answering with problems
 
 The server's refusals have fixed shapes (`contracts/problem-*.json` in roux's repository, described in
-[Errors](errors.md#the-problem-shape)). `src/testing/problems.ts` builds them, so a test answers a
-refusal exactly as the server would, with the `application/problem+json` content type that
-`problemOf` requires:
+[Errors](errors.md#the-problem-shape)). The kit builds them exactly as the server sends them, with the
+`application/problem+json` content type that `problemOf` requires:
+
+| Answer | Status | As the server answers |
+| --- | --- | --- |
+| `invalidFields({ name: "Must not be blank" })` | 400 | a Bean Validation failure or an `InvalidFieldException` |
+| `invariantViolation("A class meets at most 7 times a week")` | 400 | an `InvariantViolationException` |
+| `notFound("No rank r9")` | 404 | a `NotFoundException` |
+| `stale()` | 409 | a save at a version that is no longer the latest |
+| `serverError(errorId?)` | 500 | an unexpected failure, with the reference it logged |
 
 ```ts
-const PROBLEM_JSON = { "Content-Type": "application/problem+json" };
-
-function problem(body: object, status: number): Response {
-  return new Response(JSON.stringify(body), { status, headers: PROBLEM_JSON });
-}
-
-/** A 400 naming invalid fields, as roux answers a Bean Validation failure or an InvalidFieldException. */
-export function invalidFields(fields: Record<string, string>): Response {
-  const errors = Object.entries(fields).map(([field, message]) => ({ field, message }));
-  return problem({ title: "Bad Request", status: 400, detail: "The request has invalid fields", errors }, 400);
-}
-
-/** A 400 for a broken rule (an InvariantViolationException): a `detail` and no fields. */
-export function invariantViolation(detail: string): Response {
-  return problem({ title: "Bad Request", status: 400, detail }, 400);
-}
-
-/** A 404 (a NotFoundException). */
-export function notFound(detail: string): Response {
-  return problem({ title: "Not Found", status: 404, detail }, 404);
-}
-
-/** A 409 for a stale version, as roux answers an optimistic-locking failure. */
-export function stale(): Response {
-  return problem({ title: "Conflict", status: 409, detail: "This record changed since you loaded it" }, 409);
-}
-
-/** A 500, with the reference the server logged. */
-export function serverError(errorId = "7d1c2e0a-5b4f-4c1e-9a8b-0f6e2d3c4b5a"): Response {
-  return problem({ title: "Internal Server Error", status: 500, detail: "Something went wrong", errorId }, 500);
-}
+server.use(http.post("/api/ranks", () => invalidFields({ name: "Another rank has this name" })));
 ```
 
 Write field messages in the server's words (`Must not be blank`, `Another rank has this name`).
@@ -428,9 +349,7 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toaster } from "@jwcarman/roux-web/feedback";
 import { queryKeys } from "../queryKeys";
-import { invalidFields, stale } from "../testing/problems";
-import { renderWithProviders } from "../testing/render";
-import { server } from "../testing/server";
+import { invalidFields, renderWithProviders, server, stale } from "@jwcarman/roux-web/testing";
 import type { Rank } from "./ranks";
 import { RankFormDialog } from "./RankFormDialog";
 
@@ -521,16 +440,15 @@ describe("RankFormDialog", () => {
 ### A route test
 
 A page that keeps its state in the URL (a `QueryTable` with `params`) is tested through the router.
-`src/testing/route.tsx` opens a path in the app's generated route tree, signed in through a mocked
-`/who/me`:
+`src/testing/route.tsx`, the one test helper that stays the app's own (it needs the app's route tree
+and session), opens a path in the whole app, signed in through a mocked `/who/me`:
 
 ```tsx
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { http, HttpResponse } from "msw";
 import { routeTree } from "../routeTree.gen";
 import { SessionProvider } from "../session";
-import { renderWithProviders, testQueryClient } from "./render";
-import { server } from "./server";
+import { renderWithProviders, server, testQueryClient } from "@jwcarman/roux-web/testing";
 
 /**
  * Opens `path` in the whole app: the generated route tree in a memory router, signed in with
@@ -562,29 +480,8 @@ export function renderRoute(path: string, { permissions }: { permissions: string
 
 Its context and providers must match the app's own `main.tsx` (here a `queryClient` in the router
 context, and the getting-started guide's `SessionProvider`). A paged endpoint answers with a
-`PageDto`; `src/testing/pages.ts` builds one:
-
-```ts
-import type { PageDto, PageParams } from "@jwcarman/roux-web/paging";
-
-/** One page of `rows`, as a jpa-utils endpoint answers `params`. */
-export function pageOf<T>(rows: readonly T[], params: PageParams): PageDto<T> {
-  const pageIndex = params.pageIndex ?? 0;
-  const pageSize = params.pageSize ?? 20;
-  const totalPageCount = Math.ceil(rows.length / pageSize);
-  return {
-    data: rows.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize),
-    pagination: {
-      pageIndex,
-      pageSize,
-      totalElementCount: rows.length,
-      totalPageCount,
-      hasNext: pageIndex < totalPageCount - 1,
-      hasPrevious: pageIndex > 0,
-    },
-  };
-}
-```
+`PageDto`: `pageOf(rows, params)` answers one page of `rows` as a roux list endpoint answers `params`
+(page 0 of 20 unless they say otherwise, with the pagination block).
 
 ```tsx
 // @vitest-environment jsdom
@@ -592,9 +489,8 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { pageOf } from "../testing/pages";
+import { pageOf, server } from "@jwcarman/roux-web/testing";
 import { renderRoute } from "../testing/route";
-import { server } from "../testing/server";
 import type { Student } from "./students";
 
 const STUDENTS: Student[] = [

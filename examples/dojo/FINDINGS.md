@@ -537,3 +537,15 @@ What building the dojo showed about roux: one entry per finding, in the order fo
 - Outcome: fixed (`roux-activity-log`, `@jwcarman/roux-web/activity`; `docs/guides/activity-log.md`).
   The dojo's activities are records (`MemberRenamed`, `PaymentRecorded`, `StudentPromoted`, ...), and
   the student page has a History section.
+
+## Every app copies its test kit
+- Where: the dojo's `AppTest`, `TestDatabase`, `TestMembers`, `TestMember`, `TestClock`, `TestMail`,
+  `RecordingWhoEmailSender` (about 490 lines of Java) and `src/testing/{server,setup,render,problems,
+  fakeServer}` (about 270 lines of TypeScript)
+- What was clunky: the testing guide told a new app to copy them; nothing in them was about a dojo,
+  and copies drift. `TestMembers` also saved the dojo's profile itself, a second way to make a member.
+- roux could: ship the kits, and have one event for a member joining that tests and production share.
+- Outcome: fixed (`roux-test`, `@jwcarman/roux-web/testing`, `MemberJoined`, `MemberInvitations`). The
+  dojo keeps `renderRoute` and a one-line setup file; its profile comes from one `MemberJoined`
+  listener for the owner, invitations and tests alike.
+

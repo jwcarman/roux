@@ -69,6 +69,18 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- `roux-test` (in the BOM, not the starter; add it with test scope): the Java test kit an app copied
+  before. `@AppTest` (the whole app on PostgreSQL, a database per context), `TestMembers` (`reset`,
+  `signedIn(name, email, role)`, `owner()`, `anonymous()`), `TestMember`, `TestClock`, `TestDatabase`,
+  `RecordingWhoEmailSender` and `TestMail`. A test person joins as a real member does: who's identity,
+  address and role, and `MemberJoined`, in one transaction. The database and mail servers named by the
+  environment are `ROUX_TEST_DATABASE_*` and `ROUX_TEST_MAIL_*`. See `docs/guides/testing.md`.
+- `@jwcarman/roux-web/testing`: the browser test kit. The fake network (`server`, `listen`,
+  `checkAllAnswered`, `settle`), `testQueryClient`, `renderWithProviders`, `renderHookWithProviders`
+  (roux's query client and theme), the server's problem answers (`invalidFields`, `invariantViolation`,
+  `notFound`, `stale`, `serverError`) and `pageOf`; and `@jwcarman/roux-web/testing/setup`, which the
+  app's own setup file imports. `msw`, `@testing-library/react`, `@testing-library/jest-dom` and
+  `vitest` are optional peer dependencies.
 - `roux-activity-log`, in the starter: the business activity log. A kind is a record implementing
   `BusinessActivity` (`type()`, `describe()`); `ActivityLog.append(anchor, activity, related...)` stores it
   in the change's transaction with the actor, the time and its components as JSON, in roux's table

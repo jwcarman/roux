@@ -38,8 +38,13 @@ Before changing anything, find out what is there:
   feature: `src/<feature>/` holds its resource module (`src/ranks/ranks.ts`), its pages, dialogs and
   tests. Route files under `src/routes/` stay thin (search validation, loader, `component`). Find the
   nearest existing feature and follow its shape; the guides' examples (students, ranks) are that shape.
+  Name a file in PascalCase when it is one component named after it (`StudentsPage.tsx`,
+  `RankFormDialog.tsx`), and in camelCase when it is a module of several things: a resource module
+  (`students.ts`), a provider with its hook (`session.tsx`: `SessionProvider`, `useSession`), functions
+  (`guards.ts`). A test is named after the file it tests (`StudentsPage.test.tsx`).
 - **What is already shared:** `src/queryKeys.ts` (every query key), the session provider, `main.tsx`
-  (providers mounted once), and the test helpers under `src/testing/`.
+  (providers mounted once), and the app's test files under `src/testing/` (its one-line setup and
+  `renderRoute`; the rest of the test kit is roux's: `roux-test` and `@jwcarman/roux-web/testing`).
 - One Maven module per app. Don't split a feature into its own module or add configurability roux
   does not have.
 
@@ -77,8 +82,9 @@ Before changing anything, find out what is there:
   A list's key and fetch live in its resource module as `pageQuery(queryKeys..., (params, signal) => ...)`
   and the page passes it as `query={...}`: never build a list's key or call its API in the page.
 - **Import roux-web only from its subpaths**: `@jwcarman/roux-web/problem`, `/api`, `/paging`,
-  `/table`, `/feedback`, `/form`, `/dates`, `/theme`, `/signin`, `/navigation`. There is no root import, and anything else (roux's source, its
-  internal test helpers) is not API and breaks on upgrade.
+  `/table`, `/feedback`, `/form`, `/dates`, `/theme`, `/signin`, `/navigation`, `/money`, `/activity`,
+  `/organization`, and in tests `/testing`. There is no root import, and anything else (roux's source)
+  is not API and breaks on upgrade.
 - **Sign-in, identities and permissions are who's.** Use who's own guides (its Claude Code skill, if
   installed) for them; roux only wires the session into the client (`onSessionLost`,
   `useClearQueriesOnIdentityChange`). The browser calls who (sign-in, sign-out, the person's own
@@ -130,7 +136,7 @@ sections you need.
 | Toasts, confirmations, an inline error, not-found and error pages | `references/feedback.md` |
 | The shell (`index.html`, its CSP and nonce, `roux.spa.csp.*`), the theme (`roux.theme.*`, roux-theme, `ThemeProvider`, `AppearanceSettings`), the sign-in page (`EmailSignIn`, `PasskeySignInButton`, `ProviderSignInButtons`), the sidebar and its declaration (`defineNav`, `AppShell`) | `references/getting-started.md` (The shell), `references/shell.md` |
 | What who's emails say, naming the app, the brand colour (`extra.roux`), replacing one email or one subject | `references/email.md` |
-| Java tests (`@AppTest`, signed-in members, PostgreSQL), Vitest with MSW, form and route tests, Playwright | `references/testing.md` |
+| Java tests (`roux-test`: `@AppTest`, `TestMembers`, `TestClock`, captured mail), Vitest with MSW (`@jwcarman/roux-web/testing`), form and route tests, Playwright | `references/testing.md` |
 
 A feature usually touches several: a new resource with a list and a form reads errors, queries and
 mutations, forms, tables and paging, and testing. Read each one's relevant sections before writing
