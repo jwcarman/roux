@@ -41,8 +41,8 @@ Tests run the real app: who's security chain, roux's problem answers, the app's 
 ### @AppTest
 
 One annotation for every test that needs the app: `@SpringBootTest` on the app's own configuration,
-MockMvc, a database of its own, `TestMembers` and `TestClock`, and `roux.owner.email` set to
-`TestMembers.OWNER_EMAIL`.
+MockMvc, a database of its own, `TestUsers` and `TestClock`, and `roux.owner.email` set to
+`TestUsers.OWNER_EMAIL`.
 
 ```java
 @AppTest
@@ -53,7 +53,7 @@ class SessionCookieTest { ... }
 ```
 
 Test classes with the same configuration share one running app and one database, so each test starts
-with `members.reset(...)`. A class that adds `@TestPropertySource` (or `@Import`) gets an app and a
+with `users.reset(...)`. A class that adds `@TestPropertySource` (or `@Import`) gets an app and a
 database of its own.
 
 ### The database: TestDatabase
@@ -65,36 +65,36 @@ running), or, where there is no Docker, the server named by `ROUX_TEST_DATABASE_
 A test that opens a database itself calls `TestDatabase.create()`; a `@DynamicPropertySource` points
 the app at one with `TestDatabase.register(registry)`.
 
-### Signed-in people: TestMembers
+### Signed-in people: TestUsers
 
 ```java
-@Autowired TestMembers members;
+@Autowired TestUsers users;
 
 @BeforeEach
 void clean_slate() {
-  members.reset("promotion", "student"); // the app's tables to empty
+  users.reset("promotion", "student"); // the app's tables to empty
 }
 
-TestMember ivy = members.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
+TestUser ivy = users.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
 ivy.perform(get("/api/students")).andExpect(status().isOk());
-members.owner().perform(delete("/api/plans/" + id)).andExpect(status().isNoContent());
-members.anonymous().perform(get("/api/students")).andExpect(status().isUnauthorized());
+users.owner().perform(delete("/api/plans/" + id)).andExpect(status().isNoContent());
+users.anonymous().perform(get("/api/students")).andExpect(status().isUnauthorized());
 ```
 
-- `reset(String... appTables)` removes every member (who's tables, cascading to what refers to them),
+- `reset(String... appTables)` removes every user (who's tables, cascading to what refers to them),
   empties `appTables`, deletes the roles a test made (any role that did not exist when the app
   started), puts `TestClock` back on real time and makes the owner again, as roux does at startup. An
   app table that refers to who's tables empties with them; list the others.
-- `signedIn(name, email, role)` makes a member as a real one is made: who's identity, the address and
-  the role, and `MemberJoined` published, in one transaction ([Roles](roles.md)). The app's listener
-  for `MemberJoined` makes its own data for them (a profile), so a test person has what an invited one
-  has. The role is one of the app's, by name; an unknown one fails naming the roles there are. A
+- `signedIn(name, email, role)` makes a user as a real one is made: who's identity, the address and
+  the role, and `UserJoined` (with that role) published, in one transaction ([Roles](roles.md)). The
+  app's listener for `UserJoined` makes its own data for them, so a test person has what an invited
+  one has. The role is one of the app's, by name; an unknown one fails naming the roles there are. A
   `Role` a test made itself is accepted too: `signedIn(name, email, role)` with who's `Role`.
-- An address already registered, or a `MemberJoined` listener that throws, fails `signedIn` and leaves
+- An address already registered, or a `UserJoined` listener that throws, fails `signedIn` and leaves
   no one behind.
-- `owner()` is the owner the app made from `TestMembers.OWNER_EMAIL`, signed in; `anonymous()` a
+- `owner()` is the owner the app made from `TestUsers.OWNER_EMAIL`, signed in; `anonymous()` a
   browser with no one signed in.
-- `TestMember` is `(id, browser)`: `perform(request)` sends a request as them. The browser is
+- `TestUser` is `(id, browser)`: `perform(request)` sends a request as them. The browser is
   who-test's `WhoMockMvcBrowser`: it keeps the session and cookies between requests, and on `POST`,
   `PUT`, `PATCH` and `DELETE` sends `X-XSRF-TOKEN` from the `XSRF-TOKEN` cookie, as roux's browser
   client does; `browser().performWithoutCsrf(request)` proves a write without it is refused (`403`).
@@ -116,7 +116,7 @@ that sets it controls "now" everywhere, who's sessions excepted.
 
 ### Mail: RecordingWhoEmailSender and TestMail
 
-Tests sign in through `TestMembers`, so no mail is needed for that. A test of the app's own invitation
+Tests sign in through `TestUsers`, so no mail is needed for that. A test of the app's own invitation
 or sign-in emails captures them:
 
 - `RecordingWhoEmailSender`, declared as a bean in the test (`@Import` a `@TestConfiguration` that
@@ -145,8 +145,8 @@ import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.test.AppTest;
-import org.jwcarman.roux.test.TestMember;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUser;
+import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -159,19 +159,19 @@ class StudentsControllerTest {
 
   private static final String STUDENTS = "/api/students";
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
 
-  private TestMember instructor;
+  private TestUser instructor;
 
   @BeforeEach
   void clean_slate() {
-    members.reset("promotion", "student");
-    instructor = members.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
+    users.reset("promotion", "student");
+    instructor = users.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
   }
 
   @Test
   void a_signed_out_caller_is_refused_with_401() throws Exception {
-    members.anonymous().perform(get(STUDENTS)).andExpect(status().isUnauthorized());
+    users.anonymous().perform(get(STUDENTS)).andExpect(status().isUnauthorized());
   }
 
   @Test
@@ -243,7 +243,7 @@ What a controller test asserts:
 - **The happy path through the API**, as the browser calls it: create, read back, update at the
   version read, list with search, filters and sort.
 
-Sign in through `TestMembers`, not with Spring Security Test's `user(...)`: that principal is not a
+Sign in through `TestUsers`, not with Spring Security Test's `user(...)`: that principal is not a
 who identity, so it has none of the app's roles or permissions, and code that reads the caller's
 identity finds none. Do not send `csrf().asHeader()` either: its token is masked, and who's CSRF
 setup (`csrf.spa()`) refuses it; `WhoMockMvcBrowser` sends the cookie's value, as the browser does.

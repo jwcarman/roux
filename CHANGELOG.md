@@ -16,9 +16,9 @@ All notable changes to this project are documented in this file. The format foll
   one-day allowance remains only outside a roux app. `date().notInFuture()` compares with `today()`.
 - Roles and permissions (`docs/guides/roles.md`). What changes for a roux app:
   - Set `roux.owner.email` and `roux.owner.name` (both required; startup fails naming the missing one). While
-    no active identity holds `OWNER`, roux creates one at startup and publishes `MemberJoined` in its
-    transaction. Delete the app's own owner bootstrap; an app that keeps a profile per person listens for
-    `MemberJoined`, which roux also publishes for every member invited through `MemberInvitations`
+    no active identity holds `OWNER`, roux creates one at startup and publishes `UserJoined` in its
+    transaction. Delete the app's own owner bootstrap; an app that keeps its own data per user listens for
+    `UserJoined` (it carries the user's role), which roux also publishes for every user invited through `UserInvitations`
     (invite by name, with the app's own work in the invitation's transaction).
   - Set `roux.roles.invitable` to the roles an invitation may give (empty by default, so every invitation is
     refused until it is set; `OWNER` may not be listed). roux refuses any other role inside the invitation's
@@ -74,10 +74,10 @@ All notable changes to this project are documented in this file. The format foll
   `@LastModifiedBy`. An app writes a plain `@EnableJpaAuditing`, with no `auditorAwareRef` and no
   auditor of its own; one it defines (any `AuditorAware` bean) is kept.
 - `roux-test` (in the BOM, not the starter; add it with test scope): the Java test kit an app copied
-  before. `@AppTest` (the whole app on PostgreSQL, a database per context), `TestMembers` (`reset`,
-  `signedIn(name, email, role)`, `owner()`, `anonymous()`), `TestMember`, `TestClock`, `TestDatabase`,
-  `RecordingWhoEmailSender` and `TestMail`. A test person joins as a real member does: who's identity,
-  address and role, and `MemberJoined`, in one transaction. The database and mail servers named by the
+  before. `@AppTest` (the whole app on PostgreSQL, a database per context), `TestUsers` (`reset`,
+  `signedIn(name, email, role)`, `owner()`, `anonymous()`), `TestUser`, `TestClock`, `TestDatabase`,
+  `RecordingWhoEmailSender` and `TestMail`. A test person joins as a real user does: who's identity,
+  address and role, and `UserJoined`, in one transaction. The database and mail servers named by the
   environment are `ROUX_TEST_DATABASE_*` and `ROUX_TEST_MAIL_*`. See `docs/guides/testing.md`.
 - `@jwcarman/roux-web/testing`: the browser test kit. The fake network (`server`, `listen`,
   `checkAllAnswered`, `settle`), `testQueryClient`, `renderWithProviders`, `renderHookWithProviders`
@@ -112,7 +112,7 @@ All notable changes to this project are documented in this file. The format foll
   browser's parsing and the server's rules the same.
 
 - `roux-roles`, in the starter: `RouxRoles.OWNER`, created by its changelog with who-admin's permissions;
-  the first owner (`OwnerBootstrap`, `MemberJoined`), invitations by name (`MemberInvitations`); invitable roles (`InvitableRoles`, its guard and
+  the first owner (`OwnerBootstrap`, `UserJoined`), invitations by name (`UserInvitations`); invitable roles (`InvitableRoles`, its guard and
   `GET /api/roles/invitable`); `Permissions.allOf`; and, for an app's roles test, `RoleGrantsCheck` (the
   grants match the constants) and `PermissionsTypeScript` (writes and checks the frontend's
   `permissions.gen.ts`).

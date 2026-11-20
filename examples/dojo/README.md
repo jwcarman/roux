@@ -313,24 +313,24 @@ from a clean slate:
 ```java
 @AppTest
 class StudentsTest {
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired TestClock clock;
 
   @BeforeEach
   void cleanSlate() {
-    members.reset("student"); // every member gone, these tables emptied, the owner made again
+    users.reset("student"); // every user gone, these tables emptied, the owner made again
     clock.set("2026-11-10T17:32:00Z"); // optional: the app's clock stops here
   }
 
   @Test
   void anInstructorCannotAddAStudent() throws Exception {
-    TestMember ada = members.signedIn("Ada Park", "ada@example.com", AppRole.INSTRUCTOR);
+    TestUser ada = users.signedIn("Ada Park", "ada@example.com", AppRole.INSTRUCTOR);
     ada.perform(post("/api/students")...).andExpect(status().isForbidden());
   }
 }
 ```
 
-`members.signedIn(name, email, role)` makes a member with a profile and returns their browser
+`users.signedIn(name, email, role)` makes a user with a profile and returns their browser
 ([`who-test`](https://jwcarman.github.io/who/guides/testing/)'s `WhoMockMvcBrowser`, which holds
 their session cookie and echoes the CSRF cookie into `X-XSRF-TOKEN` as the SPA does);
 `members.owner()` signs in the owner the app makes at startup, and `members.anonymous()` is a

@@ -136,7 +136,7 @@ sections you need.
 | Toasts, confirmations, an inline error, not-found and error pages | `references/feedback.md` |
 | The shell (`index.html`, its CSP and nonce, `roux.spa.csp.*`), the theme (`roux.theme.*`, roux-theme, `ThemeProvider`, `AppearanceSettings`), the sign-in page (`EmailSignIn`, `PasskeySignInButton`, `ProviderSignInButtons`), the sidebar and its declaration (`defineNav`, `AppShell`) | `references/getting-started.md` (The shell), `references/shell.md` |
 | What who's emails say, naming the app, the brand colour (`extra.roux`), replacing one email or one subject | `references/email.md` |
-| Java tests (`roux-test`: `@AppTest`, `TestMembers`, `TestClock`, captured mail), Vitest with MSW (`@jwcarman/roux-web/testing`), form and route tests, Playwright | `references/testing.md` |
+| Java tests (`roux-test`: `@AppTest`, `TestUsers`, `TestClock`, captured mail), Vitest with MSW (`@jwcarman/roux-web/testing`), form and route tests, Playwright | `references/testing.md` |
 
 A feature usually touches several: a new resource with a list and a form reads errors, queries and
 mutations, forms, tables and paging, and testing. Read each one's relevant sections before writing

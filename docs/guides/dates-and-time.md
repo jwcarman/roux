@@ -6,7 +6,7 @@ every "not in the future" check are the organization's, on the server and in the
 Every date, time and amount the app shows is written in the organization's locale, and a moment in
 its zone.
 
-This is for the organization's own members (staff). A viewer's own locale is not supported yet.
+This is for the organization's own users (staff). A viewer's own locale is not supported yet.
 
 ## The settings
 
@@ -160,9 +160,9 @@ organization's zone (`2026-04-15T03:00:00Z` is still April 14 in New York).
 
 - **who's sessions expire on that clock.** Moving it hours or weeks ahead signs everyone out: the next
   request is `401`, which reads like a permissions bug. Sign the person in again after moving it (a
-  fresh browser from `TestMembers`, [Testing](testing.md#signed-in-people-testmembers)).
+  fresh browser from `TestUsers`, [Testing](testing.md#signed-in-people-testusers)).
 - **who stamps its own rows with the database's time, not the clock.** An identity's `created_at` (a
-  member's joined moment) is PostgreSQL's `now()`; a test of the date shown for it sets the column with
+  user's joined moment) is PostgreSQL's `now()`; a test of the date shown for it sets the column with
   SQL rather than moving the clock.
 
 ## Don't
