@@ -26,6 +26,7 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.jwcarman.who.emaillink.EmailCredentialService;
+import org.jwcarman.who.emaillink.InvalidInvitationException;
 import org.jwcarman.who.emaillink.InvitationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -59,6 +60,7 @@ class InvitableRolesContractTest {
   @Test
   void anInvitationGivingOwnerIsRolledBack() {
     assertThatThrownBy(() -> invitations.invite("x@roux.test", Set.of("OWNER")))
+        .isInstanceOf(InvalidInvitationException.class)
         .hasMessageContaining("An invitation may only give [MEMBER]");
 
     assertThat(emails.findByAddress("x@roux.test")).isEmpty();

@@ -17,18 +17,22 @@ feature" section is the full worked example (member profiles); read the part you
 - Schema changes: one changelog per feature in `src/main/resources/db/changelog`, included from
   `db.changelog-master.xml`.
 - A screen: a thin route file in `frontend/src/routes` (file-based) that opens its feature's page,
-  the page in `frontend/src/<feature>/`, shared types and permissions in `api.ts`, query keys in
+  the page in `frontend/src/<feature>/`, shared types in `api.ts`, query keys in
   `queryKeys.ts`, a sidebar entry in `frontend/src/shell/nav.ts` (`defineNav`: a Lucide icon component,
   a one-sentence `description` an owner would understand). When a request decides which page the app
   opens on, move `start: true` to it and remove Home (`/`) from `nav.ts`; exactly one place has it
   (`defineNav` throws otherwise). A place's `permission` in `nav.ts` is the same one its route's
-  `requirePermission` checks, and must be in `PERMISSIONS` in `api.ts`. A new
+  `requirePermission` checks, imported from `frontend/src/permissions.gen.ts`. A new
   URL needs nothing on the server: roux serves the shell for any page URL.
 
 ## Rules that are easy to miss
 
-- Gate endpoints on a permission, never a role: `@RequiresPermission(AppRoles.MEMBERS_READ)`.
-  `AppRoles` decides which role holds which permission.
+- Gate endpoints on a permission, never a role: `@RequiresPermission(Permissions.MEMBERS_READ)`.
+  A new permission is a constant in `identity/Permissions` and a new changeset in
+  `db/changelog/roles.xml` granting it to `OWNER` and any other role that holds it (never edit one
+  that has run). `PermissionsTest` checks the grants and rewrites `frontend/src/permissions.gen.ts`
+  when it is stale: run it and commit the file; never edit it by hand. See roux's
+  `docs/guides/roles.md`.
 - Errors are Problem Details. Throw `NotFoundException`, `InvariantViolationException` or
   `InvalidFieldException`; add no exception handlers. On the client `useSchemaForm` puts field
   errors under their fields, and `problemOf` and `notify.problem` read the rest.

@@ -74,8 +74,11 @@ Boot's BOM, so Spring Boot's managed versions stay the parent's.
 </dependencies>
 ```
 
-The starter brings `roux-problems`, `roux-validation` (`@Phone`, `@NotInFuture` and roux's validation messages), `roux-spa` (the shell for any page URL), `roux-jpa` (`Versions`), `roux-autoconfigure`, who (`who-spring-boot-starter`, with
-email-link sign-in, `who-email-link`, which renders its mail with `who-email`, and passkeys, `who-passkey`), jpa-utils
+The starter brings `roux-problems`, `roux-validation` (`@Phone`, `@NotInFuture` and roux's validation messages), `roux-spa` (the shell for any page URL), `roux-jpa` (`Versions`), `roux-roles` (the `OWNER` role, the first owner and invitable roles: see
+[Roles and permissions](roles.md)), `roux-autoconfigure`, who (`who-spring-boot-starter`, with
+email-link sign-in, `who-email-link`, which renders its mail with `who-email`, and passkeys, `who-passkey`),
+`who-admin` (who's endpoints for managing people, `/who/identities` and `/who/invitations`, open to
+whoever holds `who.identities.manage`, which roux grants to `OWNER`), jpa-utils
 (`org.jwcarman.jpa:jpa-utils`), `spring-boot-starter-validation` and `spring-boot-starter-webmvc`.
 `roux-theme` (the owner changes the look on an Appearance page) is not in the starter: add it beside the starter, with no version, as a new app does. Leave it out for a fixed brand and set `roux.theme.*` instead ([The owner's theme](#the-owners-theme)).
 Do not add who's starter yourself, and do not declare versions for any of them, for who's other
@@ -97,7 +100,7 @@ roux:
     email: you@example.com
     name: You
   roles:
-    invitable: [MEMBER]      # the roles an invitation may give (never OWNER); empty by default
+    invitable: [MEMBER]      # roles the app's own changelog creates (roles.md); never OWNER
 
 spring:
   mail:
@@ -121,7 +124,7 @@ who:
 | Setting | What it is |
 | --- | --- |
 | `roux.owner.email`, `roux.owner.name` | The first owner: while no active identity holds `OWNER`, roux creates one at startup with this address and display name, and publishes `OwnerCreated` in its transaction (an app adds its own data for the owner by listening). Once an active owner exists these change nothing. Required. See `roles.md`. |
-| `roux.roles.invitable` | The roles an invitation may give, in the order an invite form offers them (`GET /api/roles/invitable`). Empty by default, so no invitation passes until it is set; listing `OWNER` fails startup. |
+| `roux.roles.invitable` | The roles an invitation may give, in the order an invite form offers them (`GET /api/roles/invitable`). Each must be a role the app's own changelog creates (roux creates only `OWNER`; see `roles.md`), or every invitation giving it fails. Empty by default, so no invitation passes until it is set; listing `OWNER` fails startup. |
 | `spring.mail.host` | The SMTP server who's emails go through (`who-email-smtp`, over Spring Boot's `JavaMailSender`). Instead of SMTP, an app may register its own `WhoEmailSender` bean (leave out `who-email-smtp`, keep `who-email`): it only delivers, receiving every who email already rendered as an `OutgoingEmail` (`to`, `subject`, `text`, an optional `html`, and the `source` record it was rendered from). Send `text` as `text/plain`, never inside HTML: it is not escaped. roux ships the five emails finished, naming the app and wearing its brand colour; an app replaces one by dropping its own template file, and a subject is the message `who.email.<template>.subject` (see `email.md`). |
 | `who.email-link.link-base-url` | The app's page that receives sign-in links; who appends `#token=...`. Required. |
 | `who.email-link.code-secret` | Keys the typed sign-in codes: at least 32 characters, the same on every instance, from the environment in production. Required. |

@@ -25,6 +25,7 @@ import org.jwcarman.who.emaillink.EmailCredential;
 import org.jwcarman.who.emaillink.EmailCredentialService;
 import org.jwcarman.who.emaillink.EmailLinkIssuer;
 import org.jwcarman.who.emaillink.EmailLinkOutcome;
+import org.jwcarman.who.emaillink.InvalidInvitationException;
 import org.jwcarman.who.emaillink.InvitationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -280,11 +281,30 @@ class InviteControllerTest {
     int identities = count("who_identity");
 
     assertThatThrownBy(() -> invitations.invite("king@example.org", Set.of("OWNER")))
-        .isInstanceOf(IllegalStateException.class);
+        .isInstanceOf(InvalidInvitationException.class);
 
     assertThat(mail.sent()).isEmpty();
     assertThat(count("who_identity")).isEqualTo(identities);
     assertThat(emailCredentials.findByAddress("king@example.org")).isEmpty();
+  }
+
+  @Test
+  void whosOwnInviteEndpointRefusesTheOwnerRoleAsABadRequest() throws Exception {
+    int identities = count("who_identity");
+
+    members
+        .owner()
+        .browser()
+        .perform(
+            post("/who/invitations")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"king@example.org\",\"roles\":[\"OWNER\"]}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("invalid-request"))
+        .andExpect(jsonPath("$.detail").value("An invitation may only give [MEMBER, INSTRUCTOR]"));
+
+    assertThat(mail.sent()).isEmpty();
+    assertThat(count("who_identity")).isEqualTo(identities);
   }
 
   private ResultActions invite(String email) throws Exception {

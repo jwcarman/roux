@@ -16,6 +16,7 @@
 package org.jwcarman.roux.roles;
 
 import org.jwcarman.who.emaillink.IdentityInvited;
+import org.jwcarman.who.emaillink.InvalidInvitationException;
 import org.springframework.context.event.EventListener;
 
 /**
@@ -41,12 +42,13 @@ public class InvitableRolesGuard {
    * Checks the invitation's roles.
    *
    * @param event the invitation
-   * @throws IllegalStateException if it gives a role an invitation may not
+   * @throws InvalidInvitationException if it gives a role an invitation may not (who answers it as
+   *     a 400 with code {@code invalid-request})
    */
   @EventListener
   public void on(IdentityInvited event) {
     if (!invitable.names().containsAll(event.roles())) {
-      throw new IllegalStateException("An invitation may only give " + invitable.names());
+      throw new InvalidInvitationException("An invitation may only give " + invitable.names());
     }
   }
 }

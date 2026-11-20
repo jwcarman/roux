@@ -37,7 +37,9 @@ changesets like any schema.
   address, startup fails naming `roux.owner.email`.
 - **Invitable roles**, from `roux.roles.invitable` (a list, empty by default; `OWNER` can never be
   listed). roux refuses any invitation that gives another role, inside the invitation's transaction,
-  whichever endpoint sent it, and serves the list at `GET /api/roles/invitable` for the invite form.
+  whichever endpoint sent it, with who's `InvalidInvitationException` (who's own
+  `POST /who/invitations` answers it as a `400` with code `invalid-request`). It serves the list at
+  `GET /api/roles/invitable` for the invite form. List only roles the app's changelog creates.
 - **The last owner stays.** See "Keep someone who can manage people" below.
 
 ## The app's permissions

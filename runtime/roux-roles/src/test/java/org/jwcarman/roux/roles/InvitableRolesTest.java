@@ -17,8 +17,8 @@ package org.jwcarman.roux.roles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -30,6 +30,7 @@ import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.who.emaillink.IdentityInvited;
+import org.jwcarman.who.emaillink.InvalidInvitationException;
 
 @DisplayNameGeneration(ReplaceUnderscores.class)
 class InvitableRolesTest {
@@ -96,8 +97,8 @@ class InvitableRolesTest {
   void the_guard_refuses_an_unlisted_role() {
     InvitableRolesGuard guard = new InvitableRolesGuard(roles);
 
-    assertThatIllegalStateException()
-        .isThrownBy(() -> guard.on(invitation("OWNER")))
+    assertThatExceptionOfType(InvalidInvitationException.class)
+        .isThrownBy(() -> guard.on(invitation("COACH")))
         .withMessage("An invitation may only give [MEMBER, INSTRUCTOR]");
   }
 }
