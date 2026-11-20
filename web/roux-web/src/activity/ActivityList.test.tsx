@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { pageQuery, type PageDto } from "../paging";
 import { renderWithProviders } from "../testing/render";
 import type { Activity } from "./Activity";
@@ -31,6 +31,17 @@ function pageOf(data: Activity[]): PageDto<Activity> {
 }
 
 describe("ActivityList", () => {
+  // React warns of a missing or repeated key once per component, in whichever test renders it first,
+  // so every test here watches for it.
+  let errors: MockInstance;
+  beforeEach(() => {
+    errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
+  });
+
   it("shows each entry's description, who did it and when", async () => {
     renderWithProviders(
       <ActivityList
@@ -50,7 +61,6 @@ describe("ActivityList", () => {
   });
 
   it("keys each entry by its id, so React keeps them apart", async () => {
-    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
     renderWithProviders(
       <ActivityList
         aria-label="History"
@@ -58,8 +68,6 @@ describe("ActivityList", () => {
       />,
     );
     expect(await screen.findAllByRole("listitem")).toHaveLength(2);
-    expect(errors).not.toHaveBeenCalled();
-    errors.mockRestore();
   });
 
   it("says when there is no history yet", async () => {

@@ -66,9 +66,13 @@ export function timesMoney(money: Money, n: number): Money {
 
 /** The currency's narrow symbol (`$`, `¥`), as a money field shows it. */
 export function currencySymbol(currency: string): string {
-  return new Intl.NumberFormat("en", { style: "currency", currency, currencyDisplay: "narrowSymbol" })
-    .formatToParts(0)
-    .filter((part) => part.type === "currency")
-    .map((part) => part.value)
-    .join("");
+  // Zero with no fraction digits, less the zero, is the symbol alone.
+  return new Intl.NumberFormat("en", {
+    style: "currency",
+    currency,
+    currencyDisplay: "narrowSymbol",
+    maximumFractionDigits: 0,
+  })
+    .format(0)
+    .replace("0", "");
 }

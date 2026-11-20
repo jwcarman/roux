@@ -127,7 +127,11 @@ describe("startDayWatch", () => {
     // The timer set for the old day's end was replaced, not left to ask again.
     await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
     expect(fetchContext).toHaveBeenCalledOnce();
+
+    // ...nor left running after the watch stops.
     stop();
+    await vi.advanceTimersByTimeAsync(2 * 24 * 60 * 60 * 1000);
+    expect(fetchContext).toHaveBeenCalledOnce();
   });
 
   it("waking after the day ended asks once, then waits for the next day's end", async () => {
