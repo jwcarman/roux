@@ -99,6 +99,7 @@
     <modules>
         <module>runtime/roux-bom</module>
         <module>runtime/roux-problems</module>
+        <module>runtime/roux-organization</module>
         <module>runtime/roux-validation</module>
         <module>runtime/roux-spa</module>
         <module>runtime/roux-jpa</module>
