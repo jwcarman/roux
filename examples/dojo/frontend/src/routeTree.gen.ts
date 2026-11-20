@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignedInRouteImport } from './routes/_signedIn'
 import { Route as SignedInIndexRouteImport } from './routes/_signedIn/index'
 import { Route as SignedInAppearanceRouteImport } from './routes/_signedIn/appearance'
+import { Route as SignedInPaymentsRouteImport } from './routes/_signedIn/payments'
 import { Route as SignedInPlansRouteImport } from './routes/_signedIn/plans'
 import { Route as SignedInRanksRouteImport } from './routes/_signedIn/ranks'
 import { Route as SignedInSettingsRouteImport } from './routes/_signedIn/settings'
@@ -36,6 +37,11 @@ const SignedInIndexRoute = SignedInIndexRouteImport.update({
 const SignedInAppearanceRoute = SignedInAppearanceRouteImport.update({
   id: '/appearance',
   path: '/appearance',
+  getParentRoute: () => SignedInRoute,
+} as any)
+const SignedInPaymentsRoute = SignedInPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
   getParentRoute: () => SignedInRoute,
 } as any)
 const SignedInPlansRoute = SignedInPlansRouteImport.update({
@@ -99,6 +105,7 @@ const SignedInClassesClassIdCheckInRoute =
 export interface FileRoutesByFullPath {
   '/': typeof SignedInIndexRoute
   '/appearance': typeof SignedInAppearanceRoute
+  '/payments': typeof SignedInPaymentsRoute
   '/plans': typeof SignedInPlansRoute
   '/ranks': typeof SignedInRanksRoute
   '/settings': typeof SignedInSettingsRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/appearance': typeof SignedInAppearanceRoute
+  '/payments': typeof SignedInPaymentsRoute
   '/plans': typeof SignedInPlansRoute
   '/ranks': typeof SignedInRanksRoute
   '/settings': typeof SignedInSettingsRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_signedIn': typeof SignedInRouteWithChildren
   '/_signedIn/appearance': typeof SignedInAppearanceRoute
+  '/_signedIn/payments': typeof SignedInPaymentsRoute
   '/_signedIn/plans': typeof SignedInPlansRoute
   '/_signedIn/ranks': typeof SignedInRanksRoute
   '/_signedIn/settings': typeof SignedInSettingsRoute
@@ -148,6 +157,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/appearance'
+    | '/payments'
     | '/plans'
     | '/ranks'
     | '/settings'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/appearance'
+    | '/payments'
     | '/plans'
     | '/ranks'
     | '/settings'
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_signedIn'
     | '/_signedIn/appearance'
+    | '/_signedIn/payments'
     | '/_signedIn/plans'
     | '/_signedIn/ranks'
     | '/_signedIn/settings'
@@ -219,6 +231,13 @@ declare module '@tanstack/react-router' {
       path: '/appearance'
       fullPath: '/appearance'
       preLoaderRoute: typeof SignedInAppearanceRouteImport
+      parentRoute: typeof SignedInRoute
+    }
+    '/_signedIn/payments': {
+      id: '/_signedIn/payments'
+      path: '/payments'
+      fullPath: '/payments'
+      preLoaderRoute: typeof SignedInPaymentsRouteImport
       parentRoute: typeof SignedInRoute
     }
     '/_signedIn/plans': {
@@ -303,6 +322,7 @@ declare module '@tanstack/react-router' {
 
 interface SignedInRouteChildren {
   SignedInAppearanceRoute: typeof SignedInAppearanceRoute
+  SignedInPaymentsRoute: typeof SignedInPaymentsRoute
   SignedInPlansRoute: typeof SignedInPlansRoute
   SignedInRanksRoute: typeof SignedInRanksRoute
   SignedInSettingsRoute: typeof SignedInSettingsRoute
@@ -317,6 +337,7 @@ interface SignedInRouteChildren {
 
 const SignedInRouteChildren: SignedInRouteChildren = {
   SignedInAppearanceRoute: SignedInAppearanceRoute,
+  SignedInPaymentsRoute: SignedInPaymentsRoute,
   SignedInPlansRoute: SignedInPlansRoute,
   SignedInRanksRoute: SignedInRanksRoute,
   SignedInSettingsRoute: SignedInSettingsRoute,

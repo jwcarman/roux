@@ -1,4 +1,4 @@
-import { LuAward, LuCalendar, LuGraduationCap, LuHouse, LuPalette, LuSettings, LuTags, LuUsers } from "react-icons/lu";
+import { LuAward, LuCalendar, LuGraduationCap, LuHouse, LuPalette, LuSettings, LuTags, LuUsers, LuWallet } from "react-icons/lu";
 import { defineNav } from "@jwcarman/roux-web/navigation";
 import { PERMISSIONS } from "../permissions.gen";
 
@@ -42,6 +42,13 @@ export const nav = defineNav(PERMISSIONS, [
     icon: LuTags,
     permission: "plans.manage",
     description: "The membership plans the school offers and their prices.",
+  },
+  {
+    label: "Payments",
+    to: "/payments",
+    icon: LuWallet,
+    permission: "payments.read",
+    description: "Money taken each month, and this month's payments.",
   },
   {
     label: "Appearance",
