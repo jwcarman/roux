@@ -10,8 +10,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.jwcarman.roux.examples.dojo.activity.ActivityLog;
-import org.jwcarman.roux.examples.dojo.members.MemberProfile;
-import org.jwcarman.roux.examples.dojo.members.MemberProfileRepository;
 import org.jwcarman.roux.examples.dojo.plans.PlanEntity;
 import org.jwcarman.roux.examples.dojo.plans.PlanRepository;
 import org.jwcarman.roux.examples.dojo.students.PaymentState;
@@ -32,8 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class MembershipService {
 
-  static final String UNKNOWN = "Unknown";
-
   /** History entries are written in one locale; the school has no locale setting yet. */
   private static final Locale HISTORY_LOCALE = Locale.US;
 
@@ -41,7 +37,7 @@ public class MembershipService {
   private final PaymentRepository payments;
   private final PlanRepository plans;
   private final StudentRepository students;
-  private final MemberProfileRepository profiles;
+  private final Recorders recorders;
   private final ActivityLog activityLog;
   private final Clock clock;
 
@@ -50,14 +46,14 @@ public class MembershipService {
       PaymentRepository payments,
       PlanRepository plans,
       StudentRepository students,
-      MemberProfileRepository profiles,
+      Recorders recorders,
       ActivityLog activityLog,
       Clock clock) {
     this.memberships = memberships;
     this.payments = payments;
     this.plans = plans;
     this.students = students;
-    this.profiles = profiles;
+    this.recorders = recorders;
     this.activityLog = activityLog;
     this.clock = clock;
   }
@@ -170,17 +166,6 @@ public class MembershipService {
         "Payment removed: " + describe(payment));
   }
 
-  /**
-   * The display name of whoever recorded something, from its {@code createdBy}: the member's
-   * profile name, or {@value #UNKNOWN}.
-   */
-  String recordedBy(String createdBy) {
-    return parse(createdBy)
-        .flatMap(profiles::findById)
-        .map(MemberProfile::getDisplayName)
-        .orElse(UNKNOWN);
-  }
-
   private MembershipView view(
       StudentEntity student, MembershipEntity membership, List<PaymentEntity> paid) {
     PlanEntity plan = membership.getPlan();
@@ -209,7 +194,7 @@ public class MembershipService {
         payment.getAmount(),
         payment.getMethod(),
         payment.getNote(),
-        recordedBy(payment.getCreatedBy()));
+        recorders.nameOf(payment.getCreatedBy()));
   }
 
   /** "2 × $150.00": the periods and the price each was paid at (the amount always divides). */
@@ -217,14 +202,6 @@ public class MembershipService {
     Money amount = payment.getAmount();
     Money each = Money.of(amount.minorUnits() / payment.getPeriods(), amount.currency());
     return payment.getPeriods() + " × " + each.format(HISTORY_LOCALE);
-  }
-
-  private static Optional<UUID> parse(String id) {
-    try {
-      return Optional.ofNullable(id).map(UUID::fromString);
-    } catch (IllegalArgumentException e) {
-      return Optional.empty();
-    }
   }
 
   private StudentEntity locked(UUID studentId) {
