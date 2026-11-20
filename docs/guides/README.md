@@ -8,6 +8,7 @@
 - [Forms](forms.md)
 - [Money](money.md)
 - [Dates and time](dates-and-time.md)
+- [The activity log](activity-log.md)
 - [Tables and paging](tables-and-paging.md)
 - [Feedback](feedback.md)
 - [The shell: theme, sign-in and navigation](shell.md)

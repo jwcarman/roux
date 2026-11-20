@@ -527,3 +527,13 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   the dojo could not import it; the guide checker has its own list too.
 - roux could: read the entries from `package.json` in the build and the checker.
 - Outcome: fixed in the round 4 cleanup (the build and the guide checker read `package.json`'s `exports`).
+
+## Every app writes its own activity log
+- Where: the dojo's `activity/` package (table, service, repository, view, history endpoint) and its
+  `ActivityList`, `relativeTime`
+- What was clunky: nothing in it was about a dojo; every generated app would write it again, with
+  free-text summaries and no facts kept beyond the sentence.
+- roux could: own the table, the write and read, and the list component; the app declares typed kinds.
+- Outcome: fixed (`roux-activity-log`, `@jwcarman/roux-web/activity`; `docs/guides/activity-log.md`).
+  The dojo's activities are records (`MemberRenamed`, `PaymentRecorded`, `StudentPromoted`, ...), and
+  the student page has a History section.

@@ -135,6 +135,8 @@ naming the fix. There is no fallback to the device's date or locale.
 - `formatDateTime("2026-11-21T03:00:00Z")`: a moment, where the organization is
   (`Nov 20, 2026, 10:00 PM`);
 - `formatNumber(1234.5)`: `1,234.5`;
+- `formatRelativeTime("2026-11-17T12:00:00Z")`: how long ago, from this device's time (`3 days ago`,
+  `yesterday`, `now`) ([The activity log](activity-log.md#the-browser-activitylist));
 - `formatMoney(money)` (`@jwcarman/roux-web/money`): with the server's digits ([Money](money.md)).
 
 None takes a locale or a zone.

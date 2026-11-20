@@ -74,7 +74,7 @@ Boot's BOM, so Spring Boot's managed versions stay the parent's.
 </dependencies>
 ```
 
-The starter brings `roux-problems`, `roux-validation` (`@Phone`, `@NotInFuture` and roux's validation messages), `roux-spa` (the shell for any page URL), `roux-jpa` (`Versions`), `roux-money` (`Money` and its constraints: see [Money](money.md)), `roux-organization` (the time zone, locale and today: see [Dates and time](dates-and-time.md)), `roux-roles` (the `OWNER` role, the first owner and invitable roles: see
+The starter brings `roux-problems`, `roux-validation` (`@Phone`, `@NotInFuture` and roux's validation messages), `roux-spa` (the shell for any page URL), `roux-jpa` (`Versions`), `roux-money` (`Money` and its constraints: see [Money](money.md)), `roux-organization` (the time zone, locale and today: see [Dates and time](dates-and-time.md)), `roux-activity-log` (a record's history, in roux's table `roux_activity`: see [The activity log](activity-log.md)), `roux-roles` (the `OWNER` role, the first owner and invitable roles: see
 [Roles and permissions](roles.md)), `roux-autoconfigure`, who (`who-spring-boot-starter`, with
 email-link sign-in, `who-email-link`, which renders its mail with `who-email`, and passkeys, `who-passkey`),
 `who-admin` (who's endpoints for managing people, `/who/identities` and `/who/invitations`, open to
@@ -140,7 +140,7 @@ who:
 
 who's and roux's tables need no include. Each library declares its own changelog to
 [migratory](https://github.com/jwcarman/migratory), which who brings, and migratory runs them in
-order (who's, then roux-roles', which creates `OWNER`, then roux-theme's when the app has it)
+order (who's, then roux-activity-log's, then roux-roles', which creates `OWNER`, then roux-theme's when the app has it)
 before the app's own master changelog. The app's
 changelog holds only its own changesets, and may refer to who's and roux's tables. Three things
 follow:

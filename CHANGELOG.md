@@ -68,6 +68,12 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- `roux-activity-log`, in the starter: the business activity log. A kind is a record implementing
+  `BusinessActivity` (`type()`, `describe()`); `ActivityLog.append(anchor, activity, related...)` stores it
+  in the change's transaction with the actor, the time and its components as JSON, in roux's table
+  `roux_activity`; `ActivityLog.history(id, page)` reads a record's history; an `ActorNames` bean names
+  actors. roux-web: `@jwcarman/roux-web/activity` (`Activity`, `ActivityList`) and `formatRelativeTime` in
+  `./dates`. See `docs/guides/activity-log.md`.
 - `CallerPermissions` (roux-roles): `has(permission)` and `require(permission, what)` for the parts of a
   response only some callers see (a list's column, its filter and sort). See `docs/guides/roles.md`.
 - `roux-organization`, in the starter: `OrganizationCalendar` (`today()`, `thisMonth()`, `now()`,
