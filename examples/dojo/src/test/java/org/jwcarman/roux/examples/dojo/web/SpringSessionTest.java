@@ -145,8 +145,8 @@ class SpringSessionTest {
         .run(
             "--server.port=0",
             "--server.servlet.session.cookie.secure=false",
-            "--app.owner-email=" + OWNER,
-            "--app.owner-name=Owner",
+            "--roux.owner.email=" + OWNER,
+            "--roux.owner.name=Owner",
             "--spring.datasource.url=" + DATABASE.url(),
             "--spring.datasource.username=" + DATABASE.username(),
             "--spring.datasource.password=" + DATABASE.password(),

@@ -9,7 +9,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.AppTest;
 import org.jwcarman.roux.examples.dojo.TestMembers;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
+import org.jwcarman.roux.examples.dojo.identity.Roles;
+import org.jwcarman.roux.roles.RouxRoles;
 import org.jwcarman.who.core.domain.Identity;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.rbac.RbacService;
@@ -39,7 +40,7 @@ class MemberDirectoryTest {
 
   @Test
   void dualRoleIdentityAppearsOnceAsOwner() {
-    UUID id = member("Boss", "boss@example.com", AppRole.OWNER, AppRole.MEMBER);
+    UUID id = member("Boss", "boss@example.com", RouxRoles.OWNER, Roles.MEMBER);
 
     List<MemberDirectoryEntry> entries = directory.findAll();
 
@@ -54,7 +55,7 @@ class MemberDirectoryTest {
     Identity identity = who.createIdentity();
     rbac.assignRoleToIdentity(identity, customer);
     profiles.save(new MemberProfile(identity.id(), "Carl Customer", "carl@example.com"));
-    member("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    member("Ada Lovelace", "ada@example.org", Roles.MEMBER);
 
     assertThat(directory.findAll())
         .extracting(MemberDirectoryEntry::getDisplayName)
@@ -63,8 +64,8 @@ class MemberDirectoryTest {
 
   @Test
   void searchMatchesNameAndEmailCaseInsensitively() {
-    member("Ada Lovelace", "countess@example.org", AppRole.MEMBER);
-    member("Grace Hopper", "grace@example.com", AppRole.MEMBER);
+    member("Ada Lovelace", "countess@example.org", Roles.MEMBER);
+    member("Grace Hopper", "grace@example.com", Roles.MEMBER);
 
     assertThat(names(directory.search("ADA", PageRequest.of(0, 20))))
         .containsExactly("Ada Lovelace");
@@ -74,8 +75,8 @@ class MemberDirectoryTest {
 
   @Test
   void searchTreatsWildcardsLiterally() {
-    member("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
-    member("Grace_Hopper", "grace@example.com", AppRole.MEMBER);
+    member("Ada Lovelace", "ada@example.org", Roles.MEMBER);
+    member("Grace_Hopper", "grace@example.com", Roles.MEMBER);
 
     assertThat(directory.search("%", PageRequest.of(0, 20))).isEmpty();
     assertThat(names(directory.search("_", PageRequest.of(0, 20)))).containsExactly("Grace_Hopper");
@@ -83,9 +84,9 @@ class MemberDirectoryTest {
 
   @Test
   void sortsByNameEmailAndRoleBothWays() {
-    member("Bea", "a@example.com", AppRole.MEMBER);
-    member("Al", "c@example.com", AppRole.OWNER);
-    member("Cy", "b@example.com", AppRole.MEMBER);
+    member("Bea", "a@example.com", Roles.MEMBER);
+    member("Al", "c@example.com", RouxRoles.OWNER);
+    member("Cy", "b@example.com", Roles.MEMBER);
 
     assertThat(names(sorted(MemberSort.NAME, Sort.Direction.ASC)))
         .containsExactly("Al", "Bea", "Cy");
@@ -101,7 +102,7 @@ class MemberDirectoryTest {
 
   @Test
   void deletingTheIdentityDeletesTheProfile() {
-    UUID id = member("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    UUID id = member("Ada Lovelace", "ada@example.org", Roles.MEMBER);
 
     who.deleteIdentity(id);
 
@@ -110,7 +111,7 @@ class MemberDirectoryTest {
 
   @Test
   void auditingRecordsSystemOutsideARequest() {
-    UUID id = member("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    UUID id = member("Ada Lovelace", "ada@example.org", Roles.MEMBER);
 
     assertThat(
             jdbc.queryForObject(
@@ -120,9 +121,9 @@ class MemberDirectoryTest {
     assertThat(profile.getCreatedDate()).isNotNull();
   }
 
-  private UUID member(String name, String email, AppRole... roles) {
+  private UUID member(String name, String email, String... roles) {
     Identity identity = who.createIdentity();
-    for (AppRole role : roles) {
+    for (String role : roles) {
       rbac.assignRoleToIdentity(identity, rbac.findRequiredRole(role));
     }
     profiles.save(new MemberProfile(identity.id(), name, email));

@@ -8,8 +8,12 @@
 app:
   # The public origin, https and no trailing slash, such as https://app.example.com.
   base-url: ${APP_BASE_URL}
-  owner-email: ${APP_OWNER_EMAIL}
-  owner-name: ${APP_OWNER_NAME}
+
+roux:
+  # The first owner, whom roux makes while no active owner exists.
+  owner:
+    email: ${APP_OWNER_EMAIL}
+    name: ${APP_OWNER_NAME}
 
 spring:
   mail:

@@ -78,8 +78,8 @@ class E2eIT {
             // The browser talks plain HTTP to localhost.
             "--server.servlet.session.cookie.secure=false",
             "--app.base-url=" + BASE_URL,
-            "--app.owner-email=" + OWNER_EMAIL,
-            "--app.owner-name=" + OWNER_NAME,
+            "--roux.owner.email=" + OWNER_EMAIL,
+            "--roux.owner.name=" + OWNER_NAME,
             "--who.passkey.allowed-origins=" + BASE_URL,
             "--who.passkey.rp-id=localhost",
             "--spring.datasource.url=" + DATABASE.url(),

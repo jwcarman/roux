@@ -26,7 +26,8 @@ import org.jwcarman.roux.examples.dojo.TestMember;
 import org.jwcarman.roux.examples.dojo.TestMembers;
 import org.jwcarman.roux.examples.dojo.activity.ActivityEntry;
 import org.jwcarman.roux.examples.dojo.activity.ActivityRepository;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
+import org.jwcarman.roux.examples.dojo.identity.Roles;
+import org.jwcarman.roux.roles.RouxRoles;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.rbac.RbacService;
 import org.jwcarman.who.rbac.Role;
@@ -80,7 +81,7 @@ class MembersControllerTest {
 
   @Test
   void memberReadsAndRenamesOwnProfile() throws Exception {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
 
     ada.browser()
         .perform(get(ME))
@@ -99,9 +100,9 @@ class MembersControllerTest {
 
   @Test
   void withoutAStatusOnlyActiveMembersAreListed() throws Exception {
-    TestMember owner = members.signedIn("Olive Owner", "olive@example.org", AppRole.OWNER);
-    members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
-    TestMember grace = members.signedIn("Grace Hopper", "grace@example.org", AppRole.MEMBER);
+    TestMember owner = members.signedIn("Olive Owner", "olive@example.org", RouxRoles.OWNER);
+    members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
+    TestMember grace = members.signedIn("Grace Hopper", "grace@example.org", Roles.MEMBER);
     who.deactivate(grace.id());
 
     owner
@@ -115,9 +116,9 @@ class MembersControllerTest {
 
   @Test
   void deactivatedFilterListsOnlyDeactivated() throws Exception {
-    TestMember owner = members.signedIn("Olive Owner", "olive@example.org", AppRole.OWNER);
-    members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
-    TestMember grace = members.signedIn("Grace Hopper", "grace@example.org", AppRole.MEMBER);
+    TestMember owner = members.signedIn("Olive Owner", "olive@example.org", RouxRoles.OWNER);
+    members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
+    TestMember grace = members.signedIn("Grace Hopper", "grace@example.org", Roles.MEMBER);
     who.deactivate(grace.id());
 
     owner
@@ -130,9 +131,9 @@ class MembersControllerTest {
 
   @Test
   void roleFilterCombinesWithSearch() throws Exception {
-    TestMember owner = members.signedIn("Olive Owner", "olive@example.org", AppRole.OWNER);
-    members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
-    members.signedIn("Ada Owner", "ada.owner@example.org", AppRole.OWNER);
+    TestMember owner = members.signedIn("Olive Owner", "olive@example.org", RouxRoles.OWNER);
+    members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
+    members.signedIn("Ada Owner", "ada.owner@example.org", RouxRoles.OWNER);
 
     owner
         .browser()
@@ -143,7 +144,7 @@ class MembersControllerTest {
 
   @Test
   void anUnknownFilterValueIs400WithAFieldMessage() throws Exception {
-    TestMember owner = members.signedIn("Olive Owner", "olive@example.org", AppRole.OWNER);
+    TestMember owner = members.signedIn("Olive Owner", "olive@example.org", RouxRoles.OWNER);
 
     owner
         .browser()
@@ -156,14 +157,12 @@ class MembersControllerTest {
         .browser()
         .perform(get(MEMBERS).param("role", "KING"))
         .andExpect(status().isBadRequest())
-        .andExpect(
-            jsonPath("$.errors[?(@.field == \'role\')].message")
-                .value("Must be one of OWNER, INSTRUCTOR, MEMBER"));
+        .andExpect(jsonPath("$.errors[?(@.field == \'role\')].message").value("No such role"));
   }
 
   @Test
   void renameRecordsOldAndNewNames() throws Exception {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
 
     ada.browser().perform(rename("Ada King", 0)).andExpect(status().isOk());
 
@@ -179,7 +178,7 @@ class MembersControllerTest {
 
   @Test
   void renamingToTheSameNameRecordsNothing() throws Exception {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
 
     ada.browser().perform(rename(" Ada Lovelace ", 0)).andExpect(status().isOk());
 
@@ -188,7 +187,7 @@ class MembersControllerTest {
 
   @Test
   void aRefusedRenameRecordsNothing() throws Exception {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
 
     ada.browser().perform(rename("Ada King", 7)).andExpect(status().isConflict());
 
@@ -203,8 +202,8 @@ class MembersControllerTest {
 
   @Test
   void renameChangesOnlyTheCallersRow() throws Exception {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
-    TestMember grace = members.signedIn("Grace Hopper", "grace@example.com", AppRole.MEMBER);
+    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
+    TestMember grace = members.signedIn("Grace Hopper", "grace@example.com", Roles.MEMBER);
 
     ada.browser().perform(rename("Ada King", 0)).andExpect(status().isOk());
 
@@ -214,7 +213,7 @@ class MembersControllerTest {
 
   @Test
   void blankAndOverlongNamesAre400() throws Exception {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
 
     ada.browser()
         .perform(rename("   ", 0))
@@ -228,7 +227,7 @@ class MembersControllerTest {
 
   @Test
   void staleVersionIs409() throws Exception {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
     ada.browser().perform(rename("Ada King", 0)).andExpect(status().isOk());
 
     ada.browser()
@@ -240,7 +239,7 @@ class MembersControllerTest {
 
   @Test
   void missingProfileIs404() throws Exception {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
     jdbc.update("delete from member_profile where id = ?", ada.id());
 
     ada.browser().perform(get(ME)).andExpect(status().isNotFound());
@@ -249,8 +248,8 @@ class MembersControllerTest {
 
   @Test
   void directoryPagesSearchesAndSorts() throws Exception {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
-    members.signedIn("Grace Hopper", "grace@example.com", AppRole.MEMBER);
+    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
+    members.signedIn("Grace Hopper", "grace@example.com", Roles.MEMBER);
 
     ada.browser()
         .perform(get(MEMBERS).param("sortBy", "NAME"))
@@ -276,8 +275,8 @@ class MembersControllerTest {
 
   @Test
   void directoryWithoutSortByIsSortedByName() throws Exception {
-    TestMember zed = members.signedIn("Zed Zimmer", "zed@example.com", AppRole.MEMBER);
-    members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    TestMember zed = members.signedIn("Zed Zimmer", "zed@example.com", Roles.MEMBER);
+    members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
 
     zed.browser()
         .perform(get(MEMBERS))
@@ -290,8 +289,8 @@ class MembersControllerTest {
   @ParameterizedTest
   @ValueSource(strings = {"", " ", "  "})
   void blankSortByIsSortedByName(String sortBy) throws Exception {
-    TestMember zed = members.signedIn("Zed Zimmer", "zed@example.com", AppRole.MEMBER);
-    members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    TestMember zed = members.signedIn("Zed Zimmer", "zed@example.com", Roles.MEMBER);
+    members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
 
     zed.browser()
         .perform(get(MEMBERS).param("sortBy", sortBy))
@@ -303,9 +302,9 @@ class MembersControllerTest {
 
   @Test
   void membersWithTheSameNameAreEachListedOnceAcrossPages() throws Exception {
-    TestMember first = members.signedIn("Sam Same", "sam1@example.com", AppRole.MEMBER);
-    TestMember second = members.signedIn("Sam Same", "sam2@example.com", AppRole.MEMBER);
-    TestMember third = members.signedIn("Sam Same", "sam3@example.com", AppRole.MEMBER);
+    TestMember first = members.signedIn("Sam Same", "sam1@example.com", Roles.MEMBER);
+    TestMember second = members.signedIn("Sam Same", "sam2@example.com", Roles.MEMBER);
+    TestMember third = members.signedIn("Sam Same", "sam3@example.com", Roles.MEMBER);
 
     List<String> listed = new ArrayList<>();
     for (int page = 0; page < 4; page++) {
@@ -332,7 +331,7 @@ class MembersControllerTest {
 
   @Test
   void unknownSortByIs400() throws Exception {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
 
     ada.browser()
         .perform(get(MEMBERS).param("sortBy", "SALARY"))
@@ -343,7 +342,7 @@ class MembersControllerTest {
 
   @Test
   void pagePastEndIsEmpty() throws Exception {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
 
     ada.browser()
         .perform(get(MEMBERS).param("pageIndex", "99"))
@@ -355,7 +354,7 @@ class MembersControllerTest {
 
   @Test
   void pageSizeIsClamped() throws Exception {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
 
     ada.browser()
         .perform(get(MEMBERS).param("pageSize", "0"))
@@ -369,7 +368,7 @@ class MembersControllerTest {
 
   @Test
   void putWithoutCsrfHeaderIs403() throws Exception {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
     ada.browser().perform(get(ME)).andExpect(status().isOk());
 
     // WhoMockMvcBrowser always echoes the CSRF cookie into the header, so send the request with

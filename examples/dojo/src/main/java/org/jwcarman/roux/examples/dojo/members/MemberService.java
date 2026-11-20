@@ -15,11 +15,13 @@ import org.jwcarman.jpa.pagination.PageSpec;
 import org.jwcarman.jpa.spring.page.Paginator;
 import org.jwcarman.roux.examples.dojo.activity.Activity;
 import org.jwcarman.roux.examples.dojo.activity.ActivityLog;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
 import org.jwcarman.roux.examples.dojo.web.ExportTooLargeException;
 import org.jwcarman.roux.jpa.Versions;
+import org.jwcarman.roux.problems.InvalidFieldException;
 import org.jwcarman.roux.problems.InvariantViolationException;
+import org.jwcarman.roux.roles.RouxRoles;
 import org.jwcarman.who.core.service.WhoService;
+import org.jwcarman.who.rbac.RbacService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -56,6 +58,7 @@ public class MemberService {
   private final WhoService who;
   private final int maxExportRows;
   private final JdbcTemplate jdbc;
+  private final RbacService rbac;
 
   public MemberService(
       MemberProfileRepository profiles,
@@ -63,13 +66,15 @@ public class MemberService {
       ActivityLog activityLog,
       WhoService who,
       @Value("${app.export.max-rows:10000}") int maxExportRows,
-      JdbcTemplate jdbc) {
+      JdbcTemplate jdbc,
+      RbacService rbac) {
     this.profiles = profiles;
     this.directory = directory;
     this.activityLog = activityLog;
     this.who = who;
     this.maxExportRows = maxExportRows;
     this.jdbc = jdbc;
+    this.rbac = rbac;
   }
 
   /** A member's own profile, as the API shows it. */
@@ -133,10 +138,10 @@ public class MemberService {
    * @param search matched against name and email, case-insensitively; blank lists everyone
    * @param role only members with this role; null for any
    * @param status only members with this status; null for {@link MemberStatus#ACTIVE}
+   * @throws InvalidFieldException on {@code role} if no role has that name
    */
   @Transactional(readOnly = true)
-  public PageDto<Member> directory(
-      PageSpec spec, String search, AppRole role, MemberStatus status) {
+  public PageDto<Member> directory(PageSpec spec, String search, String role, MemberStatus status) {
     return DIRECTORY_PAGES.paginate(
         spec, pageable -> directory.findAll(filtered(search, role, status), pageable), Member::of);
   }
@@ -147,7 +152,7 @@ public class MemberService {
    * @throws ExportTooLargeException past {@code app.export.max-rows} rows (10,000 by default)
    */
   @Transactional(readOnly = true)
-  public String exportCsv(PageSpec spec, String search, AppRole role, MemberStatus status) {
+  public String exportCsv(PageSpec spec, String search, String role, MemberStatus status) {
     Sort sort = DIRECTORY_PAGES.pageableOf(spec).getSort();
     List<MemberDirectoryEntry> rows =
         directory
@@ -161,7 +166,10 @@ public class MemberService {
 
   /** The search, narrowed by the filters: jpa-utils' searchFor composes like any Specification. */
   private Specification<MemberDirectoryEntry> filtered(
-      String search, AppRole role, MemberStatus status) {
+      String search, String role, MemberStatus status) {
+    if (role != null && rbac.findRole(role).isEmpty()) {
+      throw new InvalidFieldException("role", "No such role");
+    }
     Specification<MemberDirectoryEntry> filter =
         directory.searchFor(search).and(statusIs(status == null ? MemberStatus.ACTIVE : status));
     return role == null ? filter : filter.and(roleIs(role));
@@ -213,8 +221,8 @@ public class MemberService {
     if (MemberStatus.DEACTIVATED.name().equals(member.getStatus())) {
       throw new InvariantViolationException("Already deactivated");
     }
-    if (AppRole.OWNER.name().equals(member.getRole())
-        && directory.countByRoleAndStatus(AppRole.OWNER.name(), MemberStatus.ACTIVE.name()) <= 1) {
+    if (RouxRoles.OWNER.equals(member.getRole())
+        && directory.countByRoleAndStatus(RouxRoles.OWNER, MemberStatus.ACTIVE.name()) <= 1) {
       throw new InvariantViolationException("The team needs at least one active owner");
     }
     who.deactivate(memberId);

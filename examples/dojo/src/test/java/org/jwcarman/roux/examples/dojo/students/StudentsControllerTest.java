@@ -22,7 +22,7 @@ import org.jwcarman.roux.examples.dojo.AppTest;
 import org.jwcarman.roux.examples.dojo.TestClock;
 import org.jwcarman.roux.examples.dojo.TestMember;
 import org.jwcarman.roux.examples.dojo.TestMembers;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
+import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
@@ -310,7 +310,7 @@ class StudentsControllerTest {
   @Test
   void aMemberReadsButCannotChange() throws Exception {
     JsonNode ada = add("Ada", "Lovelace", "2026-02-01");
-    TestMember grace = members.signedIn("Grace", "grace@example.org", AppRole.MEMBER);
+    TestMember grace = members.signedIn("Grace", "grace@example.org", Roles.MEMBER);
     String base = STUDENTS + "/" + id(ada);
 
     grace.perform(get(STUDENTS)).andExpect(status().isOk());

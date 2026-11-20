@@ -29,7 +29,7 @@ import org.jwcarman.roux.examples.dojo.AppTest;
 import org.jwcarman.roux.examples.dojo.TestClock;
 import org.jwcarman.roux.examples.dojo.TestMember;
 import org.jwcarman.roux.examples.dojo.TestMembers;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
+import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
@@ -330,8 +330,8 @@ class CheckInControllerTest {
 
   @Test
   void anInstructorChecksInButAMemberCannotAndSignedOutIs401() throws Exception {
-    TestMember ivy = members.signedIn("Ivy", "ivy@example.org", AppRole.INSTRUCTOR);
-    TestMember mo = members.signedIn("Mo", "mo@example.org", AppRole.MEMBER);
+    TestMember ivy = members.signedIn("Ivy", "ivy@example.org", Roles.INSTRUCTOR);
+    TestMember mo = members.signedIn("Mo", "mo@example.org", Roles.MEMBER);
 
     ivy.perform(checkIn(tuesdayClass, TUESDAY)).andExpect(status().isOk());
     ivy.perform(markRequest(tuesdayClass, ada, TUESDAY, true)).andExpect(status().isOk());

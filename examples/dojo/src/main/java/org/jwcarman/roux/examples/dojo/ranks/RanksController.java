@@ -5,7 +5,7 @@ import java.util.UUID;
 
 import jakarta.validation.Valid;
 
-import org.jwcarman.roux.examples.dojo.identity.AppRoles;
+import org.jwcarman.roux.examples.dojo.identity.Permissions;
 import org.jwcarman.who.spring.security.RequiresPermission;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,39 +30,39 @@ public class RanksController {
   }
 
   @GetMapping
-  @RequiresPermission(AppRoles.RANKS_READ)
+  @RequiresPermission(Permissions.RANKS_READ)
   public List<Rank> list() {
     return ranks.list();
   }
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  @RequiresPermission(AppRoles.RANKS_MANAGE)
+  @RequiresPermission(Permissions.RANKS_MANAGE)
   public Rank create(@Valid @RequestBody RankRequest request) {
     return ranks.create(request);
   }
 
   @PutMapping("/{id}")
-  @RequiresPermission(AppRoles.RANKS_MANAGE)
+  @RequiresPermission(Permissions.RANKS_MANAGE)
   public Rank update(@PathVariable UUID id, @Valid @RequestBody RankRequest request) {
     return ranks.update(id, request);
   }
 
   @PostMapping("/{id}/move-up")
-  @RequiresPermission(AppRoles.RANKS_MANAGE)
+  @RequiresPermission(Permissions.RANKS_MANAGE)
   public List<Rank> moveUp(@PathVariable UUID id) {
     return ranks.moveUp(id);
   }
 
   @PostMapping("/{id}/move-down")
-  @RequiresPermission(AppRoles.RANKS_MANAGE)
+  @RequiresPermission(Permissions.RANKS_MANAGE)
   public List<Rank> moveDown(@PathVariable UUID id) {
     return ranks.moveDown(id);
   }
 
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @RequiresPermission(AppRoles.RANKS_MANAGE)
+  @RequiresPermission(Permissions.RANKS_MANAGE)
   public void remove(@PathVariable UUID id) {
     ranks.remove(id);
   }

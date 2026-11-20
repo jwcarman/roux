@@ -12,7 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.AppTest;
 import org.jwcarman.roux.examples.dojo.TestMember;
 import org.jwcarman.roux.examples.dojo.TestMembers;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
+import org.jwcarman.roux.examples.dojo.identity.Roles;
+import org.jwcarman.roux.roles.RouxRoles;
 import org.jwcarman.who.core.domain.Identity;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailCredential;
@@ -44,7 +45,7 @@ class InvitationsSecurityTest {
   @Test
   void memberWithoutMembersInviteIs403() throws Exception {
     members
-        .signedIn("Alice", "alice@example.com", AppRole.MEMBER)
+        .signedIn("Alice", "alice@example.com", Roles.MEMBER)
         .perform(post(INVITE).contentType(MediaType.APPLICATION_JSON).content(BODY))
         .andExpect(status().isForbidden());
   }
@@ -63,7 +64,7 @@ class InvitationsSecurityTest {
 
   @Test
   void inviteNameIsValidated() throws Exception {
-    TestMember owner = members.signedIn("Bo Boss", "boss@example.com", AppRole.OWNER);
+    TestMember owner = members.signedIn("Bo Boss", "boss@example.com", RouxRoles.OWNER);
 
     for (String name : List.of("   ", "a".repeat(81))) {
       owner
@@ -96,7 +97,7 @@ class InvitationsSecurityTest {
 
   @Test
   void postWithoutCsrfHeaderIs403() throws Exception {
-    TestMember owner = members.signedIn("Bo Boss", "boss@example.com", AppRole.OWNER);
+    TestMember owner = members.signedIn("Bo Boss", "boss@example.com", RouxRoles.OWNER);
 
     // WhoMockMvcBrowser always echoes the CSRF cookie into the header, so send the request with
     // only the browser's session cookie.

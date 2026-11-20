@@ -12,7 +12,7 @@ import java.time.ZoneOffset;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
+import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.who.emaillink.EmailCredentialService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -40,7 +40,7 @@ class AppTestTest {
 
   @Test
   void signsInAMemberWithARoleAndAProfile() throws Exception {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
 
     ada.perform(get("/api/members/me"))
         .andExpect(status().isOk())
@@ -56,7 +56,7 @@ class AppTestTest {
 
   @Test
   void resetLeavesOnlyTheOwner() {
-    members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
 
     members.reset();
 

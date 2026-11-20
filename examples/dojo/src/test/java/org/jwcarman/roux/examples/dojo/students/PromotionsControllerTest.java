@@ -21,7 +21,7 @@ import org.jwcarman.roux.examples.dojo.AppTest;
 import org.jwcarman.roux.examples.dojo.TestClock;
 import org.jwcarman.roux.examples.dojo.TestMember;
 import org.jwcarman.roux.examples.dojo.TestMembers;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
+import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
@@ -300,7 +300,7 @@ class PromotionsControllerTest {
     String ada = student("Ada", "Lovelace");
     JsonNode promoted = promote(ada, white, "2026-01-10");
     String id = promoted.get("promotions").get(0).get("id").asString();
-    TestMember grace = members.signedIn("Grace", "grace@example.org", AppRole.MEMBER);
+    TestMember grace = members.signedIn("Grace", "grace@example.org", Roles.MEMBER);
 
     grace.perform(get(STUDENTS + "/" + ada)).andExpect(status().isOk());
     for (MockHttpServletRequestBuilder write :

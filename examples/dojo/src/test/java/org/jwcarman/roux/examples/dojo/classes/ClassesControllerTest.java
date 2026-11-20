@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.AppTest;
 import org.jwcarman.roux.examples.dojo.TestMember;
 import org.jwcarman.roux.examples.dojo.TestMembers;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
+import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
@@ -48,8 +48,8 @@ class ClassesControllerTest {
   void cleanSlate() {
     members.reset("school_class");
     owner = members.owner();
-    ivy = members.signedIn("Ivy Instructor", "ivy@example.org", AppRole.INSTRUCTOR);
-    mo = members.signedIn("Mo Member", "mo@example.org", AppRole.MEMBER);
+    ivy = members.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
+    mo = members.signedIn("Mo Member", "mo@example.org", Roles.MEMBER);
   }
 
   @Test

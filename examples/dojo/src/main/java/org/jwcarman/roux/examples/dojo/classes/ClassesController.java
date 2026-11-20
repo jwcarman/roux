@@ -5,7 +5,7 @@ import java.util.UUID;
 
 import jakarta.validation.Valid;
 
-import org.jwcarman.roux.examples.dojo.identity.AppRoles;
+import org.jwcarman.roux.examples.dojo.identity.Permissions;
 import org.jwcarman.who.spring.security.RequiresPermission;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,39 +30,39 @@ public class ClassesController {
   }
 
   @GetMapping
-  @RequiresPermission(AppRoles.CLASSES_READ)
+  @RequiresPermission(Permissions.CLASSES_READ)
   public List<SchoolClass> list() {
     return classes.list();
   }
 
   @GetMapping("/instructors")
-  @RequiresPermission(AppRoles.CLASSES_MANAGE)
+  @RequiresPermission(Permissions.CLASSES_MANAGE)
   public List<Instructor> instructors() {
     return classes.instructors();
   }
 
   @GetMapping("/{id}")
-  @RequiresPermission(AppRoles.CLASSES_READ)
+  @RequiresPermission(Permissions.CLASSES_READ)
   public SchoolClass get(@PathVariable UUID id) {
     return classes.get(id);
   }
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  @RequiresPermission(AppRoles.CLASSES_MANAGE)
+  @RequiresPermission(Permissions.CLASSES_MANAGE)
   public SchoolClass create(@Valid @RequestBody ClassRequest request) {
     return classes.create(request);
   }
 
   @PutMapping("/{id}")
-  @RequiresPermission(AppRoles.CLASSES_MANAGE)
+  @RequiresPermission(Permissions.CLASSES_MANAGE)
   public SchoolClass update(@PathVariable UUID id, @Valid @RequestBody ClassRequest request) {
     return classes.update(id, request);
   }
 
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @RequiresPermission(AppRoles.CLASSES_MANAGE)
+  @RequiresPermission(Permissions.CLASSES_MANAGE)
   public void remove(@PathVariable UUID id) {
     classes.remove(id);
   }

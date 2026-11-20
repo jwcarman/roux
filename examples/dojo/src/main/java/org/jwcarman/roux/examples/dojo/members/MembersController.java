@@ -11,8 +11,7 @@ import jakarta.validation.constraints.Size;
 import org.jwcarman.jpa.pagination.PageDto;
 import org.jwcarman.jpa.spring.web.PageParams;
 import org.jwcarman.roux.examples.dojo.activity.Activity;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
+import org.jwcarman.roux.examples.dojo.identity.Permissions;
 import org.jwcarman.roux.examples.dojo.members.MemberService.Member;
 import org.jwcarman.roux.examples.dojo.members.MemberService.MemberDetail;
 import org.jwcarman.roux.examples.dojo.members.MemberService.Profile;
@@ -49,35 +48,35 @@ public class MembersController {
   }
 
   @GetMapping("/me")
-  @RequiresPermission(AppRoles.MEMBERS_PROFILE)
+  @RequiresPermission(Permissions.MEMBERS_PROFILE)
   public Profile me(@AuthenticationPrincipal WhoPrincipal principal) {
     return members.profile(principal.identity().id());
   }
 
   @PutMapping("/me")
-  @RequiresPermission(AppRoles.MEMBERS_PROFILE)
+  @RequiresPermission(Permissions.MEMBERS_PROFILE)
   public Profile rename(
       @AuthenticationPrincipal WhoPrincipal principal, @Valid @RequestBody Rename request) {
     return members.rename(principal.identity().id(), request.displayName(), request.version());
   }
 
   @GetMapping
-  @RequiresPermission(AppRoles.MEMBERS_READ)
+  @RequiresPermission(Permissions.MEMBERS_READ)
   public PageDto<Member> directory(
       @ModelAttribute PageParams params,
       @RequestParam(required = false) String search,
-      @RequestParam(required = false) AppRole role,
+      @RequestParam(required = false) String role,
       @RequestParam(required = false) MemberStatus status) {
     return members.directory(params, search, role, status);
   }
 
   /** The directory as a CSV download, filtered and sorted like the list; not paged. */
   @GetMapping("/export.csv")
-  @RequiresPermission(AppRoles.MEMBERS_READ)
+  @RequiresPermission(Permissions.MEMBERS_READ)
   public ResponseEntity<String> export(
       @ModelAttribute PageParams params,
       @RequestParam(required = false) String search,
-      @RequestParam(required = false) AppRole role,
+      @RequestParam(required = false) String role,
       @RequestParam(required = false) MemberStatus status) {
     return ResponseEntity.ok()
         .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
@@ -88,26 +87,26 @@ public class MembersController {
   }
 
   @GetMapping("/{id}")
-  @RequiresPermission(AppRoles.MEMBERS_READ)
+  @RequiresPermission(Permissions.MEMBERS_READ)
   public MemberDetail detail(@PathVariable UUID id) {
     return members.detail(id);
   }
 
   @GetMapping("/{id}/activities")
-  @RequiresPermission(AppRoles.MEMBERS_READ)
+  @RequiresPermission(Permissions.MEMBERS_READ)
   public PageDto<Activity> activities(@PathVariable UUID id, @ModelAttribute PageParams params) {
     return members.activities(id, params);
   }
 
   @PostMapping("/{id}/deactivate")
-  @RequiresPermission(AppRoles.MEMBERS_MANAGE)
+  @RequiresPermission(Permissions.MEMBERS_MANAGE)
   public MemberDetail deactivate(
       @AuthenticationPrincipal WhoPrincipal principal, @PathVariable UUID id) {
     return members.deactivate(principal.identity().id(), id);
   }
 
   @PostMapping("/{id}/reactivate")
-  @RequiresPermission(AppRoles.MEMBERS_MANAGE)
+  @RequiresPermission(Permissions.MEMBERS_MANAGE)
   public MemberDetail reactivate(@PathVariable UUID id) {
     return members.reactivate(id);
   }

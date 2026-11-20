@@ -4,7 +4,7 @@ import java.util.UUID;
 
 import jakarta.validation.Valid;
 
-import org.jwcarman.roux.examples.dojo.identity.AppRoles;
+import org.jwcarman.roux.examples.dojo.identity.Permissions;
 import org.jwcarman.who.spring.security.RequiresPermission;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,14 +28,14 @@ public class PromotionsController {
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  @RequiresPermission(AppRoles.PROMOTIONS_MANAGE)
+  @RequiresPermission(Permissions.PROMOTIONS_MANAGE)
   public StudentDetail promote(
       @PathVariable UUID studentId, @Valid @RequestBody PromotionRequest request) {
     return promotions.promote(studentId, request);
   }
 
   @DeleteMapping("/{promotionId}")
-  @RequiresPermission(AppRoles.PROMOTIONS_MANAGE)
+  @RequiresPermission(Permissions.PROMOTIONS_MANAGE)
   public StudentDetail remove(@PathVariable UUID studentId, @PathVariable UUID promotionId) {
     return promotions.remove(studentId, promotionId);
   }

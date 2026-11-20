@@ -20,7 +20,7 @@ public class InvitableRolesGuard {
 
   private static final Set<String> INVITABLE =
       Arrays.stream(InvitableRole.values())
-          .map(role -> role.role().name())
+          .map(role -> role.role())
           .collect(Collectors.toUnmodifiableSet());
 
   /**

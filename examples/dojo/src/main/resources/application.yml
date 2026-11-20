@@ -46,6 +46,12 @@ spring:
     port: ${MAILPIT_SMTP_PORT:1025}
 
 roux:
+  roles:
+    # The roles an invitation may give, in the order the invite form offers them. Never OWNER:
+    # roux makes the first owner from roux.owner.*.
+    invitable:
+      - MEMBER
+      - INSTRUCTOR
   theme:
     # The app's name until the owner names it on the Appearance page (roux-theme keeps the owner's
     # choices in its own table; whatever they have not chosen is read from here).

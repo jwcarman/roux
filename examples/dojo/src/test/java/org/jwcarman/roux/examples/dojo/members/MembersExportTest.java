@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.AppTest;
 import org.jwcarman.roux.examples.dojo.TestMember;
 import org.jwcarman.roux.examples.dojo.TestMembers;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
+import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.who.core.service.WhoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.TestPropertySource;
@@ -97,6 +97,6 @@ class MembersExportTest {
   }
 
   private UUID member(String name, String email) {
-    return members.signedIn(name, email, AppRole.MEMBER).id();
+    return members.signedIn(name, email, Roles.MEMBER).id();
   }
 }

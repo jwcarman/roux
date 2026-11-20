@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <!-- The dojo's roles and what each grants. OWNER is roux's (roux-roles' changelog creates it and
+       grants who-admin's permissions; roux-theme grants theme.manage); the dojo grants it its own.
+       Roles are named, never referred to by id, and only what is missing is inserted, so a database
+       whose roles the dojo's old startup sync made gains nothing twice. A new permission is a
+       constant in Permissions and a changeset of its own here; PermissionsTest checks they agree. -->
+  <changeSet id="dojo-roles-1" author="dojo">
+        <sql>
+            INSERT INTO who_role (id, name) VALUES
+              (gen_random_uuid(), 'INSTRUCTOR'),
+              (gen_random_uuid(), 'MEMBER')
+              ON CONFLICT (name) DO NOTHING;
+        </sql>
+        <sql>
+            INSERT INTO who_role_permission (role_id, permission)
+              SELECT r.id, p.permission FROM who_role r
+              CROSS JOIN (VALUES
+                ('members.invite'),
+                ('members.read'),
+                ('members.profile'),
+                ('members.manage'),
+                ('ranks.read'),
+                ('ranks.manage'),
+                ('students.read'),
+                ('students.manage'),
+                ('promotions.manage'),
+                ('classes.read'),
+                ('classes.manage'),
+                ('attendance.record'),
+                ('attendance.read')) AS p(permission)
+              WHERE r.name = 'OWNER'
+              ON CONFLICT DO NOTHING;
+        </sql>
+        <sql>
+            INSERT INTO who_role_permission (role_id, permission)
+              SELECT r.id, p.permission FROM who_role r
+              CROSS JOIN (VALUES
+                ('ranks.read'),
+                ('students.read'),
+                ('students.manage'),
+                ('promotions.manage'),
+                ('members.read'),
+                ('members.profile'),
+                ('classes.read'),
+                ('attendance.record'),
+                ('attendance.read')) AS p(permission)
+              WHERE r.name = 'INSTRUCTOR'
+              ON CONFLICT DO NOTHING;
+        </sql>
+        <sql>
+            INSERT INTO who_role_permission (role_id, permission)
+              SELECT r.id, p.permission FROM who_role r
+              CROSS JOIN (VALUES
+                ('members.read'),
+                ('members.profile'),
+                ('ranks.read'),
+                ('students.read'),
+                ('classes.read'),
+                ('attendance.read')) AS p(permission)
+              WHERE r.name = 'MEMBER'
+              ON CONFLICT DO NOTHING;
+        </sql>
+  </changeSet>
+</databaseChangeLog>

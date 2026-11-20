@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 import org.jwcarman.roux.examples.dojo.activity.ActivityLog;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles;
+import org.jwcarman.roux.examples.dojo.identity.Permissions;
 import org.jwcarman.roux.problems.InvalidFieldException;
 import org.jwcarman.who.core.domain.Identity;
 import org.jwcarman.who.emaillink.EmailAddressTakenException;
@@ -58,14 +58,14 @@ public class InviteController {
    */
   @PostMapping
   @ResponseStatus(HttpStatus.ACCEPTED)
-  @RequiresPermission(AppRoles.MEMBERS_INVITE)
+  @RequiresPermission(Permissions.MEMBERS_INVITE)
   public InvitationResult invite(@Valid @RequestBody InvitationRequest request) {
     Invitation invitation;
     try {
       invitation =
           invitations.invite(
               request.email(),
-              Set.of(request.role().role().name()),
+              Set.of(request.role().role()),
               identity -> attachProfile(identity, request));
     } catch (EmailAddressTakenException _) {
       throw new InvalidFieldException("email", "That address is already a member");

@@ -7,7 +7,7 @@ import java.util.UUID;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
-import org.jwcarman.roux.examples.dojo.identity.AppRoles;
+import org.jwcarman.roux.examples.dojo.identity.Permissions;
 import org.jwcarman.roux.validation.NotInFuture;
 import org.jwcarman.who.spring.security.RequiresPermission;
 import org.springframework.validation.annotation.Validated;
@@ -32,14 +32,14 @@ public class CheckInController {
   }
 
   @GetMapping("/check-in")
-  @RequiresPermission(AppRoles.ATTENDANCE_RECORD)
+  @RequiresPermission(Permissions.ATTENDANCE_RECORD)
   public List<Attendee> checkIn(
       @PathVariable UUID classId, @RequestParam @NotNull @NotInFuture LocalDate date) {
     return attendance.checkIn(classId, date);
   }
 
   @PutMapping("/attendance")
-  @RequiresPermission(AppRoles.ATTENDANCE_RECORD)
+  @RequiresPermission(Permissions.ATTENDANCE_RECORD)
   public Attendee mark(@PathVariable UUID classId, @Valid @RequestBody AttendanceRequest request) {
     return attendance.mark(classId, request);
   }

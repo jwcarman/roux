@@ -23,7 +23,7 @@ import org.springframework.test.context.ContextConfiguration;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@SpringBootTest(properties = "app.owner-email=" + TestMembers.OWNER_EMAIL)
+@SpringBootTest(properties = "roux.owner.email=" + TestMembers.OWNER_EMAIL)
 @AutoConfigureMockMvc
 @ContextConfiguration(initializers = TestDatabase.Initializer.class)
 @Import({TestMembers.class, TestClock.class})

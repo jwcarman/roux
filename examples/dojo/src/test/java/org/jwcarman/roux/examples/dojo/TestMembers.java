@@ -4,10 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
-import org.jwcarman.roux.examples.dojo.identity.OwnerBootstrap;
+import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.examples.dojo.members.MemberProfile;
 import org.jwcarman.roux.examples.dojo.members.MemberProfileRepository;
+import org.jwcarman.roux.roles.OwnerBootstrap;
+import org.jwcarman.roux.roles.RouxRoles;
 import org.jwcarman.who.core.domain.Identity;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailCredential;
@@ -26,7 +27,11 @@ public class TestMembers {
 
   /** who's tables; truncating them (cascading to what refers to them) removes every member. */
   private static final List<String> WHO_TABLES =
-      List.of("who_identity", "who_role", "who_email_credential", "who_credential_identity");
+      List.of("who_identity", "who_email_credential", "who_credential_identity");
+
+  /** The roles the changelogs make; a role a test made is deleted, these stay with their grants. */
+  private static final List<String> MIGRATED_ROLES =
+      List.of(RouxRoles.OWNER, Roles.INSTRUCTOR, Roles.MEMBER);
 
   private final JdbcTemplate jdbc;
   private final OwnerBootstrap bootstrap;
@@ -57,19 +62,23 @@ public class TestMembers {
   }
 
   /**
-   * Starts a test from a clean slate: removes every member and empties {@code tables}, makes the
-   * roles and the owner again as the app does at startup, and puts the clock back on real time.
+   * Starts a test from a clean slate: removes every member and empties {@code tables}, deletes the
+   * roles tests made, makes the owner again as roux does at startup, and puts the clock back on
+   * real time.
    */
   public void reset(String... tables) {
     List<String> truncated = new ArrayList<>(WHO_TABLES);
     truncated.addAll(List.of(tables));
     jdbc.execute("truncate " + String.join(", ", truncated) + " cascade");
+    jdbc.update(
+        "delete from who_role where name <> all (?)",
+        (Object) MIGRATED_ROLES.toArray(String[]::new));
     clock.useRealTime();
     bootstrap.run(null);
   }
 
   /** A new member with {@code role}, a profile, and a browser signed in as them. */
-  public TestMember signedIn(String name, String email, AppRole role) {
+  public TestMember signedIn(String name, String email, String role) {
     return signedIn(name, email, rbac.findRequiredRole(role));
   }
 

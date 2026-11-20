@@ -6,7 +6,7 @@ import jakarta.validation.Valid;
 
 import org.jwcarman.jpa.pagination.PageDto;
 import org.jwcarman.jpa.spring.web.PageParams;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles;
+import org.jwcarman.roux.examples.dojo.identity.Permissions;
 import org.jwcarman.who.spring.security.RequiresPermission;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,7 +32,7 @@ public class StudentsController {
   }
 
   @GetMapping
-  @RequiresPermission(AppRoles.STUDENTS_READ)
+  @RequiresPermission(Permissions.STUDENTS_READ)
   public PageDto<Student> list(
       @ModelAttribute PageParams params,
       @RequestParam(required = false) String search,
@@ -42,32 +42,32 @@ public class StudentsController {
   }
 
   @GetMapping("/{id}")
-  @RequiresPermission(AppRoles.STUDENTS_READ)
+  @RequiresPermission(Permissions.STUDENTS_READ)
   public StudentDetail detail(@PathVariable UUID id) {
     return students.detail(id);
   }
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  @RequiresPermission(AppRoles.STUDENTS_MANAGE)
+  @RequiresPermission(Permissions.STUDENTS_MANAGE)
   public StudentDetail create(@Valid @RequestBody StudentRequest request) {
     return students.create(request);
   }
 
   @PutMapping("/{id}")
-  @RequiresPermission(AppRoles.STUDENTS_MANAGE)
+  @RequiresPermission(Permissions.STUDENTS_MANAGE)
   public StudentDetail update(@PathVariable UUID id, @Valid @RequestBody StudentRequest request) {
     return students.update(id, request);
   }
 
   @PostMapping("/{id}/deactivate")
-  @RequiresPermission(AppRoles.STUDENTS_MANAGE)
+  @RequiresPermission(Permissions.STUDENTS_MANAGE)
   public StudentDetail deactivate(@PathVariable UUID id) {
     return students.deactivate(id);
   }
 
   @PostMapping("/{id}/reactivate")
-  @RequiresPermission(AppRoles.STUDENTS_MANAGE)
+  @RequiresPermission(Permissions.STUDENTS_MANAGE)
   public StudentDetail reactivate(@PathVariable UUID id) {
     return students.reactivate(id);
   }

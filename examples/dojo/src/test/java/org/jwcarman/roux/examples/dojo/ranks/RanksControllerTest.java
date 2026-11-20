@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.AppTest;
 import org.jwcarman.roux.examples.dojo.TestMember;
 import org.jwcarman.roux.examples.dojo.TestMembers;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
+import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
@@ -138,7 +138,7 @@ class RanksControllerTest {
   @Test
   void aMemberReadsButCannotChange() throws Exception {
     JsonNode white = create("White", "WHITE");
-    TestMember ada = members.signedIn("Ada", "ada@example.org", AppRole.MEMBER);
+    TestMember ada = members.signedIn("Ada", "ada@example.org", Roles.MEMBER);
 
     ada.perform(get(RANKS)).andExpect(status().isOk());
     for (MockHttpServletRequestBuilder write :

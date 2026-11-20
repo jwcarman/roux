@@ -142,8 +142,11 @@ are the worked example. Copy their shape:
   (with Try again); a signed-in browser's typed bad URL reaches the same page.
 - **One icon set.** Icons come from `react-icons/lu` (Lucide), enforced by `icons.test.ts`.
 - **A permission per capability, never a role check.** `members.invite`, `members.read`,
-  `members.profile` and `members.manage` gate the endpoints with `@RequiresPermission`; `AppRoles` decides which role
-  holds which. A role that holds none of them is shut out of the members area with no code
+  `members.profile` and `members.manage` gate the endpoints with `@RequiresPermission`. The constants
+  live in `Permissions`; which role holds which is data, granted in `db/changelog/roles.xml` (OWNER
+  is roux's, and roux's modules grant it their own). `PermissionsTest` fails when OWNER lacks a
+  constant or a role grants one that does not exist, and writes `frontend/src/permissions.gen.ts`
+  from the constants. A role that holds none of them is shut out of the members area with no code
   changes.
 - **Identity from the session.** `/api/members/me` acts as the signed-in identity, so nobody edits
   another member's profile; an action on another member names them by id and needs its permission
@@ -188,14 +191,14 @@ From the repository's root, build roux once (`./mvnw install -DskipTests`), then
 
 ```bash
 cd examples/dojo
-../../mvnw spring-boot:run -Dspring-boot.run.arguments="--app.owner-email=you@example.com --app.owner-name=You"
+../../mvnw spring-boot:run -Dspring-boot.run.arguments="--roux.owner.email=you@example.com --roux.owner.name=You"
 ```
 
 `spring-boot:run` turns on the `dev` profile (`application-dev.yml`), which lets the session cookie
 travel over plain HTTP. Spring Boot starts PostgreSQL and Mailpit from `compose.yaml` by itself. The
 app is at
-<http://localhost:8080>. `app.owner-email` and `app.owner-name` are required: on first start the app makes that
-address the `OWNER`, with that display name. Request a sign-in link for it and read the email in Mailpit at
+<http://localhost:8080>. `roux.owner.email` and `roux.owner.name` are required: on first start roux makes that
+address the `OWNER`, with that display name, and the dojo gives it a member profile. Request a sign-in link for it and read the email in Mailpit at
 <http://localhost:8025>.
 
 If port 1025 or 8025 is taken, set `MAILPIT_SMTP_PORT` and/or `MAILPIT_WEB_PORT` before starting.
@@ -216,8 +219,8 @@ set these variables. None has a default. A missing one fails startup, except `PA
 | Variable | Sets | Example |
 |---|---|---|
 | `APP_BASE_URL` | `app.base-url`; links and `who.passkey.allowed-origins` follow it | `https://app.example.com` |
-| `APP_OWNER_EMAIL` | `app.owner-email`, the first `OWNER` | `owner@example.com` |
-| `APP_OWNER_NAME` | `app.owner-name`, the first `OWNER`'s display name | `Olive Owner` |
+| `APP_OWNER_EMAIL` | `roux.owner.email`, the first `OWNER` | `owner@example.com` |
+| `APP_OWNER_NAME` | `roux.owner.name`, the first `OWNER`'s display name | `Olive Owner` |
 | `PASSKEY_RP_ID` | `who.passkey.rp-id`: the app's own host, not derived from the base URL | `app.example.com` |
 | `MAIL_FROM` | `who.email.from`, the one sending address | `mail@example.com` |
 | `WHO_CODE_SECRET` | `who.email-link.code-secret`, the key for typed sign-in codes; at least 32 characters, from `openssl rand -base64 32` | |
@@ -275,10 +278,11 @@ can serve it; no sticky sessions are needed.
   reactivating stay in `MembersController` over `WhoService`, because the app's own rules (the last
   active owner, the status lock) and its activity log belong to the same transaction; who's
   `PATCH /who/identities/{id}` (who-admin) knows none of them.
-- **The owner.** `app.owner-email` makes the first owner: the bootstrap creates one only while no
-  identity holds `OWNER`. Once an owner exists, changing `app.owner-email` changes nothing (a log
-  line says so); if every owner is deleted, the next start makes that address the owner again,
-  unless another identity already holds it.
+- **The owner.** `roux.owner.email` makes the first owner: roux creates one only while no active
+  identity holds `OWNER`, and the dojo's `OwnerProfiles` gives it a profile in the same transaction.
+  Once an active owner exists, changing `roux.owner.email` changes nothing; if none is active (the
+  database was changed by hand), the next start makes that address the owner again, and fails
+  naming `roux.owner.email` when another identity already holds it.
 - **Request sizes.** Cap request bodies and headers at the ingress.
 
 ## Tests on the JVM

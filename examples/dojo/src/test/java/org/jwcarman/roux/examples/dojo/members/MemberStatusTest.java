@@ -23,9 +23,10 @@ import org.jwcarman.roux.examples.dojo.AppTest;
 import org.jwcarman.roux.examples.dojo.TestMember;
 import org.jwcarman.roux.examples.dojo.TestMembers;
 import org.jwcarman.roux.examples.dojo.activity.ActivityLog;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles;
-import org.jwcarman.roux.examples.dojo.identity.AppRoles.AppRole;
+import org.jwcarman.roux.examples.dojo.identity.Permissions;
+import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.problems.InvariantViolationException;
+import org.jwcarman.roux.roles.RouxRoles;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.rbac.RbacService;
 import org.jwcarman.who.rbac.Role;
@@ -52,7 +53,7 @@ class MemberStatusTest {
   void cleanSlate() {
     members.reset("activity");
     owner = members.owner();
-    ada = members.signedIn("Ada Lovelace", "ada@example.org", AppRole.MEMBER);
+    ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
   }
 
   @Test
@@ -132,7 +133,7 @@ class MemberStatusTest {
   void anEntryWithNoActorIsBySystemAndOneWhoseActorIsGoneIsByAFormerMember() throws Exception {
     tx.executeWithoutResult(
         _ -> activityLog.record("member", ada.id(), "member.renamed", "Renamed"));
-    TestMember grace = members.signedIn("Grace Hopper", "grace@example.org", AppRole.OWNER);
+    TestMember grace = members.signedIn("Grace Hopper", "grace@example.org", RouxRoles.OWNER);
     grace.browser().perform(post(path(ada.id()) + "/deactivate")).andExpect(status().isOk());
     who.deleteIdentity(grace.id());
 
@@ -155,7 +156,7 @@ class MemberStatusTest {
   @Test
   void theTeamKeepsAnActiveOwner() throws Exception {
     Role manager = rbac.createRole("MANAGER");
-    rbac.addPermissionToRole(manager, AppRoles.MEMBERS_MANAGE);
+    rbac.addPermissionToRole(manager, Permissions.MEMBERS_MANAGE);
     TestMember max = members.signedIn("Max Manager", "max@example.org", manager);
 
     max.browser()
@@ -166,7 +167,7 @@ class MemberStatusTest {
 
   @Test
   void twoOwnersDeactivatingEachOtherAtOnceLeaveOneActiveOwner() throws Exception {
-    TestMember olga = members.signedIn("Olga Owner", "olga@example.org", AppRole.OWNER);
+    TestMember olga = members.signedIn("Olga Owner", "olga@example.org", RouxRoles.OWNER);
     // Each change waits, before it commits, until both have run their checks (or 2 s pass, when
     // the other is held back by the lock): the window in which both would count two owners.
     CountDownLatch bothChecked = new CountDownLatch(2);
@@ -227,7 +228,7 @@ class MemberStatusTest {
 
   @Test
   void aMemberCannotDeactivateAnyone() throws Exception {
-    TestMember grace = members.signedIn("Grace Hopper", "grace@example.org", AppRole.MEMBER);
+    TestMember grace = members.signedIn("Grace Hopper", "grace@example.org", Roles.MEMBER);
 
     grace.browser().perform(post(path(ada.id()) + "/deactivate")).andExpect(status().isForbidden());
   }
