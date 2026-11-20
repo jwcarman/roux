@@ -3,7 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { renderRoute } from "./route";
-import { server } from "./server";
+import { server } from "@jwcarman/roux-web/testing";
 
 describe("renderRoute", () => {
   it("opens the path for a signed-in caller", async () => {

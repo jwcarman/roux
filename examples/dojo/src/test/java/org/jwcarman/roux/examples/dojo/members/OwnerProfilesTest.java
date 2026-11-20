@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.jwcarman.roux.examples.dojo.AppTest;
-import org.jwcarman.roux.examples.dojo.TestMembers;
+import org.jwcarman.roux.test.AppTest;
+import org.jwcarman.roux.test.TestMembers;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /** The owner roux makes at startup gets a member profile, as everyone on the team has one. */

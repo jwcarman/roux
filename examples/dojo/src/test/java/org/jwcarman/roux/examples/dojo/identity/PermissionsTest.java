@@ -5,9 +5,9 @@ import static org.jwcarman.roux.roles.Permissions.allOf;
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
-import org.jwcarman.roux.examples.dojo.AppTest;
 import org.jwcarman.roux.roles.check.PermissionsTypeScript;
 import org.jwcarman.roux.roles.check.RoleGrantsCheck;
+import org.jwcarman.roux.test.AppTest;
 import org.jwcarman.roux.theme.RouxThemePermissions;
 import org.jwcarman.who.admin.WhoAdminPermissions;
 import org.springframework.beans.factory.annotation.Autowired;

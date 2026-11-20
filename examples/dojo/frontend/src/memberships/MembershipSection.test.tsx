@@ -7,9 +7,8 @@ import { toaster } from "@jwcarman/roux-web/feedback";
 import { PAYMENTS_RECORD, STUDENTS_READ } from "../permissions.gen";
 import type { Plan } from "../plans/plans";
 import type { StudentDetail } from "../students/students";
-import { invalidFields } from "../testing/problems";
+import { invalidFields, server } from "@jwcarman/roux-web/testing";
 import { renderRoute } from "../testing/route";
-import { server } from "../testing/server";
 import { defaultStartDate, type MembershipView, type StudentMemberships } from "./memberships";
 
 const MAYA: StudentDetail = {

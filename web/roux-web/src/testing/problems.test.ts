@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contract } from "./contracts";
-import { invalidFields, invariantViolation, stale } from "./problems";
+import { invalidFields, invariantViolation, notFound, serverError, stale } from "./problems";
 
 type Problem = Record<string, unknown>;
 
@@ -44,5 +44,22 @@ describe("problem answers", () => {
       type: "application/problem+json",
       body: { ...conflict, detail: "This record changed since you loaded it" },
     });
+  });
+
+  it("notFound answers as the server does for a missing record", async () => {
+    expect(await answered(notFound("No note 42"))).toEqual({
+      status: 404,
+      type: "application/problem+json",
+      body: served("problem-not-found.json"),
+    });
+  });
+
+  it("serverError answers as the server does for an unexpected failure, with its reference", async () => {
+    expect(await answered(serverError("ref-1"))).toEqual({
+      status: 500,
+      type: "application/problem+json",
+      body: { ...served("problem-server-error.json"), errorId: "ref-1" },
+    });
+    expect((await serverError().json()) as Problem).toHaveProperty("errorId", "7d1c2e0a-5b4f-4c1e-9a8b-0f6e2d3c4b5a");
   });
 });

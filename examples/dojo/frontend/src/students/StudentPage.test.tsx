@@ -6,9 +6,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { toaster } from "@jwcarman/roux-web/feedback";
 import { PAYMENTS_RECORD, PROMOTIONS_MANAGE, STUDENTS_MANAGE, STUDENTS_READ } from "../permissions.gen";
 import type { Rank } from "../ranks/ranks";
-import { invalidFields } from "../testing/problems";
+import { invalidFields, server } from "@jwcarman/roux-web/testing";
 import { renderRoute } from "../testing/route";
-import { server } from "../testing/server";
 import type { StudentDetail } from "./students";
 
 const WHITE: Rank = { id: "r1", name: "White", colour: "WHITE", position: 1, version: 0 };

@@ -7,9 +7,7 @@ import { Toaster, toaster } from "@jwcarman/roux-web/feedback";
 import { type Profile } from "../api";
 import { MEMBERS_PROFILE } from "../permissions.gen";
 import { SessionProvider } from "../shell/session";
-import { stale } from "../testing/problems";
-import { renderWithProviders } from "../testing/render";
-import { server } from "../testing/server";
+import { renderWithProviders, server, stale } from "@jwcarman/roux-web/testing";
 import { ProfileForm } from "./ProfileForm";
 
 /** The signed-in member's profile, as last saved; a rename at another version is a 409. */

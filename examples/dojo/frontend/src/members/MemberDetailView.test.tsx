@@ -6,10 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MemberDetail } from "../api";
 import { ConfirmProvider, Toaster, toaster } from "@jwcarman/roux-web/feedback";
 import { queryKeys } from "../queryKeys";
-import { pageOf } from "../testing/fakeServer";
-import { invariantViolation } from "../testing/problems";
-import { renderWithProviders } from "../testing/render";
-import { server } from "../testing/server";
+import { invariantViolation, pageOf, renderWithProviders, server } from "@jwcarman/roux-web/testing";
 import { MemberDetailView } from "./MemberDetailView";
 
 const GRACE: MemberDetail = {

@@ -1,10 +1,18 @@
 // @vitest-environment jsdom
-import { Button, ButtonGroup } from "@chakra-ui/react";
-import { screen } from "@testing-library/react";
+import { Button, ButtonGroup, ChakraProvider, defaultSystem } from "@chakra-ui/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { renderWithProviders } from "../testing/render";
+import type { ReactElement } from "react";
 import { FilterChips } from "./FilterChips";
+
+/**
+ * The chips under Chakra's own theme alone: these tests check the chip recipe, and the app theme's global
+ * colours (which jsdom cannot compute) would stay in the document for every later test.
+ */
+function renderStyled(ui: ReactElement) {
+  return render(<ChakraProvider value={defaultSystem}>{ui}</ChakraProvider>);
+}
 
 const ROLES = [
   { value: "OWNER", label: "Owners" },
@@ -13,7 +21,7 @@ const ROLES = [
 
 describe("FilterChips", () => {
   it("is a labelled group whose chosen chip is pressed", () => {
-    renderWithProviders(<FilterChips label="Role" options={ROLES} value="OWNER" onChange={vi.fn()} allLabel="All" />);
+    renderStyled(<FilterChips label="Role" options={ROLES} value="OWNER" onChange={vi.fn()} allLabel="All" />);
     const group = screen.getByRole("group", { name: "Role" });
     expect(group).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Owners" })).toHaveAttribute("aria-pressed", "true");
@@ -22,15 +30,13 @@ describe("FilterChips", () => {
   });
 
   it("offers All for no filter, pressed when nothing is chosen", () => {
-    renderWithProviders(
-      <FilterChips label="Role" options={ROLES} value={undefined} onChange={vi.fn()} allLabel="All" />,
-    );
+    renderStyled(<FilterChips label="Role" options={ROLES} value={undefined} onChange={vi.fn()} allLabel="All" />);
     expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("reports the chip chosen, and undefined for All", async () => {
     const onChange = vi.fn();
-    renderWithProviders(<FilterChips label="Role" options={ROLES} value="OWNER" onChange={onChange} allLabel="All" />);
+    renderStyled(<FilterChips label="Role" options={ROLES} value="OWNER" onChange={onChange} allLabel="All" />);
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Members" }));
     expect(onChange).toHaveBeenLastCalledWith("MEMBER");
@@ -39,19 +45,19 @@ describe("FilterChips", () => {
   });
 
   it("offers no All chip unless asked", () => {
-    renderWithProviders(<FilterChips label="Role" options={ROLES} value="OWNER" onChange={vi.fn()} />);
+    renderStyled(<FilterChips label="Role" options={ROLES} value="OWNER" onChange={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "All" })).toBeNull();
     expect(screen.getByRole("button", { name: "Owners" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Members" })).toBeInTheDocument();
   });
 
   it("is not a joined button group", () => {
-    renderWithProviders(<FilterChips label="Role" options={ROLES} value="OWNER" onChange={vi.fn()} />);
+    renderStyled(<FilterChips label="Role" options={ROLES} value="OWNER" onChange={vi.fn()} />);
     expect(getComputedStyle(screen.getByRole("button", { name: "Owners" })).borderStartEndRadius).not.toBe("0px");
   });
 
   it("fills the chosen chip and outlines the others", () => {
-    renderWithProviders(<FilterChips label="Role" options={ROLES} value="OWNER" onChange={vi.fn()} />);
+    renderStyled(<FilterChips label="Role" options={ROLES} value="OWNER" onChange={vi.fn()} />);
     const chosen = getComputedStyle(screen.getByRole("button", { name: "Owners" }));
     const other = getComputedStyle(screen.getByRole("button", { name: "Members" }));
     expect(chosen.backgroundColor).not.toBe(other.backgroundColor);
@@ -59,7 +65,7 @@ describe("FilterChips", () => {
   });
 
   it("outlines the other chips, as an outline button is", () => {
-    renderWithProviders(
+    renderStyled(
       <>
         <FilterChips label="Role" options={ROLES} value="OWNER" onChange={vi.fn()} />
         <Button variant="outline">Reference</Button>
@@ -72,7 +78,7 @@ describe("FilterChips", () => {
   });
 
   it("fills the chosen chip even inside a toolbar that outlines its buttons", () => {
-    renderWithProviders(
+    renderStyled(
       <ButtonGroup variant="outline">
         <FilterChips label="Role" options={ROLES} value="OWNER" onChange={vi.fn()} />
       </ButtonGroup>,
@@ -84,7 +90,7 @@ describe("FilterChips", () => {
 
   describe("with a default value", () => {
     it("shows the default chip chosen while the URL has no value", () => {
-      renderWithProviders(
+      renderStyled(
         <FilterChips label="Role" options={ROLES} value={undefined} defaultValue="MEMBER" onChange={vi.fn()} />,
       );
       expect(screen.getByRole("button", { name: "Members" })).toHaveAttribute("aria-pressed", "true");
@@ -92,16 +98,14 @@ describe("FilterChips", () => {
     });
 
     it("shows the value chosen when the URL has one", () => {
-      renderWithProviders(
-        <FilterChips label="Role" options={ROLES} value="OWNER" defaultValue="MEMBER" onChange={vi.fn()} />,
-      );
+      renderStyled(<FilterChips label="Role" options={ROLES} value="OWNER" defaultValue="MEMBER" onChange={vi.fn()} />);
       expect(screen.getByRole("button", { name: "Owners" })).toHaveAttribute("aria-pressed", "true");
       expect(screen.getByRole("button", { name: "Members" })).toHaveAttribute("aria-pressed", "false");
     });
 
     it("reports undefined for the default chip and the value for any other", async () => {
       const onChange = vi.fn();
-      renderWithProviders(
+      renderStyled(
         <FilterChips label="Role" options={ROLES} value="OWNER" defaultValue="MEMBER" onChange={onChange} />,
       );
       const user = userEvent.setup();

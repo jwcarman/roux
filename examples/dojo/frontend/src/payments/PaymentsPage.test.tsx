@@ -9,9 +9,8 @@ import {
   PLANS_MANAGE,
 } from "../permissions.gen";
 import { nav } from "../shell/nav";
-import { pageOf } from "../testing/fakeServer";
+import { pageOf, server } from "@jwcarman/roux-web/testing";
 import { renderRoute } from "../testing/route";
-import { server } from "../testing/server";
 import type { MonthlyTotal, PaymentListEntry } from "./payments";
 
 const usd = (minorUnits: number) => ({ minorUnits, currency: "USD" });

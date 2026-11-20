@@ -1,7 +1,5 @@
 package org.jwcarman.roux.examples.dojo.members;
 
-import java.util.Set;
-
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -12,11 +10,10 @@ import org.jwcarman.roux.examples.dojo.identity.Permissions;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.problems.InvalidFieldException;
 import org.jwcarman.roux.roles.InvitableRoles;
+import org.jwcarman.roux.roles.MemberInvitations;
 import org.jwcarman.who.core.domain.Identity;
 import org.jwcarman.who.emaillink.EmailAddressTakenException;
-import org.jwcarman.who.emaillink.EmailCredential;
 import org.jwcarman.who.emaillink.Invitation;
-import org.jwcarman.who.emaillink.InvitationService;
 import org.jwcarman.who.spring.security.RequiresPermission;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,10 +26,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * The invite form's endpoint: the dojo's rules (a name, and only the roles in {@code
- * roux.roles.invitable}) in front of who's {@link InvitationService}, which does the invitation.
- * The member's profile and the "invited" activity entry are written by a callback that runs inside
- * who's transaction, so they commit or roll back with the invitation. roux's guard refuses any
- * other role for invitations made any other way.
+ * roux.roles.invitable}) in front of roux's {@link MemberInvitations}. The member's profile comes
+ * from {@link MemberProfiles}, which hears {@code MemberJoined}; the "invited" activity entry is
+ * written in the same transaction, so both commit or roll back with the invitation. roux's guard
+ * refuses any other role for invitations made any other way.
  */
 @RestController
 @RequestMapping("/api/members/invitations")
@@ -40,13 +37,13 @@ public class InviteController {
 
   private static final Logger log = LoggerFactory.getLogger(InviteController.class);
 
-  private final InvitationService invitations;
+  private final MemberInvitations invitations;
   private final MemberProfileRepository profiles;
   private final ActivityLog activityLog;
   private final InvitableRoles invitable;
 
   public InviteController(
-      InvitationService invitations,
+      MemberInvitations invitations,
       MemberProfileRepository profiles,
       ActivityLog activityLog,
       InvitableRoles invitable) {
@@ -74,10 +71,7 @@ public class InviteController {
     Invitation invitation;
     try {
       invitation =
-          invitations.invite(
-              request.email(),
-              Set.of(request.role()),
-              identity -> attachProfile(identity, request));
+          invitations.invite(request.name(), request.email(), request.role(), this::appendInvited);
     } catch (EmailAddressTakenException _) {
       throw new InvalidFieldException("email", "That address is already a member");
     }
@@ -93,12 +87,9 @@ public class InviteController {
    * The identity carries no address, so the profile's comes from the request, normalized as who
    * registers it.
    */
-  private void attachProfile(Identity identity, InvitationRequest request) {
-    MemberProfile profile =
-        profiles.save(
-            new MemberProfile(
-                identity.id(), request.name(), EmailCredential.normalize(request.email())));
-    activityLog.append(identity.id(), new MemberInvited(profile.getDisplayName()));
+  private void appendInvited(Identity identity) {
+    String name = profiles.findById(identity.id()).orElseThrow().getDisplayName();
+    activityLog.append(identity.id(), new MemberInvited(name));
   }
 
   /**

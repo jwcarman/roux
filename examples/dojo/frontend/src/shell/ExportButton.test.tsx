@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { renderWithProviders } from "../testing/render";
+import { renderWithProviders } from "@jwcarman/roux-web/testing";
 import { ExportButton, exportHref } from "./ExportButton";
 
 describe("exportHref", () => {

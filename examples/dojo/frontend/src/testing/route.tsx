@@ -7,8 +7,7 @@ import { ConfirmProvider, Toaster } from "@jwcarman/roux-web/feedback";
 import { routeTree } from "../routeTree.gen";
 import { SessionProvider, useSession } from "../shell/session";
 import { ThemeProvider } from "@jwcarman/roux-web/theme";
-import { testQueryClient } from "./render";
-import { server } from "./server";
+import { server, testQueryClient } from "@jwcarman/roux-web/testing";
 
 /**
  * Opens `path` in the whole app, as TanStack's file-based routing guide tests routes: a router

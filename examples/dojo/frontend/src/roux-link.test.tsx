@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { mutationOptions } from "@tanstack/react-query";
 import { text, useSchemaForm } from "@jwcarman/roux-web/form";
-import { renderWithProviders } from "./testing/render";
+import { renderWithProviders } from "@jwcarman/roux-web/testing";
 
 const schema = z.object({ name: text().max(40) });
 

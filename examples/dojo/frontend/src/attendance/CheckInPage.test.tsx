@@ -7,9 +7,8 @@ import { toaster } from "@jwcarman/roux-web/feedback";
 import { setOrganization, testOrganization } from "@jwcarman/roux-web/organization";
 import { ATTENDANCE_RECORD, CLASSES_READ } from "../permissions.gen";
 import type { SchoolClass } from "../classes/classes";
-import { invalidFields } from "../testing/problems";
+import { invalidFields, server } from "@jwcarman/roux-web/testing";
 import { renderRoute } from "../testing/route";
-import { server } from "../testing/server";
 import { queryKeys } from "../queryKeys";
 import { markAttendance, type AttendanceRequest, type Attendee } from "./attendance";
 

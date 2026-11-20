@@ -5,9 +5,8 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { toaster } from "@jwcarman/roux-web/feedback";
 import { RANKS_MANAGE, RANKS_READ } from "../permissions.gen";
-import { invalidFields } from "../testing/problems";
+import { invalidFields, server } from "@jwcarman/roux-web/testing";
 import { renderRoute } from "../testing/route";
-import { server } from "../testing/server";
 import { queryKeys } from "../queryKeys";
 import { moveRankDown, moveRankUp, removeRank, updateRank, type Rank } from "./ranks";
 

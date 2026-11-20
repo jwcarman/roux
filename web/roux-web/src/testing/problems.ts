@@ -26,3 +26,15 @@ export function stale(): Response {
   };
   return new Response(JSON.stringify(body), { status: 409, headers: PROBLEM_JSON });
 }
+
+/** A 404 Problem Detail, as the server answers a NotFoundException. */
+export function notFound(detail: string): Response {
+  const body = { title: "Not Found", status: 404, detail };
+  return new Response(JSON.stringify(body), { status: 404, headers: PROBLEM_JSON });
+}
+
+/** A 500 Problem Detail, with the reference the server logged (`errorId`), as the server answers an unexpected failure. */
+export function serverError(errorId = "7d1c2e0a-5b4f-4c1e-9a8b-0f6e2d3c4b5a"): Response {
+  const body = { title: "Internal Server Error", status: 500, detail: "Something went wrong", errorId };
+  return new Response(JSON.stringify(body), { status: 500, headers: PROBLEM_JSON });
+}

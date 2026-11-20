@@ -3,7 +3,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ColorModeButton, ColorModeProvider } from "./colorMode";
-import { renderWithProviders } from "../testing/render";
+import { renderWithProviders } from "@jwcarman/roux-web/testing";
 
 describe("ColorModeButton", () => {
   it("switches between light and dark, starting from the system's mode", async () => {

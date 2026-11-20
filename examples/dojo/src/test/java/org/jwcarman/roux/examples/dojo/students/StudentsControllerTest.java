@@ -18,11 +18,11 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.jwcarman.roux.examples.dojo.AppTest;
-import org.jwcarman.roux.examples.dojo.TestClock;
-import org.jwcarman.roux.examples.dojo.TestMember;
-import org.jwcarman.roux.examples.dojo.TestMembers;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
+import org.jwcarman.roux.test.AppTest;
+import org.jwcarman.roux.test.TestClock;
+import org.jwcarman.roux.test.TestMember;
+import org.jwcarman.roux.test.TestMembers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;

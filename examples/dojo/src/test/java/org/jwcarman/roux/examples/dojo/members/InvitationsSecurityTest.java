@@ -9,11 +9,11 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.jwcarman.roux.examples.dojo.AppTest;
-import org.jwcarman.roux.examples.dojo.TestMember;
-import org.jwcarman.roux.examples.dojo.TestMembers;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.roles.RouxRoles;
+import org.jwcarman.roux.test.AppTest;
+import org.jwcarman.roux.test.TestMember;
+import org.jwcarman.roux.test.TestMembers;
 import org.jwcarman.who.core.domain.Identity;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailCredential;

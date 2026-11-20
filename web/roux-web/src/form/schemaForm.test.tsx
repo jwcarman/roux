@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { Button } from "@chakra-ui/react";
-import { mutationOptions, useQuery, type QueryClient } from "@tanstack/react-query";
+import { mutationOptions, QueryClient, useQuery } from "@tanstack/react-query";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
@@ -11,7 +11,7 @@ import { sendJson } from "../api/client";
 import { createQueryClient } from "../api/queryClient";
 import { Toaster, toaster } from "../feedback/toaster";
 import { invalidFields, invariantViolation, stale } from "../testing/problems";
-import { renderHookWithProviders, renderWithProviders, testQueryClient } from "../testing/render";
+import { renderHookWithProviders, renderWithProviders } from "../testing/render";
 import { server } from "../testing/server";
 import { FormDialog } from "./FormDialog";
 import { email, text } from "./rules";
@@ -588,7 +588,7 @@ describe("useSchemaForm", () => {
           defaultValues: { name: "Ann", email: "ann@example.com", company: "" },
           mutation: createCustomer(),
         }),
-      testQueryClient(),
+      new QueryClient({ defaultOptions: { queries: { retry: false } } }), // not roux's
     );
 
     await expect(act(() => result.current.handleSubmit())).rejects.toThrow("meta.refreshes needs roux's query client");
