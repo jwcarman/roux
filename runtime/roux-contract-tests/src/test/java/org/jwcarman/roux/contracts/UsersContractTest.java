@@ -22,7 +22,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,15 +35,21 @@ import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.roles.OwnerBootstrap;
 import org.jwcarman.roux.roles.UserInvitations;
 import org.jwcarman.roux.users.RouxUserPermissions;
+import org.jwcarman.who.core.email.OutgoingEmail;
+import org.jwcarman.who.core.email.WhoEmailSender;
 import org.jwcarman.who.core.repository.IdentityRepository;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailCredentialService;
+import org.jwcarman.who.emaillink.InvitationMessage;
 import org.jwcarman.who.rbac.RbacService;
 import org.jwcarman.who.rbac.Role;
 import org.jwcarman.who.test.WhoMockMvcBrowser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.MockMvc;
@@ -54,7 +62,31 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
     properties = "roux.roles.invitable=MEMBER,INSTRUCTOR")
 @AutoConfigureMockMvc
 @DisplayNameGeneration(ReplaceUnderscores.class)
+@Import(UsersContractTest.Invitations.class)
 class UsersContractTest {
+
+  /** Keeps the addresses invitations go to, in place of an SMTP server. */
+  @TestConfiguration(proxyBeanMethods = false)
+  static class Invitations {
+    @Bean
+    InvitationsSent invitationsSent() {
+      return new InvitationsSent();
+    }
+  }
+
+  /** The addresses invitations went to, in order. */
+  static class InvitationsSent implements WhoEmailSender {
+    final List<String> addresses = new CopyOnWriteArrayList<>();
+
+    @Override
+    public void send(OutgoingEmail email) {
+      if (email.source() instanceof InvitationMessage message) {
+        addresses.add(message.address());
+      }
+    }
+  }
+
+  @Autowired InvitationsSent sent;
 
   @Autowired MockMvc mvc;
   @Autowired UserInvitations invitations;
@@ -244,7 +276,7 @@ class UsersContractTest {
       owner
           .perform(json(post("/api/users/invitations"), GRACE.formatted(email, "MEMBER")))
           .andExpect(status().isAccepted())
-          .andExpect(jsonPath("$.linkSent").isBoolean());
+          .andExpect(jsonPath("$.linkSent").value(true));
 
       Person grace = signedIn(email);
       lastActivityIs(grace.id(), "user.invited");
@@ -447,6 +479,87 @@ class UsersContractTest {
       owner
           .perform(post("/api/users/" + UUID.randomUUID() + "/sign-out"))
           .andExpect(status().isNotFound());
+    }
+  }
+
+  @Nested
+  class Resending_an_invitation {
+
+    private final String email = UUID.randomUUID() + "@roux.test";
+    private UUID grace;
+    private UUID graceCredential;
+
+    @BeforeEach
+    void graceIsInvitedButNeverSignsIn() {
+      invitations.invite("Grace Hopper", email, "MEMBER");
+      graceCredential = emails.findByAddress(email).orElseThrow().id();
+      grace =
+          jdbc.sql("select identity_id from who_credential_identity where credential_id = ?")
+              .param(graceCredential)
+              .query(UUID.class)
+              .single();
+    }
+
+    private String token() {
+      return jdbc.sql("select token_hash from who_email_link_token where credential_id = ?")
+          .param(graceCredential)
+          .query(String.class)
+          .single();
+    }
+
+    private long invitationsTo(String address) {
+      return sent.addresses.stream().filter(address::equals).count();
+    }
+
+    @Test
+    void sends_a_new_link_once_the_resend_interval_has_passed() throws Exception {
+      String first = token();
+      jdbc.sql(
+              "update who_email_link_token set created_at = created_at - interval '1 day'"
+                  + " where credential_id = ?")
+          .param(graceCredential)
+          .update();
+
+      owner
+          .perform(post("/api/users/" + grace + "/invitation"))
+          .andExpect(status().isAccepted())
+          .andExpect(jsonPath("$.linkSent").value(true));
+
+      assertThat(token()).isNotEqualTo(first);
+      assertThat(invitationsTo(email)).isEqualTo(2);
+    }
+
+    @Test
+    void sends_nothing_right_away() throws Exception {
+      String first = token();
+
+      owner
+          .perform(post("/api/users/" + grace + "/invitation"))
+          .andExpect(status().isAccepted())
+          .andExpect(jsonPath("$.linkSent").value(false));
+
+      assertThat(token()).isEqualTo(first);
+      assertThat(invitationsTo(email)).isEqualTo(1);
+    }
+
+    @Test
+    void someone_who_has_signed_in_is_a_conflict() throws Exception {
+      owner
+          .perform(post("/api/users/" + ada.id() + "/invitation"))
+          .andExpect(status().isConflict())
+          .andExpect(jsonPath("$.detail").value("Already signed in"));
+    }
+
+    @Test
+    void an_unknown_user_is_not_found() throws Exception {
+      owner
+          .perform(post("/api/users/" + UUID.randomUUID() + "/invitation"))
+          .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void needs_users_invite() throws Exception {
+      ada.perform(post("/api/users/" + grace + "/invitation")).andExpect(status().isForbidden());
     }
   }
 }

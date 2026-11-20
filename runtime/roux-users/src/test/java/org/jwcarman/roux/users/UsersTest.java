@@ -478,4 +478,43 @@ class UsersTest {
       verifyNoInteractions(sessions);
     }
   }
+
+  @Nested
+  class Resending_an_invitation {
+
+    @Test
+    void resends_to_someone_who_never_signed_in() {
+      when(invitations.resend(ada)).thenReturn(EmailLinkOutcome.SENT);
+
+      assertThat(service.resendInvitation(ada)).isTrue();
+    }
+
+    @Test
+    void says_when_no_link_went_out() {
+      when(invitations.resend(ada)).thenReturn(EmailLinkOutcome.RESEND_SUPPRESSED);
+
+      assertThat(service.resendInvitation(ada)).isFalse();
+    }
+
+    @Test
+    void someone_who_has_signed_in_is_a_conflict() {
+      UserDirectoryEntry signedIn = entry("Ada Lovelace", 0);
+      when(signedIn.isInvited()).thenReturn(false);
+      when(directory.findById(ada)).thenReturn(Optional.of(signedIn));
+
+      assertThatThrownBy(() -> service.resendInvitation(ada))
+          .isInstanceOf(ConflictException.class)
+          .hasMessage("Already signed in");
+      verifyNoInteractions(invitations);
+    }
+
+    @Test
+    void someone_who_is_not_a_user_is_not_found() {
+      UUID nobody = UUID.randomUUID();
+
+      assertThatThrownBy(() -> service.resendInvitation(nobody))
+          .isInstanceOf(UserNotFoundException.class);
+      verifyNoInteractions(invitations);
+    }
+  }
 }

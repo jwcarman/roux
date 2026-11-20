@@ -16,10 +16,13 @@
 package org.jwcarman.roux.roles;
 
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import org.jwcarman.who.core.domain.Identity;
 import org.jwcarman.who.emaillink.EmailCredential;
+import org.jwcarman.who.emaillink.EmailLinkOutcome;
+import org.jwcarman.who.emaillink.InvalidInvitationException;
 import org.jwcarman.who.emaillink.Invitation;
 import org.jwcarman.who.emaillink.InvitationService;
 import org.springframework.context.ApplicationEventPublisher;
@@ -77,5 +80,19 @@ public class UserInvitations {
           events.publishEvent(new UserJoined(identity.id(), name, address, role));
           alsoInTransaction.accept(identity);
         });
+  }
+
+  /**
+   * Sends someone's invitation again: a new link to their oldest address, replacing the one they
+   * have, unless who's resend interval has not passed. It does not check whether they have signed
+   * in; who cannot tell.
+   *
+   * @param identityId the invited identity
+   * @return what became of the email; {@link EmailLinkOutcome#RESEND_SUPPRESSED} too soon after the
+   *     last
+   * @throws InvalidInvitationException if they have no address
+   */
+  public EmailLinkOutcome resend(UUID identityId) {
+    return invitations.resend(identityId);
   }
 }

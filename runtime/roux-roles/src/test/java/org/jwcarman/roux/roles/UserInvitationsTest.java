@@ -77,4 +77,12 @@ class UserInvitationsTest {
     assertThat(happened)
         .containsExactly(new UserJoined(ada.id(), "Ada Lovelace", "ada@example.org", "MEMBER"));
   }
+
+  @Test
+  void resending_is_whos_resend_and_publishes_nothing() {
+    when(who.resend(ada.id())).thenReturn(EmailLinkOutcome.RESEND_SUPPRESSED);
+
+    assertThat(invitations.resend(ada.id())).isEqualTo(EmailLinkOutcome.RESEND_SUPPRESSED);
+    assertThat(happened).isEmpty();
+  }
 }

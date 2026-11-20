@@ -112,6 +112,19 @@ public class UsersController {
   }
 
   /**
+   * Sends someone's invitation again, if they have never signed in.
+   *
+   * @param id their identity's id
+   * @return whether the link went out
+   */
+  @PostMapping("/{id}/invitation")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  @RequiresPermission(RouxUserPermissions.USERS_INVITE)
+  public InvitationResult resendInvitation(@PathVariable UUID id) {
+    return new InvitationResult(users.resendInvitation(id));
+  }
+
+  /**
    * Renames a user.
    *
    * @param id their identity's id

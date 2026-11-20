@@ -107,6 +107,13 @@ class UserControllersTest {
     }
 
     @Test
+    void resends_and_says_whether_the_link_went_out() {
+      when(users.resendInvitation(ada)).thenReturn(false);
+
+      assertThat(controller.resendInvitation(ada)).isEqualTo(new InvitationResult(false));
+    }
+
+    @Test
     void renames_and_changes_the_role() {
       when(users.rename(ada, "Ada King", 0L)).thenReturn(detail);
       when(users.changeRole(ada, "INSTRUCTOR")).thenReturn(detail);

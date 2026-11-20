@@ -38,6 +38,7 @@ import org.jwcarman.who.core.repository.IdentityRepository;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.core.service.WhoSessions;
 import org.jwcarman.who.emaillink.EmailAddressTakenException;
+import org.jwcarman.who.emaillink.EmailLinkOutcome;
 import org.jwcarman.who.emaillink.Invitation;
 import org.jwcarman.who.rbac.RbacService;
 import org.jwcarman.who.rbac.Role;
@@ -199,6 +200,23 @@ public class Users {
     } catch (EmailAddressTakenException _) {
       throw new InvalidFieldException("email", "That address already belongs to a user");
     }
+  }
+
+  /**
+   * Sends the invitation again to someone who has never signed in. Runs with no transaction of its
+   * own, as who's invitations must.
+   *
+   * @param id their identity's id
+   * @return whether the link went out; not when it is too soon after the last
+   * @throws UserNotFoundException if there is no such user
+   * @throws ConflictException if they have signed in
+   */
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  public boolean resendInvitation(UUID id) {
+    if (!entry(id).isInvited()) {
+      throw new ConflictException("Already signed in");
+    }
+    return invitations.resend(id) == EmailLinkOutcome.SENT;
   }
 
   /**
