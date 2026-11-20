@@ -43,4 +43,3 @@ export function timeInputOf(iso: string | null): string {
 export function moneyInputOf(money: Money | null): string {
   return money === null ? "" : decimalTextOf(money.minorUnits, digitsOf(money.currency));
 }
-

@@ -521,9 +521,7 @@ describe("money()", () => {
       minorUnits: 15000,
       currency: "EUR",
     });
-    expect(moneyIn("EUR", 2).safeParse("$150").error?.issues[0]?.message).toBe(
-      "Must be an amount",
-    );
+    expect(moneyIn("EUR", 2).safeParse("$150").error?.issues[0]?.message).toBe("Must be an amount");
   });
 
   it("refuses an amount too large to count exactly", () => {

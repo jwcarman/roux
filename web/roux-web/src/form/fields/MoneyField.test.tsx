@@ -20,7 +20,7 @@ function Harness({ initial, onSubmit }: { initial: string; onSubmit: (price: Mon
   return (
     <form.AppForm>
       <form.Form>
-        <form.AppField name="price">{(field) => <field.MoneyField label="Price"  />}</form.AppField>
+        <form.AppField name="price">{(field) => <field.MoneyField label="Price" />}</form.AppField>
         <form.SubmitButton>Save</form.SubmitButton>
       </form.Form>
     </form.AppForm>

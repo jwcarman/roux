@@ -493,10 +493,14 @@ function moneyRule(state: MoneyState): MoneyRule<Money | null> {
     }
     return { minorUnits: amount, currency };
   });
-  return rule(schema, { required: state.required }, {
-    positive: () => moneyRule({ ...state, positive: true }),
-    optional: () => moneyRule({ ...state, required: false }),
-  }) as unknown as MoneyRule<Money | null>;
+  return rule(
+    schema,
+    { required: state.required },
+    {
+      positive: () => moneyRule({ ...state, positive: true }),
+      optional: () => moneyRule({ ...state, required: false }),
+    },
+  ) as unknown as MoneyRule<Money | null>;
 }
 
 /**
@@ -507,4 +511,3 @@ function moneyRule(state: MoneyState): MoneyRule<Money | null> {
 export function money(): MoneyRule {
   return moneyRule({ required: true, positive: false }) as unknown as MoneyRule;
 }
-

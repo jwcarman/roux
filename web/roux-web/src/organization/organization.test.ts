@@ -58,7 +58,9 @@ describe("readPageOrganization", () => {
   });
 
   it("refuses a context that is not JSON or not an object", () => {
-    expect(() => readPageOrganization(pageWith("{"))).toThrow("The page's organization context (#app-context) is not JSON");
+    expect(() => readPageOrganization(pageWith("{"))).toThrow(
+      "The page's organization context (#app-context) is not JSON",
+    );
     expect(() => readPageOrganization(pageWith("3"))).toThrow(
       "The page's organization context (#app-context) is not an object",
     );
@@ -76,12 +78,16 @@ describe("readPageOrganization", () => {
     expect(read({ currency: 3 })).toThrow("has no currency");
     expect(read({ fractionDigits: "2" })).toThrow("has no fractionDigits");
     expect(read({ currency: null, fractionDigits: null })()).toMatchObject({ currency: null, fractionDigits: null });
-    expect(read({ fractionDigits: null })).toThrow("has a currency without its fractionDigits, or digits without a currency");
+    expect(read({ fractionDigits: null })).toThrow(
+      "has a currency without its fractionDigits, or digits without a currency",
+    );
     expect(read({ currency: null })).toThrow("has a currency without its fractionDigits");
   });
 
   it("refuses a time zone this browser does not know", () => {
-    expect(read({ timeZone: "America/Nwe_York" })).toThrow("has a time zone this browser does not know: America/Nwe_York");
+    expect(read({ timeZone: "America/Nwe_York" })).toThrow(
+      "has a time zone this browser does not know: America/Nwe_York",
+    );
   });
 
   it("refuses a today that is not a date, and an end that is not a moment", () => {

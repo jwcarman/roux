@@ -3,7 +3,14 @@ import { QueryClient } from "@tanstack/react-query";
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { startDayWatch, RETRY_MS } from "./dayWatch";
-import { clearOrganization, organization, setOrganization, testOrganization, today, type OrganizationContext } from "./organization";
+import {
+  clearOrganization,
+  organization,
+  setOrganization,
+  testOrganization,
+  today,
+  type OrganizationContext,
+} from "./organization";
 import { useToday } from "./useToday";
 
 const DAY = testOrganization(); // 2026-06-15, ends 2026-06-16T04:00:00Z
@@ -53,7 +60,9 @@ describe("startDayWatch", () => {
   });
 
   it("watches for the next day after taking one", async () => {
-    const fetchContext = vi.fn(async () => (fetchContext.mock.calls.length === 1 ? NEXT : { ...NEXT, today: "2026-06-17" }));
+    const fetchContext = vi.fn(async () =>
+      fetchContext.mock.calls.length === 1 ? NEXT : { ...NEXT, today: "2026-06-17" },
+    );
     const stop = startDayWatch(queryClient, fetchContext);
 
     await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
@@ -80,7 +89,10 @@ describe("startDayWatch", () => {
   });
 
   it("keeps the day and retries when the server still says today", async () => {
-    const fetchContext = vi.fn().mockResolvedValueOnce({ ...DAY }).mockResolvedValue(NEXT);
+    const fetchContext = vi
+      .fn()
+      .mockResolvedValueOnce({ ...DAY })
+      .mockResolvedValue(NEXT);
     const stop = startDayWatch(queryClient, fetchContext);
 
     await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
