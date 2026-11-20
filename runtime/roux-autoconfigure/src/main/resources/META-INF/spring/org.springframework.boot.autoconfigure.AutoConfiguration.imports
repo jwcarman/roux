@@ -9,3 +9,5 @@ org.jwcarman.roux.autoconfigure.money.RouxMoneyAutoConfiguration
 org.jwcarman.roux.autoconfigure.organization.RouxOrganizationAutoConfiguration
 org.jwcarman.roux.autoconfigure.activity.RouxActivityLogPersistenceAutoConfiguration
 org.jwcarman.roux.autoconfigure.activity.RouxActivityLogAutoConfiguration
+org.jwcarman.roux.autoconfigure.users.RouxUsersPersistenceAutoConfiguration
+org.jwcarman.roux.autoconfigure.users.RouxUsersAutoConfiguration

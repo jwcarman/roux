@@ -111,6 +111,11 @@
             </dependency>
             <dependency>
                 <groupId>org.jwcarman.roux</groupId>
+                <artifactId>roux-users</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jwcarman.roux</groupId>
                 <artifactId>roux-theme</artifactId>
                 <version>${project.version}</version>
             </dependency>
