@@ -6,7 +6,9 @@ import org.jwcarman.jpa.pagination.SortPropertyProvider;
 public enum StudentSort implements SortPropertyProvider {
   NAME("nameKey"),
   START_DATE("startDate"),
-  RANK("rankPosition");
+  RANK("rankPosition"),
+  /** Needs {@code payments.record}. */
+  PAID_THROUGH("paidThrough");
 
   private final String property;
 

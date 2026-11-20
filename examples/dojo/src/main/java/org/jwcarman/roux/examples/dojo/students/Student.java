@@ -19,9 +19,12 @@ public record Student(
     LocalDate startDate,
     StudentStatus status,
     Rank currentRank,
-    long version) {
+    long version,
+    String planName,
+    LocalDate paidThrough,
+    PaymentState payment) {
 
-  /** The student {@code entry} holds. */
+  /** The student {@code entry} holds, without the payment fields. */
   public static Student of(StudentListEntry entry) {
     return new Student(
         entry.getId(),
@@ -33,6 +36,31 @@ public record Student(
         entry.getStartDate(),
         entry.getStatus(),
         entry.currentRank(),
-        entry.getVersion());
+        entry.getVersion(),
+        null,
+        null,
+        null);
+  }
+
+  /**
+   * The student {@code entry} holds, with its plan, paid through and payment state on {@code
+   * today}.
+   */
+  public static Student withPayment(StudentListEntry entry, LocalDate today) {
+    LocalDate paidThrough = entry.isHasMembership() ? entry.getPaidThrough() : null;
+    return new Student(
+        entry.getId(),
+        entry.getFirstName(),
+        entry.getLastName(),
+        entry.getEmail(),
+        entry.getPhone(),
+        entry.getBirthDate(),
+        entry.getStartDate(),
+        entry.getStatus(),
+        entry.currentRank(),
+        entry.getVersion(),
+        entry.getPlanName(),
+        paidThrough,
+        PaymentState.of(entry.getStatus(), paidThrough, today));
   }
 }

@@ -57,6 +57,12 @@ public class StudentListEntry extends BaseEntity {
 
   private Long rankVersion;
 
+  private String planName;
+
+  private LocalDate paidThrough;
+
+  private boolean hasMembership;
+
   /** The current rank, or null for a student with no promotion. */
   public Rank currentRank() {
     return rankId == null

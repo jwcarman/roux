@@ -7,8 +7,11 @@ import jakarta.validation.Valid;
 import org.jwcarman.jpa.pagination.PageDto;
 import org.jwcarman.jpa.spring.web.PageParams;
 import org.jwcarman.roux.examples.dojo.identity.Permissions;
+import org.jwcarman.who.core.domain.WhoPrincipal;
 import org.jwcarman.who.spring.security.RequiresPermission;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,8 +40,15 @@ public class StudentsController {
       @ModelAttribute PageParams params,
       @RequestParam(required = false) String search,
       @RequestParam(required = false) StudentStatus status,
-      @RequestParam(required = false) UUID rankId) {
-    return students.list(params, search, status, rankId);
+      @RequestParam(required = false) UUID rankId,
+      @RequestParam(required = false) PaymentState payment,
+      @AuthenticationPrincipal WhoPrincipal principal) {
+    boolean withPayment = principal.permissions().contains(Permissions.PAYMENTS_RECORD);
+    if (!withPayment
+        && (payment != null || StudentSort.PAID_THROUGH.name().equals(params.sortBy()))) {
+      throw new AccessDeniedException("Filtering or sorting by payment needs payments.record");
+    }
+    return students.list(params, search, status, rankId, payment, withPayment);
   }
 
   @GetMapping("/{id}")

@@ -14,10 +14,10 @@ import org.jwcarman.roux.examples.dojo.members.MemberProfile;
 import org.jwcarman.roux.examples.dojo.members.MemberProfileRepository;
 import org.jwcarman.roux.examples.dojo.plans.PlanEntity;
 import org.jwcarman.roux.examples.dojo.plans.PlanRepository;
+import org.jwcarman.roux.examples.dojo.students.PaymentState;
 import org.jwcarman.roux.examples.dojo.students.StudentEntity;
 import org.jwcarman.roux.examples.dojo.students.StudentNotFoundException;
 import org.jwcarman.roux.examples.dojo.students.StudentRepository;
-import org.jwcarman.roux.examples.dojo.students.StudentStatus;
 import org.jwcarman.roux.money.Money;
 import org.jwcarman.roux.problems.InvalidFieldException;
 import org.jwcarman.roux.problems.InvariantViolationException;
@@ -188,8 +188,8 @@ public class MembershipService {
     LocalDate paidThrough = PaidThrough.of(membership.getStartDate(), plan.getPeriod(), periods);
     boolean overdue =
         membership.getEndDate() == null
-            && student.getStatus() == StudentStatus.ACTIVE
-            && paidThrough.isBefore(LocalDate.now(clock));
+            && PaymentState.of(student.getStatus(), paidThrough, LocalDate.now(clock))
+                == PaymentState.OVERDUE;
     return new MembershipView(
         membership.getId(),
         new MembershipView.PlanSummary(

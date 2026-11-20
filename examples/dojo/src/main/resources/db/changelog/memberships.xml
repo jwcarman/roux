@@ -75,4 +75,24 @@
       group by m.id, p.period
     </createView>
   </changeSet>
+  <!-- The student list gains the current membership: its plan, paid through, and whether there is one. -->
+  <changeSet id="student-list-with-membership" author="dojo">
+    <dropView viewName="student_list"/>
+    <createView viewName="student_list">
+      select s.id, s.version, s.first_name, s.last_name, s.email, s.phone, s.birth_date,
+             s.start_date, s.status,
+             lower(s.last_name) || ' ' || lower(s.first_name) as name_key,
+             r.id as rank_id, r.name::varchar as rank_name, r.colour::varchar as rank_colour,
+             r.position as rank_position, r.version as rank_version,
+             pl.name::varchar as plan_name, mpt.paid_through,
+             (mpt.membership_id is not null) as has_membership
+      from student s
+      left join student_current_rank c on c.student_id = s.id
+      left join rank r on r.id = c.rank_id
+      left join membership_paid_through mpt on mpt.student_id = s.id and mpt.end_date is null
+      left join membership m on m.id = mpt.membership_id
+      left join plan pl on pl.id = m.plan_id
+    </createView>
+  </changeSet>
+
 </databaseChangeLog>

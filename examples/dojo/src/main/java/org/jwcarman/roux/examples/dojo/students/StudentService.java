@@ -1,8 +1,11 @@
 package org.jwcarman.roux.examples.dojo.students;
 
 import static org.jwcarman.roux.examples.dojo.students.StudentSpecifications.currentRankIs;
+import static org.jwcarman.roux.examples.dojo.students.StudentSpecifications.paymentIs;
 import static org.jwcarman.roux.examples.dojo.students.StudentSpecifications.statusIs;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.UUID;
 
 import org.jwcarman.jpa.pagination.PageDto;
@@ -35,12 +38,17 @@ public class StudentService {
   private final StudentRepository students;
   private final StudentListRepository list;
   private final PromotionRepository promotions;
+  private final Clock clock;
 
   public StudentService(
-      StudentRepository students, StudentListRepository list, PromotionRepository promotions) {
+      StudentRepository students,
+      StudentListRepository list,
+      PromotionRepository promotions,
+      Clock clock) {
     this.students = students;
     this.list = list;
     this.promotions = promotions;
+    this.clock = clock;
   }
 
   /**
@@ -51,15 +59,33 @@ public class StudentService {
    *     matches everyone
    * @param status only students with this status; null for {@link StudentStatus#ACTIVE}
    * @param rankId only students whose current rank this is; null for any
+   * @param payment only students in this payment state on today's date; null for any
+   * @param withPayment whether rows carry the plan, paid-through and payment fields (the caller may
+   *     record payments); the controller refuses {@code payment} and the paid-through sort
+   *     otherwise
    */
   @Transactional(readOnly = true)
-  public PageDto<Student> list(PageSpec spec, String search, StudentStatus status, UUID rankId) {
+  public PageDto<Student> list(
+      PageSpec spec,
+      String search,
+      StudentStatus status,
+      UUID rankId,
+      PaymentState payment,
+      boolean withPayment) {
+    LocalDate today = LocalDate.now(clock);
     Specification<StudentListEntry> filter =
         list.searchFor(search).and(statusIs(status == null ? StudentStatus.ACTIVE : status));
-    Specification<StudentListEntry> filtered =
-        rankId == null ? filter : filter.and(currentRankIs(rankId));
+    if (rankId != null) {
+      filter = filter.and(currentRankIs(rankId));
+    }
+    if (payment != null) {
+      filter = filter.and(paymentIs(payment, today));
+    }
+    Specification<StudentListEntry> filtered = filter;
     return PAGES.paginate(
-        spec, pageable -> list.findAll(filtered, nullsLast(pageable)), Student::of);
+        spec,
+        pageable -> list.findAll(filtered, nullsLast(pageable)),
+        entry -> withPayment ? Student.withPayment(entry, today) : Student.of(entry));
   }
 
   /** Adds a student, active. */
