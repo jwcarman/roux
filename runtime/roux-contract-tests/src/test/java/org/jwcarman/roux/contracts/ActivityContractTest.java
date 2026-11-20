@@ -40,6 +40,9 @@ import org.jwcarman.roux.activity.BusinessActivity;
 import org.jwcarman.roux.money.Money;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -93,6 +96,7 @@ class ActivityContractTest {
   @Autowired ActivityRepository entries;
   @Autowired JsonMapper json;
   @Autowired TransactionTemplate transaction;
+  @Autowired JdbcTemplate jdbc;
 
   private List<Activity> history(ActivityLog from, UUID id) {
     return from.history(id, new FirstPage()).data();
@@ -174,5 +178,24 @@ class ActivityContractTest {
     transaction.executeWithoutResult(status -> log.append(nothing, YELLOW, UUID.randomUUID()));
 
     assertThat(history(log, nothing)).hasSize(1);
+  }
+
+  @Test
+  void a_history_page_reads_through_the_indexes_not_the_whole_table() throws Exception {
+    Query query =
+        ActivityRepository.class
+            .getMethod("history", UUID.class, Pageable.class)
+            .getAnnotation(Query.class);
+    String id = "'" + UUID.randomUUID() + "'::uuid";
+    for (String sql : List.of(query.value(), query.countQuery())) {
+      String plan =
+          transaction.execute(
+              status -> {
+                jdbc.execute("set local enable_seqscan = off");
+                return String.join(
+                    "\n", jdbc.queryForList("explain " + sql.replace(":id", id), String.class));
+              });
+      assertThat(plan).as(sql).doesNotContain("Seq Scan").contains("ix_roux_activity_related");
+    }
   }
 }

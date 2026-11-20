@@ -32,10 +32,10 @@ public interface ActivityRepository extends JpaRepository<ActivityEntry, UUID> {
    */
   @Query(
       value =
-          "select * from roux_activity where anchor_id = :id or :id = any(related_ids)"
+          "select * from roux_activity where anchor_id = :id or related_ids @> array[cast(:id as uuid)]"
               + " order by occurred_at desc, id desc",
       countQuery =
-          "select count(*) from roux_activity where anchor_id = :id or :id = any(related_ids)",
+          "select count(*) from roux_activity where anchor_id = :id or related_ids @> array[cast(:id as uuid)]",
       nativeQuery = true)
   Page<ActivityEntry> history(@Param("id") UUID id, Pageable page);
 }
