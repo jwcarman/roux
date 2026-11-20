@@ -18,20 +18,17 @@ package org.jwcarman.roux.autoconfigure.money;
 import java.util.Objects;
 
 import org.jwcarman.roux.money.Money;
-import org.jwcarman.roux.money.MoneyController;
 import org.jwcarman.roux.money.MoneySettings;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
 /**
  * Money, once {@code roux.money.currency} names the app's currency: {@link MoneySettings} (which
- * {@code @InCurrency} checks against) and {@code GET /api/money}.
+ * {@code @InCurrency} checks against), which the organization's context carries to the browser.
  */
 @AutoConfiguration
 @ConditionalOnClass(Money.class)
@@ -49,18 +46,5 @@ public class RouxMoneyAutoConfiguration {
   @ConditionalOnMissingBean
   public MoneySettings rouxMoneySettings(RouxMoneyProperties money) {
     return new MoneySettings(Objects.requireNonNull(money.currency()));
-  }
-
-  /**
-   * {@code GET /api/money}.
-   *
-   * @param settings the app's currency
-   * @return the controller
-   */
-  @Bean
-  @ConditionalOnMissingBean
-  @ConditionalOnWebApplication(type = Type.SERVLET)
-  public MoneyController rouxMoneyController(MoneySettings settings) {
-    return new MoneyController(settings);
   }
 }

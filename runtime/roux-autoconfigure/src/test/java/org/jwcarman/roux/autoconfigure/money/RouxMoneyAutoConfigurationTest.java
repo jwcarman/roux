@@ -22,11 +22,9 @@ import java.util.Currency;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Test;
-import org.jwcarman.roux.money.MoneyController;
 import org.jwcarman.roux.money.MoneySettings;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 
 @DisplayNameGeneration(ReplaceUnderscores.class)
 class RouxMoneyAutoConfigurationTest {
@@ -55,20 +53,5 @@ class RouxMoneyAutoConfigurationTest {
     runner
         .withPropertyValues("roux.money.currency=ZZZ")
         .run(context -> assertThat(context).hasFailed());
-  }
-
-  @Test
-  void a_web_app_serves_the_currency() {
-    new WebApplicationContextRunner()
-        .withConfiguration(AutoConfigurations.of(RouxMoneyAutoConfiguration.class))
-        .withPropertyValues("roux.money.currency=USD")
-        .run(context -> assertThat(context).hasSingleBean(MoneyController.class));
-  }
-
-  @Test
-  void a_non_web_app_has_no_endpoint() {
-    runner
-        .withPropertyValues("roux.money.currency=USD")
-        .run(context -> assertThat(context).doesNotHaveBean(MoneyController.class));
   }
 }

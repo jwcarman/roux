@@ -21,8 +21,8 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * The app's one currency, from {@code roux.money.currency}. Served at {@code GET /api/money} as
- * {@code {"currency": "USD", "fractionDigits": 2}} so a form can make a new amount.
+ * The app's one currency, from {@code roux.money.currency}. The browser gets it in the
+ * organization's context ({@code GET /api/organization}), with its {@code fractionDigits}.
  *
  * @param currency the currency every amount in the app is in
  */

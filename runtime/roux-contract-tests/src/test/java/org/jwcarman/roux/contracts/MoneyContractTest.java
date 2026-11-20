@@ -21,7 +21,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -54,7 +53,10 @@ import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Money as an app gets it from the starter: its JSON, {@code GET /api/money}, its constraints. */
+/**
+ * Money as an app gets it from the starter: its JSON, its currency in {@code GET
+ * /api/organization}, its constraints.
+ */
 @SpringBootTest(classes = ContractTestApplication.class)
 @AutoConfigureMockMvc
 @Import(MoneyContractTest.PriceController.class)
@@ -111,15 +113,8 @@ class MoneyContractTest {
   }
 
   @Test
-  void signedInGetsTheCurrency() throws Exception {
-    mvc.perform(get("/api/money").with(user("someone")))
-        .andExpect(status().isOk())
-        .andExpect(content().json("{\"currency\":\"USD\",\"fractionDigits\":2}", true));
-  }
-
-  @Test
-  void signedOutIsRefused() throws Exception {
-    mvc.perform(get("/api/money")).andExpect(status().isUnauthorized());
+  void theMoneyEndpointIsGone() throws Exception {
+    mvc.perform(get("/api/money").with(user("someone"))).andExpect(status().isNotFound());
   }
 
   @Test

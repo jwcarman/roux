@@ -109,13 +109,6 @@ class MoneyTest {
   }
 
   @Test
-  void the_controller_answers_the_settings() {
-    MoneySettings settings = new MoneySettings(USD);
-
-    assertThat(new MoneyController(settings).money()).isSameAs(settings);
-  }
-
-  @Test
   void formats_in_a_locale_with_the_currencys_digits() {
     assertThat(Money.of(15000, Currency.getInstance("USD")).format(Locale.US)).isEqualTo("$150.00");
     assertThat(Money.of(-5, Currency.getInstance("USD")).format(Locale.US)).isEqualTo("-$0.05");
