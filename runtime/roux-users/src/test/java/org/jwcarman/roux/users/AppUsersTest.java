@@ -19,12 +19,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.roles.UserJoined;
+import org.jwcarman.who.core.event.SignInMethod;
+import org.jwcarman.who.core.event.SignInSucceeded;
 import org.mockito.ArgumentCaptor;
 
 @DisplayNameGeneration(ReplaceUnderscores.class)
@@ -41,5 +44,17 @@ class AppUsersTest {
     verify(users).save(saved.capture());
     assertThat(saved.getValue().getId()).isEqualTo(id);
     assertThat(saved.getValue().getDisplayName()).isEqualTo("Ada Lovelace");
+  }
+
+  @Test
+  void a_sign_in_records_the_users_first() {
+    AppUserRepository users = mock(AppUserRepository.class);
+    UUID ada = UUID.randomUUID();
+    Instant at = Instant.parse("2026-11-20T15:00:00Z");
+
+    new AppUsers(users)
+        .on(new SignInSucceeded(at, SignInMethod.EMAIL_LINK, ada, UUID.randomUUID()));
+
+    verify(users).recordFirstSignIn(ada, at);
   }
 }

@@ -20,7 +20,8 @@ shapes:
 | Always signs in, and has fields of its own | **An entity that shares the user's id**, made when the user joins. | A coach with a belt and a bio |
 | Sometimes signs in | **An entity with an optional link to a user**, set when it is given a login. | A student, some of whom get a portal login |
 
-An entity that always signs in maps the user with `@MapsId`, so its id is the user's, and is made in a
+An entity that always signs in maps the user with `@MapsId` and `@JoinColumn(name = "id")`, so its id
+is the user's in a column named `id` (without it, the key column is `user_id`), and is made in a
 `UserJoined` listener for its role ([Roles](roles.md#a-user-joined-userjoined)). roux's own listener
 makes the `AppUser` first (it runs at the highest precedence), so the app's can refer to it:
 
@@ -31,6 +32,7 @@ public class Coach {
 
   @MapsId
   @OneToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "id") // the key column is the user's id, named id
   private AppUser user;
 
   private String belt;
@@ -143,6 +145,7 @@ public class Coach {
 
   @MapsId
   @OneToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "id") // the key column is the user's id, named id
   private AppUser user;
 
   @OneToOne(fetch = FetchType.LAZY)

@@ -22,6 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -46,6 +47,8 @@ import org.jwcarman.roux.users.Users;
 import org.jwcarman.who.admin.LastAdminException;
 import org.jwcarman.who.core.email.OutgoingEmail;
 import org.jwcarman.who.core.email.WhoEmailSender;
+import org.jwcarman.who.core.event.SignInMethod;
+import org.jwcarman.who.core.event.SignInSucceeded;
 import org.jwcarman.who.core.repository.IdentityRepository;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailCredentialService;
@@ -57,6 +60,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -106,6 +110,7 @@ class UsersContractTest {
   @Autowired RbacService rbac;
   @Autowired OwnerBootstrap bootstrap;
   @Autowired JdbcClient jdbc;
+  @Autowired ApplicationEventPublisher events;
   @Autowired Users users;
   @Autowired TransactionTemplate tx;
 
@@ -601,6 +606,20 @@ class UsersContractTest {
 
       assertThat(token()).isEqualTo(first);
       assertThat(invitationsTo(email)).isEqualTo(1);
+    }
+
+    @Test
+    void someone_whose_sessions_are_all_gone_has_still_signed_in() throws Exception {
+      // who publishes SignInSucceeded for a real sign-in, then purges ended and idle sessions.
+      events.publishEvent(
+          new SignInSucceeded(Instant.now(), SignInMethod.EMAIL_LINK, grace, graceCredential));
+      jdbc.sql("delete from who_session where identity_id = ?").param(grace).update();
+
+      owner.perform(get("/api/users/" + grace)).andExpect(jsonPath("$.invited").value(false));
+      owner
+          .perform(post("/api/users/" + grace + "/invitation"))
+          .andExpect(status().isConflict())
+          .andExpect(jsonPath("$.detail").value("Already signed in"));
     }
 
     @Test

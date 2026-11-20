@@ -15,9 +15,32 @@
  */
 package org.jwcarman.roux.users;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 /** The app's users, by identity id. */
-public interface AppUserRepository extends JpaRepository<AppUser, UUID> {}
+public interface AppUserRepository extends JpaRepository<AppUser, UUID> {
+
+  /**
+   * Records when a user first signed in, if it is not recorded yet; a later sign-in changes
+   * nothing. It does not change the user's version: it is not an edit.
+   *
+   * @param id the user's id
+   * @param at when they signed in
+   * @return 1 when it was their first, 0 otherwise (or for no such user)
+   */
+  @Transactional
+  @Modifying
+  @Query(
+      value =
+          "update roux_user set first_signed_in_at = :at"
+              + " where id = :id and first_signed_in_at is null",
+      nativeQuery = true)
+  int recordFirstSignIn(@Param("id") UUID id, @Param("at") Instant at);
+}

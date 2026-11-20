@@ -16,6 +16,7 @@
 package org.jwcarman.roux.users;
 
 import org.jwcarman.roux.roles.UserJoined;
+import org.jwcarman.who.core.event.SignInSucceeded;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -47,5 +48,16 @@ public class AppUsers {
   @Order(Ordered.HIGHEST_PRECEDENCE)
   public void on(UserJoined joined) {
     users.save(new AppUser(joined.identityId(), joined.name()));
+  }
+
+  /**
+   * Records a user's first sign-in, which the directory's {@code invited} flag reads: who purges
+   * ended and idle sessions, so "has a session" cannot tell.
+   *
+   * @param signedIn who's sign-in
+   */
+  @EventListener
+  public void on(SignInSucceeded signedIn) {
+    users.recordFirstSignIn(signedIn.identityId(), signedIn.occurredAt());
   }
 }

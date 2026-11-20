@@ -140,14 +140,32 @@ class UserFilterQueryTest {
   @Nested
   class Over_an_apps_own_entity {
 
+    private AppUser user(UUID id, String name) {
+      AppUser user = new AppUser(id, name);
+      entities.persist(user);
+      return user;
+    }
+
+    @Test
+    void its_id_is_the_users() {
+      entities.persist(new TestProfile(user(ada, "Ada Lovelace"), "black"));
+      entities.flush();
+      entities.clear();
+
+      TestProfile profile = entities.find(TestProfile.class, ada);
+      assertThat(profile.user.getDisplayName()).isEqualTo("Ada Lovelace");
+      assertThat(profile.entry.getEmail()).isEqualTo("ada@example.org");
+    }
+
     @Test
     void the_same_conditions_apply_through_its_join() {
-      entities.persist(new TestProfile(ada, "black"));
-      entities.persist(new TestProfile(grace, "brown"));
-      entities.persist(new TestProfile(hedy, "white"));
+      entities.persist(new TestProfile(user(ada, "Ada Lovelace"), "black"));
+      entities.persist(new TestProfile(user(grace, "Grace Hopper"), "brown"));
+      entities.persist(new TestProfile(user(hedy, "Hedy Lamarr"), "white"));
       entities.flush();
+      entities.clear();
       Specification<TestProfile> spec =
-          new UserFilter("example", "MEMBER", null).specification(root -> root.join("user"));
+          new UserFilter("example", "MEMBER", null).specification(root -> root.join("entry"));
 
       List<String> belts = profiles.findAll(spec).stream().map(profile -> profile.belt).toList();
 
