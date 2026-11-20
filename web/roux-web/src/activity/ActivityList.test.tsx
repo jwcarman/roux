@@ -35,7 +35,7 @@ describe("ActivityList", () => {
     renderWithProviders(
       <ActivityList
         aria-label="History"
-        query={pageQuery(["history"], async () => pageOf([RENAMED]))}
+        query={pageQuery(["history"], () => Promise.resolve(pageOf([RENAMED])))}
         now={new Date("2026-11-08T12:00:00Z")}
       />,
     );
@@ -54,7 +54,7 @@ describe("ActivityList", () => {
     renderWithProviders(
       <ActivityList
         aria-label="History"
-        query={pageQuery(["two"], async () => pageOf([RENAMED, { ...RENAMED, id: "a2" }]))}
+        query={pageQuery(["two"], () => Promise.resolve(pageOf([RENAMED, { ...RENAMED, id: "a2" }])))}
       />,
     );
     expect(await screen.findAllByRole("listitem")).toHaveLength(2);
@@ -63,7 +63,9 @@ describe("ActivityList", () => {
   });
 
   it("says when there is no history yet", async () => {
-    renderWithProviders(<ActivityList aria-label="History" query={pageQuery(["empty"], async () => pageOf([]))} />);
+    renderWithProviders(
+      <ActivityList aria-label="History" query={pageQuery(["empty"], () => Promise.resolve(pageOf([])))} />,
+    );
     expect(await screen.findByText("Nothing has happened yet.")).toBeInTheDocument();
   });
 
@@ -71,7 +73,7 @@ describe("ActivityList", () => {
     renderWithProviders(
       <ActivityList
         aria-label="History"
-        query={pageQuery(["empty-own"], async () => pageOf([]))}
+        query={pageQuery(["empty-own"], () => Promise.resolve(pageOf([])))}
         emptyText="No promotions yet."
       />,
     );
@@ -80,12 +82,7 @@ describe("ActivityList", () => {
 
   it("says when the history could not be loaded", async () => {
     renderWithProviders(
-      <ActivityList
-        aria-label="History"
-        query={pageQuery(["broken"], async () => {
-          throw new Error("down");
-        })}
-      />,
+      <ActivityList aria-label="History" query={pageQuery(["broken"], () => Promise.reject(new Error("down")))} />,
     );
     expect(await screen.findByText("Could not load the history.")).toBeInTheDocument();
   });

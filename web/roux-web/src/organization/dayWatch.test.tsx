@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient } from "@tanstack/react-query";
 import { act, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { startDayWatch, RETRY_MS } from "./dayWatch";
 import {
   clearOrganization,
@@ -27,13 +27,14 @@ function visibility(state: DocumentVisibilityState) {
 }
 
 let queryClient: QueryClient;
+let invalidate: MockInstance;
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
   vi.setSystemTime(END - 60 * 60 * 1000); // an hour before the day ends
   setOrganization(DAY);
   queryClient = new QueryClient();
-  vi.spyOn(queryClient, "invalidateQueries");
+  invalidate = vi.spyOn(queryClient, "invalidateQueries");
 });
 
 afterEach(() => {
@@ -44,7 +45,7 @@ afterEach(() => {
 
 describe("startDayWatch", () => {
   it("takes the new day when today ends, refreshes every query and re-renders", async () => {
-    const fetchContext = vi.fn(async () => NEXT);
+    const fetchContext = vi.fn(() => Promise.resolve(NEXT));
     render(<Today />);
     const stop = startDayWatch(queryClient, fetchContext);
 
@@ -54,14 +55,14 @@ describe("startDayWatch", () => {
 
     expect(fetchContext).toHaveBeenCalledOnce();
     expect(today()).toBe("2026-06-16");
-    expect(queryClient.invalidateQueries).toHaveBeenCalledOnce();
+    expect(invalidate).toHaveBeenCalledOnce();
     expect(screen.getByText("2026-06-16")).toBeInTheDocument();
     stop();
   });
 
   it("watches for the next day after taking one", async () => {
-    const fetchContext = vi.fn(async () =>
-      fetchContext.mock.calls.length === 1 ? NEXT : { ...NEXT, today: "2026-06-17" },
+    const fetchContext = vi.fn(() =>
+      Promise.resolve(fetchContext.mock.calls.length === 1 ? NEXT : { ...NEXT, today: "2026-06-17" }),
     );
     const stop = startDayWatch(queryClient, fetchContext);
 
@@ -78,7 +79,7 @@ describe("startDayWatch", () => {
 
     await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
     expect(today()).toBe("2026-06-15");
-    expect(queryClient.invalidateQueries).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(RETRY_MS - 1);
     expect(fetchContext).toHaveBeenCalledOnce();
@@ -97,7 +98,7 @@ describe("startDayWatch", () => {
 
     await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
     expect(organization()).toBe(DAY);
-    expect(queryClient.invalidateQueries).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(RETRY_MS - 1);
     expect(fetchContext).toHaveBeenCalledOnce();
     await vi.advanceTimersByTimeAsync(RETRY_MS);
@@ -106,7 +107,7 @@ describe("startDayWatch", () => {
   });
 
   it("asks when a tab becomes visible after the day ended", async () => {
-    const fetchContext = vi.fn(async () => NEXT);
+    const fetchContext = vi.fn(() => Promise.resolve(NEXT));
     const stop = startDayWatch(queryClient, fetchContext);
 
     visibility("visible");
@@ -157,7 +158,7 @@ describe("startDayWatch", () => {
   it("waits out a day end further away than a timer can wait, without asking early", async () => {
     // A device clock a month behind: the day ends further away than setTimeout's 2^31 - 1 ms.
     vi.setSystemTime(END - 30 * 24 * 60 * 60 * 1000);
-    const fetchContext = vi.fn(async () => NEXT);
+    const fetchContext = vi.fn(() => Promise.resolve(NEXT));
     const stop = startDayWatch(queryClient, fetchContext);
 
     await vi.advanceTimersByTimeAsync(2 ** 31 - 1);
@@ -168,7 +169,7 @@ describe("startDayWatch", () => {
   });
 
   it("asks when a tab becomes visible exactly as the day ends", async () => {
-    const fetchContext = vi.fn(async () => NEXT);
+    const fetchContext = vi.fn(() => Promise.resolve(NEXT));
     const stop = startDayWatch(queryClient, fetchContext);
 
     vi.setSystemTime(END);
@@ -179,7 +180,7 @@ describe("startDayWatch", () => {
   });
 
   it("stopped before the day ends, it never asks", async () => {
-    const fetchContext = vi.fn(async () => NEXT);
+    const fetchContext = vi.fn(() => Promise.resolve(NEXT));
     startDayWatch(queryClient, fetchContext)();
 
     await vi.advanceTimersByTimeAsync(2 * 60 * 60 * 1000);

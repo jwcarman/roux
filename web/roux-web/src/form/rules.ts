@@ -500,7 +500,7 @@ function moneyRule(state: MoneyState): MoneyRule<Money | null> {
       positive: () => moneyRule({ ...state, positive: true }),
       optional: () => moneyRule({ ...state, required: false }),
     },
-  ) as unknown as MoneyRule<Money | null>;
+  );
 }
 
 /**
