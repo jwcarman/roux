@@ -161,7 +161,7 @@ days ("yesterday"), months and years.
 `roux_activity` (`ActivityEntry`, read through `ActivityRepository`): `id`, `version`, `occurred_at`,
 `actor_id` (null for the system), `anchor_id`, `related_ids` (`uuid[]`), `type`, `description`,
 `details` (`jsonb`). Indexed by anchor and time, and by related id. Rows are never updated. A test that
-starts from an empty history resets it with the app's other tables (`members.reset("roux_activity")`).
+starts from an empty history resets it with the app's other tables (`users.reset("roux_activity")`).
 
 ## Don't
 
