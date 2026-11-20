@@ -24,6 +24,14 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.members.all, "detail", id] as const,
     activities: (id: string) => [...queryKeys.members.all, "activities", id] as const,
   },
+  payments: {
+    all: ["payments"] as const,
+  },
+  plans: {
+    all: ["plans"] as const,
+    lists: () => [...queryKeys.plans.all, "list"] as const,
+    active: () => [...queryKeys.plans.all, "active"] as const,
+  },
   roles: {
     all: ["roles"] as const,
     invitable: () => [...queryKeys.roles.all, "invitable"] as const,

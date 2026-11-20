@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignedInRouteImport } from './routes/_signedIn'
 import { Route as SignedInIndexRouteImport } from './routes/_signedIn/index'
 import { Route as SignedInAppearanceRouteImport } from './routes/_signedIn/appearance'
+import { Route as SignedInPlansRouteImport } from './routes/_signedIn/plans'
 import { Route as SignedInRanksRouteImport } from './routes/_signedIn/ranks'
 import { Route as SignedInSettingsRouteImport } from './routes/_signedIn/settings'
 import { Route as SignedInTimetableRouteImport } from './routes/_signedIn/timetable'
@@ -35,6 +36,11 @@ const SignedInIndexRoute = SignedInIndexRouteImport.update({
 const SignedInAppearanceRoute = SignedInAppearanceRouteImport.update({
   id: '/appearance',
   path: '/appearance',
+  getParentRoute: () => SignedInRoute,
+} as any)
+const SignedInPlansRoute = SignedInPlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
   getParentRoute: () => SignedInRoute,
 } as any)
 const SignedInRanksRoute = SignedInRanksRouteImport.update({
@@ -93,6 +99,7 @@ const SignedInClassesClassIdCheckInRoute =
 export interface FileRoutesByFullPath {
   '/': typeof SignedInIndexRoute
   '/appearance': typeof SignedInAppearanceRoute
+  '/plans': typeof SignedInPlansRoute
   '/ranks': typeof SignedInRanksRoute
   '/settings': typeof SignedInSettingsRoute
   '/timetable': typeof SignedInTimetableRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/appearance': typeof SignedInAppearanceRoute
+  '/plans': typeof SignedInPlansRoute
   '/ranks': typeof SignedInRanksRoute
   '/settings': typeof SignedInSettingsRoute
   '/timetable': typeof SignedInTimetableRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_signedIn': typeof SignedInRouteWithChildren
   '/_signedIn/appearance': typeof SignedInAppearanceRoute
+  '/_signedIn/plans': typeof SignedInPlansRoute
   '/_signedIn/ranks': typeof SignedInRanksRoute
   '/_signedIn/settings': typeof SignedInSettingsRoute
   '/_signedIn/timetable': typeof SignedInTimetableRoute
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/appearance'
+    | '/plans'
     | '/ranks'
     | '/settings'
     | '/timetable'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/appearance'
+    | '/plans'
     | '/ranks'
     | '/settings'
     | '/timetable'
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_signedIn'
     | '/_signedIn/appearance'
+    | '/_signedIn/plans'
     | '/_signedIn/ranks'
     | '/_signedIn/settings'
     | '/_signedIn/timetable'
@@ -207,6 +219,13 @@ declare module '@tanstack/react-router' {
       path: '/appearance'
       fullPath: '/appearance'
       preLoaderRoute: typeof SignedInAppearanceRouteImport
+      parentRoute: typeof SignedInRoute
+    }
+    '/_signedIn/plans': {
+      id: '/_signedIn/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof SignedInPlansRouteImport
       parentRoute: typeof SignedInRoute
     }
     '/_signedIn/ranks': {
@@ -284,6 +303,7 @@ declare module '@tanstack/react-router' {
 
 interface SignedInRouteChildren {
   SignedInAppearanceRoute: typeof SignedInAppearanceRoute
+  SignedInPlansRoute: typeof SignedInPlansRoute
   SignedInRanksRoute: typeof SignedInRanksRoute
   SignedInSettingsRoute: typeof SignedInSettingsRoute
   SignedInTimetableRoute: typeof SignedInTimetableRoute
@@ -297,6 +317,7 @@ interface SignedInRouteChildren {
 
 const SignedInRouteChildren: SignedInRouteChildren = {
   SignedInAppearanceRoute: SignedInAppearanceRoute,
+  SignedInPlansRoute: SignedInPlansRoute,
   SignedInRanksRoute: SignedInRanksRoute,
   SignedInSettingsRoute: SignedInSettingsRoute,
   SignedInTimetableRoute: SignedInTimetableRoute,
