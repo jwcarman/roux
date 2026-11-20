@@ -9,38 +9,19 @@ A roux app is tested at three levels, each against the real thing as far as it c
 - **Playwright:** the built app in a browser, signing in by email link, including a
   Content-Security-Policy test.
 
-The helpers below are the app's own files (the template has them, and a new app copies them).
-roux-web's own test helpers are internal and not exported; do not import from roux's source.
+The Java helpers come from `roux-test`, roux's test kit; the browser helpers below are the app's own
+files (the template has them). roux-web's own test helpers are internal; do not import from roux's
+source.
 
 ## Dependencies
 
-Test dependencies in `pom.xml`, without versions (Spring Boot's parent manages Spring's and
-Testcontainers'; `roux-bom` manages `who-test`, which brings `spring-security-test`):
+One test dependency in `pom.xml`, without a version (`roux-bom` manages it). It brings JUnit, AssertJ,
+MockMvc, who-test (with `spring-security-test`), Testcontainers' PostgreSQL and the PostgreSQL driver:
 
 ```xml
 <dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-test</artifactId>
-    <scope>test</scope>
-</dependency>
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-webmvc-test</artifactId>
-    <scope>test</scope>
-</dependency>
-<dependency>
-    <groupId>org.jwcarman.who</groupId>
-    <artifactId>who-test</artifactId>
-    <scope>test</scope>
-</dependency>
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-testcontainers</artifactId>
-    <scope>test</scope>
-</dependency>
-<dependency>
-    <groupId>org.testcontainers</groupId>
-    <artifactId>testcontainers-postgresql</artifactId>
+    <groupId>org.jwcarman.roux</groupId>
+    <artifactId>roux-test</artifactId>
     <scope>test</scope>
 </dependency>
 ```
@@ -52,142 +33,100 @@ and in the frontend's `package.json`, as dev dependencies: `vitest`, `jsdom`, `m
 ## Java: the whole app on PostgreSQL
 
 Tests run the real app: who's security chain, roux's problem answers, the app's Liquibase changelog
-(after who's and roux's tables, which migratory creates), on a PostgreSQL that Testcontainers starts (Docker must be running). Nothing
-is mocked; the app's `application.yml` applies, so its required settings
-([Getting started](getting-started.md#required-settings)) are already there, and no mail is sent
-because tests sign in through who-test, not by email.
-
-### The database
-
-```java
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.context.annotation.Bean;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-
-/** PostgreSQL for the tests, the database who and the app keep their tables in. */
-@TestConfiguration(proxyBeanMethods = false)
-public class TestDatabase {
-
-  @Bean
-  @ServiceConnection
-  PostgreSQLContainer postgres() {
-    return new PostgreSQLContainer("postgres:16");
-  }
-}
-```
-
-`@ServiceConnection` points `spring.datasource.*` at the container; no URL is configured. One
-container serves each application context, and Spring caches contexts, so test classes with the same
-configuration share one database. (The template's `TestDatabase` goes further: one PostgreSQL per
-run with a fresh database per context, and a database named by the environment where there is no
-Docker. Use it when the suite grows.)
+(after who's and roux's tables, which migratory creates), on PostgreSQL. Nothing is mocked; the app's
+`application.yml` applies, so its required settings
+([Getting started](getting-started.md#required-settings)) are already there. Everything below is in
+`org.jwcarman.roux.test`.
 
 ### @AppTest
 
-One annotation for every test that needs the app:
+One annotation for every test that needs the app: `@SpringBootTest` on the app's own configuration,
+MockMvc, a database of its own, `TestMembers` and `TestClock`, and `roux.owner.email` set to
+`TestMembers.OWNER_EMAIL`.
 
 ```java
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+@AppTest
+class StudentsControllerTest { ... }
 
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
-
-/**
- * The whole app on PostgreSQL, with MockMvc and {@link TestMembers}. Test classes with the same
- * configuration share one running app and one database, so each test starts with {@link
- * TestMembers#reset(String...)}.
- */
-@Target(ElementType.TYPE)
-@Retention(RetentionPolicy.RUNTIME)
-@Documented
-@SpringBootTest
-@AutoConfigureMockMvc
-@Import({TestDatabase.class, TestMembers.class})
-public @interface AppTest {}
+@AppTest(webEnvironment = WebEnvironment.RANDOM_PORT) // a test that needs a real port
+class SessionCookieTest { ... }
 ```
+
+Test classes with the same configuration share one running app and one database, so each test starts
+with `members.reset(...)`. A class that adds `@TestPropertySource` (or `@Import`) gets an app and a
+database of its own.
+
+### The database: TestDatabase
+
+`@AppTest` gives each application context a new, empty database (`app_test_<12 hex>`) on one
+PostgreSQL server per test run: a Testcontainers `postgres:16` started on first use (Docker must be
+running), or, where there is no Docker, the server named by `ROUX_TEST_DATABASE_URL`,
+`ROUX_TEST_DATABASE_USERNAME` and `ROUX_TEST_DATABASE_PASSWORD` (a user who may create databases).
+A test that opens a database itself calls `TestDatabase.create()`; a `@DynamicPropertySource` points
+the app at one with `TestDatabase.register(registry)`.
 
 ### Signed-in people: TestMembers
 
-who signs people in; a test makes a person, gives them a role, and gets a browser signed in as them.
-who-test's `WhoMockMvcBrowser` is that browser:
-
 ```java
-import java.util.ArrayList;
-import java.util.List;
+@Autowired TestMembers members;
 
-import org.jwcarman.who.core.domain.Identity;
-import org.jwcarman.who.core.service.WhoService;
-import org.jwcarman.who.emaillink.EmailCredential;
-import org.jwcarman.who.emaillink.EmailCredentialService;
-import org.jwcarman.who.rbac.RbacService;
-import org.jwcarman.who.test.WhoMockMvcBrowser;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.web.servlet.MockMvc;
-
-/** People for an {@link AppTest}: a clean slate, and browsers signed in with a role. */
-public class TestMembers {
-
-  /** who's people and their email sign-ins; truncating them cascades to sessions and roles held. */
-  private static final List<String> WHO_TABLES = List.of("who_identity", "who_email_credential");
-
-  private final JdbcTemplate jdbc;
-  private final MockMvc mvc;
-  private final WhoService who;
-  private final EmailCredentialService emailCredentials;
-  private final RbacService rbac;
-
-  public TestMembers(
-      JdbcTemplate jdbc,
-      MockMvc mvc,
-      WhoService who,
-      EmailCredentialService emailCredentials,
-      RbacService rbac) {
-    this.jdbc = jdbc;
-    this.mvc = mvc;
-    this.who = who;
-    this.emailCredentials = emailCredentials;
-    this.rbac = rbac;
-  }
-
-  /** Removes every person and empties the app's {@code tables}; the roles stay. */
-  public void reset(String... tables) {
-    List<String> truncated = new ArrayList<>(WHO_TABLES);
-    truncated.addAll(List.of(tables));
-    jdbc.execute("truncate " + String.join(", ", truncated) + " cascade");
-  }
-
-  /** A new person with {@code role} (one the app made at startup), and a browser signed in as them. */
-  public <R extends Enum<R>> WhoMockMvcBrowser signedIn(String email, R role) {
-    Identity identity = who.createIdentity();
-    EmailCredential credential = emailCredentials.register(identity, email);
-    rbac.assignRoleToIdentity(identity, rbac.findRequiredRole(role));
-    return new WhoMockMvcBrowser(mvc).signedInAs(identity.id(), credential.id());
-  }
-
-  /** A browser with no one signed in. */
-  public WhoMockMvcBrowser anonymous() {
-    return new WhoMockMvcBrowser(mvc);
-  }
+@BeforeEach
+void clean_slate() {
+  members.reset("promotion", "student"); // the app's tables to empty
 }
+
+TestMember ivy = members.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
+ivy.perform(get("/api/students")).andExpect(status().isOk());
+members.owner().perform(delete("/api/plans/" + id)).andExpect(status().isNoContent());
+members.anonymous().perform(get("/api/students")).andExpect(status().isUnauthorized());
 ```
 
-- `new WhoMockMvcBrowser(mvc)` keeps the session and cookies between requests, and on `POST`, `PUT`,
-  `PATCH` and `DELETE` sends `X-XSRF-TOKEN` from the `XSRF-TOKEN` cookie, as roux's browser client
-  does. It gets that cookie from `GET /who/me` first when it has none.
-- `signedInAs(identityId, credentialId)` records a real sign-in in who's tables (who checks the
-  session against them on every request), so the person and the credential must exist:
-  `WhoService.createIdentity()` and `EmailCredentialService.register(identity, email)` make them.
-  With Spring Session (the template's JDBC sessions) it saves the session there.
-- `browser.perform(request)` sends a request as that person; `performWithoutCsrf(request)` sends one
-  without the CSRF header, to prove a write is refused (`403`).
-- Roles are the app's (`RbacService.findRequiredRole(AppRole.INSTRUCTOR)`), made at startup by the
-  app; `reset` leaves them. An app that keeps a profile per member saves it in `signedIn` too.
+- `reset(String... appTables)` removes every member (who's tables, cascading to what refers to them),
+  empties `appTables`, deletes the roles a test made (any role that did not exist when the app
+  started), puts `TestClock` back on real time and makes the owner again, as roux does at startup. An
+  app table that refers to who's tables empties with them; list the others.
+- `signedIn(name, email, role)` makes a member as a real one is made: who's identity, the address and
+  the role, and `MemberJoined` published, in one transaction ([Roles](roles.md)). The app's listener
+  for `MemberJoined` makes its own data for them (a profile), so a test person has what an invited one
+  has. The role is one of the app's, by name; an unknown one fails naming the roles there are. A
+  `Role` a test made itself is accepted too: `signedIn(name, email, role)` with who's `Role`.
+- An address already registered, or a `MemberJoined` listener that throws, fails `signedIn` and leaves
+  no one behind.
+- `owner()` is the owner the app made from `TestMembers.OWNER_EMAIL`, signed in; `anonymous()` a
+  browser with no one signed in.
+- `TestMember` is `(id, browser)`: `perform(request)` sends a request as them. The browser is
+  who-test's `WhoMockMvcBrowser`: it keeps the session and cookies between requests, and on `POST`,
+  `PUT`, `PATCH` and `DELETE` sends `X-XSRF-TOKEN` from the `XSRF-TOKEN` cookie, as roux's browser
+  client does; `browser().performWithoutCsrf(request)` proves a write without it is refused (`403`).
+
+### Time: TestClock
+
+`TestClock` is the app's `Clock` in an `@AppTest`: UTC, on real time until a test sets it.
+
+```java
+@Autowired TestClock clock;
+
+clock.set("2026-11-10T17:32:00Z"); // stopped there
+clock.advance(Duration.ofDays(1));  // moved on a day
+clock.useRealTime();               // reset does this too
+```
+
+The app reads time only from the injected `Clock` ([Dates and time](dates-and-time.md)), so a test
+that sets it controls "now" everywhere, who's sessions excepted.
+
+### Mail: RecordingWhoEmailSender and TestMail
+
+Tests sign in through `TestMembers`, so no mail is needed for that. A test of the app's own invitation
+or sign-in emails captures them:
+
+- `RecordingWhoEmailSender`, declared as a bean in the test (`@Import` a `@TestConfiguration` that
+  returns `new RecordingWhoEmailSender()`), replaces who's mail sender and keeps each sign-in or
+  invitation link sent: `sent()` is a list of `Sent(address, link, code)`; `failSends()` makes sends
+  fail (to test what the app does when mail is down); `clear()` forgets them.
+- `TestMail` is a real mail server for an end-to-end test: `TestMail.get()` is a Mailpit
+  (`Mail(smtpHost, smtpPort, apiUrl)`) started on first use, or the one named by
+  `ROUX_TEST_MAIL_SMTP_HOST`, `ROUX_TEST_MAIL_SMTP_PORT` and `ROUX_TEST_MAIL_API_URL`. Point
+  `spring.mail.*` at it and read the mail from its API.
 
 ### A controller test
 
@@ -205,7 +144,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator;
 import org.junit.jupiter.api.Test;
-import org.jwcarman.who.test.WhoMockMvcBrowser;
+import org.jwcarman.roux.test.AppTest;
+import org.jwcarman.roux.test.TestMember;
+import org.jwcarman.roux.test.TestMembers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -220,12 +161,12 @@ class StudentsControllerTest {
 
   @Autowired TestMembers members;
 
-  private WhoMockMvcBrowser instructor;
+  private TestMember instructor;
 
   @BeforeEach
   void clean_slate() {
     members.reset("promotion", "student");
-    instructor = members.signedIn("ivy@example.org", AppRole.INSTRUCTOR);
+    instructor = members.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
   }
 
   @Test

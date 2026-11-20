@@ -16,9 +16,10 @@ All notable changes to this project are documented in this file. The format foll
   one-day allowance remains only outside a roux app. `date().notInFuture()` compares with `today()`.
 - Roles and permissions (`docs/guides/roles.md`). What changes for a roux app:
   - Set `roux.owner.email` and `roux.owner.name` (both required; startup fails naming the missing one). While
-    no active identity holds `OWNER`, roux creates one at startup and publishes `OwnerCreated` in its
+    no active identity holds `OWNER`, roux creates one at startup and publishes `MemberJoined` in its
     transaction. Delete the app's own owner bootstrap; an app that keeps a profile per person listens for
-    `OwnerCreated`.
+    `MemberJoined`, which roux also publishes for every member invited through `MemberInvitations`
+    (invite by name, with the app's own work in the invitation's transaction).
   - Set `roux.roles.invitable` to the roles an invitation may give (empty by default, so every invitation is
     refused until it is set; `OWNER` may not be listed). roux refuses any other role inside the invitation's
     transaction, and serves the list at `GET /api/roles/invitable`.
@@ -95,7 +96,7 @@ All notable changes to this project are documented in this file. The format foll
   browser's parsing and the server's rules the same.
 
 - `roux-roles`, in the starter: `RouxRoles.OWNER`, created by its changelog with who-admin's permissions;
-  the first owner (`OwnerBootstrap`, `OwnerCreated`); invitable roles (`InvitableRoles`, its guard and
+  the first owner (`OwnerBootstrap`, `MemberJoined`), invitations by name (`MemberInvitations`); invitable roles (`InvitableRoles`, its guard and
   `GET /api/roles/invitable`); `Permissions.allOf`; and, for an app's roles test, `RoleGrantsCheck` (the
   grants match the constants) and `PermissionsTypeScript` (writes and checks the frontend's
   `permissions.gen.ts`).

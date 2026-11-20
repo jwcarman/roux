@@ -13,24 +13,8 @@ changesets like any schema.
   (`RouxThemePermissions.THEME_MANAGE`). A roux upgrade that adds a permission brings its grant with it.
   The app grants `OWNER` its own permissions.
 - **The first owner**, from `roux.owner.email` and `roux.owner.name` (both required). While no active
-  identity holds `OWNER`, roux creates one at startup and publishes `OwnerCreated(identityId, name,
-  email)` inside that transaction. An app that keeps its own data per person (a profile) listens for it:
-
-  ```java
-  @Component
-  class OwnerProfiles {
-    private final MemberProfileRepository profiles;
-
-    OwnerProfiles(MemberProfileRepository profiles) {
-      this.profiles = profiles;
-    }
-
-    @EventListener
-    void on(OwnerCreated owner) {
-      profiles.save(new MemberProfile(owner.identityId(), owner.name(), owner.email()));
-    }
-  }
-  ```
+  identity holds `OWNER`, roux creates one at startup and publishes `MemberJoined` for it inside that
+  transaction (below).
 
   Once an active owner exists, the settings change nothing. If none is active (someone changed the
   database by hand), the next start makes one again; when another identity already holds the
@@ -41,6 +25,66 @@ changesets like any schema.
   `POST /who/invitations` answers it as a `400` with code `invalid-request`). It serves the list at
   `GET /api/roles/invitable` for the invite form. List only roles the app's changelog creates.
 - **The last owner stays.** See "Keep someone who can manage people" below.
+
+## A member joined: MemberJoined
+
+roux publishes `MemberJoined(identityId, name, email)` whenever a member is created: the first owner
+at startup, someone invited through `MemberInvitations`, and a test's person (`TestMembers.signedIn`,
+[Testing](testing.md)). It is published synchronously, inside the transaction that creates the
+member, so an app that keeps its own data per person (a profile) makes it in one listener, and a
+listener that throws rolls the member back:
+
+```java
+@Component
+class MemberProfiles {
+  private final MemberProfileRepository profiles;
+
+  MemberProfiles(MemberProfileRepository profiles) {
+    this.profiles = profiles;
+  }
+
+  @EventListener
+  void on(MemberJoined member) {
+    profiles.save(new MemberProfile(member.identityId(), member.name(), member.email()));
+  }
+}
+```
+
+`email` is the address as who registered it (trimmed and lower-cased).
+
+## Inviting a member: MemberInvitations
+
+The app's invite endpoint (its permission, its request, its field errors) invites through
+`MemberInvitations`, which wraps who's `InvitationService` and publishes `MemberJoined` inside who's
+invitation transaction:
+
+```java
+@PostMapping("/api/members/invitations")
+@ResponseStatus(HttpStatus.ACCEPTED)
+@RequiresPermission(Permissions.MEMBERS_INVITE)
+public InvitationResult invite(@Valid @RequestBody InvitationRequest request) {
+  Invitation invitation;
+  try {
+    invitation =
+        invitations.invite(
+            request.name(),
+            request.email(),
+            request.role(),
+            identity -> activityLog.append(identity.id(), new MemberInvited(request.name())));
+  } catch (EmailAddressTakenException _) {
+    throw new InvalidFieldException("email", "That address is already a member");
+  }
+  return new InvitationResult(invitation.linkSent());
+}
+```
+
+- `invite(name, email, role)` returns who's `Invitation` (the new identity's id, and whether the link
+  was sent). `invite(name, email, role, alsoInTransaction)` runs the app's other work that must commit
+  with the invitation (an activity, say) after `MemberJoined`, in the same transaction.
+- The role is checked as every invitation's is (invitable roles, above). An address already registered
+  is refused with who's `EmailAddressTakenException`, for the endpoint to turn into a field error.
+- who-admin's own `POST /who/invitations` takes no name, so it publishes no `MemberJoined`: a member
+  invited that way has no app profile. Invite through the app's endpoint.
 
 ## The app's permissions
 
@@ -169,7 +213,8 @@ active. Grant it to `OWNER` alone unless that is what you want.
   order, without duplicates; it throws for a class that has none) and `Permissions.constantsOf`, which
   keeps the field names.
 - `OwnerBootstrap`, the `ApplicationRunner` that makes the first owner, configured by
-  `RouxOwnerProperties` (`roux.owner.*`); `OwnerCreated`.
+  `RouxOwnerProperties` (`roux.owner.*`); `MemberJoined`, published for every member who joins;
+  `MemberInvitations`, invitations by name.
 - `InvitableRoles` (the checked list, from `RouxRolesProperties`, `roux.roles.*`),
   `InvitableRolesGuard` (the listener on who's `IdentityInvited`) and `InvitableRolesController`.
 - `RoleGrantsCheck` and `PermissionsTypeScript`, for the app's roles test.
