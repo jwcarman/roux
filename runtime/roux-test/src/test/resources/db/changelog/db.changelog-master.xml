@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <!-- The test app's own role, as an app's changelog makes its roles: reset keeps it. -->
+  <changeSet id="test-kit-roles-1" author="roux">
+    <sql>INSERT INTO who_role (id, name) VALUES (gen_random_uuid(), 'MEMBER') ON CONFLICT (name) DO NOTHING;</sql>
+  </changeSet>
+</databaseChangeLog>
