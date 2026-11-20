@@ -11,8 +11,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.test.AppTest;
-import org.jwcarman.roux.test.TestMember;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUser;
+import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
@@ -27,15 +27,15 @@ class PlansControllerTest {
 
   private static final String PLANS = "/api/plans";
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired ObjectMapper json;
 
-  private TestMember owner;
+  private TestUser owner;
 
   @BeforeEach
   void cleanSlate() {
-    members.reset("plan");
-    owner = members.owner();
+    users.reset("plan");
+    owner = users.owner();
   }
 
   @Test
@@ -128,7 +128,7 @@ class PlansControllerTest {
   void anInstructorReadsOnlyActivePlansAndChangesNone() throws Exception {
     create("Monthly", "MONTHLY", true);
     create("Old", "MONTHLY", false);
-    TestMember ivy = members.signedIn("Ivy", "ivy@example.org", Roles.INSTRUCTOR);
+    TestUser ivy = users.signedIn("Ivy", "ivy@example.org", Roles.INSTRUCTOR);
 
     ivy.browser()
         .perform(get(PLANS + "/active"))
@@ -146,7 +146,7 @@ class PlansControllerTest {
 
   @Test
   void aMemberSeesNoPlans() throws Exception {
-    TestMember max = members.signedIn("Max", "max@example.org", Roles.MEMBER);
+    TestUser max = users.signedIn("Max", "max@example.org", Roles.MEMBER);
 
     max.browser().perform(get(PLANS + "/active")).andExpect(status().isForbidden());
   }

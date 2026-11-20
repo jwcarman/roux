@@ -14,7 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.problems.InvalidFieldException;
 import org.jwcarman.roux.test.AppTest;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -23,13 +23,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @AppTest
 class RankConstraintsTest {
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired JdbcTemplate jdbc;
   @Autowired RankRepository repository;
 
   @BeforeEach
   void cleanSlate() {
-    members.reset("rank");
+    users.reset("rank");
   }
 
   @Test

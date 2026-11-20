@@ -31,11 +31,11 @@ import org.jwcarman.who.emaillink.EmailCredentialService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** What every {@link AppTest} gets: a database, signed-in members, a clean slate and a clock. */
+/** What every {@link AppTest} gets: a database, signed-in users, a clean slate and a clock. */
 @AppTest
 class AppTestTest {
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired TestClock testClock;
   @Autowired Clock clock;
   @Autowired JdbcTemplate jdbc;
@@ -43,7 +43,7 @@ class AppTestTest {
 
   @BeforeEach
   void cleanSlate() {
-    members.reset();
+    users.reset();
   }
 
   @Test
@@ -54,7 +54,7 @@ class AppTestTest {
 
   @Test
   void signsInAMemberWithARole() throws Exception {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", "MEMBER");
+    TestUser ada = users.signedIn("Ada Lovelace", "ada@example.org", "MEMBER");
 
     ada.perform(get("/api/roles/invitable")).andExpect(status().isOk());
     assertThat(ada.id()).isNotNull();
@@ -62,22 +62,22 @@ class AppTestTest {
 
   @Test
   void anAnonymousBrowserIsNotSignedIn() throws Exception {
-    members.anonymous().perform(get("/api/roles/invitable")).andExpect(status().isUnauthorized());
+    users.anonymous().perform(get("/api/roles/invitable")).andExpect(status().isUnauthorized());
   }
 
   @Test
   void theOwnerIsSignedIn() throws Exception {
-    members.owner().perform(get("/api/roles/invitable")).andExpect(status().isOk());
+    users.owner().perform(get("/api/roles/invitable")).andExpect(status().isOk());
   }
 
   @Test
   void resetLeavesOnlyTheOwner() {
-    members.signedIn("Ada Lovelace", "ada@example.org", "MEMBER");
+    users.signedIn("Ada Lovelace", "ada@example.org", "MEMBER");
 
-    members.reset();
+    users.reset();
 
     assertThat(emailCredentials.findByAddress("ada@example.org")).isEmpty();
-    assertThat(emailCredentials.findByAddress(TestMembers.OWNER_EMAIL)).isPresent();
+    assertThat(emailCredentials.findByAddress(TestUsers.OWNER_EMAIL)).isPresent();
   }
 
   @Test
@@ -86,7 +86,7 @@ class AppTestTest {
         "insert into roux_activity (id, version, occurred_at, anchor_id, type, description, details)"
             + " values (gen_random_uuid(), 0, now(), gen_random_uuid(), 'x.y', 'y', '{}')");
 
-    members.reset("roux_activity");
+    users.reset("roux_activity");
 
     assertThat(jdbc.queryForObject("select count(*) from roux_activity", Integer.class)).isZero();
   }
@@ -123,7 +123,7 @@ class AppTestTest {
   void resetPutsTheClockBackOnRealTime() {
     testClock.set("2020-01-01T00:00:00Z");
 
-    members.reset();
+    users.reset();
 
     assertThat(clock.instant()).isAfter(Instant.parse("2025-01-01T00:00:00Z"));
   }

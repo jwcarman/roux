@@ -29,19 +29,19 @@ import org.springframework.core.annotation.AliasFor;
 import org.springframework.test.context.ContextConfiguration;
 
 /**
- * The whole app on a test database, with MockMvc, {@link TestMembers} and {@link TestClock}.
+ * The whole app on a test database, with MockMvc, {@link TestUsers} and {@link TestClock}.
  *
  * <p>Test classes with the same configuration share one running app and one database, so each test
- * starts with {@link TestMembers#reset(String...)}. A class that needs other properties adds
+ * starts with {@link TestUsers#reset(String...)}. A class that needs other properties adds
  * {@code @TestPropertySource}; it then gets an app and a database of its own.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@SpringBootTest(properties = "roux.owner.email=" + TestMembers.OWNER_EMAIL)
+@SpringBootTest(properties = "roux.owner.email=" + TestUsers.OWNER_EMAIL)
 @AutoConfigureMockMvc
 @ContextConfiguration(initializers = TestDatabase.Initializer.class)
-@Import({TestMembers.class, TestClock.class})
+@Import({TestUsers.class, TestClock.class})
 public @interface AppTest {
 
   /** {@link WebEnvironment#RANDOM_PORT} for a test that needs a real port. */

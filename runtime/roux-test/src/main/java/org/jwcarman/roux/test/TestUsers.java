@@ -35,16 +35,16 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Members for an {@link AppTest}: a clean slate, and people signed in with a role. A person is made
- * as a real member is: who's identity, address and role, and {@link UserJoined} in the same
+ * Users for an {@link AppTest}: a clean slate, and people signed in with a role. A person is made
+ * as a real user is: who's identity, address and role, and {@link UserJoined} in the same
  * transaction, so the app's listener makes its own data for them.
  */
-public class TestMembers {
+public class TestUsers {
 
   /** The owner's address, which the app makes the owner at startup and on every reset. */
   public static final String OWNER_EMAIL = "owner@example.com";
 
-  /** who's tables; truncating them (cascading to what refers to them) removes every member. */
+  /** who's tables; truncating them (cascading to what refers to them) removes every user. */
   private static final List<String> WHO_TABLES =
       List.of("who_identity", "who_email_credential", "who_credential_identity");
 
@@ -60,7 +60,7 @@ public class TestMembers {
   private final String[] startupRoles;
 
   /**
-   * Creates the members, remembering the roles that exist now (from the changelogs) as the ones
+   * Creates the users, remembering the roles that exist now (from the changelogs) as the ones
    * {@link #reset(String...)} keeps.
    *
    * @param jdbc empties tables and reads roles
@@ -71,9 +71,9 @@ public class TestMembers {
    * @param rbac finds and assigns roles
    * @param emailCredentials registers addresses
    * @param events publishes {@link UserJoined}
-   * @param transactionManager runs each new member's transaction
+   * @param transactionManager runs each new user's transaction
    */
-  public TestMembers(
+  public TestUsers(
       JdbcTemplate jdbc,
       OwnerBootstrap bootstrap,
       TestClock clock,
@@ -97,8 +97,8 @@ public class TestMembers {
   }
 
   /**
-   * Starts a test from a clean slate: removes every member and empties {@code appTables}, deletes
-   * the roles tests made, makes the owner again as roux does at startup, and puts the clock back on
+   * Starts a test from a clean slate: removes every user and empties {@code appTables}, deletes the
+   * roles tests made, makes the owner again as roux does at startup, and puts the clock back on
    * real time.
    *
    * @param appTables the app's tables to empty as well (cascading to what refers to them)
@@ -113,15 +113,15 @@ public class TestMembers {
   }
 
   /**
-   * A new member with {@code role}, signed in.
+   * A new user with {@code role}, signed in.
    *
-   * @param name the member's display name, as {@link UserJoined} carries it
-   * @param email the member's address
+   * @param name the user's display name, as {@link UserJoined} carries it
+   * @param email the user's address
    * @param role the name of one of the app's roles
-   * @return the member and their browser
+   * @return the user and their browser
    * @throws IllegalArgumentException when no role has that name, listing the roles there are
    */
-  public TestMember signedIn(String name, String email, String role) {
+  public TestUser signedIn(String name, String email, String role) {
     List<String> roles = jdbc.queryForList("select name from who_role order by name", String.class);
     if (!roles.contains(role)) {
       throw new IllegalArgumentException("No role named " + role + "; the roles are " + roles);
@@ -130,16 +130,16 @@ public class TestMembers {
   }
 
   /**
-   * A new member with {@code role}, which need not be one of the app's, signed in. Everything is
-   * made in one transaction: an address already registered, or a listener that throws, leaves no
-   * one behind.
+   * A new user with {@code role}, which need not be one of the app's, signed in. Everything is made
+   * in one transaction: an address already registered, or a listener that throws, leaves no one
+   * behind.
    *
-   * @param name the member's display name, as {@link UserJoined} carries it
-   * @param email the member's address
+   * @param name the user's display name, as {@link UserJoined} carries it
+   * @param email the user's address
    * @param role the role to assign
-   * @return the member and their browser
+   * @return the user and their browser
    */
-  public TestMember signedIn(String name, String email, Role role) {
+  public TestUser signedIn(String name, String email, Role role) {
     EmailCredential[] credential = new EmailCredential[1];
     Identity identity =
         tx.execute(
@@ -151,7 +151,7 @@ public class TestMembers {
                   new UserJoined(created.id(), name, credential[0].address(), role.name()));
               return created;
             });
-    return new TestMember(identity.id(), browserFor(identity.id(), credential[0]));
+    return new TestUser(identity.id(), browserFor(identity.id(), credential[0]));
   }
 
   /**
@@ -159,10 +159,10 @@ public class TestMembers {
    *
    * @return the owner and their browser
    */
-  public TestMember owner() {
+  public TestUser owner() {
     EmailCredential credential = emailCredentials.findByAddress(OWNER_EMAIL).orElseThrow();
     UUID id = who.resolve(credential::id).orElseThrow().identity().id();
-    return new TestMember(id, browserFor(id, credential));
+    return new TestUser(id, browserFor(id, credential));
   }
 
   /**

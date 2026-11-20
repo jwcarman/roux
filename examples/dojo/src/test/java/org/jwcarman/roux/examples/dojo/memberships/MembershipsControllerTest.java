@@ -26,8 +26,8 @@ import org.jwcarman.roux.examples.dojo.students.StudentStatus;
 import org.jwcarman.roux.money.Money;
 import org.jwcarman.roux.test.AppTest;
 import org.jwcarman.roux.test.TestClock;
-import org.jwcarman.roux.test.TestMember;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUser;
+import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -42,7 +42,7 @@ class MembershipsControllerTest {
 
   private static final Currency USD = Currency.getInstance("USD");
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired TestClock clock;
   @Autowired ObjectMapper json;
   @Autowired PlanRepository plans;
@@ -51,15 +51,15 @@ class MembershipsControllerTest {
   @Autowired MembershipRepository membershipRepository;
   @Autowired PaymentRepository paymentRepository;
 
-  private TestMember ivy;
+  private TestUser ivy;
   private PlanEntity monthly;
   private UUID maya;
 
   @BeforeEach
   void cleanSlate() {
-    members.reset("payment", "membership", "plan", "student", "roux_activity");
+    users.reset("payment", "membership", "plan", "student", "roux_activity");
     clock.set("2026-04-01T12:00:00Z");
-    ivy = members.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
+    ivy = users.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
     monthly =
         plans.save(
             new PlanEntity("Monthly unlimited", Money.of(15000, USD), PlanPeriod.MONTHLY, true));
@@ -228,7 +228,7 @@ class MembershipsControllerTest {
 
   @Test
   void aMemberCannotSeeOrRecordMoney() throws Exception {
-    TestMember max = members.signedIn("Max", "max@example.org", Roles.MEMBER);
+    TestUser max = users.signedIn("Max", "max@example.org", Roles.MEMBER);
 
     max.browser()
         .perform(get("/api/students/" + maya + "/memberships"))
@@ -276,7 +276,7 @@ class MembershipsControllerTest {
 
   @Test
   void aMemberCannotSeeTheStudentsHistory() throws Exception {
-    TestMember max = members.signedIn("Max", "max@example.org", Roles.MEMBER);
+    TestUser max = users.signedIn("Max", "max@example.org", Roles.MEMBER);
 
     max.browser()
         .perform(get("/api/students/" + maya + "/activities"))
@@ -301,7 +301,7 @@ class MembershipsControllerTest {
   @Test
   void aUsedPlanCannotBeRemovedOrChangePeriod() throws Exception {
     start(maya, monthly.getId(), "2026-03-15");
-    TestMember owner = members.owner();
+    TestUser owner = users.owner();
 
     owner.browser().perform(get("/api/plans")).andExpect(jsonPath("$[0].inUse").value(true));
     owner

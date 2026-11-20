@@ -23,28 +23,28 @@ import org.jwcarman.roux.examples.dojo.students.StudentRequest;
 import org.jwcarman.roux.money.Money;
 import org.jwcarman.roux.test.AppTest;
 import org.jwcarman.roux.test.TestClock;
-import org.jwcarman.roux.test.TestMember;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUser;
+import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
 @AppTest
 class PaymentsControllerTest {
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired TestClock clock;
   @Autowired PlanRepository plans;
   @Autowired StudentRepository students;
 
-  private TestMember owner;
+  private TestUser owner;
 
   private UUID maya;
 
   @BeforeEach
   void paymentsOverAYear() throws Exception {
-    members.reset("payment", "membership", "plan", "student");
+    users.reset("payment", "membership", "plan", "student");
     clock.set("2026-04-15T12:00:00Z");
-    owner = members.owner();
+    owner = users.owner();
     UUID plan =
         plans
             .save(
@@ -108,7 +108,7 @@ class PaymentsControllerTest {
   void thisMonthIsNewYorksMonthAtUtcsMonthStart() throws Exception {
     // 03:00 UTC on May 1 is still April 30 in New York.
     clock.set("2026-05-01T03:00:00Z");
-    owner = members.owner(); // a fresh session: the old one expired as the clock moved on
+    owner = users.owner(); // a fresh session: the old one expired as the clock moved on
     pay(maya, 1, "2026-04-30");
 
     owner
@@ -125,7 +125,7 @@ class PaymentsControllerTest {
 
   @Test
   void anInstructorCannotSeeMoneyTaken() throws Exception {
-    TestMember ivy = members.signedIn("Ivy", "ivy@example.org", Roles.INSTRUCTOR);
+    TestUser ivy = users.signedIn("Ivy", "ivy@example.org", Roles.INSTRUCTOR);
 
     ivy.browser().perform(get("/api/payments/monthly")).andExpect(status().isForbidden());
     ivy.browser().perform(get("/api/payments")).andExpect(status().isForbidden());

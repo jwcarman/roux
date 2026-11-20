@@ -17,7 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.jwcarman.roux.activity.ActivityRepository;
 import org.jwcarman.roux.test.AppTest;
 import org.jwcarman.roux.test.RecordingWhoEmailSender;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUsers;
 import org.jwcarman.who.core.domain.IdentityStatus;
 import org.jwcarman.who.core.domain.WhoPrincipal;
 import org.jwcarman.who.core.service.WhoService;
@@ -53,7 +53,7 @@ class InviteControllerTest {
   }
 
   @Autowired JdbcTemplate jdbc;
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired EmailCredentialService emailCredentials;
   @Autowired InvitationService invitations;
   @Autowired RecordingWhoEmailSender mail;
@@ -65,7 +65,7 @@ class InviteControllerTest {
 
   @BeforeEach
   void cleanSlate() {
-    members.reset("who_email_link_token");
+    users.reset("who_email_link_token");
     mail.clear();
   }
 
@@ -97,7 +97,7 @@ class InviteControllerTest {
 
     UUID identityId = identityOf(emailCredentials.findByAddress("ivy@example.org").orElseThrow());
     assertThat(rolesOf(identityId)).containsExactly("INSTRUCTOR");
-    members
+    users
         .owner()
         .perform(get("/api/members/" + identityId))
         .andExpect(status().isOk())
@@ -292,7 +292,7 @@ class InviteControllerTest {
   void whosOwnInviteEndpointRefusesTheOwnerRoleAsABadRequest() throws Exception {
     int identities = count("who_identity");
 
-    members
+    users
         .owner()
         .browser()
         .perform(
@@ -312,7 +312,7 @@ class InviteControllerTest {
   }
 
   private ResultActions invite(String name, String email) throws Exception {
-    return members
+    return users
         .owner()
         .perform(
             post("/api/members/invitations")
@@ -321,7 +321,7 @@ class InviteControllerTest {
   }
 
   private ResultActions invite(String name, String email, String role) throws Exception {
-    return members
+    return users
         .owner()
         .perform(
             post("/api/members/invitations")

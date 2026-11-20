@@ -21,8 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.test.AppTest;
 import org.jwcarman.roux.test.TestClock;
-import org.jwcarman.roux.test.TestMember;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUser;
+import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -38,20 +38,20 @@ class PromotionsControllerTest {
   private static final String STUDENTS = "/api/students";
   private static final String RANKS = "/api/ranks";
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired TestClock clock;
   @Autowired ObjectMapper json;
   @Autowired JdbcTemplate jdbc;
 
-  private TestMember owner;
+  private TestUser owner;
   private String white;
   private String yellow;
   private String green;
 
   @BeforeEach
   void cleanSlate() throws Exception {
-    members.reset("promotion", "student", "rank", "roux_activity");
-    owner = members.owner();
+    users.reset("promotion", "student", "rank", "roux_activity");
+    owner = users.owner();
     white = rank("White", "WHITE");
     yellow = rank("Yellow", "YELLOW");
     green = rank("Green", "GREEN");
@@ -258,7 +258,7 @@ class PromotionsControllerTest {
     String ada = student("Ada", "Lovelace");
     // 03:00 UTC on Mar 11 is still Mar 10 in New York, the school's zone.
     clock.set("2026-03-11T03:00:00Z");
-    owner = members.owner();
+    owner = users.owner();
 
     owner.perform(promotion(ada, white, "2026-03-10")).andExpect(status().isCreated());
     owner
@@ -303,7 +303,7 @@ class PromotionsControllerTest {
     String ada = student("Ada", "Lovelace");
     JsonNode promoted = promote(ada, white, "2026-01-10");
     String id = promoted.get("promotions").get(0).get("id").asString();
-    TestMember grace = members.signedIn("Grace", "grace@example.org", Roles.MEMBER);
+    TestUser grace = users.signedIn("Grace", "grace@example.org", Roles.MEMBER);
 
     grace.perform(get(STUDENTS + "/" + ada)).andExpect(status().isOk());
     for (MockHttpServletRequestBuilder write :
@@ -316,7 +316,7 @@ class PromotionsControllerTest {
 
   @Test
   void signedOutIs401() throws Exception {
-    members
+    users
         .anonymous()
         .perform(get(STUDENTS + "/" + UUID.randomUUID()))
         .andExpect(status().isUnauthorized());

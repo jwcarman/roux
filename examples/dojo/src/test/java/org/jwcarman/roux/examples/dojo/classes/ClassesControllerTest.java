@@ -20,8 +20,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.test.AppTest;
-import org.jwcarman.roux.test.TestMember;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUser;
+import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
@@ -36,20 +36,20 @@ class ClassesControllerTest {
 
   private static final String CLASSES = "/api/classes";
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired ObjectMapper json;
   @Autowired JdbcTemplate jdbc;
 
-  private TestMember owner;
-  private TestMember ivy;
-  private TestMember mo;
+  private TestUser owner;
+  private TestUser ivy;
+  private TestUser mo;
 
   @BeforeEach
   void cleanSlate() {
-    members.reset("school_class");
-    owner = members.owner();
-    ivy = members.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
-    mo = members.signedIn("Mo Member", "mo@example.org", Roles.MEMBER);
+    users.reset("school_class");
+    owner = users.owner();
+    ivy = users.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
+    mo = users.signedIn("Mo Member", "mo@example.org", Roles.MEMBER);
   }
 
   @Test
@@ -221,7 +221,7 @@ class ClassesControllerTest {
   void everyoneReadsTheTimetableButOnlyTheOwnerChangesIt() throws Exception {
     String id = add("Kids", "MONDAY", "17:00", "18:00");
 
-    for (TestMember reader : new TestMember[] {ivy, mo}) {
+    for (TestUser reader : new TestUser[] {ivy, mo}) {
       reader.perform(get(CLASSES)).andExpect(jsonPath("$", hasSize(1)));
       reader.perform(get(CLASSES + "/" + id)).andExpect(status().isOk());
       reader
@@ -229,7 +229,7 @@ class ClassesControllerTest {
           .andExpect(status().isForbidden());
       reader.perform(delete(CLASSES + "/" + id)).andExpect(status().isForbidden());
     }
-    members.anonymous().perform(get(CLASSES)).andExpect(status().isUnauthorized());
+    users.anonymous().perform(get(CLASSES)).andExpect(status().isUnauthorized());
   }
 
   @Test

@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.roles.RouxRoles;
 import org.jwcarman.roux.test.AppTest;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUsers;
 import org.jwcarman.who.core.domain.Identity;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.rbac.RbacService;
@@ -25,7 +25,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class MemberDirectoryTest {
 
   @Autowired JdbcTemplate jdbc;
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired WhoService who;
   @Autowired RbacService rbac;
   @Autowired MemberProfileRepository profiles;
@@ -33,7 +33,7 @@ class MemberDirectoryTest {
 
   @BeforeEach
   void cleanSlate() {
-    members.reset();
+    users.reset();
     // Only the members each test seeds.
     jdbc.execute("truncate member_profile");
   }

@@ -16,8 +16,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.test.AppTest;
-import org.jwcarman.roux.test.TestMember;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUser;
+import org.jwcarman.roux.test.TestUsers;
 import org.jwcarman.who.core.service.WhoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -28,16 +28,16 @@ import org.springframework.test.context.TestPropertySource;
 @TestPropertySource(properties = "app.export.max-rows=3")
 class MembersExportTest {
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired WhoService who;
 
-  private TestMember owner;
+  private TestUser owner;
   @Autowired JdbcClient jdbc;
 
   @BeforeEach
   void cleanSlate() {
-    members.reset();
-    owner = members.owner();
+    users.reset();
+    owner = users.owner();
   }
 
   @Test
@@ -118,6 +118,6 @@ class MembersExportTest {
   }
 
   private UUID member(String name, String email) {
-    return members.signedIn(name, email, Roles.MEMBER).id();
+    return users.signedIn(name, email, Roles.MEMBER).id();
   }
 }

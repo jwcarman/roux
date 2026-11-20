@@ -15,8 +15,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.test.AppTest;
-import org.jwcarman.roux.test.TestMember;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUser;
+import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
@@ -30,15 +30,15 @@ class RanksControllerTest {
 
   private static final String RANKS = "/api/ranks";
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired ObjectMapper json;
 
-  private TestMember owner;
+  private TestUser owner;
 
   @BeforeEach
   void cleanSlate() {
-    members.reset("rank");
-    owner = members.owner();
+    users.reset("rank");
+    owner = users.owner();
   }
 
   @Test
@@ -138,7 +138,7 @@ class RanksControllerTest {
   @Test
   void aMemberReadsButCannotChange() throws Exception {
     JsonNode white = create("White", "WHITE");
-    TestMember ada = members.signedIn("Ada", "ada@example.org", Roles.MEMBER);
+    TestUser ada = users.signedIn("Ada", "ada@example.org", Roles.MEMBER);
 
     ada.perform(get(RANKS)).andExpect(status().isOk());
     for (MockHttpServletRequestBuilder write :
@@ -154,7 +154,7 @@ class RanksControllerTest {
 
   @Test
   void signedOutIs401() throws Exception {
-    members.anonymous().perform(get(RANKS)).andExpect(status().isUnauthorized());
+    users.anonymous().perform(get(RANKS)).andExpect(status().isUnauthorized());
   }
 
   private JsonNode create(String name, String colour) throws Exception {

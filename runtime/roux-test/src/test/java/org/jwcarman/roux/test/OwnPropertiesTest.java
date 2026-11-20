@@ -27,18 +27,18 @@ import org.springframework.test.context.TestPropertySource;
 /** A class with properties of its own gets an app, a database and an owner of its own. */
 @AppTest
 @TestPropertySource(properties = "roux.owner.name=Another Owner")
-@Import(TestMembersTest.Joined.class)
+@Import(TestUsersTest.Joined.class)
 class OwnPropertiesTest {
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired JdbcTemplate jdbc;
-  @Autowired TestMembersTest.Joined joined;
+  @Autowired TestUsersTest.Joined joined;
 
   @Test
   void a_class_with_its_own_properties_gets_its_own_database_and_owner() {
     joined.events.clear();
 
-    members.reset();
+    users.reset();
 
     assertThat(jdbc.queryForObject("select current_database()", String.class))
         .startsWith("app_test_");

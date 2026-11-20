@@ -20,8 +20,8 @@ import org.jwcarman.roux.examples.dojo.plans.PlanRepository;
 import org.jwcarman.roux.money.Money;
 import org.jwcarman.roux.test.AppTest;
 import org.jwcarman.roux.test.TestClock;
-import org.jwcarman.roux.test.TestMember;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUser;
+import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
@@ -32,18 +32,18 @@ class StudentListPaymentTest {
 
   private static final String STUDENTS = "/api/students";
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired TestClock clock;
   @Autowired PlanRepository plans;
   @Autowired StudentRepository students;
 
-  private TestMember owner;
+  private TestUser owner;
 
   @BeforeEach
   void threeStudents() throws Exception {
-    members.reset("payment", "membership", "plan", "promotion", "student");
+    users.reset("payment", "membership", "plan", "promotion", "student");
     clock.set("2026-04-01T12:00:00Z");
-    owner = members.owner();
+    owner = users.owner();
     UUID plan =
         plans
             .save(
@@ -81,10 +81,10 @@ class StudentListPaymentTest {
   void aStudentPaidThroughTodayInNewYorkIsNotOverdueBeforeNewYorksMidnight() throws Exception {
     // Paula is paid through Apr 14. At 03:00 UTC on the 15th it is still the 14th in New York.
     clock.set("2026-04-15T03:00:00Z");
-    owner = members.owner(); // a fresh session: the old one expired as the clock moved on
+    owner = users.owner(); // a fresh session: the old one expired as the clock moved on
     list("payment", "PAID").andExpect(jsonPath("$.data[*].firstName", contains("Paula")));
     clock.set("2026-04-15T04:00:00Z");
-    owner = members.owner();
+    owner = users.owner();
     list("payment", "PAID").andExpect(jsonPath("$.data", hasSize(0)));
   }
 
@@ -122,7 +122,7 @@ class StudentListPaymentTest {
 
   @Test
   void aMemberSeesNoMoneyAndCannotFilterOrSortByIt() throws Exception {
-    TestMember max = members.signedIn("Max", "max@example.org", Roles.MEMBER);
+    TestUser max = users.signedIn("Max", "max@example.org", Roles.MEMBER);
 
     max.browser()
         .perform(get(STUDENTS).param("sortBy", "NAME"))

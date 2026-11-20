@@ -14,8 +14,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.test.AppTest;
-import org.jwcarman.roux.test.TestMember;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUser;
+import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
@@ -24,14 +24,14 @@ import org.springframework.test.web.servlet.ResultActions;
 @AppTest
 class AppProblemsTest {
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
 
-  private TestMember browser;
+  private TestUser browser;
 
   @BeforeEach
   void signIn() {
-    members.reset();
-    browser = members.signedIn("Tess Tester", "tester@example.com", Roles.MEMBER);
+    users.reset();
+    browser = users.signedIn("Tess Tester", "tester@example.com", Roles.MEMBER);
   }
 
   static ResultActions isProblem(ResultActions result, int status, String title) throws Exception {

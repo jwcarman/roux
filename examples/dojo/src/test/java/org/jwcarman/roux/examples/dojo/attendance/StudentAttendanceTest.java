@@ -20,8 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.test.AppTest;
 import org.jwcarman.roux.test.TestClock;
-import org.jwcarman.roux.test.TestMember;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUser;
+import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -38,12 +38,12 @@ class StudentAttendanceTest {
 
   private static final String STUDENTS = "/api/students";
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired TestClock clock;
   @Autowired ObjectMapper json;
   @Autowired JdbcTemplate jdbc;
 
-  private TestMember owner;
+  private TestUser owner;
   private String kids;
   private String adults;
   private String ada;
@@ -53,8 +53,8 @@ class StudentAttendanceTest {
 
   @BeforeEach
   void cleanSlate() throws Exception {
-    members.reset("attendance", "promotion", "school_class", "student", "rank");
-    owner = members.owner();
+    users.reset("attendance", "promotion", "school_class", "student", "rank");
+    owner = users.owner();
     clock.set("2026-03-20T10:00:00Z");
     kids = schoolClass("Kids", "MONDAY");
     adults = schoolClass("Adults", "TUESDAY");
@@ -232,15 +232,15 @@ class StudentAttendanceTest {
 
   @Test
   void everyoneSignedInReadsItAndSignedOutIs401() throws Exception {
-    TestMember mo = members.signedIn("Mo", "mo@example.org", Roles.MEMBER);
-    TestMember ivy = members.signedIn("Ivy", "ivy@example.org", Roles.INSTRUCTOR);
+    TestUser mo = users.signedIn("Mo", "mo@example.org", Roles.MEMBER);
+    TestUser ivy = users.signedIn("Ivy", "ivy@example.org", Roles.INSTRUCTOR);
     attend(ada, kids, "2026-03-02");
 
-    for (TestMember reader : new TestMember[] {mo, ivy}) {
+    for (TestUser reader : new TestUser[] {mo, ivy}) {
       reader.perform(get(listUrl(ada))).andExpect(jsonPath("$.data", hasSize(1)));
       reader.perform(get(sinceUrl(ada))).andExpect(jsonPath("$.classes").value(1));
     }
-    members.anonymous().perform(get(listUrl(ada))).andExpect(status().isUnauthorized());
+    users.anonymous().perform(get(listUrl(ada))).andExpect(status().isUnauthorized());
   }
 
   private static String listUrl(String studentId) {

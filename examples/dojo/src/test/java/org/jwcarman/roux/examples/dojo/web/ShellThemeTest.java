@@ -10,7 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.test.AppTest;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -24,12 +24,12 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 @AppTest
 class ShellThemeTest {
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired JdbcTemplate jdbc;
 
   @BeforeEach
   void cleanSlate() {
-    members.reset();
+    users.reset();
     jdbc.update(
         "update roux_theme set version = 0, app_name = null, palette = null, brand_color = null,"
             + " shape = null, heading_font = null, body_font = null");
@@ -46,7 +46,7 @@ class ShellThemeTest {
   }
 
   private String signedOutPage() throws Exception {
-    return members
+    return users
         .anonymous()
         .perform(get("/signin").accept(MediaType.TEXT_HTML))
         .andReturn()
@@ -66,7 +66,7 @@ class ShellThemeTest {
 
   @Test
   void whatTheOwnerSavesIsWhatTheNextVisitorGets() throws Exception {
-    members.owner().perform(save("Kicks")).andExpect(status().isOk());
+    users.owner().perform(save("Kicks")).andExpect(status().isOk());
 
     assertThat(signedOutPage())
         .contains("<title>Kicks</title>")
@@ -76,8 +76,7 @@ class ShellThemeTest {
 
   @Test
   void aSignedOutVisitorCannotChangeItAndTheStoredThemeStaysAsItWas() throws Exception {
-    int status =
-        members.anonymous().perform(save("Hijacked")).andReturn().getResponse().getStatus();
+    int status = users.anonymous().perform(save("Hijacked")).andReturn().getResponse().getStatus();
 
     assertThat(status).isIn(401, 403);
     assertThat(
@@ -89,12 +88,12 @@ class ShellThemeTest {
 
   @Test
   void theOwnerMaySeeItAndAMemberMayNotChangeIt() throws Exception {
-    members.anonymous().perform(get("/api/theme")).andExpect(status().isOk());
-    members
+    users.anonymous().perform(get("/api/theme")).andExpect(status().isOk());
+    users
         .signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER)
         .perform(save("Mine"))
         .andExpect(status().isForbidden());
-    members
+    users
         .owner()
         .perform(get("/api/theme"))
         .andExpect(status().isOk())

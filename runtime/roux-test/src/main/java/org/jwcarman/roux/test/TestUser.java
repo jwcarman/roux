@@ -22,15 +22,15 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
- * A member signed in through {@link TestMembers}: their identity, and a browser in their session.
+ * A user signed in through {@link TestUsers}: their identity, and a browser in their session.
  *
- * @param id the member's who identity
+ * @param id the user's who identity
  * @param browser a browser in their session
  */
-public record TestMember(UUID id, WhoMockMvcBrowser browser) {
+public record TestUser(UUID id, WhoMockMvcBrowser browser) {
 
   /**
-   * Sends {@code request} from this member's browser, with the session and CSRF token.
+   * Sends {@code request} from this user's browser, with the session and CSRF token.
    *
    * @param request the request
    * @return the result, to assert on

@@ -13,8 +13,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.test.AppTest;
-import org.jwcarman.roux.test.TestMember;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUser;
+import org.jwcarman.roux.test.TestUsers;
 import org.jwcarman.who.rbac.RbacService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -24,29 +24,29 @@ import org.springframework.test.web.servlet.ResultActions;
 @AppTest
 class WhoProblemsTest {
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired RbacService rbac;
 
   @BeforeEach
   void cleanSlate() {
-    members.reset();
+    users.reset();
   }
 
   @Test
   void signedOutApiRequestIs401Problem() throws Exception {
-    AppProblemsTest.isProblem(members.anonymous().perform(get("/api/members")), 401, "Unauthorized")
+    AppProblemsTest.isProblem(users.anonymous().perform(get("/api/members")), 401, "Unauthorized")
         .andExpect(jsonPath("$.detail").value("Sign in to continue"));
   }
 
   @Test
   void whoMeSignedOutIs401Problem() throws Exception {
-    whoProblem(members.anonymous().perform(get("/who/me")), "not-signed-in");
+    whoProblem(users.anonymous().perform(get("/who/me")), "not-signed-in");
   }
 
   @Test
   void failedSignInIs401Problem() throws Exception {
     whoProblem(
-            members
+            users
                 .anonymous()
                 .perform(
                     post("/who/email/sign-in")
@@ -70,7 +70,7 @@ class WhoProblemsTest {
 
   @Test
   void deniedSplitsAnonymousFromSignedIn() throws Exception {
-    TestMember carl = members.signedIn("Carl", "carl@example.com", rbac.createRole("CUSTOMER"));
+    TestUser carl = users.signedIn("Carl", "carl@example.com", rbac.createRole("CUSTOMER"));
     AppProblemsTest.isProblem(carl.perform(get("/api/members")), 403, "Forbidden")
         .andExpect(jsonPath("$.detail").value("You do not have permission"));
   }

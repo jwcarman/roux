@@ -21,8 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.test.AppTest;
 import org.jwcarman.roux.test.TestClock;
-import org.jwcarman.roux.test.TestMember;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUser;
+import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
@@ -36,16 +36,16 @@ class StudentsControllerTest {
 
   private static final String STUDENTS = "/api/students";
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired TestClock clock;
   @Autowired ObjectMapper json;
 
-  private TestMember owner;
+  private TestUser owner;
 
   @BeforeEach
   void cleanSlate() {
-    members.reset("promotion", "student", "rank");
-    owner = members.owner();
+    users.reset("promotion", "student", "rank");
+    owner = users.owner();
   }
 
   @Test
@@ -176,7 +176,7 @@ class StudentsControllerTest {
   void aBirthDateUpToTheSchoolsTodayIsAcceptedAndTomorrowIsRefused() throws Exception {
     // 03:00 UTC on Mar 11 is still Mar 10 in New York, the school's zone.
     clock.set("2026-03-11T03:00:00Z");
-    owner = members.owner();
+    owner = users.owner();
     Map<String, Object> body = student("Ada", "Lovelace");
 
     body.put("birthDate", "2026-03-10");
@@ -312,7 +312,7 @@ class StudentsControllerTest {
   @Test
   void aMemberReadsButCannotChange() throws Exception {
     JsonNode ada = add("Ada", "Lovelace", "2026-02-01");
-    TestMember grace = members.signedIn("Grace", "grace@example.org", Roles.MEMBER);
+    TestUser grace = users.signedIn("Grace", "grace@example.org", Roles.MEMBER);
     String base = STUDENTS + "/" + id(ada);
 
     grace.perform(get(STUDENTS)).andExpect(status().isOk());
@@ -328,7 +328,7 @@ class StudentsControllerTest {
 
   @Test
   void signedOutIs401() throws Exception {
-    members.anonymous().perform(get(STUDENTS)).andExpect(status().isUnauthorized());
+    users.anonymous().perform(get(STUDENTS)).andExpect(status().isUnauthorized());
   }
 
   private void assertNames(String sortBy, String direction, String... names) throws Exception {

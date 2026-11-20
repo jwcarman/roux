@@ -41,12 +41,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.PlatformTransactionManager;
 
-/** Test people are made as real members are: one transaction, one {@link UserJoined}. */
+/** Test people are made as real users are: one transaction, one {@link UserJoined}. */
 @AppTest
-@Import(TestMembersTest.Joined.class)
-class TestMembersTest {
+@Import(TestUsersTest.Joined.class)
+class TestUsersTest {
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired Joined joined;
   @Autowired JdbcTemplate jdbc;
   @Autowired EmailCredentialService emails;
@@ -76,7 +76,7 @@ class TestMembersTest {
   @BeforeEach
   void cleanSlate() {
     joined.refuse = false;
-    members.reset();
+    users.reset();
     joined.events.clear();
   }
 
@@ -91,7 +91,7 @@ class TestMembersTest {
 
   @Test
   void a_signed_in_member_holds_the_role() {
-    TestMember ada = members.signedIn("Ada Lovelace", "ada@example.org", "MEMBER");
+    TestUser ada = users.signedIn("Ada Lovelace", "ada@example.org", "MEMBER");
 
     assertThat(
             jdbc.queryForList(
@@ -104,8 +104,8 @@ class TestMembersTest {
 
   @Test
   void members_made_later_keep_the_roles_present_when_they_were_made() {
-    TestMembers later =
-        new TestMembers(jdbc, bootstrap, clock, mvc, who, rbac, emails, events, transactions);
+    TestUsers later =
+        new TestUsers(jdbc, bootstrap, clock, mvc, who, rbac, emails, events, transactions);
     jdbc.update("insert into who_role (id, name) values (?, 'TEMP')", UUID.randomUUID());
 
     later.reset();
@@ -115,8 +115,18 @@ class TestMembersTest {
   }
 
   @Test
-  void signed_in_people_join_as_members_do() {
-    TestMember ada = members.signedIn("Ada Lovelace", " Ada@Example.org ", "MEMBER");
+  void a_role_given_as_a_role_joins_by_its_name() {
+    Role member = rbac.findRequiredRole("MEMBER");
+
+    TestUser grace = users.signedIn("Grace Hopper", "grace@example.org", member);
+
+    assertThat(joined.events)
+        .containsExactly(new UserJoined(grace.id(), "Grace Hopper", "grace@example.org", "MEMBER"));
+  }
+
+  @Test
+  void signed_in_people_join_as_users_do() {
+    TestUser ada = users.signedIn("Ada Lovelace", " Ada@Example.org ", "MEMBER");
 
     assertThat(joined.events)
         .containsExactly(new UserJoined(ada.id(), "Ada Lovelace", "ada@example.org", "MEMBER"));
@@ -127,7 +137,7 @@ class TestMembersTest {
     int before = identities();
     joined.refuse = true;
 
-    assertThatThrownBy(() -> members.signedIn("Ada Lovelace", "ada@example.org", "MEMBER"))
+    assertThatThrownBy(() -> users.signedIn("Ada Lovelace", "ada@example.org", "MEMBER"))
         .hasMessageContaining("refused by the test");
 
     assertThat(identities()).isEqualTo(before);
@@ -136,10 +146,10 @@ class TestMembersTest {
 
   @Test
   void an_address_already_registered_is_refused_whole() {
-    members.signedIn("Ada Lovelace", "ada@example.org", "MEMBER");
+    users.signedIn("Ada Lovelace", "ada@example.org", "MEMBER");
     int before = identities();
 
-    assertThatThrownBy(() -> members.signedIn("Ada Again", "ada@example.org", "MEMBER"))
+    assertThatThrownBy(() -> users.signedIn("Ada Again", "ada@example.org", "MEMBER"))
         .isInstanceOf(EmailAddressTakenException.class);
 
     assertThat(identities()).isEqualTo(before);
@@ -150,9 +160,9 @@ class TestMembersTest {
   void reset_removes_roles_a_test_made_and_keeps_the_apps() {
     Role temp = new Role(UUID.randomUUID(), "TEMP");
     jdbc.update("insert into who_role (id, name) values (?, ?)", temp.id(), temp.name());
-    members.signedIn("Ada Lovelace", "ada@example.org", temp);
+    users.signedIn("Ada Lovelace", "ada@example.org", temp);
 
-    members.reset();
+    users.reset();
 
     assertThat(roleExists("TEMP")).isFalse();
     assertThat(roleExists("MEMBER")).isTrue();
@@ -161,20 +171,20 @@ class TestMembersTest {
 
   @Test
   void reset_makes_the_owner_again_as_a_member_who_joined() {
-    members.reset();
+    users.reset();
 
     assertThat(joined.events)
         .singleElement()
         .satisfies(
             owner -> {
               assertThat(owner.name()).isEqualTo("Test Owner");
-              assertThat(owner.email()).isEqualTo(TestMembers.OWNER_EMAIL);
+              assertThat(owner.email()).isEqualTo(TestUsers.OWNER_EMAIL);
             });
   }
 
   @Test
   void an_unknown_role_is_named_with_the_roles_there_are() {
-    assertThatThrownBy(() -> members.signedIn("Ada Lovelace", "ada@example.org", "MEMBR"))
+    assertThatThrownBy(() -> users.signedIn("Ada Lovelace", "ada@example.org", "MEMBR"))
         .hasMessageContaining("MEMBR")
         .hasMessageContaining("MEMBER");
   }

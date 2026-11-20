@@ -28,8 +28,8 @@ import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.test.AppTest;
 import org.jwcarman.roux.test.TestClock;
-import org.jwcarman.roux.test.TestMember;
-import org.jwcarman.roux.test.TestMembers;
+import org.jwcarman.roux.test.TestUser;
+import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
@@ -47,21 +47,21 @@ class CheckInControllerTest {
   /** A Tuesday. */
   private static final String TUESDAY = "2026-03-10";
 
-  @Autowired TestMembers members;
+  @Autowired TestUsers users;
   @Autowired TestClock clock;
   @Autowired ObjectMapper json;
   @Autowired JdbcTemplate jdbc;
   @Autowired AttendanceService service;
 
-  private TestMember owner;
+  private TestUser owner;
   private String tuesdayClass;
   private String ada;
   private String alan;
 
   @BeforeEach
   void cleanSlate() throws Exception {
-    members.reset("attendance", "school_class", "student");
-    owner = members.owner();
+    users.reset("attendance", "school_class", "student");
+    owner = users.owner();
     clock.set("2026-03-12T10:00:00Z");
     tuesdayClass = schoolClass("Tuesday Karate", "TUESDAY");
     ada = student("Ada", "Lovelace");
@@ -226,7 +226,7 @@ class CheckInControllerTest {
   void theSchoolsTodayIsAcceptedThoughUtcIsAlreadyTomorrow() throws Exception {
     // 03:00 UTC on Wednesday Mar 11 is still Tuesday Mar 10 in New York, the school's zone.
     clock.set("2026-03-11T03:00:00Z");
-    owner = members.owner();
+    owner = users.owner();
     String tuesdayClass = schoolClass("Tuesday Sparring", "TUESDAY");
 
     mark(tuesdayClass, ada, "2026-03-10", true).andExpect(status().isOk());
@@ -330,17 +330,14 @@ class CheckInControllerTest {
 
   @Test
   void anInstructorChecksInButAMemberCannotAndSignedOutIs401() throws Exception {
-    TestMember ivy = members.signedIn("Ivy", "ivy@example.org", Roles.INSTRUCTOR);
-    TestMember mo = members.signedIn("Mo", "mo@example.org", Roles.MEMBER);
+    TestUser ivy = users.signedIn("Ivy", "ivy@example.org", Roles.INSTRUCTOR);
+    TestUser mo = users.signedIn("Mo", "mo@example.org", Roles.MEMBER);
 
     ivy.perform(checkIn(tuesdayClass, TUESDAY)).andExpect(status().isOk());
     ivy.perform(markRequest(tuesdayClass, ada, TUESDAY, true)).andExpect(status().isOk());
     mo.perform(checkIn(tuesdayClass, TUESDAY)).andExpect(status().isForbidden());
     mo.perform(markRequest(tuesdayClass, ada, TUESDAY, true)).andExpect(status().isForbidden());
-    members
-        .anonymous()
-        .perform(checkIn(tuesdayClass, TUESDAY))
-        .andExpect(status().isUnauthorized());
+    users.anonymous().perform(checkIn(tuesdayClass, TUESDAY)).andExpect(status().isUnauthorized());
   }
 
   private int rows() {
