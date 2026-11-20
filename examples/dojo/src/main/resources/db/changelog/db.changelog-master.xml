@@ -7,7 +7,6 @@
 
   <include file="classpath:db/changelog/spring-session.xml"/>
   <include file="classpath:db/changelog/members.xml"/>
-  <include file="classpath:db/changelog/activity.xml"/>
   <include file="classpath:db/changelog/theme.xml"/>
   <include file="classpath:db/changelog/ranks.xml"/>
   <include file="classpath:db/changelog/students.xml"/>
@@ -18,5 +17,4 @@
   <include file="classpath:db/changelog/plans.xml"/>
   <include file="classpath:db/changelog/memberships.xml"/>
   <include file="classpath:db/changelog/roles.xml"/>
-  <include file="classpath:db/changelog/activity-moved.xml"/>
 </databaseChangeLog>
