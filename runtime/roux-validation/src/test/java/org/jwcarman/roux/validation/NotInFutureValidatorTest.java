@@ -20,56 +20,63 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Locale;
 
 import org.junit.jupiter.api.Test;
+import org.jwcarman.roux.organization.OrganizationCalendar;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
 
 class NotInFutureValidatorTest {
 
-  private static final Clock CLOCK =
-      Clock.fixed(Instant.parse("2026-06-15T23:30:00Z"), ZoneOffset.UTC);
-  private static final LocalDate TODAY = LocalDate.of(2026, 6, 15);
-
-  private static NotInFutureValidator withClock() {
+  private static NotInFutureValidator at(String instant, String zone) {
     StaticListableBeanFactory beans = new StaticListableBeanFactory();
-    beans.addBean("clock", CLOCK);
-    return new NotInFutureValidator(beans.getBeanProvider(Clock.class));
+    beans.addBean(
+        "calendar",
+        new OrganizationCalendar(
+            Clock.fixed(Instant.parse(instant), ZoneOffset.UTC), ZoneId.of(zone), Locale.US));
+    return new NotInFutureValidator(beans.getBeanProvider(OrganizationCalendar.class));
   }
 
   @Test
-  void aDayUpToTomorrowIsAllowed() {
-    NotInFutureValidator validator = withClock();
+  void tomorrowIsInTheFutureWithACalendar() {
+    // 03:00 UTC on the 21st is still the 20th in New York.
+    NotInFutureValidator validator = at("2026-11-21T03:00:00Z", "America/New_York");
 
-    assertThat(validator.isValid(TODAY.minusYears(30), null)).isTrue();
-    assertThat(validator.isValid(TODAY, null)).isTrue();
-    assertThat(validator.isValid(TODAY.plusDays(1), null)).isTrue();
+    assertThat(validator.isValid(LocalDate.parse("1996-11-20"), null)).isTrue();
+    assertThat(validator.isValid(LocalDate.parse("2026-11-20"), null)).isTrue();
+    assertThat(validator.isValid(LocalDate.parse("2026-11-21"), null)).isFalse();
   }
 
   @Test
-  void theDayAfterTomorrowIsInTheFuture() {
-    assertThat(withClock().isValid(TODAY.plusDays(2), null)).isFalse();
+  void aZoneAheadOfUtcAcceptsItsToday() {
+    NotInFutureValidator validator = at("2026-11-20T12:00:00Z", "Pacific/Auckland");
+
+    assertThat(validator.isValid(LocalDate.parse("2026-11-21"), null)).isTrue();
+    assertThat(validator.isValid(LocalDate.parse("2026-11-22"), null)).isFalse();
   }
 
   @Test
   void noDateIsLeftToNotNull() {
-    assertThat(withClock().isValid(null, null)).isTrue();
+    assertThat(at("2026-11-20T12:00:00Z", "UTC").isValid(null, null)).isTrue();
   }
 
   @Test
-  void withoutAClockBeanItUsesTheSystemClock() {
+  void withoutACalendarTomorrowIsAllowed() {
     NotInFutureValidator validator =
-        new NotInFutureValidator(new StaticListableBeanFactory().getBeanProvider(Clock.class));
+        new NotInFutureValidator(
+            new StaticListableBeanFactory().getBeanProvider(OrganizationCalendar.class));
 
-    assertThat(validator.isValid(LocalDate.now(), null)).isTrue();
+    assertThat(validator.isValid(LocalDate.now().plusDays(1), null)).isTrue();
     assertThat(validator.isValid(LocalDate.now().plusDays(3), null)).isFalse();
   }
 
   @Test
-  void builtWithoutSpringItUsesTheSystemClock() {
+  void builtWithoutSpringTomorrowIsAllowed() {
     NotInFutureValidator validator = new NotInFutureValidator();
 
-    assertThat(validator.isValid(LocalDate.now(), null)).isTrue();
+    assertThat(validator.isValid(LocalDate.now().plusDays(1), null)).isTrue();
     assertThat(validator.isValid(LocalDate.now().plusDays(3), null)).isFalse();
   }
 }

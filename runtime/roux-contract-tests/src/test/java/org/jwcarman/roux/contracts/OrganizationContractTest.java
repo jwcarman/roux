@@ -15,11 +15,19 @@
  */
 package org.jwcarman.roux.contracts;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
+
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
+
 import org.junit.jupiter.api.Test;
+import org.jwcarman.roux.organization.OrganizationCalendar;
+import org.jwcarman.roux.validation.NotInFuture;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -31,6 +39,18 @@ import org.springframework.test.web.servlet.MockMvc;
 class OrganizationContractTest {
 
   @Autowired MockMvc mvc;
+  @Autowired Validator validator;
+  @Autowired OrganizationCalendar calendar;
+
+  record Taken(@NotInFuture LocalDate on) {}
+
+  @Test
+  void notInFutureIsTheOrganizationsToday() {
+    assertThat(validator.validate(new Taken(calendar.today()))).isEmpty();
+    assertThat(validator.validate(new Taken(calendar.today().plusDays(1))))
+        .extracting(ConstraintViolation::getMessage)
+        .containsExactly("Must not be in the future");
+  }
 
   @Test
   void signedOutGetsTheOrganizationsContext() throws Exception {

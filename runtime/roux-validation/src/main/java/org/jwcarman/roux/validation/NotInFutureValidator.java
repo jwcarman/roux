@@ -15,37 +15,45 @@
  */
 package org.jwcarman.roux.validation;
 
-import java.time.Clock;
 import java.time.LocalDate;
+import java.util.function.Supplier;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
 import org.jspecify.annotations.Nullable;
+import org.jwcarman.roux.organization.OrganizationCalendar;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Checks {@link NotInFuture}. Spring builds it with the application's {@link Clock}; a validator
- * built outside Spring uses the system clock.
+ * Checks {@link NotInFuture}. In a roux app, Spring builds it with the {@link
+ * OrganizationCalendar}, and a date after the organization's today is in the future. Outside a roux
+ * app (no calendar, or built without Spring) it falls back to the server's zone with a day's
+ * allowance, since the server and the person's browser may then disagree on today.
  */
 public class NotInFutureValidator implements ConstraintValidator<NotInFuture, LocalDate> {
 
-  private final Clock clock;
+  private final Supplier<LocalDate> latest;
 
-  /** Built by Spring: the application's {@link Clock} bean, or the system clock without one. */
+  /** Built by Spring: the organization's today, or the fallback without a calendar. */
   @Autowired
-  public NotInFutureValidator(ObjectProvider<Clock> clock) {
-    this.clock = clock.getIfAvailable(Clock::systemDefaultZone);
+  public NotInFutureValidator(ObjectProvider<OrganizationCalendar> calendar) {
+    OrganizationCalendar organization = calendar.getIfAvailable();
+    this.latest = organization == null ? NotInFutureValidator::fallback : organization::today;
   }
 
-  /** Built without Spring: the system clock. */
+  /** Built without Spring: the fallback. */
   public NotInFutureValidator() {
-    this.clock = Clock.systemDefaultZone();
+    this.latest = NotInFutureValidator::fallback;
+  }
+
+  private static LocalDate fallback() {
+    return LocalDate.now().plusDays(1);
   }
 
   @Override
   public boolean isValid(@Nullable LocalDate value, ConstraintValidatorContext context) {
-    return value == null || !value.isAfter(LocalDate.now(clock).plusDays(1));
+    return value == null || !value.isAfter(latest.get());
   }
 }
