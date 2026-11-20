@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { setOrganization, testOrganization } from "../organization/organization";
 import { validationMessage } from "../testing/validationMessages";
 import { contract } from "../testing/contracts";
 import { z } from "zod";
@@ -141,23 +142,26 @@ describe("money() is the server's money", () => {
     message: string | null;
   }
   const fixture = contract<{ parse: ParseCase[]; rules: RuleCase[] }>("money.json");
-  const settingsOf = (currency: string) => ({ currency, fractionDigits: currency === "JPY" ? 0 : 2 });
+  const moneyIn = (currency: string) => {
+    setOrganization(testOrganization({ currency, fractionDigits: currency === "JPY" ? 0 : 2 }));
+    return money();
+  };
 
   it.each(fixture.parse.filter((c) => c.minorUnits !== undefined))("money() reads $input ($currency)", (c) => {
-    expect(money(settingsOf(c.currency)).safeParse(c.input)).toEqual({
+    expect(moneyIn(c.currency).safeParse(c.input)).toEqual({
       success: true,
       data: { minorUnits: c.minorUnits, currency: c.currency },
     });
   });
 
   it.each(fixture.parse.filter((c) => c.message !== undefined))("money() refuses $input ($currency)", (c) => {
-    expect(messageOf(money(settingsOf(c.currency)).safeParse(c.input))).toBe(c.message);
+    expect(messageOf(moneyIn(c.currency).safeParse(c.input))).toBe(c.message);
   });
 
   // The browser's amounts are always in the app's currency, so the other-currency case is the server's.
   it.each(fixture.rules.filter((c) => c.money.currency === "USD"))("gives the server's answer for %j", (c) => {
     const text = (c.money.minorUnits / 100).toFixed(2);
-    const rule = c.positive ? money(settingsOf("USD")).positive() : money(settingsOf("USD"));
+    const rule = c.positive ? money().positive() : money();
     const result = rule.safeParse(text);
     expect(result.success ? null : messageOf(result)).toBe(c.message);
   });

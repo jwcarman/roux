@@ -76,6 +76,8 @@ describe("readPageOrganization", () => {
     expect(read({ currency: 3 })).toThrow("has no currency");
     expect(read({ fractionDigits: "2" })).toThrow("has no fractionDigits");
     expect(read({ currency: null, fractionDigits: null })()).toMatchObject({ currency: null, fractionDigits: null });
+    expect(read({ fractionDigits: null })).toThrow("has a currency without its fractionDigits, or digits without a currency");
+    expect(read({ currency: null })).toThrow("has a currency without its fractionDigits");
   });
 
   it("refuses a locale this browser does not know", () => {

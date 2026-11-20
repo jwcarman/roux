@@ -52,6 +52,9 @@ function checked(raw: unknown, where: string): OrganizationContext {
   if (context.fractionDigits !== null && typeof context.fractionDigits !== "number") {
     refuse("has no fractionDigits");
   }
+  if ((context.currency === null) !== (context.fractionDigits === null)) {
+    refuse("has a currency without its fractionDigits, or digits without a currency");
+  }
   const locale = context.locale as string;
   let known: string[];
   try {

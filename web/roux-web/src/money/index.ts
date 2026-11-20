@@ -1,1 +1,1 @@
-export { currencySymbol, formatMoney, moneySettingsQuery, timesMoney, type Money, type MoneySettings } from "./money";
+export { currencySymbol, formatMoney, timesMoney, type Money } from "./money";

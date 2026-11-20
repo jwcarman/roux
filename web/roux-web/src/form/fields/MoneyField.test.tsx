@@ -3,16 +3,15 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import type { Money, MoneySettings } from "../../money/money";
+import type { Money } from "../../money/money";
+import { setOrganization, testOrganization } from "../../organization/organization";
 import { renderWithProviders } from "../../testing/render";
 import { useAppForm } from "../form";
 import { money } from "../rules";
 import { moneyInputOf } from "../values";
 
-const USD: MoneySettings = { currency: "USD", fractionDigits: 2 };
-
 function Harness({ initial, onSubmit }: { initial: string; onSubmit: (price: Money) => void }) {
-  const schema = z.object({ price: money(USD).positive() });
+  const schema = z.object({ price: money().positive() });
   const form = useAppForm({
     defaultValues: { price: initial },
     validators: { onSubmit: schema },
@@ -21,7 +20,7 @@ function Harness({ initial, onSubmit }: { initial: string; onSubmit: (price: Mon
   return (
     <form.AppForm>
       <form.Form>
-        <form.AppField name="price">{(field) => <field.MoneyField label="Price" settings={USD} />}</form.AppField>
+        <form.AppField name="price">{(field) => <field.MoneyField label="Price"  />}</form.AppField>
         <form.SubmitButton>Save</form.SubmitButton>
       </form.Form>
     </form.AppForm>
@@ -51,7 +50,7 @@ describe("MoneyField", () => {
   });
 
   it("shows the currency's symbol beside the input and starts from a saved amount", () => {
-    renderWithProviders(<Harness initial={moneyInputOf({ minorUnits: 15050, currency: "USD" }, USD)} onSubmit={vi.fn()} />);
+    renderWithProviders(<Harness initial={moneyInputOf({ minorUnits: 15050, currency: "USD" })} onSubmit={vi.fn()} />);
 
     expect(screen.getByText("$")).toBeInTheDocument();
     expect(screen.getByLabelText(/^Price/)).toHaveValue("150.50");
@@ -59,8 +58,9 @@ describe("MoneyField", () => {
   });
 
   it("starts empty without an amount", () => {
-    expect(moneyInputOf(null, USD)).toBe("");
-    expect(moneyInputOf({ minorUnits: 150, currency: "JPY" }, { currency: "JPY", fractionDigits: 0 })).toBe("150");
-    expect(moneyInputOf({ minorUnits: 5, currency: "USD" }, USD)).toBe("0.05");
+    expect(moneyInputOf(null)).toBe("");
+    expect(moneyInputOf({ minorUnits: 5, currency: "USD" })).toBe("0.05");
+    setOrganization(testOrganization({ currency: "JPY", fractionDigits: 0 }));
+    expect(moneyInputOf({ minorUnits: 150, currency: "JPY" })).toBe("150");
   });
 });

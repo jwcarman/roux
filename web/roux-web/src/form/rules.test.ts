@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
+import { clearOrganization, setOrganization, testOrganization } from "../organization/organization";
 import { z } from "zod";
 import { after, date, email, fieldRules, id, integer, money, number, oneOf, phone, text, time, url } from "./rules";
 
@@ -205,43 +206,36 @@ describe("rules", () => {
   });
 
   describe("date().notInFuture()", () => {
-    // Local time: the browser's own today is the 5th of January, 2026, though UTC may already be the 6th.
-    const at = (year: number, month: number, day: number, hours: number) =>
-      vi.setSystemTime(new Date(year, month - 1, day, hours, 30));
+    const on = (today: string) => setOrganization(testOrganization({ today }));
 
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
-    it("accepts the browser's today and every earlier day", () => {
-      vi.useFakeTimers();
-      at(2026, 1, 5, 23);
+    it("accepts the organization's today and every earlier day", () => {
+      on("2026-01-05");
       for (const value of ["2026-01-05", "2026-01-04", "2025-12-31", "1990-02-03"]) {
         expect(date().notInFuture().safeParse(value)).toEqual({ success: true, data: value });
       }
     });
 
     it("refuses tomorrow and later, as the server's words say", () => {
-      vi.useFakeTimers();
-      at(2026, 1, 5, 0);
+      on("2026-01-05");
       for (const value of ["2026-01-06", "2026-02-01", "2027-01-01"]) {
         expect(messagesOf(date().notInFuture().safeParse(value))).toEqual(["Must not be in the future"]);
       }
     });
 
     it("reads today when it parses, not when the rule was built", () => {
-      vi.useFakeTimers();
-      at(2026, 1, 5, 12);
+      on("2026-01-05");
       const rule = date().notInFuture();
-      at(2026, 1, 6, 12);
+      on("2026-01-06");
       expect(rule.safeParse("2026-01-06").success).toBe(true);
     });
 
-    it("pads a month and a day to two digits", () => {
+    it("ignores the device's own date", () => {
       vi.useFakeTimers();
-      at(2026, 3, 7, 12);
+      vi.setSystemTime(new Date(2030, 0, 1));
+      on("2026-03-07");
       expect(date().notInFuture().safeParse("2026-03-07").success).toBe(true);
       expect(date().notInFuture().safeParse("2026-03-08").success).toBe(false);
+      vi.useRealTimers();
     });
 
     it("reports a value that is not a date only as that, and empty only as empty", () => {
@@ -490,54 +484,69 @@ describe("rules", () => {
 });
 
 describe("money()", () => {
-  const usd = { currency: "USD", fractionDigits: 2 };
+  const moneyIn = (currency: string, fractionDigits: number) => {
+    setOrganization(testOrganization({ currency, fractionDigits }));
+    return money();
+  };
+
+  it("reads the organization's currency when it parses, not when it was built", () => {
+    clearOrganization();
+    const rule = money();
+    setOrganization(testOrganization({ currency: "EUR" }));
+    expect(rule.safeParse("150").data).toEqual({ minorUnits: 15000, currency: "EUR" });
+  });
+
+  it("is an error in an organization without a currency", () => {
+    setOrganization(testOrganization({ currency: null, fractionDigits: null }));
+    expect(() => money().safeParse("150")).toThrow("roux.money.currency is not set: the organization has no currency");
+  });
 
   it("counts decimal places by the currency's digits", () => {
-    const one = money({ currency: "USD", fractionDigits: 1 }).safeParse("1.55");
-    const three = money({ currency: "KWD", fractionDigits: 3 }).safeParse("1.5555");
+    const one = moneyIn("USD", 1).safeParse("1.55");
+    const three = moneyIn("KWD", 3).safeParse("1.5555");
     expect(one.error?.issues[0]?.message).toBe("Must have at most 1 decimal place");
     expect(three.error?.issues[0]?.message).toBe("Must have at most 3 decimal places");
-    expect(money({ currency: "KWD", fractionDigits: 3 }).safeParse("1.5")).toEqual({
+    expect(moneyIn("KWD", 3).safeParse("1.5")).toEqual({
       success: true,
       data: { minorUnits: 1500, currency: "KWD" },
     });
   });
 
   it("reads a symbol followed by a space", () => {
-    expect(money(usd).safeParse("$ 150").data).toEqual({ minorUnits: 15000, currency: "USD" });
+    expect(money().safeParse("$ 150").data).toEqual({ minorUnits: 15000, currency: "USD" });
   });
 
   it("takes only its own currency's symbol", () => {
-    expect(money({ currency: "EUR", fractionDigits: 2 }).safeParse("€150").data).toEqual({
+    expect(moneyIn("EUR", 2).safeParse("€150").data).toEqual({
       minorUnits: 15000,
       currency: "EUR",
     });
-    expect(money({ currency: "EUR", fractionDigits: 2 }).safeParse("$150").error?.issues[0]?.message).toBe(
+    expect(moneyIn("EUR", 2).safeParse("$150").error?.issues[0]?.message).toBe(
       "Must be an amount",
     );
   });
 
   it("treats blank as empty", () => {
-    expect(money(usd).safeParse("   ").error?.issues[0]?.message).toBe("Must not be empty");
-    expect(money(usd).optional().safeParse("   ")).toEqual({ success: true, data: null });
-    expect(money(usd).optional().safeParse("")).toEqual({ success: true, data: null });
+    expect(money().safeParse("   ").error?.issues[0]?.message).toBe("Must not be empty");
+    expect(money().optional().safeParse("   ")).toEqual({ success: true, data: null });
+    expect(money().optional().safeParse("")).toEqual({ success: true, data: null });
   });
 
   it("keeps an optional amount's checks", () => {
-    expect(money(usd).optional().positive().safeParse("0").error?.issues[0]?.message).toBe("Must be more than 0");
-    expect(money(usd).optional().safeParse("2.5").data).toEqual({ minorUnits: 250, currency: "USD" });
+    expect(money().optional().positive().safeParse("0").error?.issues[0]?.message).toBe("Must be more than 0");
+    expect(money().optional().safeParse("2.5").data).toEqual({ minorUnits: 250, currency: "USD" });
   });
 
   it("marks the field required unless optional", () => {
-    expect(fieldRules.get(money(usd))).toEqual({ required: true });
-    expect(fieldRules.get(money(usd).optional())).toEqual({ required: false });
+    expect(fieldRules.get(money())).toEqual({ required: true });
+    expect(fieldRules.get(money().optional())).toEqual({ required: false });
   });
 
   it("reports each refusal as a custom issue on the field", () => {
     for (const [rule, text] of [
-      [money(usd), ""],
-      [money(usd), "abc"],
-      [money(usd).positive(), "0"],
+      [money(), ""],
+      [money(), "abc"],
+      [money().positive(), "0"],
     ] as const) {
       expect(rule.safeParse(text).error?.issues[0]?.code).toBe("custom");
     }

@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { isValid, parseISO } from "date-fns";
-import { formatIsoDate, parseIsoDate, parseIsoTime } from "../dates/dates";
-import { currencySymbol, type Money, type MoneySettings } from "../money/money";
+import { parseIsoDate, parseIsoTime } from "../dates/dates";
+import { currencySymbol, organizationCurrency, type Money } from "../money/money";
+import { today } from "../organization/organization";
 
 /*
  * Rule helpers for a form's Zod schema, in the server's words: each message is the one in
@@ -163,9 +164,8 @@ export type DateRule<Out extends string | null = string> = Rule<
   string,
   {
     /**
-     * Not after the browser's today: `Must not be in the future`. The server's `@NotInFuture`
-     * allows one day more (a browser can be ahead of the server's zone), so a date this accepts is
-     * never refused there.
+     * Not after the organization's today (`today()`, the server's): `Must not be in the future`,
+     * exactly as the server's `@NotInFuture` decides.
      */
     notInFuture(): DateRule<Out>;
     /** May be left empty, which gives `null`. */
@@ -182,7 +182,7 @@ function dateSchema(state: DateState): z.ZodString {
     abort: true,
   });
   if (state.notInFuture) {
-    schema = schema.refine((value) => value <= formatIsoDate(new Date()), { error: NOT_IN_FUTURE });
+    schema = schema.refine((value) => value <= today(), { error: NOT_IN_FUTURE });
   }
   return schema;
 }
@@ -446,9 +446,9 @@ function tooManyDecimals(fractionDigits: number): string {
  * Typed text as minor units, or the message for why it is not an amount. A leading currency symbol
  * and thousands commas are allowed; arithmetic is on the digits as text, never on a float.
  */
-function readAmount(text: string, settings: MoneySettings): number | string {
+function readAmount(text: string, currency: string, fractionDigits: number): number | string {
   let rest = text.trim();
-  const symbol = currencySymbol(settings.currency);
+  const symbol = currencySymbol(currency);
   if (rest.startsWith(symbol)) {
     rest = rest.slice(symbol.length).trim();
   }
@@ -463,15 +463,15 @@ function readAmount(text: string, settings: MoneySettings): number | string {
   const point = digits.indexOf(".");
   const whole = point < 0 ? digits : digits.slice(0, point);
   const fraction = point < 0 ? "" : digits.slice(point + 1);
-  if (fraction.length > settings.fractionDigits) {
-    return tooManyDecimals(settings.fractionDigits);
+  if (fraction.length > fractionDigits) {
+    return tooManyDecimals(fractionDigits);
   }
   // Leading zeros are harmless: Number("0050") is 50.
-  const minorUnits = Number(whole + fraction.padEnd(settings.fractionDigits, "0"));
+  const minorUnits = Number(whole + fraction.padEnd(fractionDigits, "0"));
   return Number.isSafeInteger(minorUnits) ? minorUnits : NOT_AN_AMOUNT;
 }
 
-function moneyRule(settings: MoneySettings, state: MoneyState): MoneyRule<Money | null> {
+function moneyRule(state: MoneyState): MoneyRule<Money | null> {
   const schema = z.string().transform((value, ctx): Money | null => {
     if (value.trim() === "") {
       if (state.required) {
@@ -480,7 +480,9 @@ function moneyRule(settings: MoneySettings, state: MoneyState): MoneyRule<Money 
       }
       return null;
     }
-    const amount = readAmount(value, settings);
+    // Read when it parses, not when the rule is built: a schema made at module load is fine.
+    const { currency, fractionDigits } = organizationCurrency();
+    const amount = readAmount(value, currency, fractionDigits);
     if (typeof amount === "string") {
       ctx.addIssue({ code: "custom", message: amount });
       return z.NEVER;
@@ -489,20 +491,20 @@ function moneyRule(settings: MoneySettings, state: MoneyState): MoneyRule<Money 
       ctx.addIssue({ code: "custom", message: NOT_POSITIVE });
       return z.NEVER;
     }
-    return { minorUnits: amount, currency: settings.currency };
+    return { minorUnits: amount, currency };
   });
   return rule(schema, { required: state.required }, {
-    positive: () => moneyRule(settings, { ...state, positive: true }),
-    optional: () => moneyRule(settings, { ...state, required: false }),
+    positive: () => moneyRule({ ...state, positive: true }),
+    optional: () => moneyRule({ ...state, required: false }),
   }) as unknown as MoneyRule<Money | null>;
 }
 
 /**
- * A required amount in the app's currency (`settings` from `moneySettingsQuery`): `Must not be
+ * A required amount in the organization's currency (read from its context when it parses): `Must not be
  * empty`, `Must be an amount`, `Must not be negative`, `Must have at most 2 decimal places`. Its
  * output is `Money`; pair it with `f.MoneyField` and the server's `@InCurrency`.
  */
-export function money(settings: MoneySettings): MoneyRule {
-  return moneyRule(settings, { required: true, positive: false }) as unknown as MoneyRule;
+export function money(): MoneyRule {
+  return moneyRule({ required: true, positive: false }) as unknown as MoneyRule;
 }
 
