@@ -1,4 +1,4 @@
-package org.jwcarman.roux.examples.dojo.members;
+package org.jwcarman.roux.examples.dojo.users;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -18,6 +18,9 @@ import org.jwcarman.roux.activity.ActivityRepository;
 import org.jwcarman.roux.test.AppTest;
 import org.jwcarman.roux.test.RecordingWhoEmailSender;
 import org.jwcarman.roux.test.TestUsers;
+import org.jwcarman.roux.users.AppUser;
+import org.jwcarman.roux.users.AppUserRepository;
+import org.jwcarman.roux.users.UserDirectory;
 import org.jwcarman.who.core.domain.IdentityStatus;
 import org.jwcarman.who.core.domain.WhoPrincipal;
 import org.jwcarman.who.core.service.WhoService;
@@ -41,8 +44,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @ExtendWith(OutputCaptureExtension.class)
 @AppTest
-@Import(InviteControllerTest.Mail.class)
-class InviteControllerTest {
+@Import(InviteTest.Mail.class)
+class InviteTest {
 
   @TestConfiguration
   static class Mail {
@@ -59,7 +62,8 @@ class InviteControllerTest {
   @Autowired RecordingWhoEmailSender mail;
   @Autowired TransactionTemplate tx;
   @Autowired WhoService who;
-  @Autowired MemberProfileRepository profiles;
+  @Autowired AppUserRepository profiles;
+  @Autowired UserDirectory directory;
   @Autowired ActivityRepository activities;
   @Autowired EmailLinkIssuer linkIssuer;
 
@@ -99,7 +103,7 @@ class InviteControllerTest {
     assertThat(rolesOf(identityId)).containsExactly("INSTRUCTOR");
     users
         .owner()
-        .perform(get("/api/members/" + identityId))
+        .perform(get("/api/users/" + identityId))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.role").value("INSTRUCTOR"));
   }
@@ -119,13 +123,11 @@ class InviteControllerTest {
     invite("Olive Again", "olive@example.org", "OWNER")
         .andExpect(status().isBadRequest())
         .andExpect(
-            jsonPath("$.errors[?(@.field == 'role')].message")
-                .value("An invitation cannot give that role"));
+            jsonPath("$.errors[?(@.field == 'role')].message").value("That role cannot be given"));
     invite("Nobody", "nobody@example.org", "KING")
         .andExpect(status().isBadRequest())
         .andExpect(
-            jsonPath("$.errors[?(@.field == 'role')].message")
-                .value("An invitation cannot give that role"));
+            jsonPath("$.errors[?(@.field == 'role')].message").value("That role cannot be given"));
 
     assertThat(emailCredentials.findByAddress("olive@example.org")).isEmpty();
     assertThat(profiles.count()).isEqualTo(before);
@@ -136,9 +138,10 @@ class InviteControllerTest {
     invite(" Ada Lovelace ", " Ada@Example.org ").andExpect(status().isAccepted());
 
     UUID identityId = identityOf(emailCredentials.findByAddress("ada@example.org").orElseThrow());
-    MemberProfile profile = profiles.findById(identityId).orElseThrow();
-    assertThat(profile.getDisplayName()).isEqualTo("Ada Lovelace");
-    assertThat(profile.getEmail()).isEqualTo("ada@example.org");
+    assertThat(profiles.findById(identityId).orElseThrow().getDisplayName())
+        .isEqualTo("Ada Lovelace");
+    assertThat(directory.findById(identityId).orElseThrow().getEmail())
+        .isEqualTo("ada@example.org");
   }
 
   @Test
@@ -161,7 +164,7 @@ class InviteControllerTest {
         .singleElement()
         .satisfies(
             entry -> {
-              assertThat(entry.getType()).isEqualTo("member.invited");
+              assertThat(entry.getType()).isEqualTo("user.invited");
               assertThat(entry.getDescription()).isEqualTo("Invited Ada Lovelace");
               assertThat(entry.getActorId()).isEqualTo(ownerId);
             });
@@ -211,7 +214,7 @@ class InviteControllerTest {
         .andExpect(jsonPath("$.linkSent").value(false));
 
     assertThat(mail.sent()).isEmpty();
-    assertThat(output.getOut()).contains("Invitation link not sent: SEND_FAILED");
+    assertThat(output.getOut()).contains("not sent: SEND_FAILED");
     assertThat(output.getAll()).doesNotContain("dave@example.com");
   }
 
@@ -222,7 +225,7 @@ class InviteControllerTest {
     invite(" Owner@Example.COM ")
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.errors[0].field").value("email"))
-        .andExpect(jsonPath("$.errors[0].message").value("That address is already a member"));
+        .andExpect(jsonPath("$.errors[0].message").value("That address already belongs to a user"));
 
     assertThat(count("who_identity")).isEqualTo(identities);
     assertThat(mail.sent()).isEmpty();
@@ -264,7 +267,7 @@ class InviteControllerTest {
                     "grace@example.org",
                     Set.of("MEMBER"),
                     identity -> {
-                      profiles.save(new MemberProfile(identity.id(), "Grace", "grace@example.org"));
+                      profiles.save(new AppUser(identity.id(), "Grace"));
                       throw new IllegalArgumentException("callback failed");
                     }))
         .isInstanceOf(IllegalArgumentException.class)
@@ -315,16 +318,17 @@ class InviteControllerTest {
     return users
         .owner()
         .perform(
-            post("/api/members/invitations")
+            post("/api/users/invitations")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"" + name + "\",\"email\":\"" + email + "\"}"));
+                .content(
+                    "{\"name\":\"" + name + "\",\"email\":\"" + email + "\",\"role\":\"MEMBER\"}"));
   }
 
   private ResultActions invite(String name, String email, String role) throws Exception {
     return users
         .owner()
         .perform(
-            post("/api/members/invitations")
+            post("/api/users/invitations")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     "{\"name\":\"%s\",\"email\":\"%s\",\"role\":\"%s\"}"

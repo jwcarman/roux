@@ -48,7 +48,7 @@ class AppProblemsTest {
   void renameWithBlankNameIsAFieldProblem() throws Exception {
     isProblem(
             browser.perform(
-                put("/api/members/me")
+                put("/api/users/me")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"displayName\":\" \",\"version\":0}")),
             400,
@@ -74,11 +74,11 @@ class AppProblemsTest {
   @Test
   void aMistypedQueryObjectFieldIsReadable() throws Exception {
     // PageParams is bound as an object: its conversion failures must not name Java types
-    isProblem(browser.perform(get("/api/members?pageIndex=abc")), 400, "Bad Request")
+    isProblem(browser.perform(get("/api/users?pageIndex=abc")), 400, "Bad Request")
         .andExpect(jsonPath("$.errors[0].field").value("pageIndex"))
         .andExpect(jsonPath("$.errors[0].message").value("Invalid value"))
         .andExpect(content().string(not(containsString("java."))));
-    isProblem(browser.perform(get("/api/members?sortDirection=SIDEWAYS")), 400, "Bad Request")
+    isProblem(browser.perform(get("/api/users?sortDirection=SIDEWAYS")), 400, "Bad Request")
         .andExpect(jsonPath("$.errors[0].field").value("sortDirection"))
         .andExpect(jsonPath("$.errors[0].message").value("Must be one of ASC, DESC"))
         .andExpect(content().string(not(containsString("org.jwcarman"))));

@@ -7,11 +7,11 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.jwcarman.roux.examples.dojo.members.MemberDirectoryEntry;
-import org.jwcarman.roux.examples.dojo.members.MemberDirectoryRepository;
 import org.jwcarman.roux.jpa.Versions;
 import org.jwcarman.roux.problems.ConflictException;
 import org.jwcarman.roux.problems.InvalidFieldException;
+import org.jwcarman.roux.users.UserDirectory;
+import org.jwcarman.roux.users.UserDirectoryEntry;
 import org.springframework.data.domain.Sort;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
@@ -30,13 +30,13 @@ public class ClassService {
           .thenComparing(ClassEntity::getName);
 
   private final ClassRepository classes;
-  private final MemberDirectoryRepository directory;
+  private final UserDirectory directory;
   private final List<ClassRemovalCheck> removalChecks;
   private final List<ClassWeekdayChangeCheck> weekdayChecks;
 
   public ClassService(
       ClassRepository classes,
-      MemberDirectoryRepository directory,
+      UserDirectory directory,
       List<ClassRemovalCheck> removalChecks,
       List<ClassWeekdayChangeCheck> weekdayChecks) {
     this.classes = classes;
@@ -141,8 +141,7 @@ public class ClassService {
             .distinct()
             .toList();
     return directory.findAllById(ids).stream()
-        .collect(
-            Collectors.toMap(MemberDirectoryEntry::getId, MemberDirectoryEntry::getDisplayName));
+        .collect(Collectors.toMap(UserDirectoryEntry::getId, UserDirectoryEntry::getDisplayName));
   }
 
   private ClassEntity find(UUID id) {

@@ -81,4 +81,14 @@
     </sql>
   </changeSet>
 
+  <!-- Users moved to roux: roux-users grants OWNER users.read, users.invite and users.manage; the
+       dojo lets instructors and members see the team too. The dojo's members.* grants go. -->
+  <changeSet id="dojo-roles-3" author="dojo">
+    <sql>
+        INSERT INTO who_role_permission (role_id, permission)
+          SELECT r.id, 'users.read' FROM who_role r WHERE r.name IN ('INSTRUCTOR', 'MEMBER')
+          ON CONFLICT DO NOTHING;
+        DELETE FROM who_role_permission WHERE permission LIKE 'members.%';
+    </sql>
+  </changeSet>
 </databaseChangeLog>

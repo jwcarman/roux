@@ -7,7 +7,7 @@ import { ExportButton, exportHref } from "./ExportButton";
 describe("exportHref", () => {
   it("carries the search, filters and sort, and no paging", () => {
     expect(
-      exportHref("/api/members/export.csv", {
+      exportHref("/api/users/export.csv", {
         pageIndex: 2,
         pageSize: 10,
         sortBy: "EMAIL",
@@ -16,15 +16,15 @@ describe("exportHref", () => {
         role: "OWNER",
         status: "DEACTIVATED",
       }),
-    ).toBe("/api/members/export.csv?sortBy=EMAIL&sortDirection=DESC&search=ada&role=OWNER&status=DEACTIVATED");
+    ).toBe("/api/users/export.csv?sortBy=EMAIL&sortDirection=DESC&search=ada&role=OWNER&status=DEACTIVATED");
   });
 });
 
 describe("ExportButton", () => {
   it("is a download link", () => {
-    renderWithProviders(<ExportButton href="/api/members/export.csv?role=OWNER" />);
+    renderWithProviders(<ExportButton href="/api/users/export.csv?role=OWNER" />);
     const link = screen.getByRole("link", { name: "Export" });
-    expect(link).toHaveAttribute("href", "/api/members/export.csv?role=OWNER");
+    expect(link).toHaveAttribute("href", "/api/users/export.csv?role=OWNER");
     expect(link).toHaveAttribute("download");
   });
 });

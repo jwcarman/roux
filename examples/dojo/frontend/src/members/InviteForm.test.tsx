@@ -13,7 +13,7 @@ import { InviteForm } from "./InviteForm";
 function answer(response: () => Response) {
   const sent = { count: 0 };
   server.use(
-    http.post("/api/members/invitations", () => {
+    http.post("/api/users/invitations", () => {
       sent.count++;
       return response();
     }),
@@ -79,7 +79,7 @@ describe("InviteForm", () => {
   it("invites as a member unless another role is chosen", async () => {
     const bodies: unknown[] = [];
     server.use(
-      http.post("/api/members/invitations", async ({ request }) => {
+      http.post("/api/users/invitations", async ({ request }) => {
         bodies.push(await request.json());
         return HttpResponse.json({ linkSent: true }, { status: 202 });
       }),
@@ -133,7 +133,7 @@ describe("InviteForm", () => {
   it("invites an instructor when Instructor is chosen", async () => {
     const bodies: unknown[] = [];
     server.use(
-      http.post("/api/members/invitations", async ({ request }) => {
+      http.post("/api/users/invitations", async ({ request }) => {
         bodies.push(await request.json());
         return HttpResponse.json({ linkSent: true }, { status: 202 });
       }),

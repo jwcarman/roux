@@ -1,4 +1,4 @@
-package org.jwcarman.roux.examples.dojo.members;
+package org.jwcarman.roux.examples.dojo.users;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -28,8 +28,9 @@ import org.springframework.test.web.servlet.MockMvc;
 @AppTest
 class InvitationsSecurityTest {
 
-  private static final String INVITE = "/api/members/invitations";
-  private static final String BODY = "{\"name\":\"New Member\",\"email\":\"new@example.com\"}";
+  private static final String INVITE = "/api/users/invitations";
+  private static final String BODY =
+      "{\"name\":\"New Member\",\"email\":\"new@example.com\",\"role\":\"MEMBER\"}";
 
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
@@ -71,7 +72,10 @@ class InvitationsSecurityTest {
           .perform(
               post(INVITE)
                   .contentType(MediaType.APPLICATION_JSON)
-                  .content("{\"name\":\"" + name + "\",\"email\":\"ada@example.org\"}"))
+                  .content(
+                      "{\"name\":\""
+                          + name
+                          + "\",\"email\":\"ada@example.org\",\"role\":\"MEMBER\"}"))
           .andExpect(status().isBadRequest())
           .andExpect(jsonPath("$.errors[?(@.field == \'name\')]").isNotEmpty());
     }
@@ -79,17 +83,17 @@ class InvitationsSecurityTest {
         .perform(
             post(INVITE)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"ada@example.org\"}"))
+                .content("{\"email\":\"ada@example.org\",\"role\":\"MEMBER\"}"))
         .andExpect(status().isBadRequest());
     owner
         .perform(
             post(INVITE)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\" Ada \",\"email\":\"ada@example.org\"}"))
+                .content("{\"name\":\" Ada \",\"email\":\"ada@example.org\",\"role\":\"MEMBER\"}"))
         .andExpect(status().isAccepted());
     assertThat(
             jdbc.queryForObject(
-                "select display_name from member_profile where email = ?",
+                "select display_name from roux_user_directory where email = ?",
                 String.class,
                 "ada@example.org"))
         .isEqualTo("Ada");

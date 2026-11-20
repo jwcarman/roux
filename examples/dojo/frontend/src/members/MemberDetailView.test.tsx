@@ -22,8 +22,8 @@ const GRACE: MemberDetail = {
 function answer(response: () => Response) {
   const changes: string[] = [];
   server.use(
-    http.get("/api/members/:id/activities", () => HttpResponse.json(pageOf([], {}))),
-    http.post("/api/members/:id/:action", ({ params }) => {
+    http.get("/api/users/:id/activities", () => HttpResponse.json(pageOf([], {}))),
+    http.post("/api/users/:id/:action", ({ params }) => {
       changes.push(String(params.action));
       return response();
     }),

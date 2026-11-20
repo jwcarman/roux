@@ -50,4 +50,19 @@
       group by p.id, i.id
     </createView>
   </changeSet>
+
+  <!-- Users moved to roux: roux-users' roux_user holds each user's name (migratory made it before
+       this changelog runs). Every profile becomes a user, keeping its version and audit columns;
+       one already there is left alone. The address was a copy of who's and needs no move. Then the
+       dojo's own directory and profiles go. -->
+  <changeSet id="members-to-roux-users" author="dojo">
+    <sql>
+        INSERT INTO roux_user (id, version, display_name, created_date, modified_date, created_by, modified_by)
+          SELECT id, version, display_name, created_date, modified_date, created_by, modified_by
+            FROM member_profile
+          ON CONFLICT (id) DO NOTHING;
+    </sql>
+    <dropView viewName="member_directory"/>
+    <dropTable tableName="member_profile"/>
+  </changeSet>
 </databaseChangeLog>

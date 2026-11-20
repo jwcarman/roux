@@ -21,7 +21,7 @@ import { formatDateTime } from "@jwcarman/roux-web/dates";
 
 export interface MemberDetailViewProps {
   member: MemberDetail;
-  /** Whether the viewer holds members.manage. */
+  /** Whether the viewer holds users.manage. */
   canManage: boolean;
   /** Whether this is the viewer's own page (they cannot deactivate themselves). */
   isSelf: boolean;

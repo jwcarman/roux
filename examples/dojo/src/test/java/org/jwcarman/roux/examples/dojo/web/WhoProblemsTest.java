@@ -34,7 +34,7 @@ class WhoProblemsTest {
 
   @Test
   void signedOutApiRequestIs401Problem() throws Exception {
-    AppProblemsTest.isProblem(users.anonymous().perform(get("/api/members")), 401, "Unauthorized")
+    AppProblemsTest.isProblem(users.anonymous().perform(get("/api/users")), 401, "Unauthorized")
         .andExpect(jsonPath("$.detail").value("Sign in to continue"));
   }
 
@@ -71,7 +71,7 @@ class WhoProblemsTest {
   @Test
   void deniedSplitsAnonymousFromSignedIn() throws Exception {
     TestUser carl = users.signedIn("Carl", "carl@example.com", rbac.createRole("CUSTOMER"));
-    AppProblemsTest.isProblem(carl.perform(get("/api/members")), 403, "Forbidden")
+    AppProblemsTest.isProblem(carl.perform(get("/api/users")), 403, "Forbidden")
         .andExpect(jsonPath("$.detail").value("You do not have permission"));
   }
 }

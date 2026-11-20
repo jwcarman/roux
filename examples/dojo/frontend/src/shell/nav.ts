@@ -12,7 +12,7 @@ export const nav = defineNav(PERMISSIONS, [
     label: "Members",
     to: "/members",
     icon: LuUsers,
-    permission: "members.read",
+    permission: "users.read",
     description: "Who can use the app and what they may do.",
   },
   {

@@ -26,6 +26,12 @@ export function renderRoute(
         ? new HttpResponse(null, { status: 401 })
         : HttpResponse.json({ identityId: "id-1", permissions }),
     ),
+    // The signed-in user's name, which the session loads for anyone signed in (roux's /api/users/me).
+    http.get("/api/users/me", () =>
+      permissions === null
+        ? new HttpResponse(null, { status: 401 })
+        : HttpResponse.json({ id: "id-1", displayName: "Test User", email: "test@example.org", version: 0 }),
+    ),
   );
   const client = testQueryClient();
   if (browserHistory) {

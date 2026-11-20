@@ -63,9 +63,10 @@ test("an invited member signs in by link, sees the directory, and cannot invite"
       ).status;
     return {
       token: token !== undefined && token.length > 0,
-      invitation: await post("/api/members/invitations", {
+      invitation: await post("/api/users/invitations", {
         name: "Someone Else",
         email: "someone-else@dojo.test",
+        role: "MEMBER",
       }),
     };
   });

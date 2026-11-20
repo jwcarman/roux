@@ -71,7 +71,7 @@ class SpaRoutingTest {
   @Test
   void apiAndWhoEndpointsAreNotShadowed() {
     assertThat(get("/who/me").getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-    assertThat(get("/api/members/me").getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    assertThat(get("/api/users/me").getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
   }
 
   @Test
@@ -186,7 +186,7 @@ class SpaRoutingTest {
   @Test
   void apiAndWhoResponsesAreNeverStored() {
     assertThat(cacheControl(get("/who/me"))).contains("no-store");
-    assertThat(cacheControl(get("/api/members/me"))).contains("no-store");
+    assertThat(cacheControl(get("/api/users/me"))).contains("no-store");
   }
 
   @ParameterizedTest

@@ -22,9 +22,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +42,8 @@ import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.roles.OwnerBootstrap;
 import org.jwcarman.roux.roles.UserInvitations;
 import org.jwcarman.roux.users.RouxUserPermissions;
+import org.jwcarman.roux.users.Users;
+import org.jwcarman.who.admin.LastAdminException;
 import org.jwcarman.who.core.email.OutgoingEmail;
 import org.jwcarman.who.core.email.WhoEmailSender;
 import org.jwcarman.who.core.repository.IdentityRepository;
@@ -55,6 +64,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /** roux's users endpoints, called by people signed in to who for real. */
 @SpringBootTest(
@@ -96,6 +106,8 @@ class UsersContractTest {
   @Autowired RbacService rbac;
   @Autowired OwnerBootstrap bootstrap;
   @Autowired JdbcClient jdbc;
+  @Autowired Users users;
+  @Autowired TransactionTemplate tx;
 
   /** Someone signed in: their identity and their browser. */
   record Person(UUID id, String email, WhoMockMvcBrowser browser) {
@@ -447,6 +459,55 @@ class UsersContractTest {
           .perform(post("/api/users/" + ada.id() + "/reactivate"))
           .andExpect(status().isConflict())
           .andExpect(jsonPath("$.detail").value("Already active"));
+    }
+
+    @Test
+    void two_owners_deactivating_each_other_at_once_leave_one_active_owner() throws Exception {
+      Person olga = joins("Olga Owner", "MEMBER");
+      rbac.assignRoleToIdentity(
+          identities.findById(olga.id()).orElseThrow(), rbac.findRequiredRole("OWNER"));
+      // Each change waits, before it commits, until both have run their checks (or 2 s pass, when
+      // the other is held back by the lock): the window in which both would count two owners.
+      CountDownLatch bothChecked = new CountDownLatch(2);
+      ExecutorService pool = Executors.newFixedThreadPool(2);
+      try {
+        List<Future<?>> changes = new ArrayList<>();
+        for (UUID[] pair : new UUID[][] {{owner.id(), olga.id()}, {olga.id(), owner.id()}}) {
+          changes.add(
+              pool.submit(
+                  () ->
+                      tx.executeWithoutResult(
+                          status -> {
+                            users.deactivate(pair[0], pair[1]);
+                            bothChecked.countDown();
+                            try {
+                              bothChecked.await(2, TimeUnit.SECONDS);
+                            } catch (InterruptedException e) {
+                              Thread.currentThread().interrupt();
+                            }
+                          })));
+        }
+        int refused = 0;
+        for (Future<?> change : changes) {
+          try {
+            change.get(10, TimeUnit.SECONDS);
+          } catch (ExecutionException e) {
+            assertThat(e.getCause()).isInstanceOf(LastAdminException.class);
+            refused++;
+          }
+        }
+        assertThat(refused).isEqualTo(1);
+      } finally {
+        pool.shutdownNow();
+      }
+      assertThat(
+              jdbc.sql(
+                      "select count(*) from who_identity_role ir join who_role r on r.id ="
+                          + " ir.role_id join who_identity i on i.id = ir.identity_id where r.name ="
+                          + " 'OWNER' and i.status = 'ACTIVE'")
+                  .query(Integer.class)
+                  .single())
+          .isEqualTo(1);
     }
 
     @Test

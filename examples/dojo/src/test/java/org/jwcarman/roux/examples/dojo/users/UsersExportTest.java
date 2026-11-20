@@ -1,4 +1,4 @@
-package org.jwcarman.roux.examples.dojo.members;
+package org.jwcarman.roux.examples.dojo.users;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -26,7 +26,7 @@ import org.springframework.test.context.TestPropertySource;
 /** The directory as a CSV file; the row cap is lowered to 3 so a test can pass it. */
 @AppTest
 @TestPropertySource(properties = "app.export.max-rows=3")
-class MembersExportTest {
+class UsersExportTest {
 
   @Autowired TestUsers users;
   @Autowired WhoService who;
@@ -49,13 +49,10 @@ class MembersExportTest {
     byte[] body =
         owner
             .perform(
-                get("/api/members/export.csv")
-                    .param("sortBy", "NAME")
-                    .param("sortDirection", "DESC"))
+                get("/api/users/export.csv").param("sortBy", "NAME").param("sortDirection", "DESC"))
             .andExpect(status().isOk())
             .andExpect(header().string("Content-Type", "text/csv;charset=UTF-8"))
-            .andExpect(
-                header().string("Content-Disposition", "attachment; filename=\"members.csv\""))
+            .andExpect(header().string("Content-Disposition", "attachment; filename=\"users.csv\""))
             .andReturn()
             .getResponse()
             .getContentAsByteArray();
@@ -79,7 +76,7 @@ class MembersExportTest {
 
     String body =
         owner
-            .perform(get("/api/members/export.csv").param("search", "late@example.org"))
+            .perform(get("/api/users/export.csv").param("search", "late@example.org"))
             .andReturn()
             .getResponse()
             .getContentAsString(StandardCharsets.UTF_8);
@@ -93,7 +90,7 @@ class MembersExportTest {
 
     String body =
         owner
-            .perform(get("/api/members/export.csv").param("status", "DEACTIVATED"))
+            .perform(get("/api/users/export.csv").param("status", "DEACTIVATED"))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse()
@@ -109,7 +106,7 @@ class MembersExportTest {
     member("Katherine Johnson", "katherine@example.org");
 
     owner
-        .perform(get("/api/members/export.csv"))
+        .perform(get("/api/users/export.csv"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.detail").value("The request has invalid fields"))
         .andExpect(jsonPath("$.errors.length()").value(1))

@@ -1,11 +1,11 @@
 import { Heading, Link, Stack, Text } from "@chakra-ui/react";
 import { Link as RouterLink } from "@tanstack/react-router";
-import { MEMBERS_READ } from "../permissions.gen";
+import { USERS_READ } from "../permissions.gen";
 import { useSession } from "./session";
 
 export function Home() {
   const { me, profile } = useSession();
-  const canSeeMembers = me?.permissions.includes(MEMBERS_READ) ?? false;
+  const canSeeMembers = me?.permissions.includes(USERS_READ) ?? false;
 
   return (
     <Stack gap="4">

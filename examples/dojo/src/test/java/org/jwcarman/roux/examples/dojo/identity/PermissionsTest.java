@@ -9,6 +9,7 @@ import org.jwcarman.roux.roles.check.PermissionsTypeScript;
 import org.jwcarman.roux.roles.check.RoleGrantsCheck;
 import org.jwcarman.roux.test.AppTest;
 import org.jwcarman.roux.theme.RouxThemePermissions;
+import org.jwcarman.roux.users.RouxUserPermissions;
 import org.jwcarman.who.admin.WhoAdminPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -22,7 +23,10 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 class PermissionsTest {
 
   private static final Class<?>[] ALL = {
-    Permissions.class, RouxThemePermissions.class, WhoAdminPermissions.class
+    Permissions.class,
+    RouxThemePermissions.class,
+    RouxUserPermissions.class,
+    WhoAdminPermissions.class
   };
 
   @Autowired JdbcClient jdbc;

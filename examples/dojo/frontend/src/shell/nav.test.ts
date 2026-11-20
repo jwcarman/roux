@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { MEMBERS_READ, THEME_MANAGE } from "./../permissions.gen";
+import { USERS_READ, THEME_MANAGE } from "./../permissions.gen";
 import { navItemsFor, openingRedirect } from "@jwcarman/roux-web/navigation";
 import { nav } from "./nav";
 
 describe("the dojo's navigation", () => {
   it("lists every page to someone who may see them all", () => {
-    expect(navItemsFor(nav, [MEMBERS_READ, THEME_MANAGE]).map((item) => item.label)).toEqual([
+    expect(navItemsFor(nav, [USERS_READ, THEME_MANAGE]).map((item) => item.label)).toEqual([
       "Home",
       "Members",
       "Appearance",
@@ -18,6 +18,6 @@ describe("the dojo's navigation", () => {
   });
 
   it("opens on Home", () => {
-    expect(openingRedirect(nav, [MEMBERS_READ], false)).toBeNull();
+    expect(openingRedirect(nav, [USERS_READ], false)).toBeNull();
   });
 });

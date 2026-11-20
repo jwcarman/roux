@@ -5,7 +5,6 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Toaster, toaster } from "@jwcarman/roux-web/feedback";
 import { type Profile } from "../api";
-import { MEMBERS_PROFILE } from "../permissions.gen";
 import { SessionProvider } from "../shell/session";
 import { renderWithProviders, server, stale } from "@jwcarman/roux-web/testing";
 import { ProfileForm } from "./ProfileForm";
@@ -15,9 +14,9 @@ function serveProfile() {
   let current: Profile = { displayName: "Ada Lovelace", email: "ada@example.com", version: 2 };
   const renames: unknown[] = [];
   server.use(
-    http.get("/who/me", () => HttpResponse.json({ identityId: "id-1", permissions: [MEMBERS_PROFILE] })),
-    http.get("/api/members/me", () => HttpResponse.json(current)),
-    http.put("/api/members/me", async ({ request }) => {
+    http.get("/who/me", () => HttpResponse.json({ identityId: "id-1", permissions: [] })),
+    http.get("/api/users/me", () => HttpResponse.json(current)),
+    http.put("/api/users/me", async ({ request }) => {
       const body = (await request.json()) as { displayName: string; version: number };
       renames.push(body);
       if (body.version !== current.version) {

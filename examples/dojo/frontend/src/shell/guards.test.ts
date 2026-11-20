@@ -2,11 +2,11 @@
 import { isRedirect } from "@tanstack/react-router";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Me } from "../api";
-import { MEMBERS_READ } from "../permissions.gen";
+import { USERS_READ } from "../permissions.gen";
 import { requirePermission, requireSignedIn, requireSignedOut } from "./guards";
 import { takeSignInReturn as takeReturn } from "@jwcarman/roux-web/signin";
 
-const member: Me = { identityId: "ada", permissions: [MEMBERS_READ] };
+const member: Me = { identityId: "ada", permissions: [USERS_READ] };
 const outsider: Me = { identityId: "eve", permissions: [] };
 
 function redirectOf(guard: () => unknown): string | undefined {
@@ -50,14 +50,14 @@ describe("guards", () => {
   });
 
   it("sends a caller without the permission home", () => {
-    expect(redirectOf(() => requirePermission(outsider, MEMBERS_READ))).toBe("/");
-    expect(redirectOf(() => requirePermission(member, MEMBERS_READ))).toBeUndefined();
-    expect(redirectOf(() => requirePermission(null, MEMBERS_READ))).toBe("/signin");
+    expect(redirectOf(() => requirePermission(outsider, USERS_READ))).toBe("/");
+    expect(redirectOf(() => requirePermission(member, USERS_READ))).toBeUndefined();
+    expect(redirectOf(() => requirePermission(null, USERS_READ))).toBe("/signin");
   });
 
   it("sends a caller without the permission to Home itself, never on to the start place", () => {
     try {
-      requirePermission(outsider, MEMBERS_READ);
+      requirePermission(outsider, USERS_READ);
     } catch (thrown) {
       expect((thrown as { options: { search?: unknown } }).options.search).toEqual({ home: true });
     }

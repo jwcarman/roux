@@ -7,13 +7,13 @@ import { historyQuery } from "@jwcarman/roux-web/activity";
 import type { Member, MemberDetail, Profile } from "../api";
 import { queryKeys } from "../queryKeys";
 
-/** The longest name, as the server's MemberProfile.MAX_NAME allows. */
+/** The longest name, as the server's AppUser.MAX_NAME allows. */
 const MAX_NAME = 80;
 
 /** A role as people read it, for a member's page, the directory and the invite form; others show their name. */
 export const ROLE_LABELS = { OWNER: "Owner", INSTRUCTOR: "Instructor", MEMBER: "Member" } as const;
 
-/** InviteController.InvitationRequest's rules, in roux's words. */
+/** roux's InvitationRequest's rules, in roux's words. */
 export const invitationSchema = z.object({
   name: text().max(MAX_NAME),
   email: email(),
@@ -28,7 +28,7 @@ export interface InvitationResult {
   linkSent: boolean;
 }
 
-/** MembersController.Rename's rules (without the version), in roux's words. */
+/** roux's NameChange's rules (without the version), in roux's words. */
 export const renameSchema = z.object({
   displayName: text().max(MAX_NAME),
 });
@@ -36,21 +36,21 @@ export const renameSchema = z.object({
 /** A rename as it is sent, before the version is added. */
 export type Rename = z.output<typeof renameSchema>;
 
-/** The directory's filters, as `/api/members` takes them. */
+/** The directory's filters, as `/api/users` takes them. */
 export type MemberFilters = { search?: string; role?: string; status?: string };
 
-/** What a manager can do to a member's status: the endpoint under `/api/members/{id}/`. */
+/** What a manager can do to a member's status: the endpoint under `/api/users/{id}/`. */
 export type MemberStatusAction = "deactivate" | "reactivate";
 
-/** `/api/members`: one function per endpoint. */
+/** `/api/users`: one function per endpoint. */
 export const membersApi = {
   list: (params: PageParams & MemberFilters, signal?: AbortSignal) =>
-    getJson<PageDto<Member>>("members", { params, signal }),
-  get: (id: string, signal?: AbortSignal) => getJson<MemberDetail>(path`members/${id}`, { signal }),
-  invite: (invitation: Invitation) => sendJson<InvitationResult>("POST", "members/invitations", invitation),
+    getJson<PageDto<Member>>("users", { params, signal }),
+  get: (id: string, signal?: AbortSignal) => getJson<MemberDetail>(path`users/${id}`, { signal }),
+  invite: (invitation: Invitation) => sendJson<InvitationResult>("POST", "users/invitations", invitation),
   changeStatus: (id: string, action: MemberStatusAction) =>
-    sendJson<MemberDetail>("POST", path`members/${id}/${action}`),
-  rename: (rename: Rename & { version: number }) => sendJson<Profile>("PUT", "members/me", rename),
+    sendJson<MemberDetail>("POST", path`users/${id}/${action}`),
+  rename: (rename: Rename & { version: number }) => sendJson<Profile>("PUT", "users/me", rename),
 };
 
 /** The roles an invitation may give, in the order the server lists them (`roux.roles.invitable`). */
@@ -76,7 +76,7 @@ export function membersPage(filters: MemberFilters) {
 
 /** A member's history, newest first, as an ActivityList takes it. */
 export function activitiesPage(id: string) {
-  return historyQuery(queryKeys.members.activities(id), path`members/${id}/activities`);
+  return historyQuery(queryKeys.members.activities(id), path`users/${id}/activities`);
 }
 
 /** Invites a member; the directory refreshes. */

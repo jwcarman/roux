@@ -4,13 +4,13 @@ import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import type { TableSearch } from "@jwcarman/roux-web/paging";
 import { DEFAULT_PAGE_SIZE, DebouncedSearchInput, FilterChips, QueryTable } from "@jwcarman/roux-web/table";
 import { type Member } from "../api";
-import { MEMBERS_INVITE } from "../permissions.gen";
+import { USERS_INVITE } from "../permissions.gen";
 import { ExportButton, exportHref } from "../shell/ExportButton";
 import { membersPage, ROLE_LABELS } from "./members";
 import { useSession } from "../shell/session";
 import { InviteForm } from "./InviteForm";
 
-/** The directory's sorts: the column ids, and `MemberSort`'s values on the server. */
+/** The directory's sorts: the column ids, and `UserSort`'s values on the server (roux). */
 export const MEMBER_SORTS = ["NAME", "EMAIL", "ROLE"] as const;
 type MemberSort = (typeof MEMBER_SORTS)[number];
 
@@ -81,7 +81,7 @@ export function Members() {
     <Stack gap="6">
       <Flex justify="space-between" align="center" gap="3" wrap="wrap">
         <Heading as="h2">Members</Heading>
-        {me?.permissions.includes(MEMBERS_INVITE) && (
+        {me?.permissions.includes(USERS_INVITE) && (
           <InviteForm />
         )}
       </Flex>
@@ -118,7 +118,7 @@ export function Members() {
             onChange={(role) => navigate({ search: (previous) => ({ ...previous, role, pageIndex: undefined }) })}
           />
         </Flex>
-        <ExportButton href={exportHref("/api/members/export.csv", { ...search })} />
+        <ExportButton href={exportHref("/api/users/export.csv", { ...search })} />
       </Flex>
       <QueryTable
         aria-label="Members"

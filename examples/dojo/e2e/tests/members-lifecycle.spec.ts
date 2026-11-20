@@ -47,7 +47,7 @@ test("an owner invites, deactivates and reactivates a member, with the history t
   await expect(status).toHaveText("Deactivated");
 
   // Her open session ends at her next request.
-  expect((await gracePage.request.get("/api/members/me")).status()).toBe(401);
+  expect((await gracePage.request.get("/api/users/me")).status()).toBe(401);
 
   // The directory shows her only under Deactivated.
   await page.getByRole("link", { name: "All members" }).click();
@@ -78,7 +78,7 @@ test("the directory exports what it shows as CSV", async ({ page, request }) => 
   const download = page.waitForEvent("download");
   await page.getByRole("link", { name: "Export" }).click();
   const file = await download;
-  expect(file.suggestedFilename()).toBe("members.csv");
+  expect(file.suggestedFilename()).toBe("users.csv");
   const lines = (await readFile(await file.path(), "utf8")).split("\r\n");
   expect(lines[0]).toBe("﻿Name,Email,Role,Status,Joined");
   expect(lines.filter((line) => line.length > 0).slice(1)).toEqual([

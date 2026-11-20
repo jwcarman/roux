@@ -2,7 +2,7 @@ import { Link, Stack } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { LuArrowLeft } from "react-icons/lu";
-import { MEMBERS_MANAGE } from "../permissions.gen";
+import { USERS_MANAGE } from "../permissions.gen";
 import { memberQuery } from "./members";
 import { useSession } from "../shell/session";
 import { MemberDetailView } from "./MemberDetailView";
@@ -24,7 +24,7 @@ export function MemberDetail() {
       </Link>
       <MemberDetailView
         member={member}
-        canManage={me?.permissions.includes(MEMBERS_MANAGE) ?? false}
+        canManage={me?.permissions.includes(USERS_MANAGE) ?? false}
         isSelf={me?.identityId === member.id}
       />
     </Stack>
