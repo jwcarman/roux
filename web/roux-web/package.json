@@ -60,6 +60,10 @@
     "./money": {
       "types": "./dist/money/index.d.ts",
       "import": "./dist/money/index.js"
+    },
+    "./organization": {
+      "types": "./dist/organization/index.d.ts",
+      "import": "./dist/organization/index.js"
     }
   },
   "scripts": {

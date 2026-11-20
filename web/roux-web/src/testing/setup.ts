@@ -1,9 +1,13 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
+import { setOrganization, testOrganization } from "../organization/organization";
 import { checkAllAnswered, listen, server, settle } from "./server";
 
 beforeAll(listen);
+
+// Every test starts in the same organization, on the same day; a test sets another with setOrganization.
+beforeEach(() => setOrganization(testOrganization()));
 
 afterEach(async () => {
   await settle();
