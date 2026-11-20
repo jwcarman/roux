@@ -21,12 +21,16 @@ import static org.mockito.Mockito.mock;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Test;
+import org.jwcarman.roux.roles.InvitableRoles;
+import org.jwcarman.roux.roles.InvitableRolesController;
+import org.jwcarman.roux.roles.InvitableRolesGuard;
 import org.jwcarman.roux.roles.OwnerBootstrap;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailCredentialService;
 import org.jwcarman.who.rbac.RbacService;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -66,5 +70,55 @@ class RouxRolesAutoConfigurationTest {
     new ApplicationContextRunner()
         .withConfiguration(AutoConfigurations.of(RouxRolesAutoConfiguration.class))
         .run(context -> assertThat(context).doesNotHaveBean(OwnerBootstrap.class));
+  }
+
+  @Test
+  void the_invitable_roles_and_their_guard_are_registered() {
+    runner
+        .withPropertyValues(
+            "roux.owner.email=pat@example.com",
+            "roux.owner.name=Pat",
+            "roux.roles.invitable=MEMBER,INSTRUCTOR")
+        .run(
+            context -> {
+              assertThat(context.getBean(InvitableRoles.class).names())
+                  .containsExactly("MEMBER", "INSTRUCTOR");
+              assertThat(context).hasSingleBean(InvitableRolesGuard.class);
+              assertThat(context).doesNotHaveBean(InvitableRolesController.class);
+            });
+  }
+
+  @Test
+  void none_listed_means_no_role_is_invitable() {
+    runner
+        .withPropertyValues("roux.owner.email=pat@example.com", "roux.owner.name=Pat")
+        .run(context -> assertThat(context.getBean(InvitableRoles.class).names()).isEmpty());
+  }
+
+  @Test
+  void listing_owner_fails_startup() {
+    runner
+        .withPropertyValues(
+            "roux.owner.email=pat@example.com", "roux.owner.name=Pat", "roux.roles.invitable=OWNER")
+        .run(
+            context ->
+                assertThat(context)
+                    .getFailure()
+                    .rootCause()
+                    .hasMessage(
+                        "roux.roles.invitable may not list OWNER: owners are never invited"));
+  }
+
+  @Test
+  void a_web_application_serves_the_list() {
+    new WebApplicationContextRunner()
+        .withConfiguration(AutoConfigurations.of(RouxRolesAutoConfiguration.class))
+        .withBean(JdbcClient.class, () -> mock(JdbcClient.class))
+        .withBean(RbacService.class, () -> mock(RbacService.class))
+        .withBean(WhoService.class, () -> mock(WhoService.class))
+        .withBean(EmailCredentialService.class, () -> mock(EmailCredentialService.class))
+        .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
+        .withPropertyValues("roux.owner.email=pat@example.com", "roux.owner.name=Pat")
+        .run(context -> assertThat(context).hasSingleBean(InvitableRolesController.class));
   }
 }

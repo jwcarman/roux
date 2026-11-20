@@ -15,6 +15,9 @@
  */
 package org.jwcarman.roux.autoconfigure.roles;
 
+import org.jwcarman.roux.roles.InvitableRoles;
+import org.jwcarman.roux.roles.InvitableRolesController;
+import org.jwcarman.roux.roles.InvitableRolesGuard;
 import org.jwcarman.roux.roles.OwnerBootstrap;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailCredentialService;
@@ -23,6 +26,8 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
@@ -31,8 +36,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * roux's roles, with roux-roles on the class path and who's role and email-link services present:
- * the first owner from {@code roux.owner.*}. The OWNER role itself comes from roux-roles'
- * changelog, which migratory runs.
+ * the first owner from {@code roux.owner.*}, and the roles an invitation may give from {@code
+ * roux.roles.invitable}. The OWNER role itself comes from roux-roles' changelog, which migratory
+ * runs.
  */
 @AutoConfiguration(
     afterName = {
@@ -41,7 +47,7 @@ import org.springframework.transaction.PlatformTransactionManager;
     })
 @ConditionalOnClass(OwnerBootstrap.class)
 @ConditionalOnBean({RbacService.class, EmailCredentialService.class})
-@EnableConfigurationProperties(RouxOwnerProperties.class)
+@EnableConfigurationProperties({RouxOwnerProperties.class, RouxRolesProperties.class})
 public class RouxRolesAutoConfiguration {
 
   /**
@@ -68,5 +74,42 @@ public class RouxRolesAutoConfiguration {
       RouxOwnerProperties owner) {
     return new OwnerBootstrap(
         jdbc, rbac, who, emailCredentials, events, transactionManager, owner.email(), owner.name());
+  }
+
+  /**
+   * The roles an invitation may give.
+   *
+   * @param roles {@code roux.roles.*}
+   * @return the checked list
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  public InvitableRoles rouxInvitableRoles(RouxRolesProperties roles) {
+    return new InvitableRoles(roles.invitable());
+  }
+
+  /**
+   * Refuses any invitation giving a role outside the list.
+   *
+   * @param invitable the roles an invitation may give
+   * @return the guard
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  public InvitableRolesGuard rouxInvitableRolesGuard(InvitableRoles invitable) {
+    return new InvitableRolesGuard(invitable);
+  }
+
+  /**
+   * Serves the list to the invite form.
+   *
+   * @param invitable the roles an invitation may give
+   * @return the controller
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  @ConditionalOnWebApplication(type = Type.SERVLET)
+  public InvitableRolesController rouxInvitableRolesController(InvitableRoles invitable) {
+    return new InvitableRolesController(invitable);
   }
 }
