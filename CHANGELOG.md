@@ -8,6 +8,7 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- Spring Boot 4.1.3 (was 4.1.2), the version migratory 0.1.0 is built against.
 - who 0.25.0 (was 0.24.0), `@jwcarman/who-client` 0.25.0, and libraries' tables through
   [migratory](https://github.com/jwcarman/migratory) 0.1.0, which who brings. What changes for a roux app:
   - Remove the includes of who's changelog (`classpath:org/jwcarman/who/db/who-changelog.xml`, gone in who
