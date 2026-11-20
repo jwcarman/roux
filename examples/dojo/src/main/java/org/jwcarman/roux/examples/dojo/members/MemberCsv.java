@@ -1,6 +1,6 @@
 package org.jwcarman.roux.examples.dojo.members;
 
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.List;
 
 import org.jwcarman.roux.examples.dojo.web.Csv;
@@ -12,7 +12,7 @@ final class MemberCsv {
 
   private MemberCsv() {}
 
-  static String write(List<MemberDirectoryEntry> members) {
+  static String write(List<MemberDirectoryEntry> members, ZoneId zone) {
     return Csv.document(
         HEADER,
         members.stream()
@@ -23,7 +23,7 @@ final class MemberCsv {
                         member.getEmail(),
                         member.getRole(),
                         member.getStatus(),
-                        member.getJoinedAt().atOffset(ZoneOffset.UTC).toLocalDate().toString()))
+                        member.getJoinedAt().atZone(zone).toLocalDate().toString()))
             .toList());
   }
 }

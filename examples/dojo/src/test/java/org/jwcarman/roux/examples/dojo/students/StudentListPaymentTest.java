@@ -78,6 +78,17 @@ class StudentListPaymentTest {
   }
 
   @Test
+  void aStudentPaidThroughTodayInNewYorkIsNotOverdueBeforeNewYorksMidnight() throws Exception {
+    // Paula is paid through Apr 14. At 03:00 UTC on the 15th it is still the 14th in New York.
+    clock.set("2026-04-15T03:00:00Z");
+    owner = members.owner(); // a fresh session: the old one expired as the clock moved on
+    list("payment", "PAID").andExpect(jsonPath("$.data[*].firstName", contains("Paula")));
+    clock.set("2026-04-15T04:00:00Z");
+    owner = members.owner();
+    list("payment", "PAID").andExpect(jsonPath("$.data", hasSize(0)));
+  }
+
+  @Test
   void thePaymentFilterPicksEachState() throws Exception {
     list("payment", "OVERDUE").andExpect(jsonPath("$.data[*].firstName", contains("Olive")));
     list("payment", "PAID").andExpect(jsonPath("$.data[*].firstName", contains("Paula")));

@@ -173,13 +173,15 @@ class StudentsControllerTest {
   }
 
   @Test
-  void aBirthDateUpToTomorrowInTheServersZoneIsAcceptedAndLaterIsRefused() throws Exception {
-    clock.set("2026-03-10T23:30:00Z");
+  void aBirthDateUpToTheSchoolsTodayIsAcceptedAndTomorrowIsRefused() throws Exception {
+    // 03:00 UTC on Mar 11 is still Mar 10 in New York, the school's zone.
+    clock.set("2026-03-11T03:00:00Z");
+    owner = members.owner();
     Map<String, Object> body = student("Ada", "Lovelace");
 
-    body.put("birthDate", "2026-03-11"); // already today in UTC+14, so a person may enter it
+    body.put("birthDate", "2026-03-10");
     owner.perform(send(post(STUDENTS), body)).andExpect(status().isCreated());
-    body.put("birthDate", "2026-03-12");
+    body.put("birthDate", "2026-03-11");
     owner
         .perform(send(post(STUDENTS), body))
         .andExpect(status().isBadRequest())

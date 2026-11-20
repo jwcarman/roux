@@ -1,9 +1,7 @@
 package org.jwcarman.roux.examples.dojo.memberships;
 
-import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -17,6 +15,7 @@ import org.jwcarman.roux.examples.dojo.students.StudentEntity;
 import org.jwcarman.roux.examples.dojo.students.StudentNotFoundException;
 import org.jwcarman.roux.examples.dojo.students.StudentRepository;
 import org.jwcarman.roux.money.Money;
+import org.jwcarman.roux.organization.OrganizationCalendar;
 import org.jwcarman.roux.problems.InvalidFieldException;
 import org.jwcarman.roux.problems.InvariantViolationException;
 import org.springframework.stereotype.Service;
@@ -24,22 +23,22 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * A student's memberships and the payments recorded on them. Paid through is never stored: it is
- * counted from the payments ({@link PaidThrough}). "Today" is the injected clock's date.
+ * counted from the payments ({@link PaidThrough}). "Today" is the school's ({@link
+ * OrganizationCalendar}).
  */
 @Service
 @Transactional
 public class MembershipService {
 
   /** History entries are written in one locale; the school has no locale setting yet. */
-  private static final Locale HISTORY_LOCALE = Locale.US;
-
   private final MembershipRepository memberships;
+
   private final PaymentRepository payments;
   private final PlanRepository plans;
   private final StudentRepository students;
   private final Recorders recorders;
   private final ActivityLog activityLog;
-  private final Clock clock;
+  private final OrganizationCalendar calendar;
 
   public MembershipService(
       MembershipRepository memberships,
@@ -48,14 +47,14 @@ public class MembershipService {
       StudentRepository students,
       Recorders recorders,
       ActivityLog activityLog,
-      Clock clock) {
+      OrganizationCalendar calendar) {
     this.memberships = memberships;
     this.payments = payments;
     this.plans = plans;
     this.students = students;
     this.recorders = recorders;
     this.activityLog = activityLog;
-    this.clock = clock;
+    this.calendar = calendar;
   }
 
   /**
@@ -173,7 +172,7 @@ public class MembershipService {
     LocalDate paidThrough = PaidThrough.of(membership.getStartDate(), plan.getPeriod(), periods);
     boolean overdue =
         membership.getEndDate() == null
-            && PaymentState.of(student.getStatus(), paidThrough, LocalDate.now(clock))
+            && PaymentState.of(student.getStatus(), paidThrough, calendar.today())
                 == PaymentState.OVERDUE;
     return new MembershipView(
         membership.getId(),
@@ -198,10 +197,10 @@ public class MembershipService {
   }
 
   /** "2 × $150.00": the periods and the price each was paid at (the amount always divides). */
-  private static String describe(PaymentEntity payment) {
+  private String describe(PaymentEntity payment) {
     Money amount = payment.getAmount();
     Money each = Money.of(amount.minorUnits() / payment.getPeriods(), amount.currency());
-    return payment.getPeriods() + " × " + each.format(HISTORY_LOCALE);
+    return payment.getPeriods() + " × " + each.format(calendar.locale());
   }
 
   private StudentEntity locked(UUID studentId) {

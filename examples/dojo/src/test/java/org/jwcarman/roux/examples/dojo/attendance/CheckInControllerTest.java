@@ -223,16 +223,16 @@ class CheckInControllerTest {
   }
 
   @Test
-  void todayWhereTheBrowserIsAheadOfTheServerIsAccepted() throws Exception {
-    // 23:30 UTC on Tuesday is already Wednesday in UTC+14, so a Wednesday class's "today" is
-    // tomorrow here; Thursday is nowhere "today" yet.
-    clock.set("2026-03-10T23:30:00Z");
-    String wednesdayClass = schoolClass("Wednesday Sparring", "WEDNESDAY");
+  void theSchoolsTodayIsAcceptedThoughUtcIsAlreadyTomorrow() throws Exception {
+    // 03:00 UTC on Wednesday Mar 11 is still Tuesday Mar 10 in New York, the school's zone.
+    clock.set("2026-03-11T03:00:00Z");
+    owner = members.owner();
+    String tuesdayClass = schoolClass("Tuesday Sparring", "TUESDAY");
 
-    mark(wednesdayClass, ada, "2026-03-11", true).andExpect(status().isOk());
-    owner.perform(checkIn(wednesdayClass, "2026-03-11")).andExpect(status().isOk());
-    String thursdayClass = schoolClass("Thursday Kata", "THURSDAY");
-    mark(thursdayClass, ada, "2026-03-12", true)
+    mark(tuesdayClass, ada, "2026-03-10", true).andExpect(status().isOk());
+    owner.perform(checkIn(tuesdayClass, "2026-03-10")).andExpect(status().isOk());
+    String wednesdayClass = schoolClass("Wednesday Kata", "WEDNESDAY");
+    mark(wednesdayClass, ada, "2026-03-11", true)
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.errors[0].field").value("date"));
   }

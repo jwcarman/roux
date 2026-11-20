@@ -17,6 +17,7 @@ import org.jwcarman.roux.examples.dojo.activity.Activity;
 import org.jwcarman.roux.examples.dojo.activity.ActivityLog;
 import org.jwcarman.roux.examples.dojo.web.ExportTooLargeException;
 import org.jwcarman.roux.jpa.Versions;
+import org.jwcarman.roux.organization.OrganizationCalendar;
 import org.jwcarman.roux.problems.InvalidFieldException;
 import org.jwcarman.roux.problems.InvariantViolationException;
 import org.jwcarman.who.admin.LastAdminException;
@@ -61,6 +62,7 @@ public class MemberService {
   private final JdbcTemplate jdbc;
   private final RbacService rbac;
   private final LastAdminGuard lastAdmin;
+  private final OrganizationCalendar calendar;
 
   public MemberService(
       MemberProfileRepository profiles,
@@ -70,7 +72,8 @@ public class MemberService {
       @Value("${app.export.max-rows:10000}") int maxExportRows,
       JdbcTemplate jdbc,
       RbacService rbac,
-      LastAdminGuard lastAdmin) {
+      LastAdminGuard lastAdmin,
+      OrganizationCalendar calendar) {
     this.profiles = profiles;
     this.directory = directory;
     this.activityLog = activityLog;
@@ -79,6 +82,7 @@ public class MemberService {
     this.jdbc = jdbc;
     this.rbac = rbac;
     this.lastAdmin = lastAdmin;
+    this.calendar = calendar;
   }
 
   /** A member's own profile, as the API shows it. */
@@ -165,7 +169,7 @@ public class MemberService {
     if (rows.size() > maxExportRows) {
       throw new ExportTooLargeException();
     }
-    return MemberCsv.write(rows);
+    return MemberCsv.write(rows, calendar.zone());
   }
 
   /** The search, narrowed by the filters: jpa-utils' searchFor composes like any Specification. */

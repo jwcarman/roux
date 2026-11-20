@@ -46,6 +46,11 @@ spring:
     port: ${MAILPIT_SMTP_PORT:1025}
 
 roux:
+  organization:
+    # Where the school is: its day starts and ends in this zone ("today", overdue, this month), and
+    # its dates, times and amounts are written in this locale.
+    time-zone: America/New_York
+    locale: en-US
   money:
     # The school's one currency: every price and payment is in it.
     currency: USD

@@ -38,6 +38,8 @@ class PaymentsControllerTest {
 
   private TestMember owner;
 
+  private UUID maya;
+
   @BeforeEach
   void paymentsOverAYear() throws Exception {
     members.reset("payment", "membership", "plan", "student");
@@ -52,7 +54,7 @@ class PaymentsControllerTest {
                     PlanPeriod.MONTHLY,
                     true))
             .getId();
-    UUID maya =
+    maya =
         students
             .saveAndFlush(
                 new StudentEntity(
@@ -100,6 +102,25 @@ class PaymentsControllerTest {
         .andExpect(jsonPath("$.data[0].amount.minorUnits").value(15000))
         .andExpect(jsonPath("$.data[0].method").value("CASH"))
         .andExpect(jsonPath("$.data[0].recordedByName").isNotEmpty());
+  }
+
+  @Test
+  void thisMonthIsNewYorksMonthAtUtcsMonthStart() throws Exception {
+    // 03:00 UTC on May 1 is still April 30 in New York.
+    clock.set("2026-05-01T03:00:00Z");
+    owner = members.owner(); // a fresh session: the old one expired as the clock moved on
+    pay(maya, 1, "2026-04-30");
+
+    owner
+        .browser()
+        .perform(get("/api/payments"))
+        .andExpect(
+            jsonPath("$.data[*].takenOn", contains("2026-04-30", "2026-04-10", "2026-04-01")));
+    owner
+        .browser()
+        .perform(get("/api/payments/monthly"))
+        .andExpect(jsonPath("$[11].month").value("2026-04"))
+        .andExpect(jsonPath("$[11].total.minorUnits").value(45000));
   }
 
   @Test

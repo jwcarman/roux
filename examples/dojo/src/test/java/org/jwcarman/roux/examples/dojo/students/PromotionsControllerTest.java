@@ -251,15 +251,15 @@ class PromotionsControllerTest {
   }
 
   @Test
-  void aDateTwoDaysAheadIs400OnDateButTodayAndTomorrowAreFine() throws Exception {
+  void tomorrowIs400OnDateButTheSchoolsTodayIsFine() throws Exception {
     String ada = student("Ada", "Lovelace");
-    clock.set("2026-03-10T23:30:00Z");
+    // 03:00 UTC on Mar 11 is still Mar 10 in New York, the school's zone.
+    clock.set("2026-03-11T03:00:00Z");
+    owner = members.owner();
 
-    // tomorrow is already today in UTC+14, so a person there may enter it
     owner.perform(promotion(ada, white, "2026-03-10")).andExpect(status().isCreated());
-    owner.perform(promotion(ada, yellow, "2026-03-11")).andExpect(status().isCreated());
     owner
-        .perform(promotion(ada, green, "2026-03-12"))
+        .perform(promotion(ada, green, "2026-03-11"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.errors[0].field").value("date"))
         .andExpect(jsonPath("$.errors[0].message").value("Must not be in the future"));

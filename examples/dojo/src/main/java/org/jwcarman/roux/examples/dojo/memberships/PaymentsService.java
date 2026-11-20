@@ -1,6 +1,5 @@
 package org.jwcarman.roux.examples.dojo.memberships;
 
-import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
@@ -15,13 +14,17 @@ import org.jwcarman.roux.examples.dojo.students.StudentEntity;
 import org.jwcarman.roux.examples.dojo.students.StudentRepository;
 import org.jwcarman.roux.money.Money;
 import org.jwcarman.roux.money.MoneySettings;
+import org.jwcarman.roux.organization.OrganizationCalendar;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Money taken: per month for a year, and this month's payments. "Now" is the injected clock. */
+/**
+ * Money taken: per month for a year, and this month's payments. "Now" is the school's month ({@link
+ * OrganizationCalendar}).
+ */
 @Service
 @Transactional(readOnly = true)
 public class PaymentsService {
@@ -42,7 +45,7 @@ public class PaymentsService {
   private final StudentRepository students;
   private final Recorders recorders;
   private final MoneySettings money;
-  private final Clock clock;
+  private final OrganizationCalendar calendar;
 
   public PaymentsService(
       PaymentRepository payments,
@@ -50,18 +53,18 @@ public class PaymentsService {
       StudentRepository students,
       Recorders recorders,
       MoneySettings money,
-      Clock clock) {
+      OrganizationCalendar calendar) {
     this.payments = payments;
     this.memberships = memberships;
     this.students = students;
     this.recorders = recorders;
     this.money = money;
-    this.clock = clock;
+    this.calendar = calendar;
   }
 
   /** The last {@value #MONTHS} months including this one, oldest first, zero where none. */
   public List<MonthlyTotal> monthly() {
-    YearMonth now = YearMonth.now(clock);
+    YearMonth now = calendar.thisMonth();
     YearMonth first = now.minusMonths(MONTHS - 1L);
     Map<String, Long> sums =
         payments.sumByMonth(first.atDay(1), now.plusMonths(1).atDay(1)).stream()
@@ -78,7 +81,7 @@ public class PaymentsService {
 
   /** This month's payments, newest first unless {@code spec} sorts otherwise. */
   public PageDto<PaymentListEntry> thisMonth(PageSpec spec) {
-    YearMonth now = YearMonth.now(clock);
+    YearMonth now = calendar.thisMonth();
     LocalDate from = now.atDay(1);
     LocalDate until = now.plusMonths(1).atDay(1);
     return PAGES.paginate(

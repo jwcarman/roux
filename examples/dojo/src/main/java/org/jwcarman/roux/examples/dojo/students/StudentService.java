@@ -4,7 +4,6 @@ import static org.jwcarman.roux.examples.dojo.students.StudentSpecifications.cur
 import static org.jwcarman.roux.examples.dojo.students.StudentSpecifications.paymentIs;
 import static org.jwcarman.roux.examples.dojo.students.StudentSpecifications.statusIs;
 
-import java.time.Clock;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -12,6 +11,7 @@ import org.jwcarman.jpa.pagination.PageDto;
 import org.jwcarman.jpa.pagination.PageSpec;
 import org.jwcarman.jpa.spring.page.Paginator;
 import org.jwcarman.roux.jpa.Versions;
+import org.jwcarman.roux.organization.OrganizationCalendar;
 import org.jwcarman.roux.problems.ConflictException;
 import org.jwcarman.roux.problems.InvalidFieldException;
 import org.springframework.data.domain.PageRequest;
@@ -38,17 +38,17 @@ public class StudentService {
   private final StudentRepository students;
   private final StudentListRepository list;
   private final PromotionRepository promotions;
-  private final Clock clock;
+  private final OrganizationCalendar calendar;
 
   public StudentService(
       StudentRepository students,
       StudentListRepository list,
       PromotionRepository promotions,
-      Clock clock) {
+      OrganizationCalendar calendar) {
     this.students = students;
     this.list = list;
     this.promotions = promotions;
-    this.clock = clock;
+    this.calendar = calendar;
   }
 
   /**
@@ -72,7 +72,7 @@ public class StudentService {
       UUID rankId,
       PaymentState payment,
       boolean withPayment) {
-    LocalDate today = LocalDate.now(clock);
+    LocalDate today = calendar.today();
     Specification<StudentListEntry> filter =
         list.searchFor(search).and(statusIs(status == null ? StudentStatus.ACTIVE : status));
     if (rankId != null) {
