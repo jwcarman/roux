@@ -24,7 +24,9 @@ import org.jwcarman.roux.problems.ProblemErrorController;
 import org.jwcarman.roux.problems.ProblemsAdvice;
 import org.jwcarman.roux.problems.RootProblemsAdvice;
 import org.jwcarman.roux.problems.SecurityProblemsAdvice;
+import org.jwcarman.roux.problems.WhoAdminProblemsAdvice;
 import org.jwcarman.roux.problems.WhoProblemsAdvice;
+import org.jwcarman.who.admin.LastAdminException;
 import org.jwcarman.who.spring.security.web.SignInFailedException;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
@@ -142,6 +144,17 @@ class RouxProblemsAutoConfigurationTest {
   }
 
   @Test
+  void withoutWhoAdminNoWhoAdminAdvice() {
+    web.withClassLoader(new FilteredClassLoader(LastAdminException.class))
+        .run(
+            context ->
+                assertThat(context)
+                    .hasNotFailed()
+                    .doesNotHaveBean(WhoAdminProblemsAdvice.class)
+                    .hasSingleBean(WhoProblemsAdvice.class));
+  }
+
+  @Test
   void withoutSecurityNoSecurityAdvice() {
     web.withClassLoader(new FilteredClassLoader(AccessDeniedException.class))
         .run(
@@ -170,6 +183,7 @@ class RouxProblemsAutoConfigurationTest {
         context -> {
           assertThat(context)
               .hasSingleBean(WhoProblemsAdvice.class)
+              .hasSingleBean(WhoAdminProblemsAdvice.class)
               .hasSingleBean(SecurityProblemsAdvice.class)
               .hasSingleBean(PagingProblemsAdvice.class);
           assertThat(context.getBean(WhoProblemsAdvice.class)).isNotNull();

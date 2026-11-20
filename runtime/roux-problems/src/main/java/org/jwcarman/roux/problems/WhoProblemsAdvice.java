@@ -52,7 +52,7 @@ public class WhoProblemsAdvice {
         "reauthentication-required", HttpStatus.UNAUTHORIZED, "Sign in again to continue");
   }
 
-  private static ProblemDetail whoProblem(String code, HttpStatus status, String detail) {
+  static ProblemDetail whoProblem(String code, HttpStatus status, String detail) {
     ProblemDetail problem = ProblemsAdvice.problem(status, detail);
     problem.setType(URI.create(ERROR_TYPE + code));
     problem.setProperty("code", code);

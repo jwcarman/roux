@@ -16,6 +16,7 @@
 package org.jwcarman.roux.problems;
 
 import org.jwcarman.jpa.pagination.UnknownSortByValueException;
+import org.jwcarman.who.admin.LastAdminException;
 import org.jwcarman.who.spring.security.web.ReauthenticationRequiredException;
 import org.jwcarman.who.spring.security.web.SignInFailedException;
 import org.springframework.security.access.AccessDeniedException;
@@ -47,6 +48,11 @@ class LibraryErrorsTestController {
   @GetMapping("/reauthenticate")
   String reauthenticate() {
     throw new ReauthenticationRequiredException();
+  }
+
+  @GetMapping("/last-admin")
+  String lastAdmin() {
+    throw new LastAdminException();
   }
 
   @GetMapping("/unknown-sort")

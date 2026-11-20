@@ -22,7 +22,9 @@ import org.jwcarman.roux.problems.ProblemsAdvice;
 import org.jwcarman.roux.problems.ProblemsRuntimeHints;
 import org.jwcarman.roux.problems.RootProblemsAdvice;
 import org.jwcarman.roux.problems.SecurityProblemsAdvice;
+import org.jwcarman.roux.problems.WhoAdminProblemsAdvice;
 import org.jwcarman.roux.problems.WhoProblemsAdvice;
+import org.jwcarman.who.admin.LastAdminException;
 import org.jwcarman.who.spring.security.web.SignInFailedException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -97,6 +99,18 @@ public class RouxProblemsAutoConfiguration {
       @ConditionalOnMissingBean
       WhoProblemsAdvice whoProblemsAdvice() {
         return new WhoProblemsAdvice();
+      }
+
+      /** who-admin's refusals, when an app's service calls its guard. */
+      @Configuration(proxyBeanMethods = false)
+      @ConditionalOnClass(LastAdminException.class)
+      static class WhoAdminConfiguration {
+
+        @Bean
+        @ConditionalOnMissingBean
+        WhoAdminProblemsAdvice whoAdminProblemsAdvice() {
+          return new WhoAdminProblemsAdvice();
+        }
       }
     }
   }

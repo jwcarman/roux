@@ -65,6 +65,12 @@
             <artifactId>who-spring-security</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- who-admin's last-admin refusal, on the app's endpoints that call its guard -->
+        <dependency>
+            <groupId>org.jwcarman.who</groupId>
+            <artifactId>who-admin</artifactId>
+            <optional>true</optional>
+        </dependency>
 
         <dependency>
             <!-- UnknownSortByValueException, which PagingProblemsAdvice answers -->

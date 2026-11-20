@@ -47,6 +47,7 @@ import org.springframework.security.web.SecurityFilterChain;
   RootProblemsAdvice.class,
   SecurityProblemsAdvice.class,
   WhoProblemsAdvice.class,
+  WhoAdminProblemsAdvice.class,
   PagingProblemsAdvice.class,
   ProblemErrorController.class
 })

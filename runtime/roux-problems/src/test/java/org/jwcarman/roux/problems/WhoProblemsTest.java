@@ -57,6 +57,17 @@ class WhoProblemsTest {
         .andExpect(jsonPath("$.code").value("reauthentication-required"));
   }
 
+  @Test
+  void lastAdminIsAConflictInWhoShape() throws Exception {
+    mvc.perform(get("/api/test/libraries/last-admin"))
+        .andExpect(status().isConflict())
+        .andExpect(header().string("Content-Type", startsWith("application/problem+json")))
+        .andExpect(
+            jsonPath("$.detail").value("The team needs someone active who can manage people"))
+        .andExpect(jsonPath("$.type").value("urn:who:error:last-admin"))
+        .andExpect(jsonPath("$.code").value("last-admin"));
+  }
+
   /** A 401 Problem Detail with a {@code type} of its own, which who's own answers have too. */
   private static ResultActions whoProblem(ResultActions result) throws Exception {
     return result
