@@ -15,6 +15,7 @@
  */
 package org.jwcarman.roux.autoconfigure.roles;
 
+import org.jwcarman.roux.roles.CallerPermissions;
 import org.jwcarman.roux.roles.InvitableRoles;
 import org.jwcarman.roux.roles.InvitableRolesController;
 import org.jwcarman.roux.roles.InvitableRolesGuard;
@@ -74,6 +75,17 @@ public class RouxRolesAutoConfiguration {
       RouxOwnerProperties owner) {
     return new OwnerBootstrap(
         jdbc, rbac, who, emailCredentials, events, transactionManager, owner.email(), owner.name());
+  }
+
+  /**
+   * What the signed-in caller may do, for the parts of a response only some callers see.
+   *
+   * @return the caller's permissions
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  public CallerPermissions rouxCallerPermissions() {
+    return new CallerPermissions();
   }
 
   /**

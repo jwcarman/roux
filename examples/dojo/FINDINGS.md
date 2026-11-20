@@ -485,7 +485,7 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   how, and a forgotten check leaks the fields.
 - roux could: a helper for "does the caller hold this permission" and a documented pattern for
   permission-gated fields and filters on a list.
-- Outcome: open.
+- Outcome: fixed in the round 4 cleanup (roux-roles' `CallerPermissions`; tables-and-paging, A column only some people see).
 
 ## The signed-out route test raced the sign-in page's request
 - Where: `frontend/src/testing/route.test.tsx`

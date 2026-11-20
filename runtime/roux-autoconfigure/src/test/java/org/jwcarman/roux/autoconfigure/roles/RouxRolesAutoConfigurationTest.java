@@ -21,6 +21,7 @@ import static org.mockito.Mockito.mock;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
 import org.junit.jupiter.api.Test;
+import org.jwcarman.roux.roles.CallerPermissions;
 import org.jwcarman.roux.roles.InvitableRoles;
 import org.jwcarman.roux.roles.InvitableRolesController;
 import org.jwcarman.roux.roles.InvitableRolesGuard;
@@ -51,6 +52,13 @@ class RouxRolesAutoConfigurationTest {
     runner
         .withPropertyValues("roux.owner.email=pat@example.com", "roux.owner.name=Pat")
         .run(context -> assertThat(context).hasSingleBean(OwnerBootstrap.class));
+  }
+
+  @Test
+  void the_callers_permissions_are_there_to_inject() {
+    runner
+        .withPropertyValues("roux.owner.email=pat@example.com", "roux.owner.name=Pat")
+        .run(context -> assertThat(context).hasSingleBean(CallerPermissions.class));
   }
 
   @Test

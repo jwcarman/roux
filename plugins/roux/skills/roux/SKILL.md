@@ -124,6 +124,7 @@ sections you need.
 | Reorder rows (move up/down) | `references/tables-and-paging.md` (An ordered list) |
 | One feature must refuse another's removal | `references/errors.md` (Refuse because of what another feature holds) |
 | A permission, a role, the first owner, invitable roles, the roles test, `permissions.gen.ts` | `references/roles.md` |
+| A column, filter or sort only some callers may see (`CallerPermissions`) | `references/tables-and-paging.md` (A column only some people see) |
 | Deactivate someone or remove a role without losing the last owner (`LastAdminGuard`) | `references/roles.md` (Keep someone who can manage people) |
 | Toasts, confirmations, an inline error, not-found and error pages | `references/feedback.md` |
 | The shell (`index.html`, its CSP and nonce, `roux.spa.csp.*`), the theme (`roux.theme.*`, roux-theme, `ThemeProvider`, `AppearanceSettings`), the sign-in page (`EmailSignIn`, `PasskeySignInButton`, `ProviderSignInButtons`), the sidebar and its declaration (`defineNav`, `AppShell`) | `references/getting-started.md` (The shell), `references/shell.md` |

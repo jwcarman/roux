@@ -68,6 +68,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- `CallerPermissions` (roux-roles): `has(permission)` and `require(permission, what)` for the parts of a
+  response only some callers see (a list's column, its filter and sort). See `docs/guides/roles.md`.
 - `roux-organization`, in the starter: `OrganizationCalendar` (`today()`, `thisMonth()`, `now()`,
   `todayEndsAt()`, `zone()`, `locale()`, from the app's `Clock` in the organization's zone),
   `OrganizationContext`, `OrganizationContextSource` and `GET /api/organization`

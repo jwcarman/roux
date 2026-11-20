@@ -55,6 +55,14 @@ public final class Permissions {
 }
 ```
 
+### Parts of a response only some callers see
+
+`@RequiresPermission` guards a whole endpoint. When the endpoint is open to more people than one of its
+parts (a list's column, and the filter and sort over it), inject roux's `CallerPermissions` and check
+inside it: `has(permission)` answers for the signed-in caller (`false` signed out), and
+`require(permission, what)` refuses with a `403` problem. See
+[Tables and paging](tables-and-paging.md#a-column-only-some-people-see).
+
 ## The app's roles
 
 In the app's own changelog (included from its master), by name, inserting only what is missing:
@@ -165,6 +173,7 @@ active. Grant it to `OWNER` alone unless that is what you want.
 - `InvitableRoles` (the checked list, from `RouxRolesProperties`, `roux.roles.*`),
   `InvitableRolesGuard` (the listener on who's `IdentityInvited`) and `InvitableRolesController`.
 - `RoleGrantsCheck` and `PermissionsTypeScript`, for the app's roles test.
+- `CallerPermissions`, for the parts of a response only some callers see.
 - `RouxThemePermissions`; `WhoAdminProblemsAdvice`, which answers `LastAdminException` on the app's
   endpoints.
 

@@ -768,6 +768,31 @@ list and read through the view's. Two traps:
 A Paginator cannot put nulls last in a sort; the dojo rebuilds the `Pageable`'s `Sort` with
 `Order::nullsLast` inside the query callback.
 
+## A column only some people see
+
+A list everyone with `students.read` may open can carry fields only some of them may see (a student's
+payment status needs `payments.record`). The endpoint keeps its own permission; the column's is checked
+inside it with `CallerPermissions` (roux-roles), once:
+
+```java
+@GetMapping
+@RequiresPermission(Permissions.STUDENTS_READ)
+public PageDto<Student> list(@ModelAttribute PageParams params, @RequestParam(required = false) PaymentState payment) {
+  if (payment != null || StudentSort.PAID_THROUGH.name().equals(params.sortBy())) {
+    caller.require(Permissions.PAYMENTS_RECORD, "Filtering or sorting by payment"); // a 403 problem
+  }
+  boolean withPayment = caller.has(Permissions.PAYMENTS_RECORD);
+  return students.list(params, payment, withPayment); // the rows' payment fields, or null
+}
+```
+
+- **Refuse the filter and the sort, don't ignore them.** A caller who filters on a field they cannot
+  see learns its values from which rows come back.
+- **Leave the fields `null` for such a caller**, not absent: the row's type stays one shape.
+- The page hides the column, filter and sort from the same permission
+  (`me.permissions.includes(PAYMENTS_RECORD)`, from `permissions.gen.ts`); the server's check is the one
+  that counts.
+
 ## A list that grows
 
 `InfiniteList` shows a paged endpoint as a list that loads its next page on demand, newest first or
