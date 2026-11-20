@@ -16,5 +16,6 @@
   <include file="classpath:db/changelog/attendance.xml"/>
   <include file="classpath:db/changelog/theme-moved.xml"/>
   <include file="classpath:db/changelog/plans.xml"/>
+  <include file="classpath:db/changelog/memberships.xml"/>
   <include file="classpath:db/changelog/roles.xml"/>
 </databaseChangeLog>

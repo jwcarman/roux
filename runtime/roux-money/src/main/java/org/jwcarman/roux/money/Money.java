@@ -15,7 +15,10 @@
  */
 package org.jwcarman.roux.money;
 
+import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.util.Currency;
+import java.util.Locale;
 import java.util.Objects;
 
 import jakarta.persistence.Embeddable;
@@ -89,6 +92,23 @@ public record Money(long minorUnits, Currency currency) {
           "Cannot add " + other.currency.getCurrencyCode() + " to " + currency.getCurrencyCode());
     }
     return new Money(Math.addExact(minorUnits, other.minorUnits), currency);
+  }
+
+  /**
+   * This amount as {@code locale} writes it, with its currency's symbol and digits ("$150.00" in
+   * {@code Locale.US}): for text the server writes, such as a history entry. The browser formats
+   * with {@code formatMoney}.
+   *
+   * @param locale how to write it
+   * @return the formatted amount
+   */
+  public String format(Locale locale) {
+    NumberFormat format = NumberFormat.getCurrencyInstance(locale);
+    format.setCurrency(currency);
+    int digits = Math.max(0, currency.getDefaultFractionDigits());
+    format.setMinimumFractionDigits(digits);
+    format.setMaximumFractionDigits(digits);
+    return format.format(BigDecimal.valueOf(minorUnits, digits));
   }
 
   /**

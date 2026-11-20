@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import java.util.Currency;
+import java.util.Locale;
 
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator.ReplaceUnderscores;
@@ -111,5 +112,15 @@ class MoneyTest {
     MoneySettings settings = new MoneySettings(USD);
 
     assertThat(new MoneyController(settings).money()).isSameAs(settings);
+  }
+
+  @Test
+  void formats_in_a_locale_with_the_currencys_digits() {
+    assertThat(Money.of(15000, Currency.getInstance("USD")).format(Locale.US)).isEqualTo("$150.00");
+    assertThat(Money.of(-5, Currency.getInstance("USD")).format(Locale.US)).isEqualTo("-$0.05");
+    assertThat(Money.of(1500, Currency.getInstance("JPY")).format(Locale.JAPAN))
+        .isEqualTo("￥1,500");
+    assertThat(Money.of(123456, Currency.getInstance("EUR")).format(Locale.GERMANY))
+        .isEqualTo("1.234,56\u00a0€");
   }
 }
