@@ -61,25 +61,25 @@ are the worked example. Copy their shape:
   `frontend/src/routes/` keeps TanStack's route files, each a thin file that opens its feature's
   page; `main.tsx`, `api.ts`, `queryKeys.ts` and `testing/` are shared.
 
-- **A table keyed by the identity.** A `member_profile` row's `id` is its member's identity id
-  (`db/changelog/members.xml`), a foreign key to `who_identity` with `ON DELETE CASCADE`, so
-  deleting an identity deletes its row. A new kind of person (students, parents) gets a
-  table of its own keyed the same way, and a role of its own, not a row in `member_profile`.
-- **A write entity.** `MemberProfile` extends jpa-utils' `AuditableEntity` (`id`, `@Version`,
+- **A table keyed by the identity.** roux-users' `roux_user` row (a user's name) has its user's
+  identity id as its `id`, a foreign key to `who_identity` with `ON DELETE CASCADE`, so deleting an
+  identity deletes its row. A new kind of person who signs in (a coach with a belt) gets a table of
+  its own keyed the same way (`@MapsId` to roux's `AppUser`), and a role of its own.
+- **A write entity.** roux's `AppUser` extends jpa-utils' `AuditableEntity` (`id`, `@Version`,
   created and modified date and by), passing the identity id to its constructor. It has no
   setters: `rename` enforces the name rule, and the request records repeat it with Bean Validation
-  so clients get field errors.
-- **A read model for screens that combine tables.** The directory joins profiles to who's roles in
-  the `member_directory` view, mapped by the `@Immutable` entity `MemberDirectoryEntry` (also a
-  `BaseEntity`, with the profile's `id` and `version`) and listed with one
-  `SearchableRepository.search` call: paged, searched and sorted in SQL, not N+1 in Java. The view
-  reads who's tables directly; a who release that renames them fails Liquibase or Hibernate's
-  `validate` in CI.
-- **Lists use jpa-utils.** `PageParams` in, `PageDto` out, sorts named by an enum (`MemberSort`),
-  through one `Paginator` per list: `Paginator.of(MemberDirectoryEntry.class, MemberSort.class,
-  cfg -> cfg.defaultSort(MemberSort.NAME))`, which checks the sort's property paths against the
-  entity when it is built, then `paginate(spec, repository search, mapper)`. Paginator sorts by
-  `id` last, so rows that sort equal keep their place from page to page.
+  so clients get field errors. The dojo's own write entities (ranks, students, classes, plans)
+  follow it.
+- **A read model for screens that combine tables.** roux's user directory joins `roux_user` to
+  who's identities, addresses and roles in the `roux_user_directory` view, mapped by the `@Immutable`
+  entity `UserDirectoryEntry` (a `BaseEntity`, with the user's `id` and `version`): paged, searched
+  and sorted in SQL, not N+1 in Java. The view reads who's tables directly; a who release that
+  renames them fails Liquibase or Hibernate's `validate` in CI.
+- **Lists use jpa-utils.** `PageParams` in, `PageDto` out, sorts named by an enum (`PaymentSort`),
+  through one `Paginator` per list (`Paginator.of(entity, sort enum, cfg -> cfg.defaultSort(...))`),
+  which checks the sort's property paths against the entity when it is built, then
+  `paginate(spec, repository search, mapper)`. Paginator sorts by `id` last, so rows that sort equal
+  keep their place from page to page.
 - **Navigation is a left sidebar** (`frontend/src/shell/Layout.tsx`): full from `lg`, an icon rail
   at `md`, a drawer behind a menu button on a phone. Its items come from one list,
   `frontend/src/shell/nav.ts` (`defineNav`): a label, a route, an icon component and the permission the
@@ -120,16 +120,16 @@ are the worked example. Copy their shape:
   the loader `ensureQueryData`s the record through a query-options factory (`memberQuery` in
   `members/members.ts`) and throws `notFound()` on a 404, which shows "Member not found" in the frame;
   the page reads it with `useSuspenseQuery`. Names in the directory link to it.
-- **Archive, don't delete.** Deactivate and Reactivate (`POST /api/members/{id}/deactivate`,
-  `members.manage`) go through who; a deactivated member is signed out on their next request
-  and cannot sign in. Refusals are an `InvariantViolationException`: a 400 whose detail is the
-  message for the user ("You cannot deactivate yourself"). The last active owner is kept by
-  who-admin's `LastAdminGuard`, which the deactivation runs inside: only owners may manage people,
-  so deactivating the last one is a 409 problem with code `last-admin` ("The team needs someone
-  active who can manage people").
-- **A history of changes.** `ActivityLog.record(subject, id, action, summary)` writes in the
-  changing transaction (it refuses to run outside one); `ActivityLog.history` pages it newest
-  first with each actor's name. Members record invites, renames and status changes, shown by
+- **The team is roux's users.** The Members pages call roux-users' endpoints under `/api/users`
+  (list, detail, invite, rename, deactivate, reactivate; see roux's
+  [Users guide](../../docs/guides/users.md)): the dojo keeps no profile table, directory or invite
+  endpoint of its own. Deactivate and Reactivate go through who; a deactivated member is signed out
+  on their next request and cannot sign in. "You cannot deactivate yourself" is a 400, and the last
+  active owner is kept by who-admin's `LastAdminGuard`: deactivating them is a 409 problem with code
+  `last-admin` ("The team needs someone active who can manage people").
+- **A history of changes.** `ActivityLog.append(anchor, activity)` writes in the changing
+  transaction (it refuses to run outside one); `ActivityLog.history` pages it newest first with each
+  actor's name. roux records invites, renames and status changes against the user, shown by
   `ActivityList` on the member's page.
 - **Actions use `useServerAction`** (`@jwcarman/roux-web/api`), a TanStack Query mutation:
   `{ request, failure, refreshes, onSuccess }` gives `{ run, pending }`. A refusal toasts the
@@ -142,22 +142,22 @@ are the worked example. Copy their shape:
   [Feedback guide](../../docs/guides/feedback.md).
 - **Filters and export.** `FilterChips` binds a filter to the URL (Status and Role on Members, with
   `enumSearchOf` dropping unknown values; the server answers an unknown enum with a 400 field
-  message). `ExportButton` downloads `GET /api/members/export.csv`: the list's search, filters and
-  sort, unpaged, written by `Csv` (UTF-8 with a BOM for Excel, RFC 4180 quoting, formula escaping),
+  message). `ExportButton` downloads `GET /api/users/export.csv` (the dojo's `UsersExportController`, over
+  roux's `UserDirectory` and `UserFilter`): the list's search, filters and sort, unpaged, written by `Csv` (UTF-8 with a BOM for Excel, RFC 4180 quoting, formula escaping),
   capped at `app.export.max-rows`.
 - **Errors and not-found pages.** The root route shows "Page not found" and "Something went wrong"
   (with Try again); a signed-in browser's typed bad URL reaches the same page.
 - **One icon set.** Icons come from `react-icons/lu` (Lucide), enforced by `icons.test.ts`.
-- **A permission per capability, never a role check.** `members.invite`, `members.read`,
-  `members.profile` and `members.manage` gate the endpoints with `@RequiresPermission`. The constants
-  live in `Permissions`; which role holds which is data, granted in `db/changelog/roles.xml` (OWNER
+- **A permission per capability, never a role check.** roux's `users.read`, `users.invite` and
+  `users.manage`, and the dojo's own (`classes.read`, `payments.record`, ...), gate the endpoints with
+  `@RequiresPermission`. The dojo's constants live in `Permissions`; which role holds which is data, granted in `db/changelog/roles.xml` (OWNER
   is roux's, and roux's modules grant it their own). `PermissionsTest` fails when OWNER lacks a
   constant or a role grants one that does not exist, and writes `frontend/src/permissions.gen.ts`
   from the constants. A role that holds none of them is shut out of the members area with no code
   changes.
-- **Identity from the session.** `/api/members/me` acts as the signed-in identity, so nobody edits
-  another member's profile; an action on another member names them by id and needs its permission
-  (`members.manage` to deactivate).
+- **Identity from the session.** `/api/users/me` acts as the signed-in identity, so nobody edits
+  another member's name; an action on another member names them by id and needs its permission
+  (`users.manage` to deactivate).
 - **Optimistic locking.** The client sends back the `version` it read; a stale one answers 409,
   the only 409 an app's own code causes. The client reloads the record and asks again.
 - **Errors are RFC 9457 Problem Details** (roux's `org.jwcarman.roux.problems`, through
@@ -181,9 +181,8 @@ are the worked example. Copy their shape:
   `WhoMockMvcBrowser` tests for permissions (401 and 403), validation and conflicts, Vitest tests
   for the client (components and hooks in jsdom with Testing Library), and Playwright scenarios.
 
-`member_profile.email` is a copy of the address who stored at registration, because search and
-sorting need it in SQL. The app has no email change; an app that adds one updates
-`member_profile.email` in the same transaction.
+A user's email is not copied: roux's directory reads the oldest of their addresses from who, so a
+change through who's `/who/me/email-addresses` shows up at once.
 
 ## Prerequisites
 
@@ -267,17 +266,13 @@ can serve it; no sticky sessions are needed.
 
 ## Known limits
 
-- **Invitations.** `POST /api/members/invitations` (`InviteController`) is a thin endpoint over
-  who's `InvitationService.invite(email, roleNames, callback)`, called outside any transaction: it keeps the
-  dojo's rules (a name, and only the roles in `roux.roles.invitable`, so an invitation never makes
-  an owner) in front of who's, which creates the identity, registers the address, assigns the role and
-  publishes `IdentityInvited` in one transaction, then sends the link after it commits.
-  The callback runs inside who's transaction, on the caller's thread, after the identity, address
-  and roles exist and before `IdentityInvited` is published: it saves the member's profile (with the
-  form's name) and writes the activity entry, so a failure rolls the invitation back and no email is
-  sent. roux's guard, an `@EventListener` for `IdentityInvited`, refuses any role outside
-  `roux.roles.invitable` for an invitation made any other way (who's own `POST /who/invitations`),
-  which gets no profile. The invite form asks `GET /api/roles/invitable` for the roles to offer. An invitation is a who sign-in link, so it expires with who's token TTL (5
+- **Invitations.** `POST /api/users/invitations` is roux-users': it invites through roux's
+  `UserInvitations`, outside any transaction, over who's `InvitationService.invite`, which creates the
+  identity, registers the address, assigns the role and publishes `IdentityInvited` in one
+  transaction, then sends the link after it commits. roux's `UserJoined` listener makes the user's
+  name, and the "Invited" activity is written in the same transaction, so a failure rolls the
+  invitation back and no email is sent. roux's guard refuses any role outside `roux.roles.invitable`
+  for an invitation made any other way (who's own `POST /who/invitations`), which gets no name. The invite form asks `GET /api/roles/invitable` for the roles to offer. An invitation is a who sign-in link, so it expires with who's token TTL (5
   minutes by default); an invited member who opens it later is sent to sign in, which works because
   the address is registered. If the email cannot be sent, the member is still added and the answer
   says so (`{"linkSent": false}`): the owner is told to have them sign in from the sign-in page, and

@@ -16,7 +16,7 @@ const webEntries = Object.keys(JSON.parse(readFileSync(join(root, "web/roux-web/
 );
 
 // Public but not API: wiring that users never reference by name.
-const excludedJava = new Set(["ProblemsRuntimeHints", "ValidationRuntimeHints", "RouxProblemsAutoConfiguration", "RouxAuditingAutoConfiguration", "RouxSpaAutoConfiguration", "RouxThemeAutoConfiguration", "RouxThemePersistenceAutoConfiguration", "RouxEmailAutoConfiguration", "RouxRolesAutoConfiguration", "RouxMoneyAutoConfiguration", "RouxOrganizationAutoConfiguration", "RouxActivityLogAutoConfiguration", "RouxActivityLogPersistenceAutoConfiguration"]);
+const excludedJava = new Set(["ProblemsRuntimeHints", "ValidationRuntimeHints", "RouxProblemsAutoConfiguration", "RouxAuditingAutoConfiguration", "RouxSpaAutoConfiguration", "RouxThemeAutoConfiguration", "RouxThemePersistenceAutoConfiguration", "RouxEmailAutoConfiguration", "RouxRolesAutoConfiguration", "RouxMoneyAutoConfiguration", "RouxOrganizationAutoConfiguration", "RouxActivityLogAutoConfiguration", "RouxActivityLogPersistenceAutoConfiguration", "RouxUsersAutoConfiguration", "RouxUsersPersistenceAutoConfiguration"]);
 
 const problems = [];
 const rel = (file) => relative(root, file);

@@ -1,6 +1,6 @@
 # The activity log
 
-A record's history: who did what to it, and when. A member renamed, a student promoted, a payment
+A record's history: who did what to it, and when. A user renamed, a student promoted, a payment
 taken and then removed. The app says what happened, in its own terms, as a small typed record, in the
 transaction that makes the change; roux stores it with who did it and when, and serves a record's
 history a page at a time to `ActivityList` in the browser.
@@ -18,11 +18,11 @@ Each kind of activity is a Java record that implements `BusinessActivity`. Its c
 facts kept; `type()` is its code and `describe()` its sentence:
 
 ```java
-public record MemberRenamed(String from, String to) implements BusinessActivity {
+public record PlanRenamed(String from, String to) implements BusinessActivity {
 
   @Override
   public String type() {
-    return "member.renamed";
+    return "plan.renamed";
   }
 
   @Override
@@ -32,11 +32,11 @@ public record MemberRenamed(String from, String to) implements BusinessActivity 
 }
 ```
 
-- `type()` is lower case and dotted (`member.renamed`, `payment.recorded`), at most 100 characters.
+- `type()` is lower case and dotted (`plan.renamed`, `payment.recorded`), at most 100 characters.
 - `describe()` is a sentence of at most 500 characters, written once, when the activity happens.
 - The components are stored as JSON with the app's own Jackson mapper, so a `Money`, a `LocalDate` or
   an id is written as the API writes it, and `null` as `null`. A record with no components is fine
-  (`record MemberDeactivated() implements BusinessActivity`).
+  (`record UserDeactivated() implements BusinessActivity`).
 - `describe()` cannot read the request or the organization: what it needs is a component. Text that
   depends on the locale (an amount as the school writes it) is formatted by the service and passed in:
 
@@ -54,12 +54,12 @@ Inject `ActivityLog` and call `append` in the transaction that makes the change:
 
 ```java
 @Transactional
-public Profile rename(UUID memberId, String name) {
-  MemberProfile profile = find(memberId);
-  String before = profile.getDisplayName();
-  profile.rename(name);
-  activityLog.append(memberId, new MemberRenamed(before, profile.getDisplayName()));
-  return Profile.of(profiles.saveAndFlush(profile));
+public PlanView rename(UUID planId, String name) {
+  Plan plan = find(planId);
+  String before = plan.getName();
+  plan.rename(name);
+  activityLog.append(planId, new PlanRenamed(before, plan.getName()));
+  return PlanView.of(plans.saveAndFlush(plan));
 }
 ```
 
@@ -68,7 +68,7 @@ actor (the signed-in who identity; none for the system), the anchor, the related
 description and the details.
 
 - **The anchor** is the id of the record the activity is about. It is a bare `UUID`, not an entity:
-  anything with an id has a history (a member's is anchored to who's identity id), and there is no
+  anything with an id has a history (a user's is anchored to who's identity id), and there is no
   foreign key, so the history outlives the record ("Plan removed" stays).
 - **Related ids** are other records the activity concerns. A promotion is anchored to the student and
   related to the rank, so the rank's history has it too:
@@ -92,9 +92,9 @@ and size are clamped as roux's other lists are; a sort is ignored.
 
 ```java
 @GetMapping("/{id}/activities")
-@RequiresPermission(Permissions.MEMBERS_READ)
+@RequiresPermission(Permissions.STUDENTS_READ)
 public PageDto<Activity> activities(@PathVariable UUID id, @ModelAttribute PageParams params) {
-  return members.activities(id, params); // 404 for an unknown member, then activityLog.history(id, params)
+  return students.activities(id, params); // 404 for an unknown student, then activityLog.history(id, params)
 }
 ```
 
@@ -105,25 +105,29 @@ after its record changes or is deleted. A history that holds something only some
 
 ## Who did it: `ActorNames`
 
-The actor is a who identity id. To show a name, declare an `ActorNames` bean: it names a page's actors
-at once (one call per page).
+The actor is a who identity id. roux-users names actors after their `AppUser` (`AppUserActorNames`,
+one query per page), so a history reads "Ada Lovelace". To name them some other way, declare an
+`ActorNames` bean; it replaces roux's, and names a page's actors at once:
 
 ```java
 @Component
-public class MemberActorNames implements ActorNames {
-  private final MemberProfileRepository profiles;
+public class StaffActorNames implements ActorNames {
+  private final StaffRepository staff;
 
-  public MemberActorNames(MemberProfileRepository profiles) {
-    this.profiles = profiles;
+  public StaffActorNames(StaffRepository staff) {
+    this.staff = staff;
   }
 
   @Override
   public Map<UUID, String> namesOf(Set<UUID> identityIds) {
-    return profiles.findAllById(identityIds).stream()
-        .collect(Collectors.toMap(MemberProfile::getId, MemberProfile::getDisplayName));
+    return staff.findAllById(identityIds).stream()
+        .collect(Collectors.toMap(Staff::getId, Staff::getBadgeName));
   }
 }
 ```
+
+roux-users' own kinds, anchored to the user: `UserInvited`, `UserRenamed`, `UserDeactivated`,
+`UserReactivated` and `UserRoleChanged` ([Users](users.md)).
 
 An actor it does not name (or every actor, without the bean) is `Activity.UNKNOWN` ("Unknown"); an
 activity with no actor is `Activity.SYSTEM` ("System").

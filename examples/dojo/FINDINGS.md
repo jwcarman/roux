@@ -548,4 +548,6 @@ What building the dojo showed about roux: one entry per finding, in the order fo
 - Outcome: fixed (`roux-test`, `@jwcarman/roux-web/testing`, `MemberJoined`, `MemberInvitations`). The
   dojo keeps `renderRoute` and a one-line setup file; its profile comes from one `MemberJoined`
   listener for the owner, invitations and tests alike.
+- Later: the member names became user names (`UserJoined`, `UserInvitations`, `TestUsers`,
+  `TestUser`), and the dojo's profile moved to roux-users' `AppUser`.
 

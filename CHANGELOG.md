@@ -33,7 +33,7 @@ All notable changes to this project are documented in this file. The format foll
     (only `OWNER` does, by default). roux answers `LastAdminException` as a `409` problem with code
     `last-admin`.
 - Spring Boot 4.1.3 (was 4.1.2), the version migratory 0.1.0 is built against.
-- who 0.25.0 (was 0.24.0), `@jwcarman/who-client` 0.25.0, and libraries' tables through
+- who 0.26.0 (was 0.24.0; 0.26.0 adds resending an invitation), `@jwcarman/who-client` 0.25.0, and libraries' tables through
   [migratory](https://github.com/jwcarman/migratory) 0.1.0, which who brings. What changes for a roux app:
   - Remove the includes of who's changelog (`classpath:org/jwcarman/who/db/who-changelog.xml`, gone in who
     0.25.0) and roux-theme's (`classpath:org/jwcarman/roux/theme/db/roux-theme-changelog.xml`) from the master
@@ -69,6 +69,19 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- roux-users (in the starter): users on the server. `AppUser` (each user's display name, in roux's
+  table `roux_user`, made by roux's `UserJoined` listener), the read-only directory
+  (`roux_user_directory`, `UserDirectory`, `UserFilter`, `UserSort`), and the users endpoints under
+  `/api/users` (`GET`/`PUT /me`, list, detail, history, invite, resend an invitation, rename, change
+  role, deactivate, reactivate, sign out everywhere), behind `users.read`, `users.invite` and
+  `users.manage` (`RouxUserPermissions`), which roux-users' changelog grants to `OWNER`. Each change
+  is an activity (`user.invited`, `user.renamed`, `user.deactivated`, `user.reactivated`,
+  `user.role_changed`), and the activity log names actors after their `AppUser`
+  (`AppUserActorNames`). What changes for a roux app: delete its own profile table, directory,
+  invite endpoint and actor names, move each profile's name into `roux_user` in a changeset, grant
+  `users.*` to its roles, and list `RouxUserPermissions` in its roles test. See
+  `docs/guides/users.md`.
+- roux-roles: `UserInvitations.resend(identityId)`, through who 0.26's `InvitationService.resend`.
 - roux-jpa: `IdentityAuditor`, registered for you, records the signed-in identity's id (or
   `"system"`, or the name set in `roux.auditing.system-auditor`) in `@CreatedBy` and
   `@LastModifiedBy`. An app writes a plain `@EnableJpaAuditing`, with no `auditorAwareRef` and no

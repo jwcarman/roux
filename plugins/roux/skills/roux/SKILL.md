@@ -131,6 +131,7 @@ sections you need.
 | Reorder rows (move up/down) | `references/tables-and-paging.md` (An ordered list) |
 | One feature must refuse another's removal | `references/errors.md` (Refuse because of what another feature holds) |
 | A permission, a role, the first owner, invitable roles, the roles test, `permissions.gen.ts` | `references/roles.md` |
+| Users: the signed-in user's name (`/api/users/me`), the users endpoints and their permissions, inviting, resending, one role per user, signing out everywhere, an app entity for a user (`AppUser`, `@MapsId`), an app's own users list (`UserFilter`, `UserDirectory`) | `references/users.md` |
 | A column, filter or sort only some callers may see (`CallerPermissions`) | `references/tables-and-paging.md` (A column only some people see) |
 | Deactivate someone or remove a role without losing the last owner (`LastAdminGuard`) | `references/roles.md` (Keep someone who can manage people) |
 | Toasts, confirmations, an inline error, not-found and error pages | `references/feedback.md` |

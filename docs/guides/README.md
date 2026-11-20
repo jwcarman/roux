@@ -3,6 +3,7 @@
 - [Getting started](getting-started.md)
 - [Errors](errors.md)
 - [Roles and permissions](roles.md)
+- [Users](users.md)
 - [API client](api-client.md)
 - [Queries and mutations](queries-and-mutations.md)
 - [Forms](forms.md)

@@ -107,11 +107,11 @@ export function SignIn() {
 // nav.ts
 import { LuHouse, LuUsers } from "react-icons/lu";
 import { defineNav } from "@jwcarman/roux-web/navigation";
-import { PERMISSIONS } from "./api"; // ["members.read", ...] as const
+import { PERMISSIONS } from "./api"; // ["users.read", ...] as const
 
 export const nav = defineNav(PERMISSIONS, [
   { label: "Home", to: "/", icon: LuHouse, description: "A welcome page." },
-  { label: "Members", to: "/members", icon: LuUsers, permission: "members.read", description: "Who can use the app." },
+  { label: "Users", to: "/users", icon: LuUsers, permission: "users.read", description: "Who can use the app." },
 ]);
 ```
 
