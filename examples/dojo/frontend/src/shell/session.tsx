@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { getJson, onSessionLost, useClearQueriesOnIdentityChange } from "@jwcarman/roux-web/api";
-import { fetchMe, MEMBERS_PROFILE, type Me, type Profile } from "../api";
+import { fetchMe, type Me, type Profile } from "../api";
+import { MEMBERS_PROFILE } from "../permissions.gen";
 import { who } from "../who";
 
 export interface Session {

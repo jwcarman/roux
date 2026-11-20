@@ -11,39 +11,6 @@ export async function fetchMe(): Promise<Me | null> {
   return result.ok ? result.value : null;
 }
 
-export const MEMBERS_INVITE = "members.invite";
-export const MEMBERS_READ = "members.read";
-export const MEMBERS_PROFILE = "members.profile";
-export const MEMBERS_MANAGE = "members.manage";
-export const THEME_MANAGE = "theme.manage";
-export const RANKS_READ = "ranks.read";
-export const RANKS_MANAGE = "ranks.manage";
-export const STUDENTS_READ = "students.read";
-export const STUDENTS_MANAGE = "students.manage";
-export const PROMOTIONS_MANAGE = "promotions.manage";
-export const CLASSES_READ = "classes.read";
-export const CLASSES_MANAGE = "classes.manage";
-export const ATTENDANCE_RECORD = "attendance.record";
-export const ATTENDANCE_READ = "attendance.read";
-
-/** Every permission the server's roles grant (AppRoles.java): what the navigation's items may need. */
-export const PERMISSIONS = [
-  MEMBERS_INVITE,
-  MEMBERS_READ,
-  MEMBERS_PROFILE,
-  MEMBERS_MANAGE,
-  THEME_MANAGE,
-  RANKS_READ,
-  RANKS_MANAGE,
-  STUDENTS_READ,
-  STUDENTS_MANAGE,
-  PROMOTIONS_MANAGE,
-  CLASSES_READ,
-  CLASSES_MANAGE,
-  ATTENDANCE_RECORD,
-  ATTENDANCE_READ,
-] as const;
-
 /** The signed-in member's own profile; `version` goes back with a rename. */
 export interface Profile {
   displayName: string;

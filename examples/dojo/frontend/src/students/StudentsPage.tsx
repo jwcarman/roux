@@ -4,7 +4,7 @@ import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import type { TableSearch } from "@jwcarman/roux-web/paging";
 import { DEFAULT_PAGE_SIZE, DebouncedSearchInput, FilterChips, QueryTable } from "@jwcarman/roux-web/table";
-import { STUDENTS_MANAGE } from "../api";
+import { STUDENTS_MANAGE } from "../permissions.gen";
 import { RankSwatch } from "../ranks/RankSwatch";
 import { ranksQuery } from "../ranks/ranks";
 import { formatDate } from "../shell/format";

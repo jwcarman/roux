@@ -1,6 +1,6 @@
 import { LuAward, LuCalendar, LuGraduationCap, LuHouse, LuPalette, LuSettings, LuUsers } from "react-icons/lu";
 import { defineNav } from "@jwcarman/roux-web/navigation";
-import { PERMISSIONS } from "../api";
+import { PERMISSIONS } from "../permissions.gen";
 
 /**
  * The sidebar, in order. A new feature's page is one more entry: `to` must be a route that exists,

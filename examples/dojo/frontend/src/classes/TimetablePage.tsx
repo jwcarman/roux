@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link as RouterLink } from "@tanstack/react-router";
 import { LuListChecks } from "react-icons/lu";
 import { ErrorMessage } from "@jwcarman/roux-web/feedback";
-import { ATTENDANCE_RECORD, CLASSES_MANAGE } from "../api";
+import { ATTENDANCE_RECORD, CLASSES_MANAGE } from "../permissions.gen";
 import { formatTime } from "../shell/format";
 import { useSession } from "../shell/session";
 import { ClassActions } from "./ClassActions";

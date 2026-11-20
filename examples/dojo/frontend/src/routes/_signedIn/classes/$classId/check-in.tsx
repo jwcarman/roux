@@ -2,7 +2,7 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { ApiError } from "@jwcarman/roux-web/api";
 import { NotFoundPage } from "@jwcarman/roux-web/feedback";
 import { dateSearchOf } from "@jwcarman/roux-web/paging";
-import { ATTENDANCE_RECORD } from "../../../../api";
+import { ATTENDANCE_RECORD } from "../../../../permissions.gen";
 import { CheckInPage } from "../../../../attendance/CheckInPage";
 import { classQuery } from "../../../../classes/classes";
 import { requirePermission } from "../../../../shell/guards";

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { RANKS_READ } from "../../api";
+import { RANKS_READ } from "../../permissions.gen";
 import { requirePermission } from "../../shell/guards";
 import { RanksPage } from "../../ranks/RanksPage";
 

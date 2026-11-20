@@ -1,6 +1,6 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { enumSearchOf, idSearchOf, tableSearchOf } from "@jwcarman/roux-web/paging";
-import { STUDENTS_READ } from "../../../api";
+import { STUDENTS_READ } from "../../../permissions.gen";
 import { requirePermission } from "../../../shell/guards";
 import { STUDENT_SORTS, STUDENT_STATUSES } from "../../../students/students";
 import { StudentsPage, STUDENTS_SEARCH_DEFAULTS, type StudentsSearch } from "../../../students/StudentsPage";

@@ -3,7 +3,8 @@ import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import type { TableSearch } from "@jwcarman/roux-web/paging";
 import { DEFAULT_PAGE_SIZE, DebouncedSearchInput, FilterChips, QueryTable } from "@jwcarman/roux-web/table";
-import { MEMBERS_INVITE, type Member } from "../api";
+import { type Member } from "../api";
+import { MEMBERS_INVITE } from "../permissions.gen";
 import { ExportButton, exportHref } from "../shell/ExportButton";
 import { membersPage, ROLE_LABELS } from "./members";
 import { useSession } from "../shell/session";
@@ -14,7 +15,7 @@ export const MEMBER_SORTS = ["NAME", "EMAIL", "ROLE"] as const;
 type MemberSort = (typeof MEMBER_SORTS)[number];
 
 /** The directory's defaults, left out of the URL. */
-/** The directory's filters: the server's AppRole and MemberStatus values. */
+/** The directory's filters: the dojo's roles (db/changelog/roles.xml) and the server's MemberStatus values. */
 export const MEMBER_ROLES = ["OWNER", "INSTRUCTOR", "MEMBER"] as const;
 export const MEMBER_STATUSES = ["ACTIVE", "DEACTIVATED"] as const;
 

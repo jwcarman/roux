@@ -1,6 +1,6 @@
 import { Heading, Link, Stack, Text } from "@chakra-ui/react";
 import { Link as RouterLink } from "@tanstack/react-router";
-import { MEMBERS_READ } from "../api";
+import { MEMBERS_READ } from "../permissions.gen";
 import { useSession } from "./session";
 
 export function Home() {

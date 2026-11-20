@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MEMBERS_READ, THEME_MANAGE } from "./../api";
+import { MEMBERS_READ, THEME_MANAGE } from "./../permissions.gen";
 import { navItemsFor, openingRedirect } from "@jwcarman/roux-web/navigation";
 import { nav } from "./nav";
 

@@ -4,7 +4,7 @@ import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { LuArrowLeft, LuAward } from "react-icons/lu";
 import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, removal, useConfirm } from "@jwcarman/roux-web/feedback";
-import { ATTENDANCE_READ, PROMOTIONS_MANAGE, STUDENTS_MANAGE } from "../api";
+import { ATTENDANCE_READ, PROMOTIONS_MANAGE, STUDENTS_MANAGE } from "../permissions.gen";
 import { ClassesSincePromotion, StudentAttendanceList } from "../attendance/StudentAttendanceList";
 import { RankSwatch } from "../ranks/RankSwatch";
 import { formatDate } from "../shell/format";

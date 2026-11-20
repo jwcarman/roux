@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { toaster } from "@jwcarman/roux-web/feedback";
-import { STUDENTS_MANAGE, STUDENTS_READ } from "../api";
+import { STUDENTS_MANAGE, STUDENTS_READ } from "../permissions.gen";
 import type { Rank } from "../ranks/ranks";
 import { pageOf } from "../testing/fakeServer";
 import { invalidFields } from "../testing/problems";

@@ -2,7 +2,7 @@ import { Link, Stack } from "@chakra-ui/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { LuArrowLeft } from "react-icons/lu";
-import { MEMBERS_MANAGE } from "../api";
+import { MEMBERS_MANAGE } from "../permissions.gen";
 import { memberQuery } from "./members";
 import { useSession } from "../shell/session";
 import { MemberDetailView } from "./MemberDetailView";

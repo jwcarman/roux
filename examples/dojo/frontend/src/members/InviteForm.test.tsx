@@ -23,6 +23,11 @@ function answer(response: () => Response) {
   return sent;
 }
 
+/** The roles the server says an invitation may give, in its order. */
+function invitable(roles: string[]) {
+  server.use(http.get("/api/roles/invitable", () => HttpResponse.json(roles)));
+}
+
 /** A list of members on the page: the invitation refreshes it. `load` answers each fetch. */
 function MemberList({ load }: { load: () => Promise<string> }) {
   const list = useQuery({ queryKey: queryKeys.members.list({}), queryFn: load });
@@ -39,6 +44,8 @@ async function openInvite(load: () => Promise<string> = async () => "loaded") {
   );
   const invalidate = vi.spyOn(client, "invalidateQueries");
   const user = userEvent.setup();
+  // the button waits for the server's roles
+  await waitFor(() => expect(screen.getByRole("button", { name: "Invite member" })).toBeEnabled());
   await user.click(screen.getByRole("button", { name: "Invite member" }));
   const dialog = await screen.findByRole("dialog", { name: "Invite a member" });
   return { invalidate, user, dialog };
@@ -55,6 +62,7 @@ async function invite(name: string, email: string, load?: () => Promise<string>)
 describe("InviteForm", () => {
   beforeEach(() => {
     document.cookie = "XSRF-TOKEN=token";
+    invitable(["MEMBER", "INSTRUCTOR"]);
   });
 
   afterEach(() => {
@@ -88,6 +96,40 @@ describe("InviteForm", () => {
     await user.click(screen.getByRole("button", { name: "Send invitation" }));
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toEqual({ name: "Ivy", email: "ivy@example.com", role: "MEMBER" });
+  });
+
+  it("offers only the roles the server lists, the first chosen", async () => {
+    invitable(["INSTRUCTOR"]);
+    await openInvite();
+
+    const role = screen.getByLabelText(/^Role/);
+    expect(role).toHaveValue("INSTRUCTOR");
+    expect(within(role).getAllByRole("option").map((option) => option.textContent)).toEqual(["Instructor"]);
+  });
+
+  it("names a role it has no label for as the server does", async () => {
+    invitable(["MEMBER", "COACH"]);
+    await openInvite();
+
+    expect(within(screen.getByLabelText(/^Role/)).getAllByRole("option").map((option) => option.getAttribute("value"))).toEqual([
+      "MEMBER",
+      "COACH",
+    ]);
+  });
+
+  it("cannot be opened until the server has said which roles may be invited", async () => {
+    server.use(http.get("/api/roles/invitable", () => new Promise<Response>(() => undefined)));
+    renderWithProviders(<InviteForm />);
+
+    expect(screen.getByRole("button", { name: "Invite member" })).toBeDisabled();
+  });
+
+  it("cannot be opened when no role may be invited", async () => {
+    invitable([]);
+    renderWithProviders(<InviteForm />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Invite member" })).toBeDisabled());
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("invites an instructor when Instructor is chosen", async () => {

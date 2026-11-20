@@ -1,7 +1,7 @@
 import { Heading, Stack } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { AppearanceSettings } from "@jwcarman/roux-web/theme";
-import { THEME_MANAGE } from "../../api";
+import { THEME_MANAGE } from "../../permissions.gen";
 import { requirePermission } from "../../shell/guards";
 
 function Appearance() {

@@ -1,5 +1,5 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import { MEMBERS_READ } from "../../../api";
+import { MEMBERS_READ } from "../../../permissions.gen";
 import { requirePermission } from "../../../shell/guards";
 import {
   MEMBER_ROLES,

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { toaster } from "@jwcarman/roux-web/feedback";
-import { RANKS_MANAGE, RANKS_READ } from "../api";
+import { RANKS_MANAGE, RANKS_READ } from "../permissions.gen";
 import { invalidFields } from "../testing/problems";
 import { renderRoute } from "../testing/route";
 import { server } from "../testing/server";

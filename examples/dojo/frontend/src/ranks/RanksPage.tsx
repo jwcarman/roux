@@ -1,7 +1,7 @@
 import { Button, Flex, HStack, Heading, Stack, Text, VisuallyHidden } from "@chakra-ui/react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { SimpleQueryTable } from "@jwcarman/roux-web/table";
-import { RANKS_MANAGE } from "../api";
+import { RANKS_MANAGE } from "../permissions.gen";
 import { useSession } from "../shell/session";
 import { RankActions } from "./RankActions";
 import { RankFormDialog } from "./RankFormDialog";

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CLASSES_READ } from "../../api";
+import { CLASSES_READ } from "../../permissions.gen";
 import { requirePermission } from "../../shell/guards";
 import { TimetablePage } from "../../classes/TimetablePage";
 

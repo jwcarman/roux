@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { toaster } from "@jwcarman/roux-web/feedback";
-import { ATTENDANCE_RECORD, CLASSES_MANAGE, CLASSES_READ } from "../api";
+import { ATTENDANCE_RECORD, CLASSES_MANAGE, CLASSES_READ } from "../permissions.gen";
 import { formatTime } from "../shell/format";
 import { invalidFields, stale } from "../testing/problems";
 import { renderRoute } from "../testing/route";

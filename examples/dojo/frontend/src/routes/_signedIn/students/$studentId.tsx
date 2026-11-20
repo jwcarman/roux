@@ -1,7 +1,7 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { ApiError } from "@jwcarman/roux-web/api";
 import { NotFoundPage } from "@jwcarman/roux-web/feedback";
-import { STUDENTS_READ } from "../../../api";
+import { STUDENTS_READ } from "../../../permissions.gen";
 import { requirePermission } from "../../../shell/guards";
 import { StudentPage } from "../../../students/StudentPage";
 import { studentQuery } from "../../../students/students";

@@ -2,7 +2,7 @@
 import { isRedirect } from "@tanstack/react-router";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Me } from "../api";
-import { MEMBERS_READ } from "../api";
+import { MEMBERS_READ } from "../permissions.gen";
 import { requirePermission, requireSignedIn, requireSignedOut } from "./guards";
 import { takeSignInReturn as takeReturn } from "@jwcarman/roux-web/signin";
 

@@ -1,6 +1,6 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { ApiError } from "@jwcarman/roux-web/api";
-import { MEMBERS_READ } from "../../../api";
+import { MEMBERS_READ } from "../../../permissions.gen";
 import { NotFoundPage } from "@jwcarman/roux-web/feedback";
 import { requirePermission } from "../../../shell/guards";
 import { MemberDetail } from "../../../members/MemberDetail";

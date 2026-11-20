@@ -5,7 +5,7 @@ import { delay, http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { formatIsoDate } from "@jwcarman/roux-web/dates";
 import { toaster } from "@jwcarman/roux-web/feedback";
-import { ATTENDANCE_RECORD, CLASSES_READ } from "../api";
+import { ATTENDANCE_RECORD, CLASSES_READ } from "../permissions.gen";
 import type { SchoolClass } from "../classes/classes";
 import { invalidFields } from "../testing/problems";
 import { renderRoute } from "../testing/route";

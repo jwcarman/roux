@@ -24,6 +24,10 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.members.all, "detail", id] as const,
     activities: (id: string) => [...queryKeys.members.all, "activities", id] as const,
   },
+  roles: {
+    all: ["roles"] as const,
+    invitable: () => [...queryKeys.roles.all, "invitable"] as const,
+  },
   ranks: {
     all: ["ranks"] as const,
     lists: () => [...queryKeys.ranks.all, "list"] as const,
