@@ -92,6 +92,12 @@
             <optional>true</optional>
         </dependency>
         <dependency>
+            <groupId>org.jwcarman.roux</groupId>
+            <artifactId>roux-money</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
             <groupId>org.jwcarman.who</groupId>
             <artifactId>who-admin</artifactId>
             <optional>true</optional>

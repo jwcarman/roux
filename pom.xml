@@ -103,6 +103,7 @@
         <module>runtime/roux-spa</module>
         <module>runtime/roux-jpa</module>
         <module>runtime/roux-roles</module>
+        <module>runtime/roux-money</module>
         <module>runtime/roux-theme</module>
         <module>runtime/roux-email</module>
         <module>runtime/roux-autoconfigure</module>

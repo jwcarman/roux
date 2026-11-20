@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.jwcarman.jpa.spring.web.PagingWebAutoConfiguration;
+import org.jwcarman.roux.money.MoneySettings;
 import org.jwcarman.roux.problems.PagingProblemsAdvice;
 import org.jwcarman.roux.problems.ProblemsAdvice;
 import org.jwcarman.roux.problems.WhoProblemsAdvice;
@@ -59,5 +60,10 @@ class StarterTest {
   @Test
   void starterBringsWhoAdmin() {
     assertThat(context.getBeanNamesForType(LastAdminGuard.class)).hasSize(1);
+  }
+
+  @Test
+  void starterBringsRouxMoney() {
+    assertThat(context.getBeanNamesForType(MoneySettings.class)).hasSize(1);
   }
 }
