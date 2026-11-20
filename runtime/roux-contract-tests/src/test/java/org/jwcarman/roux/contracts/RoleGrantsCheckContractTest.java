@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.roles.Permissions;
 import org.jwcarman.roux.roles.check.RoleGrantsCheck;
 import org.jwcarman.roux.theme.RouxThemePermissions;
+import org.jwcarman.roux.users.RouxUserPermissions;
 import org.jwcarman.who.admin.WhoAdminPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,7 +36,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 class RoleGrantsCheckContractTest {
 
   private static final List<String> EVERY_PERMISSION =
-      Permissions.allOf(WhoAdminPermissions.class, RouxThemePermissions.class);
+      Permissions.allOf(
+          WhoAdminPermissions.class, RouxThemePermissions.class, RouxUserPermissions.class);
 
   @Autowired JdbcClient jdbc;
 

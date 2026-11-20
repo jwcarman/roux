@@ -67,4 +67,17 @@
               join who_identity i on i.id = u.id
         </createView>
     </changeSet>
+
+    <!-- roux-users' permissions for OWNER, which roux-roles' changelog creates: by name, and only if
+         missing. An app grants them to its own roles in its changelog. -->
+    <changeSet id="roux-users-3" author="roux">
+        <sql>
+            INSERT INTO who_role_permission (role_id, permission)
+              SELECT r.id, p.permission
+                FROM who_role r
+                CROSS JOIN (VALUES ('users.read'), ('users.invite'), ('users.manage')) AS p(permission)
+               WHERE r.name = 'OWNER'
+              ON CONFLICT DO NOTHING;
+        </sql>
+    </changeSet>
 </databaseChangeLog>
