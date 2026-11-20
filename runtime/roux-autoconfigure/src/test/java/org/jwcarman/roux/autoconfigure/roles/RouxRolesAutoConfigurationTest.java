@@ -25,9 +25,11 @@ import org.jwcarman.roux.roles.CallerPermissions;
 import org.jwcarman.roux.roles.InvitableRoles;
 import org.jwcarman.roux.roles.InvitableRolesController;
 import org.jwcarman.roux.roles.InvitableRolesGuard;
+import org.jwcarman.roux.roles.MemberInvitations;
 import org.jwcarman.roux.roles.OwnerBootstrap;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailCredentialService;
+import org.jwcarman.who.emaillink.InvitationService;
 import org.jwcarman.who.rbac.RbacService;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -45,6 +47,7 @@ class RouxRolesAutoConfigurationTest {
           .withBean(RbacService.class, () -> mock(RbacService.class))
           .withBean(WhoService.class, () -> mock(WhoService.class))
           .withBean(EmailCredentialService.class, () -> mock(EmailCredentialService.class))
+          .withBean(InvitationService.class, () -> mock(InvitationService.class))
           .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class));
 
   @Test
@@ -59,6 +62,13 @@ class RouxRolesAutoConfigurationTest {
     runner
         .withPropertyValues("roux.owner.email=pat@example.com", "roux.owner.name=Pat")
         .run(context -> assertThat(context).hasSingleBean(CallerPermissions.class));
+  }
+
+  @Test
+  void members_are_invited_by_name_through_roux() {
+    runner
+        .withPropertyValues("roux.owner.email=pat@example.com", "roux.owner.name=Pat")
+        .run(context -> assertThat(context).hasSingleBean(MemberInvitations.class));
   }
 
   @Test
@@ -125,6 +135,7 @@ class RouxRolesAutoConfigurationTest {
         .withBean(RbacService.class, () -> mock(RbacService.class))
         .withBean(WhoService.class, () -> mock(WhoService.class))
         .withBean(EmailCredentialService.class, () -> mock(EmailCredentialService.class))
+        .withBean(InvitationService.class, () -> mock(InvitationService.class))
         .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
         .withPropertyValues("roux.owner.email=pat@example.com", "roux.owner.name=Pat")
         .run(context -> assertThat(context).hasSingleBean(InvitableRolesController.class));

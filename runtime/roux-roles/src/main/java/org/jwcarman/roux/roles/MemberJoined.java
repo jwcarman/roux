@@ -18,12 +18,13 @@ package org.jwcarman.roux.roles;
 import java.util.UUID;
 
 /**
- * roux made the first owner. Published inside the owner's transaction, so an app's listener adds
- * its own data for the owner (a profile) in the same commit, and a listener that throws rolls the
- * owner back.
+ * A member joined: the first owner at startup, someone invited through {@link MemberInvitations},
+ * or a test's person. Published inside the transaction that creates the member, so an app's
+ * listener adds its own data for them (a profile) in the same commit, and a listener that throws
+ * rolls the member back.
  *
- * @param identityId the owner's identity
- * @param name the owner's display name, from {@code roux.owner.name}
- * @param email the owner's address, as who registered it
+ * @param identityId the member's who identity
+ * @param name the member's display name
+ * @param email the member's address, as who registered it
  */
-public record OwnerCreated(UUID identityId, String name, String email) {}
+public record MemberJoined(UUID identityId, String name, String email) {}

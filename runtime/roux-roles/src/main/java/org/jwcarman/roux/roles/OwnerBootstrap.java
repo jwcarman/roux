@@ -59,7 +59,7 @@ public class OwnerBootstrap implements ApplicationRunner {
    * @param rbac assigns OWNER
    * @param who creates the identity
    * @param emailCredentials registers the owner's address, and decides whether it is free
-   * @param events publishes {@link OwnerCreated}
+   * @param events publishes {@link MemberJoined}
    * @param transactionManager runs the owner's transaction
    * @param email {@code roux.owner.email}
    * @param name {@code roux.owner.name}
@@ -108,7 +108,7 @@ public class OwnerBootstrap implements ApplicationRunner {
             Identity owner = who.createIdentity();
             rbac.assignRoleToIdentity(owner, rbac.findRequiredRole(RouxRoles.OWNER));
             EmailCredential credential = emailCredentials.register(owner, email);
-            events.publishEvent(new OwnerCreated(owner.id(), name, credential.address()));
+            events.publishEvent(new MemberJoined(owner.id(), name, credential.address()));
             log.info("Created the first OWNER for roux.owner.email");
           });
     } catch (EmailAddressTakenException _) {

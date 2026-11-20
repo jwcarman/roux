@@ -19,9 +19,11 @@ import org.jwcarman.roux.roles.CallerPermissions;
 import org.jwcarman.roux.roles.InvitableRoles;
 import org.jwcarman.roux.roles.InvitableRolesController;
 import org.jwcarman.roux.roles.InvitableRolesGuard;
+import org.jwcarman.roux.roles.MemberInvitations;
 import org.jwcarman.roux.roles.OwnerBootstrap;
 import org.jwcarman.who.core.service.WhoService;
 import org.jwcarman.who.emaillink.EmailCredentialService;
+import org.jwcarman.who.emaillink.InvitationService;
 import org.jwcarman.who.rbac.RbacService;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -47,7 +49,7 @@ import org.springframework.transaction.PlatformTransactionManager;
       "org.jwcarman.who.autoconfigure.WhoEmailLinkAutoConfiguration"
     })
 @ConditionalOnClass(OwnerBootstrap.class)
-@ConditionalOnBean({RbacService.class, EmailCredentialService.class})
+@ConditionalOnBean({RbacService.class, EmailCredentialService.class, InvitationService.class})
 @EnableConfigurationProperties({RouxOwnerProperties.class, RouxRolesProperties.class})
 public class RouxRolesAutoConfiguration {
 
@@ -58,7 +60,7 @@ public class RouxRolesAutoConfiguration {
    * @param rbac assigns OWNER
    * @param who creates the owner's identity
    * @param emailCredentials registers the owner's address
-   * @param events publishes {@code OwnerCreated}
+   * @param events publishes {@code MemberJoined}
    * @param transactionManager runs the owner's transaction
    * @param owner {@code roux.owner.*}
    * @return the bootstrap
@@ -98,6 +100,20 @@ public class RouxRolesAutoConfiguration {
   @ConditionalOnMissingBean
   public InvitableRoles rouxInvitableRoles(RouxRolesProperties roles) {
     return new InvitableRoles(roles.invitable());
+  }
+
+  /**
+   * Invites members by name, publishing {@code MemberJoined} inside who's invitation.
+   *
+   * @param invitations who's invitations
+   * @param events publishes {@code MemberJoined}
+   * @return the service
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  public MemberInvitations rouxMemberInvitations(
+      InvitationService invitations, ApplicationEventPublisher events) {
+    return new MemberInvitations(invitations, events);
   }
 
   /**

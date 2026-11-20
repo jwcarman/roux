@@ -94,7 +94,7 @@ class OwnerBootstrapTest {
 
     bootstrap.run(null);
 
-    verify(events).publishEvent(new OwnerCreated(id, "Pat", EMAIL));
+    verify(events).publishEvent(new MemberJoined(id, "Pat", EMAIL));
   }
 
   @Test
