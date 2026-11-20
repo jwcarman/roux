@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <!-- The dojo's history moved into roux-activity-log's table (roux_activity, from its changelog).
+       Each row keeps its id, time and actor; the subject's id is the anchor, the action the type and
+       the summary the description. Old rows kept no facts, so their details are {}. -->
+  <changeSet id="activity-moved-to-roux" author="dojo">
+    <preConditions onFail="MARK_RAN">
+      <tableExists tableName="activity"/>
+    </preConditions>
+    <sql>
+      INSERT INTO roux_activity
+             (id, version, occurred_at, actor_id, anchor_id, related_ids, type, description, details)
+      SELECT id, version, occurred_at, actor_id, subject_id, '{}', action, summary, '{}'::jsonb
+        FROM activity
+    </sql>
+    <dropTable tableName="activity"/>
+  </changeSet>
+</databaseChangeLog>

@@ -67,12 +67,12 @@ class AppTestTest {
   @Test
   void resetEmptiesTheTablesItIsGiven() {
     jdbc.update(
-        "insert into activity (id, version, occurred_at, subject_type, subject_id, action, summary)"
-            + " values (gen_random_uuid(), 0, now(), 'member', gen_random_uuid(), 'x', 'y')");
+        "insert into roux_activity (id, version, occurred_at, anchor_id, type, description, details)"
+            + " values (gen_random_uuid(), 0, now(), gen_random_uuid(), 'x.y', 'y', '{}')");
 
-    members.reset("activity");
+    members.reset("roux_activity");
 
-    assertThat(jdbc.queryForObject("select count(*) from activity", Integer.class)).isZero();
+    assertThat(jdbc.queryForObject("select count(*) from roux_activity", Integer.class)).isZero();
   }
 
   @Test

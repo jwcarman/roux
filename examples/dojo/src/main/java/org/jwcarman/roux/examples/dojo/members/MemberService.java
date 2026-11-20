@@ -13,8 +13,8 @@ import jakarta.validation.constraints.Size;
 import org.jwcarman.jpa.pagination.PageDto;
 import org.jwcarman.jpa.pagination.PageSpec;
 import org.jwcarman.jpa.spring.page.Paginator;
-import org.jwcarman.roux.examples.dojo.activity.Activity;
-import org.jwcarman.roux.examples.dojo.activity.ActivityLog;
+import org.jwcarman.roux.activity.Activity;
+import org.jwcarman.roux.activity.ActivityLog;
 import org.jwcarman.roux.examples.dojo.web.ExportTooLargeException;
 import org.jwcarman.roux.jpa.Versions;
 import org.jwcarman.roux.organization.OrganizationCalendar;
@@ -131,11 +131,7 @@ public class MemberService {
     String before = profile.getDisplayName();
     profile.rename(displayName);
     if (!profile.getDisplayName().equals(before)) {
-      activityLog.record(
-          MemberActivity.SUBJECT,
-          identityId,
-          MemberActivity.RENAMED,
-          "Renamed from " + before + " to " + profile.getDisplayName());
+      activityLog.append(identityId, new MemberRenamed(before, profile.getDisplayName()));
     }
     return Profile.of(profiles.saveAndFlush(profile));
   }
@@ -234,8 +230,7 @@ public class MemberService {
         memberId,
         () -> {
           who.deactivate(memberId);
-          activityLog.record(
-              MemberActivity.SUBJECT, memberId, MemberActivity.DEACTIVATED, "Deactivated");
+          activityLog.append(memberId, new MemberDeactivated());
           return MemberDetail.of(member).withStatus(MemberStatus.DEACTIVATED.name());
         });
   }
@@ -253,7 +248,7 @@ public class MemberService {
       throw new InvariantViolationException("Already active");
     }
     who.reactivate(memberId);
-    activityLog.record(MemberActivity.SUBJECT, memberId, MemberActivity.REACTIVATED, "Reactivated");
+    activityLog.append(memberId, new MemberReactivated());
     return MemberDetail.of(member).withStatus(MemberStatus.ACTIVE.name());
   }
 
@@ -265,7 +260,7 @@ public class MemberService {
   @Transactional(readOnly = true)
   public PageDto<Activity> activities(UUID memberId, PageSpec spec) {
     entry(memberId);
-    return activityLog.history(MemberActivity.SUBJECT, memberId, spec);
+    return activityLog.history(memberId, spec);
   }
 
   /**

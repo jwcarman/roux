@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 
 import org.jwcarman.jpa.pagination.PageDto;
 import org.jwcarman.jpa.spring.web.PageParams;
+import org.jwcarman.roux.activity.Activity;
 import org.jwcarman.roux.examples.dojo.identity.Permissions;
 import org.jwcarman.roux.roles.CallerPermissions;
 import org.jwcarman.who.spring.security.RequiresPermission;
@@ -54,6 +55,13 @@ public class StudentsController {
   @RequiresPermission(Permissions.STUDENTS_READ)
   public StudentDetail detail(@PathVariable UUID id) {
     return students.detail(id);
+  }
+
+  /** The student's history; it holds payments, so only those who record them see it. */
+  @GetMapping("/{id}/activities")
+  @RequiresPermission(Permissions.PAYMENTS_RECORD)
+  public PageDto<Activity> activities(@PathVariable UUID id, @ModelAttribute PageParams params) {
+    return students.history(id, params);
   }
 
   @PostMapping

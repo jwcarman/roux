@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-import org.jwcarman.roux.examples.dojo.activity.ActivityLog;
+import org.jwcarman.roux.activity.ActivityLog;
 import org.jwcarman.roux.examples.dojo.identity.Permissions;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.problems.InvalidFieldException;
@@ -98,11 +98,7 @@ public class InviteController {
         profiles.save(
             new MemberProfile(
                 identity.id(), request.name(), EmailCredential.normalize(request.email())));
-    activityLog.record(
-        MemberActivity.SUBJECT,
-        identity.id(),
-        MemberActivity.INVITED,
-        "Invited " + profile.getDisplayName());
+    activityLog.append(identity.id(), new MemberInvited(profile.getDisplayName()));
   }
 
   /**

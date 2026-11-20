@@ -1,5 +1,6 @@
 package org.jwcarman.roux.examples.dojo.students;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
@@ -24,6 +25,7 @@ import org.jwcarman.roux.examples.dojo.TestMembers;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
@@ -39,6 +41,7 @@ class PromotionsControllerTest {
   @Autowired TestMembers members;
   @Autowired TestClock clock;
   @Autowired ObjectMapper json;
+  @Autowired JdbcTemplate jdbc;
 
   private TestMember owner;
   private String white;
@@ -47,7 +50,7 @@ class PromotionsControllerTest {
 
   @BeforeEach
   void cleanSlate() throws Exception {
-    members.reset("promotion", "student", "rank");
+    members.reset("promotion", "student", "rank", "roux_activity");
     owner = members.owner();
     white = rank("White", "WHITE");
     yellow = rank("Yellow", "YELLOW");
@@ -353,6 +356,42 @@ class PromotionsControllerTest {
                     .content(json.writeValueAsString(body)))
             .andExpect(status().isCreated())
             .andReturn());
+  }
+
+  @Test
+  void aPromotionIsInTheStudentsHistoryAndTheRanks() throws Exception {
+    String ada = student("Ada", "Lovelace");
+    promote(ada, yellow, "2026-03-01");
+
+    owner
+        .perform(get(STUDENTS + "/" + ada + "/activities"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data[0].type").value("student.promoted"))
+        .andExpect(jsonPath("$.data[0].description").value("Promoted to Yellow"))
+        .andExpect(jsonPath("$.data[0].details.rankId").value(yellow))
+        .andExpect(jsonPath("$.data[0].details.on").value("2026-03-01"));
+    assertThat(
+            jdbc.queryForList(
+                "select description from roux_activity where ?::uuid = any(related_ids)",
+                String.class,
+                yellow))
+        .containsExactly("Promoted to Yellow");
+  }
+
+  @Test
+  void takingAPromotionBackIsInTheStudentsHistory() throws Exception {
+    String ada = student("Ada", "Lovelace");
+    String promotionId =
+        promote(ada, yellow, "2026-03-01").get("promotions").get(0).get("id").asString();
+    owner
+        .perform(delete(STUDENTS + "/" + ada + "/promotions/" + promotionId))
+        .andExpect(status().isOk());
+
+    owner
+        .perform(get(STUDENTS + "/" + ada + "/activities"))
+        .andExpect(jsonPath("$.data[0].type").value("promotion.removed"))
+        .andExpect(jsonPath("$.data[0].description").value("Promotion to Yellow taken back"))
+        .andExpect(jsonPath("$.data[1].type").value("student.promoted"));
   }
 
   private JsonNode promote(String studentId, String rankId, String date) throws Exception {

@@ -21,11 +21,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.jwcarman.roux.activity.ActivityEntry;
+import org.jwcarman.roux.activity.ActivityRepository;
 import org.jwcarman.roux.examples.dojo.AppTest;
 import org.jwcarman.roux.examples.dojo.TestMember;
 import org.jwcarman.roux.examples.dojo.TestMembers;
-import org.jwcarman.roux.examples.dojo.activity.ActivityEntry;
-import org.jwcarman.roux.examples.dojo.activity.ActivityRepository;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.roles.RouxRoles;
 import org.jwcarman.who.core.service.WhoService;
@@ -41,6 +41,8 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import com.jayway.jsonpath.JsonPath;
 
+import tools.jackson.databind.ObjectMapper;
+
 @AppTest
 class MembersControllerTest {
 
@@ -55,6 +57,7 @@ class MembersControllerTest {
   @Autowired RbacService rbac;
   @Autowired MemberProfileRepository profiles;
   @Autowired ActivityRepository activities;
+  @Autowired ObjectMapper json;
 
   @BeforeEach
   void cleanSlate() {
@@ -170,8 +173,10 @@ class MembersControllerTest {
         .singleElement()
         .satisfies(
             entry -> {
-              assertThat(entry.getAction()).isEqualTo("member.renamed");
-              assertThat(entry.getSummary()).isEqualTo("Renamed from Ada Lovelace to Ada King");
+              assertThat(entry.getType()).isEqualTo("member.renamed");
+              assertThat(entry.getDescription()).isEqualTo("Renamed from Ada Lovelace to Ada King");
+              assertThat(json.readTree(entry.getDetails()))
+                  .isEqualTo(json.readTree("{\"from\":\"Ada Lovelace\",\"to\":\"Ada King\"}"));
               assertThat(entry.getActorId()).isEqualTo(ada.id());
             });
   }
@@ -195,9 +200,7 @@ class MembersControllerTest {
   }
 
   private List<ActivityEntry> activitiesOf(TestMember member) {
-    return activities
-        .findBySubjectTypeAndSubjectId("member", member.id(), PageRequest.of(0, 10))
-        .getContent();
+    return activities.history(member.id(), PageRequest.of(0, 10)).getContent();
   }
 
   @Test

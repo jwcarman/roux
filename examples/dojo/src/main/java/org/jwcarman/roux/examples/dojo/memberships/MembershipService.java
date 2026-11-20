@@ -7,7 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.jwcarman.roux.examples.dojo.activity.ActivityLog;
+import org.jwcarman.roux.activity.ActivityLog;
 import org.jwcarman.roux.examples.dojo.plans.PlanEntity;
 import org.jwcarman.roux.examples.dojo.plans.PlanRepository;
 import org.jwcarman.roux.examples.dojo.students.PaymentState;
@@ -104,11 +104,10 @@ public class MembershipService {
         });
     MembershipEntity membership =
         memberships.saveAndFlush(new MembershipEntity(studentId, plan, request.startDate()));
-    activityLog.record(
-        MembershipActivity.SUBJECT,
+    activityLog.append(
         studentId,
-        MembershipActivity.STARTED,
-        "Membership started: " + plan.getName());
+        new MembershipStarted(plan.getId(), plan.getName(), request.startDate()),
+        plan.getId());
     return view(student, membership, List.of());
   }
 
@@ -133,11 +132,15 @@ public class MembershipService {
                 request.takenOn(),
                 request.method(),
                 request.note()));
-    activityLog.record(
-        MembershipActivity.SUBJECT,
+    activityLog.append(
         studentId,
-        MembershipActivity.PAYMENT_RECORDED,
-        "Payment recorded: " + describe(payment));
+        new PaymentRecorded(
+            payment.getId(),
+            payment.getPeriods(),
+            payment.getAmount(),
+            each(payment),
+            payment.getTakenOn(),
+            payment.getMethod()));
     return paymentView(payment);
   }
 
@@ -156,11 +159,15 @@ public class MembershipService {
         .orElseThrow(() -> new PaymentNotFoundException(paymentId));
     payments.delete(payment);
     payments.flush();
-    activityLog.record(
-        MembershipActivity.SUBJECT,
+    activityLog.append(
         studentId,
-        MembershipActivity.PAYMENT_REMOVED,
-        "Payment removed: " + describe(payment));
+        new PaymentRemoved(
+            payment.getId(),
+            payment.getPeriods(),
+            payment.getAmount(),
+            each(payment),
+            payment.getTakenOn(),
+            payment.getMethod()));
   }
 
   private MembershipView view(
@@ -195,10 +202,11 @@ public class MembershipService {
   }
 
   /** "2 × $150.00": the periods and the price each was paid at (the amount always divides). */
-  private String describe(PaymentEntity payment) {
+  /** One period's price, as the school writes it ({@code $150.00}). */
+  private String each(PaymentEntity payment) {
     Money amount = payment.getAmount();
-    Money each = Money.of(amount.minorUnits() / payment.getPeriods(), amount.currency());
-    return payment.getPeriods() + " × " + each.format(calendar.locale());
+    return Money.of(amount.minorUnits() / payment.getPeriods(), amount.currency())
+        .format(calendar.locale());
   }
 
   private StudentEntity locked(UUID studentId) {

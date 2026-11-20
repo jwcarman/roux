@@ -2,6 +2,7 @@ package org.jwcarman.roux.examples.dojo.students;
 
 import java.util.UUID;
 
+import org.jwcarman.roux.activity.ActivityLog;
 import org.jwcarman.roux.examples.dojo.ranks.RankEntity;
 import org.jwcarman.roux.examples.dojo.ranks.RankRepository;
 import org.jwcarman.roux.problems.ConflictException;
@@ -18,16 +19,19 @@ public class PromotionService {
   private final StudentRepository students;
   private final RankRepository ranks;
   private final StudentService studentService;
+  private final ActivityLog activityLog;
 
   public PromotionService(
       PromotionRepository promotions,
       StudentRepository students,
       RankRepository ranks,
-      StudentService studentService) {
+      StudentService studentService,
+      ActivityLog activityLog) {
     this.promotions = promotions;
     this.students = students;
     this.ranks = ranks;
     this.studentService = studentService;
+    this.activityLog = activityLog;
   }
 
   /**
@@ -52,6 +56,8 @@ public class PromotionService {
           student.getFirstName() + " " + student.getLastName(), rank.getName());
     }
     promotions.saveAndFlush(new PromotionEntity(studentId, rank, request.date()));
+    activityLog.append(
+        studentId, new StudentPromoted(rank.getId(), rank.getName(), request.date()), rank.getId());
     return studentService.detail(studentId);
   }
 
@@ -68,8 +74,13 @@ public class PromotionService {
         promotions
             .findByIdAndStudentId(promotionId, studentId)
             .orElseThrow(() -> new PromotionNotFoundException(promotionId));
+    RankEntity rank = promotion.getRank();
     promotions.delete(promotion);
     promotions.flush();
+    activityLog.append(
+        studentId,
+        new PromotionRemoved(rank.getId(), rank.getName(), promotion.getPromotedOn()),
+        rank.getId());
     return studentService.detail(studentId);
   }
 

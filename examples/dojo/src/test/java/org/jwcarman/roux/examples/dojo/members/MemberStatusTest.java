@@ -19,10 +19,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.jwcarman.roux.activity.ActivityLog;
 import org.jwcarman.roux.examples.dojo.AppTest;
 import org.jwcarman.roux.examples.dojo.TestMember;
 import org.jwcarman.roux.examples.dojo.TestMembers;
-import org.jwcarman.roux.examples.dojo.activity.ActivityLog;
 import org.jwcarman.roux.examples.dojo.identity.Permissions;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
 import org.jwcarman.roux.roles.RouxRoles;
@@ -51,7 +51,7 @@ class MemberStatusTest {
 
   @BeforeEach
   void cleanSlate() {
-    members.reset("activity");
+    members.reset("roux_activity");
     owner = members.owner();
     ada = members.signedIn("Ada Lovelace", "ada@example.org", Roles.MEMBER);
   }
@@ -121,18 +121,18 @@ class MemberStatusTest {
         .browser()
         .perform(get(path(ada.id()) + "/activities"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data[0].action").value("member.reactivated"))
-        .andExpect(jsonPath("$.data[0].summary").value("Reactivated"))
+        .andExpect(jsonPath("$.data[0].type").value("member.reactivated"))
+        .andExpect(jsonPath("$.data[0].description").value("Reactivated"))
         .andExpect(jsonPath("$.data[0].actorName").value("Test Owner"))
-        .andExpect(jsonPath("$.data[1].action").value("member.deactivated"))
-        .andExpect(jsonPath("$.data[1].summary").value("Deactivated"))
+        .andExpect(jsonPath("$.data[1].type").value("member.deactivated"))
+        .andExpect(jsonPath("$.data[1].description").value("Deactivated"))
         .andExpect(jsonPath("$.pagination.totalElementCount").value(2));
   }
 
   @Test
-  void anEntryWithNoActorIsBySystemAndOneWhoseActorIsGoneIsByAFormerMember() throws Exception {
+  void anEntryWithNoActorIsBySystemAndOneWhoseActorIsGoneIsUnknown() throws Exception {
     tx.executeWithoutResult(
-        _ -> activityLog.record("member", ada.id(), "member.renamed", "Renamed"));
+        _ -> activityLog.append(ada.id(), new MemberRenamed("Ada", "Ada King")));
     TestMember grace = members.signedIn("Grace Hopper", "grace@example.org", RouxRoles.OWNER);
     grace.browser().perform(post(path(ada.id()) + "/deactivate")).andExpect(status().isOk());
     who.deleteIdentity(grace.id());
@@ -140,7 +140,7 @@ class MemberStatusTest {
     owner
         .browser()
         .perform(get(path(ada.id()) + "/activities"))
-        .andExpect(jsonPath("$.data[0].actorName").value("A former member"))
+        .andExpect(jsonPath("$.data[0].actorName").value("Unknown"))
         .andExpect(jsonPath("$.data[1].actorName").value("System"));
   }
 

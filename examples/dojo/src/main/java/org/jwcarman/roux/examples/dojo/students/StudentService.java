@@ -10,6 +10,8 @@ import java.util.UUID;
 import org.jwcarman.jpa.pagination.PageDto;
 import org.jwcarman.jpa.pagination.PageSpec;
 import org.jwcarman.jpa.spring.page.Paginator;
+import org.jwcarman.roux.activity.Activity;
+import org.jwcarman.roux.activity.ActivityLog;
 import org.jwcarman.roux.jpa.Versions;
 import org.jwcarman.roux.organization.OrganizationCalendar;
 import org.jwcarman.roux.problems.ConflictException;
@@ -39,16 +41,19 @@ public class StudentService {
   private final StudentListRepository list;
   private final PromotionRepository promotions;
   private final OrganizationCalendar calendar;
+  private final ActivityLog activityLog;
 
   public StudentService(
       StudentRepository students,
       StudentListRepository list,
       PromotionRepository promotions,
-      OrganizationCalendar calendar) {
+      OrganizationCalendar calendar,
+      ActivityLog activityLog) {
     this.students = students;
     this.list = list;
     this.promotions = promotions;
     this.calendar = calendar;
+    this.activityLog = activityLog;
   }
 
   /**
@@ -161,5 +166,18 @@ public class StudentService {
   private static Pageable nullsLast(Pageable pageable) {
     Sort sort = Sort.by(pageable.getSort().stream().map(Order::nullsLast).toList());
     return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+  }
+
+  /**
+   * The student's history, newest first: memberships, payments and promotions.
+   *
+   * @throws StudentNotFoundException if there is no such student
+   */
+  @Transactional(readOnly = true)
+  public PageDto<Activity> history(UUID id, PageSpec page) {
+    if (!students.existsById(id)) {
+      throw new StudentNotFoundException(id);
+    }
+    return activityLog.history(id, page);
   }
 }

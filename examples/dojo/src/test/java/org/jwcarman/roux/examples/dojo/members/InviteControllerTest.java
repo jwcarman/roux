@@ -14,10 +14,10 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.jwcarman.roux.activity.ActivityRepository;
 import org.jwcarman.roux.examples.dojo.AppTest;
 import org.jwcarman.roux.examples.dojo.RecordingWhoEmailSender;
 import org.jwcarman.roux.examples.dojo.TestMembers;
-import org.jwcarman.roux.examples.dojo.activity.ActivityRepository;
 import org.jwcarman.who.core.domain.IdentityStatus;
 import org.jwcarman.who.core.domain.WhoPrincipal;
 import org.jwcarman.who.core.service.WhoService;
@@ -157,12 +157,12 @@ class InviteControllerTest {
     invite("Ada Lovelace", "ada@example.org").andExpect(status().isAccepted());
 
     UUID adaId = identityOf(emailCredentials.findByAddress("ada@example.org").orElseThrow());
-    assertThat(activities.findBySubjectTypeAndSubjectId("member", adaId, PageRequest.of(0, 10)))
+    assertThat(activities.history(adaId, PageRequest.of(0, 10)))
         .singleElement()
         .satisfies(
             entry -> {
-              assertThat(entry.getAction()).isEqualTo("member.invited");
-              assertThat(entry.getSummary()).isEqualTo("Invited Ada Lovelace");
+              assertThat(entry.getType()).isEqualTo("member.invited");
+              assertThat(entry.getDescription()).isEqualTo("Invited Ada Lovelace");
               assertThat(entry.getActorId()).isEqualTo(ownerId);
             });
   }

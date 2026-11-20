@@ -57,7 +57,7 @@ class MembershipsControllerTest {
 
   @BeforeEach
   void cleanSlate() {
-    members.reset("payment", "membership", "plan", "student", "activity");
+    members.reset("payment", "membership", "plan", "student", "roux_activity");
     clock.set("2026-04-01T12:00:00Z");
     ivy = members.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
     monthly =
@@ -243,8 +243,8 @@ class MembershipsControllerTest {
 
     List<String> summaries =
         jdbc.queryForList(
-            "select summary from activity where subject_type = 'student' and subject_id = ?"
-                + " order by occurred_at, summary",
+            "select description from roux_activity where anchor_id = ?"
+                + " order by occurred_at, description",
             String.class,
             maya);
     assertThat(summaries)
@@ -252,6 +252,35 @@ class MembershipsControllerTest {
             "Membership started: Monthly unlimited",
             "Payment recorded: 2 × $150.00",
             "Payment removed: 2 × $150.00");
+  }
+
+  @Test
+  void theStudentsHistoryIsNewestFirstWithTheFactsKept() throws Exception {
+    start(maya, monthly.getId(), "2026-03-15");
+    clock.set("2026-04-01T12:05:00Z");
+    pay(maya, 2, "2026-04-01", "CARD", null);
+
+    ivy.browser()
+        .perform(get("/api/students/" + maya + "/activities"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data[0].type").value("payment.recorded"))
+        .andExpect(jsonPath("$.data[0].description").value("Payment recorded: 2 × $150.00"))
+        .andExpect(jsonPath("$.data[0].details.periods").value(2))
+        .andExpect(jsonPath("$.data[0].details.amount.minorUnits").value(30000))
+        .andExpect(jsonPath("$.data[0].details.takenOn").value("2026-04-01"))
+        .andExpect(jsonPath("$.data[0].actorName").value("Ivy Instructor"))
+        .andExpect(jsonPath("$.data[1].type").value("membership.started"))
+        .andExpect(jsonPath("$.data[1].details.plan").value("Monthly unlimited"))
+        .andExpect(jsonPath("$.pagination.totalElementCount").value(2));
+  }
+
+  @Test
+  void aMemberCannotSeeTheStudentsHistory() throws Exception {
+    TestMember max = members.signedIn("Max", "max@example.org", Roles.MEMBER);
+
+    max.browser()
+        .perform(get("/api/students/" + maya + "/activities"))
+        .andExpect(status().isForbidden());
   }
 
   @Test

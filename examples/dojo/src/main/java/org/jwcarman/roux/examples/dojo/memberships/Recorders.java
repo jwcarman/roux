@@ -1,10 +1,10 @@
 package org.jwcarman.roux.examples.dojo.memberships;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
-import org.jwcarman.roux.examples.dojo.members.MemberProfile;
-import org.jwcarman.roux.examples.dojo.members.MemberProfileRepository;
+import org.jwcarman.roux.activity.ActorNames;
 import org.springframework.stereotype.Component;
 
 /** Who recorded a payment, by name, from its auditing {@code createdBy} (an identity id). */
@@ -13,17 +13,16 @@ class Recorders {
 
   static final String UNKNOWN = "Unknown";
 
-  private final MemberProfileRepository profiles;
+  private final ActorNames names;
 
-  Recorders(MemberProfileRepository profiles) {
-    this.profiles = profiles;
+  Recorders(ActorNames names) {
+    this.names = names;
   }
 
   /** The member's display name, or {@value #UNKNOWN} without a profile (or for "system"). */
   String nameOf(String createdBy) {
     return parse(createdBy)
-        .flatMap(profiles::findById)
-        .map(MemberProfile::getDisplayName)
+        .map(id -> names.namesOf(Set.of(id)).getOrDefault(id, UNKNOWN))
         .orElse(UNKNOWN);
   }
 

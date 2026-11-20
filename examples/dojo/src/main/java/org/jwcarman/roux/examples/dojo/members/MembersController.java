@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size;
 
 import org.jwcarman.jpa.pagination.PageDto;
 import org.jwcarman.jpa.spring.web.PageParams;
-import org.jwcarman.roux.examples.dojo.activity.Activity;
+import org.jwcarman.roux.activity.Activity;
 import org.jwcarman.roux.examples.dojo.identity.Permissions;
 import org.jwcarman.roux.examples.dojo.members.MemberService.Member;
 import org.jwcarman.roux.examples.dojo.members.MemberService.MemberDetail;
