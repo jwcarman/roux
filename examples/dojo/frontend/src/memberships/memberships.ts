@@ -112,6 +112,7 @@ function refreshes(studentId: string) {
   return {
     refreshes: [
       queryKeys.students.memberships(studentId),
+      queryKeys.students.activities(studentId),
       queryKeys.students.lists(),
       queryKeys.payments.all,
       queryKeys.plans.all,

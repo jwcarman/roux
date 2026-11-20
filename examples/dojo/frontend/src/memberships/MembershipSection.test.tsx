@@ -56,6 +56,11 @@ const CURRENT: MembershipView = {
   ],
 };
 
+const EMPTY_HISTORY = {
+  data: [],
+  pagination: { pageIndex: 0, pageSize: 20, totalElementCount: 0, totalPageCount: 0, hasNext: false, hasPrevious: false },
+};
+
 const RECORDS = { permissions: [STUDENTS_READ, PAYMENTS_RECORD] };
 
 /** The student page's endpoints, with `memberships` (which a test may change) for Maya. */
@@ -64,6 +69,7 @@ function serve(memberships: () => StudentMemberships) {
     http.get("/api/students/s1", () => HttpResponse.json(MAYA)),
     http.get("/api/plans/active", () => HttpResponse.json([MONTHLY])),
     http.get("/api/students/s1/memberships", () => HttpResponse.json(memberships())),
+    http.get("/api/students/s1/activities", () => HttpResponse.json(EMPTY_HISTORY)),
   );
 }
 

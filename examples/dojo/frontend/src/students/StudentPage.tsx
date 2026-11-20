@@ -8,11 +8,12 @@ import { ATTENDANCE_READ, PAYMENTS_RECORD, PROMOTIONS_MANAGE, STUDENTS_MANAGE } 
 import { MembershipSection } from "../memberships/MembershipSection";
 import { ClassesSincePromotion, StudentAttendanceList } from "../attendance/StudentAttendanceList";
 import { RankSwatch } from "../ranks/RankSwatch";
+import { ActivityList } from "@jwcarman/roux-web/activity";
 import { formatDate } from "@jwcarman/roux-web/dates";
 import { useSession } from "../shell/session";
 import { PromoteDialog } from "./PromoteDialog";
 import { StudentActions } from "./StudentActions";
-import { removePromotion, studentQuery, type Promotion, type StudentDetail } from "./students";
+import { removePromotion, studentActivitiesPage, studentQuery, type Promotion, type StudentDetail } from "./students";
 
 const route = getRouteApi("/_signedIn/students/$studentId");
 
@@ -98,6 +99,14 @@ export function StudentPage() {
       </Flex>
       <PromotionHistory student={student} canRemove={promotes} />
       {readsAttendance && <StudentAttendanceList studentId={student.id} />}
+      {recordsPayments && (
+        <Stack gap="3">
+          <Heading as="h3" size="md">
+            History
+          </Heading>
+          <ActivityList aria-label="History" query={studentActivitiesPage(student.id)} />
+        </Stack>
+      )}
     </Stack>
   );
 }

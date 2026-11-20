@@ -49,5 +49,6 @@ export const queryKeys = {
     attendance: (id: string) => [...queryKeys.students.detail(id), "attendance"] as const,
     sincePromotion: (id: string) => [...queryKeys.students.detail(id), "since-promotion"] as const,
     memberships: (id: string) => [...queryKeys.students.detail(id), "memberships"] as const,
+    activities: (id: string) => [...queryKeys.students.detail(id), "activities"] as const,
   },
 };

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { toaster } from "@jwcarman/roux-web/feedback";
-import { PROMOTIONS_MANAGE, STUDENTS_MANAGE, STUDENTS_READ } from "../permissions.gen";
+import { PAYMENTS_RECORD, PROMOTIONS_MANAGE, STUDENTS_MANAGE, STUDENTS_READ } from "../permissions.gen";
 import type { Rank } from "../ranks/ranks";
 import { invalidFields } from "../testing/problems";
 import { renderRoute } from "../testing/route";
@@ -161,6 +161,43 @@ describe("StudentPage", () => {
 
     expect(await screen.findByRole("status")).toHaveTextContent("The promotion to Yellow was removed");
     await waitFor(() => expect(screen.getByText("Current rank").nextElementSibling).toHaveTextContent("White"));
+  });
+
+  it("shows the student's history to someone who records payments", async () => {
+    serve();
+    server.use(
+      http.get("/api/students/s1/memberships", () => HttpResponse.json({ current: null, past: [] })),
+      http.get("/api/plans/active", () => HttpResponse.json([])),
+      http.get("/api/students/s1/activities", () =>
+        HttpResponse.json({
+          data: [
+            {
+              id: "a1",
+              occurredAt: "2026-06-14T12:00:00Z",
+              type: "student.promoted",
+              description: "Promoted to Yellow",
+              actorId: "m1",
+              actorName: "James",
+              details: { rank: "Yellow" },
+            },
+          ],
+          pagination: { pageIndex: 0, pageSize: 20, totalElementCount: 1, totalPageCount: 1, hasNext: false, hasPrevious: false },
+        }),
+      ),
+    );
+    renderRoute("/students/s1", { permissions: [STUDENTS_READ, PAYMENTS_RECORD] });
+
+    const history = await screen.findByRole("list", { name: "History" });
+    expect(await within(history).findByText("Promoted to Yellow")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "History" })).toBeInTheDocument();
+  });
+
+  it("hides the history from someone who does not record payments", async () => {
+    serve();
+    renderRoute("/students/s1", READ);
+
+    expect(await screen.findByRole("heading", { name: "Ada Lovelace" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "History" })).not.toBeInTheDocument();
   });
 
   it("shows not-found for a student that does not exist", async () => {

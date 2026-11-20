@@ -10,7 +10,7 @@ import { LuUserCheck, LuUserX } from "react-icons/lu";
 import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, useConfirm } from "@jwcarman/roux-web/feedback";
 import type { MemberDetail } from "../api";
-import { ActivityList } from "../activity/ActivityList";
+import { ActivityList } from "@jwcarman/roux-web/activity";
 import {
   activitiesPage,
   changeMemberStatus,

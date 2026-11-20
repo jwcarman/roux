@@ -1,6 +1,7 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
 import { date, email, id, phone, text } from "@jwcarman/roux-web/form";
+import type { Activity } from "@jwcarman/roux-web/activity";
 import { pageQuery, type PageDto, type PageParams } from "@jwcarman/roux-web/paging";
 import { z } from "zod";
 import { queryKeys } from "../queryKeys";
@@ -89,6 +90,8 @@ export const studentsApi = {
   list: (params: PageParams & StudentFilters, signal?: AbortSignal) =>
     getJson<PageDto<Student>>("students", { params, signal }),
   get: (id: string, signal?: AbortSignal) => getJson<StudentDetail>(path`students/${id}`, { signal }),
+  activities: (id: string, pageIndex: number, signal?: AbortSignal) =>
+    getJson<PageDto<Activity>>(path`students/${id}/activities`, { params: { pageIndex }, signal }),
   create: (request: StudentRequest) => sendJson<StudentDetail>("POST", "students", request),
   update: (id: string, request: StudentRequest & { version: number }) =>
     sendJson<StudentDetail>("PUT", path`students/${id}`, request),
@@ -148,3 +151,10 @@ export const removePromotion = (studentId: string) =>
     mutationFn: (promotionId: string) => studentsApi.removePromotion(studentId, promotionId),
     meta: { refreshes: [queryKeys.students.detail(studentId), queryKeys.students.lists()] },
   });
+
+/** A student's history (memberships, payments, promotions), newest first, as an ActivityList takes it. */
+export function studentActivitiesPage(id: string) {
+  return pageQuery(queryKeys.students.activities(id), ({ pageIndex = 0 }, signal) =>
+    studentsApi.activities(id, pageIndex, signal),
+  );
+}

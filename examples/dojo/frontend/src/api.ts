@@ -33,13 +33,3 @@ export interface MemberDetail extends Member {
   joinedAt: string;
 }
 
-/** A line of history: what changed, who changed it and when. */
-export interface Activity {
-  id: string;
-  occurredAt: string;
-  action: string;
-  summary: string;
-  /** Their display name, "System", or "A former member". */
-  actorName: string;
-}
-
