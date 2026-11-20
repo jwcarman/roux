@@ -8,6 +8,23 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- Roles and permissions (`docs/guides/roles.md`). What changes for a roux app:
+  - Set `roux.owner.email` and `roux.owner.name` (both required; startup fails naming the missing one). While
+    no active identity holds `OWNER`, roux creates one at startup and publishes `OwnerCreated` in its
+    transaction. Delete the app's own owner bootstrap; an app that keeps a profile per person listens for
+    `OwnerCreated`.
+  - Set `roux.roles.invitable` to the roles an invitation may give (empty by default, so every invitation is
+    refused until it is set; `OWNER` may not be listed). roux refuses any other role inside the invitation's
+    transaction, and serves the list at `GET /api/roles/invitable`.
+  - The app's roles move to a Liquibase changeset that creates them and grants their permissions by name
+    (`ON CONFLICT DO NOTHING`), and grants `OWNER` the app's own permissions. Remove startup code that
+    creates or syncs roles.
+  - roux-theme's `ThemeController.MANAGE` is `RouxThemePermissions.THEME_MANAGE`; roux-theme's changelog
+    grants `theme.manage` to `OWNER` (changeset `roux-theme-2`).
+  - The starter brings who-admin. Deactivating someone or removing a role in the app's own service goes
+    through who-admin's `LastAdminGuard`, which refuses to leave no active identity that may manage people
+    (only `OWNER` does, by default). roux answers `LastAdminException` as a `409` problem with code
+    `last-admin`.
 - Spring Boot 4.1.3 (was 4.1.2), the version migratory 0.1.0 is built against.
 - who 0.25.0 (was 0.24.0), `@jwcarman/who-client` 0.25.0, and libraries' tables through
   [migratory](https://github.com/jwcarman/migratory) 0.1.0, which who brings. What changes for a roux app:
@@ -45,6 +62,11 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- `roux-roles`, in the starter: `RouxRoles.OWNER`, created by its changelog with who-admin's permissions;
+  the first owner (`OwnerBootstrap`, `OwnerCreated`); invitable roles (`InvitableRoles`, its guard and
+  `GET /api/roles/invitable`); `Permissions.allOf`; and, for an app's roles test, `RoleGrantsCheck` (the
+  grants match the constants) and `PermissionsTypeScript` (writes and checks the frontend's
+  `permissions.gen.ts`).
 - `roux-email`, in the starter: who's five emails (sign-in, invitation, address-confirmation, address-changed,
   passkey-added) finished. Each names the app in its subject and bodies, in who's wording, as plain text and as
   one HTML card (tables and inline styles, no images or web fonts) with the action in the brand colour.

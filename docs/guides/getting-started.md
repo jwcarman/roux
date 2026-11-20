@@ -88,10 +88,17 @@ optional: the app does not start without them.
 
 ## Required settings
 
-who's two sign-in methods fail startup until they are configured, and the message names the
-missing setting. In `application.yml`, for development on `http://localhost:8080`:
+who's two sign-in methods and roux's first owner fail startup until they are configured, and the
+message names the missing setting. In `application.yml`, for development on `http://localhost:8080`:
 
 ```yaml
+roux:
+  owner:                     # the first owner, made at startup while no active owner exists
+    email: you@example.com
+    name: You
+  roles:
+    invitable: [MEMBER]      # the roles an invitation may give (never OWNER); empty by default
+
 spring:
   mail:
     host: localhost   # an SMTP server; in development, Mailpit or similar
@@ -113,6 +120,8 @@ who:
 
 | Setting | What it is |
 | --- | --- |
+| `roux.owner.email`, `roux.owner.name` | The first owner: while no active identity holds `OWNER`, roux creates one at startup with this address and display name, and publishes `OwnerCreated` in its transaction (an app adds its own data for the owner by listening). Once an active owner exists these change nothing. Required. See `roles.md`. |
+| `roux.roles.invitable` | The roles an invitation may give, in the order an invite form offers them (`GET /api/roles/invitable`). Empty by default, so no invitation passes until it is set; listing `OWNER` fails startup. |
 | `spring.mail.host` | The SMTP server who's emails go through (`who-email-smtp`, over Spring Boot's `JavaMailSender`). Instead of SMTP, an app may register its own `WhoEmailSender` bean (leave out `who-email-smtp`, keep `who-email`): it only delivers, receiving every who email already rendered as an `OutgoingEmail` (`to`, `subject`, `text`, an optional `html`, and the `source` record it was rendered from). Send `text` as `text/plain`, never inside HTML: it is not escaped. roux ships the five emails finished, naming the app and wearing its brand colour; an app replaces one by dropping its own template file, and a subject is the message `who.email.<template>.subject` (see `email.md`). |
 | `who.email-link.link-base-url` | The app's page that receives sign-in links; who appends `#token=...`. Required. |
 | `who.email-link.code-secret` | Keys the typed sign-in codes: at least 32 characters, the same on every instance, from the environment in production. Required. |
@@ -123,7 +132,8 @@ who:
 
 who's and roux's tables need no include. Each library declares its own changelog to
 [migratory](https://github.com/jwcarman/migratory), which who brings, and migratory runs them in
-order (who's, then roux-theme's when the app has it) before the app's own master changelog. The app's
+order (who's, then roux-roles', which creates `OWNER`, then roux-theme's when the app has it)
+before the app's own master changelog. The app's
 changelog holds only its own changesets, and may refer to who's and roux's tables. Three things
 follow:
 
@@ -375,7 +385,7 @@ neither does not start), `palette` (`gray`), `brand-color` (`#3b82f6`), `shape` 
 changelog the jar ships (migratory runs it), whose columns are null until the owner chooses (`roux.theme.*` stands for every part
 not chosen, so the answer is always a whole theme). It brings:
 
-- `GET /api/theme`, open to anyone, signed out too (the sign-in page needs its look): the whole
+- `GET /api/theme` (`ThemeController`), open to anyone, signed out too (the sign-in page needs its look): the whole
   theme and its `version`, 0 until the first save.
 - `PUT /api/theme`, for whoever holds the `theme.manage` permission
   (`RouxThemePermissions.THEME_MANAGE`; roux-theme's changelog grants it to `OWNER`): a `ThemeRequest` with the `version` the owner read. A stale one is a
