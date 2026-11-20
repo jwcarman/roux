@@ -16,7 +16,7 @@
 package org.jwcarman.roux.users;
 
 /**
- * The permissions roux's users endpoints check. roux-users' changelog grants all three to {@code
+ * The permissions roux's users endpoints check. roux-users' changelog grants all four to {@code
  * OWNER}; an app grants them to its own roles in its changelog.
  */
 public final class RouxUserPermissions {
@@ -29,6 +29,12 @@ public final class RouxUserPermissions {
 
   /** Rename someone, change their role, deactivate or reactivate them, sign them out everywhere. */
   public static final String USERS_MANAGE = "users.manage";
+
+  /**
+   * Make an existing user an owner (with a recent sign-in). Leave it to {@code OWNER}: whoever
+   * holds it can hand out everything.
+   */
+  public static final String USERS_OWNERS = "users.owners";
 
   private RouxUserPermissions() {}
 }

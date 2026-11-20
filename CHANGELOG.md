@@ -73,8 +73,9 @@ All notable changes to this project are documented in this file. The format foll
   table `roux_user`, made by roux's `UserJoined` listener), the read-only directory
   (`roux_user_directory`, `UserDirectory`, `UserFilter`, `UserSort`), and the users endpoints under
   `/api/users` (`GET`/`PUT /me`, list, detail, history, invite, resend an invitation, rename, change
-  role, deactivate, reactivate, sign out everywhere), behind `users.read`, `users.invite` and
-  `users.manage` (`RouxUserPermissions`), which roux-users' changelog grants to `OWNER`. Each change
+  role, deactivate, reactivate, sign out everywhere, and make an existing user an owner with a
+  recent sign-in), behind `users.read`, `users.invite`, `users.manage` and `users.owners`
+  (`RouxUserPermissions`), which roux-users' changelog grants to `OWNER`. Each change
   is an activity (`user.invited`, `user.renamed`, `user.deactivated`, `user.reactivated`,
   `user.role_changed`), and the activity log names actors after their `AppUser`
   (`AppUserActorNames`). What changes for a roux app: delete its own profile table, directory,

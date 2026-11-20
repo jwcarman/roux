@@ -10,8 +10,8 @@ changesets like any schema.
 - **`OWNER`** (`RouxRoles.OWNER`). roux-roles' changelog creates it and grants it who-admin's
   permissions (`who.identities.read`, `who.identities.manage`). Each roux module grants `OWNER` its own
   permissions in its own changelog: roux-theme grants `theme.manage`
-  (`RouxThemePermissions.THEME_MANAGE`), and roux-users grants `users.read`, `users.invite` and
-  `users.manage` (`RouxUserPermissions`, [Users](users.md)). A roux upgrade that adds a permission brings its grant with it.
+  (`RouxThemePermissions.THEME_MANAGE`), and roux-users grants `users.read`, `users.invite`,
+  `users.manage` and `users.owners` (`RouxUserPermissions`, [Users](users.md)). A roux upgrade that adds a permission brings its grant with it.
   The app grants `OWNER` its own permissions.
 - **The first owner**, from `roux.owner.email` and `roux.owner.name` (both required). While no active
   identity holds `OWNER`, roux creates one at startup and publishes `UserJoined` for it inside that

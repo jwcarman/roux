@@ -409,6 +409,46 @@ class UsersTest {
   }
 
   @Nested
+  class Making_an_owner {
+
+    private final Role ownerRole = new Role(UUID.randomUUID(), "OWNER");
+
+    @BeforeEach
+    void theOwnerRole() {
+      when(rbac.findRequiredRole("OWNER")).thenReturn(ownerRole);
+    }
+
+    @Test
+    void gives_them_owner_in_place_of_their_role_and_records_it() {
+      when(rbac.findRolesForIdentity(ada)).thenReturn(List.of(member));
+
+      assertThat(service.makeOwner(ada).id()).isEqualTo(ada);
+
+      lockTaken();
+      verify(rbac).removeRoleFromIdentity(any(Identity.class), eq(member));
+      verify(rbac).assignRoleToIdentity(any(Identity.class), eq(ownerRole));
+      verify(activityLog).append(ada, new UserRoleChanged("MEMBER", "OWNER"));
+    }
+
+    @Test
+    void an_owner_already_changes_nothing() {
+      when(rbac.findRolesForIdentity(ada)).thenReturn(List.of(ownerRole));
+
+      service.makeOwner(ada);
+
+      verify(rbac, never()).assignRoleToIdentity(any(), any());
+      verifyNoInteractions(activityLog);
+    }
+
+    @Test
+    void someone_who_is_not_a_user_is_not_found() {
+      UUID nobody = UUID.randomUUID();
+
+      assertThatThrownBy(() -> service.makeOwner(nobody)).isInstanceOf(UserNotFoundException.class);
+    }
+  }
+
+  @Nested
   class Status {
 
     @Test

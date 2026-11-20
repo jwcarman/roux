@@ -22,6 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -412,6 +413,65 @@ class UsersContractTest {
           .perform(json(put("/api/users/" + owner.id() + "/role"), "{\"role\":\"MEMBER\"}"))
           .andExpect(status().isConflict())
           .andExpect(jsonPath("$.code").value("last-admin"));
+    }
+  }
+
+  @Nested
+  class Making_an_owner {
+
+    @Test
+    void an_owner_makes_an_existing_user_an_owner() throws Exception {
+      owner
+          .perform(post("/api/users/" + ada.id() + "/owner"))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.role").value("OWNER"));
+
+      assertThat(rbac.findRolesForIdentity(ada.id()))
+          .extracting(Role::name)
+          .containsExactly("OWNER");
+      lastActivityIs(ada.id(), "user.role_changed");
+    }
+
+    @Test
+    void an_owner_stays_an_owner_with_nothing_recorded() throws Exception {
+      owner.perform(post("/api/users/" + ada.id() + "/owner")).andExpect(status().isOk());
+      owner.perform(post("/api/users/" + ada.id() + "/owner")).andExpect(status().isOk());
+
+      owner
+          .perform(get("/api/users/" + ada.id() + "/activities"))
+          .andExpect(jsonPath("$.data.length()").value(1));
+    }
+
+    @Test
+    void needs_a_recent_sign_in() throws Exception {
+      UUID credential = emails.findByAddress("owner@roux.test").orElseThrow().id();
+      WhoMockMvcBrowser longAgo =
+          new WhoMockMvcBrowser(mvc)
+              .signedInAs(owner.id(), credential, Instant.now().minus(Duration.ofHours(1)));
+
+      longAgo
+          .perform(post("/api/users/" + ada.id() + "/owner"))
+          .andExpect(status().isUnauthorized());
+      assertThat(rbac.findRolesForIdentity(ada.id()))
+          .extracting(Role::name)
+          .containsExactly("MEMBER");
+    }
+
+    @Test
+    void needs_users_owners_not_just_users_manage() throws Exception {
+      Role manager = rbac.findRole("MANAGER").orElseGet(() -> rbac.createRole("MANAGER"));
+      rbac.addPermissionToRole(manager, RouxUserPermissions.USERS_MANAGE);
+      Person grace = joins("Grace Hopper", "MEMBER");
+      rbac.assignRoleToIdentity(identities.findById(grace.id()).orElseThrow(), manager);
+
+      grace.perform(post("/api/users/" + ada.id() + "/owner")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void an_unknown_user_is_not_found() throws Exception {
+      owner
+          .perform(post("/api/users/" + UUID.randomUUID() + "/owner"))
+          .andExpect(status().isNotFound());
     }
   }
 

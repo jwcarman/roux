@@ -29,6 +29,7 @@ import org.jwcarman.roux.problems.ConflictException;
 import org.jwcarman.roux.problems.InvalidFieldException;
 import org.jwcarman.roux.problems.InvariantViolationException;
 import org.jwcarman.roux.roles.InvitableRoles;
+import org.jwcarman.roux.roles.RouxRoles;
 import org.jwcarman.roux.roles.UserInvitations;
 import org.jwcarman.who.admin.LastAdminException;
 import org.jwcarman.who.admin.LastAdminGuard;
@@ -247,6 +248,25 @@ public class Users {
     lock();
     Identity identity = identity(id);
     requireInvitable(role);
+    return giveOnly(identity, role);
+  }
+
+  /**
+   * Makes an existing user an owner, in place of their role. The endpoint asks for {@code
+   * users.owners} and a recent sign-in; invitations and {@link #changeRole} never give {@code
+   * OWNER}.
+   *
+   * @param id their identity's id
+   * @return their detail now
+   * @throws UserNotFoundException if there is no such user
+   */
+  public UserDetail makeOwner(UUID id) {
+    lock();
+    return giveOnly(identity(id), RouxRoles.OWNER);
+  }
+
+  private UserDetail giveOnly(Identity identity, String role) {
+    UUID id = identity.id();
     List<Role> current = who.rbac().findRolesForIdentity(id);
     if (current.size() == 1 && current.getFirst().name().equals(role)) {
       return detail(id);

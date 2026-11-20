@@ -117,4 +117,13 @@
               join who_identity i on i.id = u.id
         </createView>
     </changeSet>
+
+    <!-- users.owners, making an existing user an owner, for OWNER only. -->
+    <changeSet id="roux-users-5" author="roux">
+        <sql>
+            INSERT INTO who_role_permission (role_id, permission)
+              SELECT r.id, 'users.owners' FROM who_role r WHERE r.name = 'OWNER'
+              ON CONFLICT DO NOTHING;
+        </sql>
+    </changeSet>
 </databaseChangeLog>

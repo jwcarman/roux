@@ -114,6 +114,13 @@ class UserControllersTest {
     }
 
     @Test
+    void makes_an_owner() {
+      when(users.makeOwner(ada)).thenReturn(detail);
+
+      assertThat(controller.makeOwner(ada)).isSameAs(detail);
+    }
+
+    @Test
     void renames_and_changes_the_role() {
       when(users.rename(ada, "Ada King", 0L)).thenReturn(detail);
       when(users.changeRole(ada, "INSTRUCTOR")).thenReturn(detail);

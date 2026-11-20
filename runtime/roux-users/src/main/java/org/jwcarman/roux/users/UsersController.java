@@ -24,6 +24,7 @@ import org.jwcarman.jpa.spring.web.PageParams;
 import org.jwcarman.roux.activity.Activity;
 import org.jwcarman.who.core.domain.WhoPrincipal;
 import org.jwcarman.who.spring.security.RequiresPermission;
+import org.jwcarman.who.spring.security.RequiresRecentSignIn;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -148,6 +149,20 @@ public class UsersController {
   @RequiresPermission(RouxUserPermissions.USERS_MANAGE)
   public UserDetail changeRole(@PathVariable UUID id, @Valid @RequestBody RoleChange change) {
     return users.changeRole(id, change.role());
+  }
+
+  /**
+   * Makes an existing user an owner, in place of their role. Only for a caller who signed in
+   * recently: one who signed in too long ago gets who's {@code 401} and signs in again.
+   *
+   * @param id their identity's id
+   * @return their detail now
+   */
+  @PostMapping("/{id}/owner")
+  @RequiresPermission(RouxUserPermissions.USERS_OWNERS)
+  @RequiresRecentSignIn
+  public UserDetail makeOwner(@PathVariable UUID id) {
+    return users.makeOwner(id);
   }
 
   /**

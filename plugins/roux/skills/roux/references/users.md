@@ -91,6 +91,7 @@ changelog grants to `OWNER`. Grant them to the app's own roles in the app's chan
 | `POST /{id}/deactivate` | `users.manage` | Deactivates them |
 | `POST /{id}/reactivate` | `users.manage` | Reactivates them |
 | `POST /{id}/sign-out` | `users.manage` | Ends every session they have; `204` |
+| `POST /{id}/owner` | `users.owners`, and a recent sign-in | Makes them an owner, in place of their role |
 
 What they refuse ([Errors](errors.md)):
 
@@ -111,8 +112,13 @@ What they refuse ([Errors](errors.md)):
 
 An invitation gives one role, and `PUT /{id}/role` replaces whatever the user holds with the one asked
 for, removing each old role through `LastAdminGuard`. Changing to the role they hold already does
-nothing and records nothing. Only invitable roles can be given; `OWNER` is given only by the first-owner
-bootstrap or a changeset.
+nothing and records nothing. Only invitable roles can be given that way.
+
+`OWNER` is given by `POST /{id}/owner`, to someone who is already a user: invite them first, then
+make them an owner. It needs `users.owners` (roux-users grants it to `OWNER` alone; leave it there,
+since whoever holds it can hand out everything) and a recent sign-in (`@RequiresRecentSignIn`,
+`who.security.recent-sign-in`, 10 minutes by default): a caller who signed in longer ago gets who's
+`401` and signs in again. It is recorded as `user.role_changed`.
 
 ## Signing out and deactivating
 
@@ -206,7 +212,7 @@ unless the app declares its own `ActorNames`.
   and answer; `UserNotFoundException`.
 - `UserDirectory`, `UserDirectoryEntry`, `UserFilter`, `UserSort` and `UserStatus`, the directory and
   its filter.
-- `RouxUserPermissions` (`USERS_READ`, `USERS_INVITE`, `USERS_MANAGE`).
+- `RouxUserPermissions` (`USERS_READ`, `USERS_INVITE`, `USERS_MANAGE`, `USERS_OWNERS`).
 - `AppUserActorNames`, and the activity kinds above.
 
 ## Don't
