@@ -4,3 +4,4 @@ org.jwcarman.roux.autoconfigure.spa.RouxSpaAutoConfiguration
 org.jwcarman.roux.autoconfigure.theme.RouxThemePersistenceAutoConfiguration
 org.jwcarman.roux.autoconfigure.theme.RouxThemeAutoConfiguration
 org.jwcarman.roux.autoconfigure.email.RouxEmailAutoConfiguration
+org.jwcarman.roux.autoconfigure.roles.RouxRolesAutoConfiguration
