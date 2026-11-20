@@ -235,7 +235,9 @@ class RouxOrganizationAutoConfigurationTest {
         .withPropertyValues(ZONE, LOCALE)
         .run(
             context -> {
-              assertThat(context).hasSingleBean(OrganizationController.class);
+              assertThat(context)
+                  .getBean(OrganizationController.class)
+                  .isInstanceOf(OrganizationController.class);
               assertThat(context.getBean(WhoPublicPathContributor.class).publicPaths())
                   .containsExactly(OrganizationController.PATH);
             });

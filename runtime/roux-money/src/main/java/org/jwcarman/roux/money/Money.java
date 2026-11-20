@@ -127,8 +127,9 @@ public record Money(long minorUnits, Currency currency) {
     NumberFormat format = NumberFormat.getCurrencyInstance(locale);
     format.setCurrency(currency);
     int digits = Math.max(0, currency.getDefaultFractionDigits());
+    // The amount has exactly the currency's digits, so a minimum of that many shows all of them,
+    // whatever the locale's own currency would show.
     format.setMinimumFractionDigits(digits);
-    format.setMaximumFractionDigits(digits);
     return format.format(BigDecimal.valueOf(minorUnits, digits));
   }
 

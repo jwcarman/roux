@@ -128,5 +128,17 @@ class MoneyTest {
         .isThrownBy(() -> json.readValue("{\"currency\":\"USD\"}", Money.class));
     assertThat(json.readValue("{\"minorUnits\":150.0,\"currency\":\"USD\"}", Money.class))
         .isEqualTo(Money.of(150, USD));
+    assertThat(json.readValue("{\"minorUnits\":7,\"currency\":\"USD\"}", Money.class))
+        .isEqualTo(Money.of(7, USD));
+  }
+
+  @Test
+  void formats_a_currency_the_locale_does_not_use_with_that_currencys_digits() {
+    assertThat(Money.of(123456, Currency.getInstance("EUR")).format(Locale.US))
+        .isEqualTo("€1,234.56");
+    assertThat(Money.of(123456, Currency.getInstance("JPY")).format(Locale.US))
+        .isEqualTo("¥123,456");
+    assertThat(Money.of(123456, Currency.getInstance("BHD")).format(Locale.US))
+        .isEqualTo("BHD123.456");
   }
 }

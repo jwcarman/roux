@@ -54,21 +54,33 @@ class RouxRolesAutoConfigurationTest {
   void the_bootstrap_is_registered_with_the_owner_settings() {
     runner
         .withPropertyValues("roux.owner.email=pat@example.com", "roux.owner.name=Pat")
-        .run(context -> assertThat(context).hasSingleBean(OwnerBootstrap.class));
+        .run(
+            context ->
+                assertThat(context)
+                    .getBean(OwnerBootstrap.class)
+                    .isInstanceOf(OwnerBootstrap.class));
   }
 
   @Test
   void the_callers_permissions_are_there_to_inject() {
     runner
         .withPropertyValues("roux.owner.email=pat@example.com", "roux.owner.name=Pat")
-        .run(context -> assertThat(context).hasSingleBean(CallerPermissions.class));
+        .run(
+            context ->
+                assertThat(context)
+                    .getBean(CallerPermissions.class)
+                    .isInstanceOf(CallerPermissions.class));
   }
 
   @Test
   void members_are_invited_by_name_through_roux() {
     runner
         .withPropertyValues("roux.owner.email=pat@example.com", "roux.owner.name=Pat")
-        .run(context -> assertThat(context).hasSingleBean(MemberInvitations.class));
+        .run(
+            context ->
+                assertThat(context)
+                    .getBean(MemberInvitations.class)
+                    .isInstanceOf(MemberInvitations.class));
   }
 
   @Test
@@ -101,7 +113,9 @@ class RouxRolesAutoConfigurationTest {
             context -> {
               assertThat(context.getBean(InvitableRoles.class).names())
                   .containsExactly("MEMBER", "INSTRUCTOR");
-              assertThat(context).hasSingleBean(InvitableRolesGuard.class);
+              assertThat(context)
+                  .getBean(InvitableRolesGuard.class)
+                  .isInstanceOf(InvitableRolesGuard.class);
               assertThat(context).doesNotHaveBean(InvitableRolesController.class);
             });
   }
@@ -138,6 +152,10 @@ class RouxRolesAutoConfigurationTest {
         .withBean(InvitationService.class, () -> mock(InvitationService.class))
         .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
         .withPropertyValues("roux.owner.email=pat@example.com", "roux.owner.name=Pat")
-        .run(context -> assertThat(context).hasSingleBean(InvitableRolesController.class));
+        .run(
+            context ->
+                assertThat(context)
+                    .getBean(InvitableRolesController.class)
+                    .isInstanceOf(InvitableRolesController.class));
   }
 }

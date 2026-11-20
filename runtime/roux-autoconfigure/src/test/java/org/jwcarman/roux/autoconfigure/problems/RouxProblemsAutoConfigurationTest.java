@@ -187,6 +187,7 @@ class RouxProblemsAutoConfigurationTest {
               .hasSingleBean(SecurityProblemsAdvice.class)
               .hasSingleBean(PagingProblemsAdvice.class);
           assertThat(context.getBean(WhoProblemsAdvice.class)).isNotNull();
+          assertThat(context.getBean(WhoAdminProblemsAdvice.class)).isNotNull();
           assertThat(context.getBean(SecurityProblemsAdvice.class)).isNotNull();
           assertThat(context.getBean(PagingProblemsAdvice.class)).isNotNull();
         });
