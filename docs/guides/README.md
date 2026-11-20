@@ -6,6 +6,7 @@
 - [API client](api-client.md)
 - [Queries and mutations](queries-and-mutations.md)
 - [Forms](forms.md)
+- [Money](money.md)
 - [Tables and paging](tables-and-paging.md)
 - [Feedback](feedback.md)
 - [The shell: theme, sign-in and navigation](shell.md)

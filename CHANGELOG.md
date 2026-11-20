@@ -62,6 +62,16 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- `roux-money`, in the starter: `Money(minorUnits, currency)`, an `@Embeddable` record (`times`, `plus`,
+  `isPositive`, `format(Locale)`), sent as `{ "minorUnits": 15000, "currency": "USD" }`; the constraints
+  `@InCurrency`, `@PositiveMoney` and `@PositiveOrZeroMoney`; and, with `roux.money.currency` set, the
+  `MoneySettings` bean and `GET /api/money` (`{ "currency": "USD", "fractionDigits": 2 }`). See
+  `docs/guides/money.md`.
+- roux-web money: `@jwcarman/roux-web/money` (`Money`, `MoneySettings`, `moneySettingsQuery`, `formatMoney`,
+  `timesMoney`, `currencySymbol`), and in `/form` the `money(settings)` rule, `f.MoneyField` and
+  `moneyInputOf`. Typed amounts are parsed without floating point; `contracts/money.json` keeps the
+  browser's parsing and the server's rules the same.
+
 - `roux-roles`, in the starter: `RouxRoles.OWNER`, created by its changelog with who-admin's permissions;
   the first owner (`OwnerBootstrap`, `OwnerCreated`); invitable roles (`InvitableRoles`, its guard and
   `GET /api/roles/invitable`); `Permissions.allOf`; and, for an app's roles test, `RoleGrantsCheck` (the

@@ -74,7 +74,7 @@ Boot's BOM, so Spring Boot's managed versions stay the parent's.
 </dependencies>
 ```
 
-The starter brings `roux-problems`, `roux-validation` (`@Phone`, `@NotInFuture` and roux's validation messages), `roux-spa` (the shell for any page URL), `roux-jpa` (`Versions`), `roux-roles` (the `OWNER` role, the first owner and invitable roles: see
+The starter brings `roux-problems`, `roux-validation` (`@Phone`, `@NotInFuture` and roux's validation messages), `roux-spa` (the shell for any page URL), `roux-jpa` (`Versions`), `roux-money` (`Money`, its constraints and `GET /api/money`: see [Money](money.md)), `roux-roles` (the `OWNER` role, the first owner and invitable roles: see
 [Roles and permissions](roles.md)), `roux-autoconfigure`, who (`who-spring-boot-starter`, with
 email-link sign-in, `who-email-link`, which renders its mail with `who-email`, and passkeys, `who-passkey`),
 `who-admin` (who's endpoints for managing people, `/who/identities` and `/who/invitations`, open to
@@ -124,6 +124,7 @@ who:
 | Setting | What it is |
 | --- | --- |
 | `roux.owner.email`, `roux.owner.name` | The first owner: while no active identity holds `OWNER`, roux creates one at startup with this address and display name, and publishes `OwnerCreated` in its transaction (an app adds its own data for the owner by listening). Once an active owner exists these change nothing. Required. See `roles.md`. |
+| `roux.money.currency` | The app's one currency, an ISO 4217 code (`USD`). Needed once the app has money: it turns on `GET /api/money` and the `MoneySettings` bean, and `@InCurrency` checks against it. See `money.md`. |
 | `roux.roles.invitable` | The roles an invitation may give, in the order an invite form offers them (`GET /api/roles/invitable`). Each must be a role the app's own changelog creates (roux creates only `OWNER`; see `roles.md`), or every invitation giving it fails. Empty by default, so no invitation passes until it is set; listing `OWNER` fails startup. |
 | `spring.mail.host` | The SMTP server who's emails go through (`who-email-smtp`, over Spring Boot's `JavaMailSender`). Instead of SMTP, an app may register its own `WhoEmailSender` bean (leave out `who-email-smtp`, keep `who-email`): it only delivers, receiving every who email already rendered as an `OutgoingEmail` (`to`, `subject`, `text`, an optional `html`, and the `source` record it was rendered from). Send `text` as `text/plain`, never inside HTML: it is not escaped. roux ships the five emails finished, naming the app and wearing its brand colour; an app replaces one by dropping its own template file, and a subject is the message `who.email.<template>.subject` (see `email.md`). |
 | `who.email-link.link-base-url` | The app's page that receives sign-in links; who appends `#token=...`. Required. |

@@ -174,7 +174,8 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   fails at run time, as an unlisted role shown as Member).
 - roux could: a guide section on roles (who's RBAC plus the app's enum), saying which lists a role
   appears in; or a `GET /api/roles` the browser reads instead of a union type.
-- Outcome: deferred (not on the approved round-1 list).
+- Outcome: fixed by the roles work (d82c677..a3c73d6): roles are data in a changeset, permissions are
+  constants in one class, and `permissions.gen.ts` is generated from them (`docs/guides/roles.md`).
 
 ## A request enum outside its set is not a field error
 - Where: `members/InviteController.InvitationRequest` (`role`)
@@ -436,4 +437,57 @@ What building the dojo showed about roux: one entry per finding, in the order fo
   that was to copy the list and write tests that the copy has not drifted.
 - roux could: generate the list, from an endpoint (the permissions of the app's roles) or a build step
   that writes the file, so no app keeps a copy and `defineNav`'s type comes from the server's own.
+- Outcome: fixed by the roles work (d82c677..a3c73d6): `PermissionsTypeScript` writes
+  `permissions.gen.ts` from the constants in the app's roles test, which fails when it was stale.
+
+## roux has no school time zone, or locale
+- Where: `memberships/MembershipService` (overdue), `PaymentsService` (this month, the 12 months), the
+  history entry "Payment recorded: 2 × $150.00"
+- What was clunky: "today" for overdue and "this month" is the injected `Clock`'s date in UTC, while a
+  date a person picks defaults to the browser's today. Near midnight UTC a school in the Americas sees
+  a student overdue a day early, and a payment taken late in the evening on the last of the month
+  counts in the next month. Text the server writes (history) is in `Locale.US`. The end-to-end test
+  starts its membership a week back so it holds in any time zone.
+- roux could: a school time zone (and locale) setting, with "today" and "this month" from it, on the
+  server and in the browser alike.
+- Outcome: deferred (decided in the round-3 design).
+
+## Money text written by the server had no helper
+- Where: `memberships/MembershipService` (history entries)
+- What was clunky: the browser has `formatMoney`, but the server writing "Payment recorded: 2 × $150.00"
+  had nothing, and the design rules out money helpers in the app.
+- roux could: format a `Money` itself.
+- Outcome: fixed in this round (`Money.format(Locale)`).
+
+## A currency column is `varchar(3)`, not `char(3)`
+- Where: `plans.xml` (`price_currency`)
+- What was clunky: the design said `char(3)`; Hibernate maps `java.util.Currency` to `varchar(3)` and
+  schema validation refuses `bpchar` at startup.
+- roux could: say so where money is described.
+- Outcome: fixed in this round (`docs/guides/money.md`, The columns).
+
+## A money form waits for the currency before it exists
+- Where: `plans/PlansPage.tsx`, `PlanFormDialog.tsx`
+- What was clunky: `money(settings)` and `f.MoneyField` take the settings, so the schema cannot be a
+  module constant like every other; each page loads `moneySettingsQuery` and renders its form only once
+  it has them, and each dialog takes `settings` as a prop.
+- roux could: let the rule and field read the settings themselves (a provider, or a suspense query in
+  roux-web), so a money schema is written like any other.
 - Outcome: open.
+
+## Fields shown only with a permission are checked by hand in the controller
+- Where: `students/StudentsController.list`
+- What was clunky: the list's plan, paid-through and payment fields, its Payment filter and its
+  Paid-through sort need `payments.record` while the list needs only `students.read`. The controller
+  reads `WhoPrincipal.permissions()` and throws `AccessDeniedException` itself; nothing in roux says
+  how, and a forgotten check leaks the fields.
+- roux could: a helper for "does the caller hold this permission" and a documented pattern for
+  permission-gated fields and filters on a list.
+- Outcome: open.
+
+## The signed-out route test raced the sign-in page's request
+- Where: `frontend/src/testing/route.test.tsx`
+- What was clunky: the sign-in page asks who for its providers (`GET /who/sign-in`); the test answered
+  nothing, so it failed whenever that request landed before the test ended.
+- roux could: nothing (the dojo's test).
+- Outcome: fixed in this round.

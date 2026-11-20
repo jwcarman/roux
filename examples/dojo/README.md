@@ -3,7 +3,11 @@
 A martial arts school's app, built on roux in roux's own repository, against the roux code beside
 it: it is how roux finds out what is still hard for an app. It starts as a working shell, with
 sign-in, roles, invitations, Appearance, Settings, activity and one small domain, the team's member
-profiles, which sets the patterns the school's own features follow.
+profiles, which sets the patterns the school's own features follow. The school's features came
+round by round: ranks and students with their promotions; a weekly timetable and check-in; and plans
+with prices, a student's membership and the payments taken at the desk (each student's "paid
+through" date and whether they are overdue, the Students list's Payment filter, and money taken per
+month on the owner's Payments page), with amounts as roux money (`docs/guides/money.md`).
 
 It builds in roux's reactor (`./mvnw verify` from the repository's root) and is never published.
 
