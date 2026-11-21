@@ -377,7 +377,7 @@ class UsersTest {
     void the_same_role_changes_nothing() {
       when(rbac.findRolesForIdentity(ada)).thenReturn(List.of(member));
 
-      service.changeRole(ada, "MEMBER");
+      assertThat(service.changeRole(ada, "MEMBER").id()).isEqualTo(ada);
 
       verify(rbac, never()).assignRoleToIdentity(any(), any());
       verifyNoInteractions(lastAdmin, activityLog);
@@ -453,12 +453,24 @@ class UsersTest {
 
     @Test
     void deactivating_goes_through_the_guard_and_records_it() {
+      when(whoService.deactivate(ada)).thenReturn(true);
+
       assertThat(service.deactivate(owner, ada).id()).isEqualTo(ada);
 
       lockTaken();
       verify(lastAdmin).deactivate(eq(ada), any());
       verify(whoService).deactivate(ada);
       verify(activityLog).append(ada, new UserDeactivated());
+    }
+
+    @Test
+    void who_finding_them_deactivated_already_is_a_conflict() {
+      when(whoService.deactivate(ada)).thenReturn(false);
+
+      assertThatThrownBy(() -> service.deactivate(owner, ada))
+          .isInstanceOf(ConflictException.class)
+          .hasMessage("Already deactivated");
+      verifyNoInteractions(activityLog);
     }
 
     @Test

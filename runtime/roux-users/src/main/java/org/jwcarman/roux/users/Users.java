@@ -280,7 +280,7 @@ public class Users {
                 old.id(),
                 () -> {
                   who.rbac().removeRoleFromIdentity(identity, old);
-                  return Boolean.TRUE;
+                  return null;
                 });
       }
     }
@@ -313,14 +313,10 @@ public class Users {
     if (identity.status() != IdentityStatus.ACTIVE) {
       throw new ConflictException("Already deactivated");
     }
-    who.lastAdmin()
-        .deactivate(
-            id,
-            () -> {
-              who.service().deactivate(id);
-              activityLog.append(id, new UserDeactivated());
-              return Boolean.TRUE;
-            });
+    if (!who.lastAdmin().deactivate(id, () -> who.service().deactivate(id))) {
+      throw new ConflictException("Already deactivated");
+    }
+    activityLog.append(id, new UserDeactivated());
     return detail(id);
   }
 

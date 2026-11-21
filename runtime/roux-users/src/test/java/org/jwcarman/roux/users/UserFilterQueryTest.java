@@ -137,6 +137,23 @@ class UserFilterQueryTest {
     }
   }
 
+  @Test
+  void an_entry_reads_its_joined_date_and_invited_flag() {
+    UUID kate = UUID.randomUUID();
+    jdbc.sql(
+            "insert into roux_user_directory"
+                + " (id, version, display_name, email, role, status, joined_at, invited)"
+                + " values (?, 0, 'Katherine Johnson', 'kate@example.org', 'MEMBER', 'ACTIVE', ?,"
+                + " true)")
+        .params(kate, Timestamp.from(Instant.parse("2026-11-20T15:00:00Z")))
+        .update();
+
+    UserDirectoryEntry entry = directory.findById(kate).orElseThrow();
+
+    assertThat(entry.getJoinedAt()).isEqualTo(Instant.parse("2026-11-20T15:00:00Z"));
+    assertThat(entry.isInvited()).isTrue();
+  }
+
   @Nested
   class Over_an_apps_own_entity {
 
