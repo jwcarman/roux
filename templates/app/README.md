@@ -69,6 +69,23 @@ each piece goes.
 ./mvnw verify          # Java tests, Vitest, and the Playwright suite (E2eIT); -DskipITs skips E2eIT
 ```
 
+### Native
+
+The app builds into a native image with GraalVM 25 as `JAVA_HOME`:
+
+```bash
+./mvnw -Pnative package          # the binary, target/roux-app
+./mvnw -PnativeTest test         # the Java tests, compiled and run native
+./mvnw -Pnative-e2e verify       # the binary built, then the Playwright suite run against it
+```
+
+A test that cannot run native (one that mocks a static method, or starts apps of its own) carries
+`@DisabledInNativeImage` and says why. When the binary is missing something it needs at runtime
+(reflection, a resource, a proxy), `scripts/trace.sh` runs the suite on the JVM under GraalVM's
+tracing agent (`-Pnative-trace`), which records what it used in `target/native-trace`, then runs
+the native suite with that metadata (`-Pnative-e2e,traced`): if that passes, the missing hint is
+in the recording.
+
 ## Production
 
 Run the jar with `SPRING_PROFILES_ACTIVE=prod` (`application-prod.yml`) and set these variables. None

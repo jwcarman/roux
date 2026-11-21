@@ -7,13 +7,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.jwcarman.roux.test.TestDatabase;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
 
-/** The prod profile takes its deployment settings from the environment and has no fallbacks. */
+/**
+ * The prod profile takes its deployment settings from the environment and has no fallbacks. Not in
+ * a native image (nativeTest): it starts apps of its own, which an ahead-of-time build cannot.
+ */
+@DisabledInNativeImage
 class ProductionProfileTest {
 
   static final TestDatabase.Database DATABASE = TestDatabase.create();

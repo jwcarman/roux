@@ -3,10 +3,15 @@ package app;
 import static org.mockito.Mockito.mockStatic;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.mockito.MockedStatic;
 import org.springframework.boot.SpringApplication;
 
-/** {@code main} starts the app with its arguments; starting the whole app is AppTests' job. */
+/**
+ * {@code main} starts the app with its arguments; starting the whole app is AppTests' job. Not in a
+ * native image (nativeTest): Mockito cannot mock a static method there.
+ */
+@DisabledInNativeImage
 class AppMainTest {
 
   @Test

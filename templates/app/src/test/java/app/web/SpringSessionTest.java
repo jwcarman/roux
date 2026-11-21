@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.jwcarman.roux.test.RecordingWhoEmailSender;
 import org.jwcarman.roux.test.TestDatabase;
 import org.jwcarman.who.emaillink.EmailCredentialService;
@@ -36,8 +37,10 @@ import app.App;
 
 /**
  * Sessions live in PostgreSQL (Spring Session JDBC): signed in through the app's real HTTP flow, a
- * session is a row in {@code SPRING_SESSION}, and it outlives the process that created it.
+ * session is a row in {@code SPRING_SESSION}, and it outlives the process that created it. Not in a
+ * native image (nativeTest): it starts apps of its own, which an ahead-of-time build cannot.
  */
+@DisabledInNativeImage
 class SpringSessionTest {
 
   static final String OWNER = "owner@example.com";

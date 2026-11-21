@@ -5,6 +5,7 @@ import static org.jwcarman.roux.roles.Permissions.allOf;
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.jwcarman.roux.roles.check.PermissionsTypeScript;
 import org.jwcarman.roux.roles.check.RoleGrantsCheck;
 import org.jwcarman.roux.test.AppTest;
@@ -17,8 +18,10 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 /**
  * Every permission there is, in one place: the roles every changelog made grant exactly these, and
  * the frontend's list is generated from them. A forgotten grant, a typo in a changeset or a stale
- * {@code permissions.gen.ts} fails the build.
+ * {@code permissions.gen.ts} fails the build. A build check, not the app's behaviour, so not in a
+ * native image (nativeTest), where the permission classes' fields are not there to read.
  */
+@DisabledInNativeImage
 @AppTest
 class PermissionsTest {
 

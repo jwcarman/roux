@@ -145,6 +145,49 @@
         </resources>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <executions>
+                    <!-- A native build's AOT step (process-aot) writes generated classes (named with "__",
+                         such as Spring Data's __Accessor_ classes, or $$SpringCGLIB$$ proxies) and native metadata into
+                         target/classes. A later JVM build would keep them, and a stale one fails at runtime
+                         once an entity changes. So every build starts without them, and a native build
+                         makes them again; no "mvn clean" between the two. -->
+                    <execution>
+                        <id>remove-aot-output</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                        <configuration>
+                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                            <filesets>
+                                <fileset>
+                                    <directory>${project.build.outputDirectory}</directory>
+                                    <includes>
+                                        <include>**/*__*.class</include>
+                                        <include>**/*$$SpringCGLIB$$*.class</include>
+                                        <include>META-INF/native-image/**</include>
+                                    </includes>
+                                </fileset>
+                                <!-- The test AOT step (nativeTest) writes the same into target/test-classes. -->
+                                <fileset>
+                                    <directory>${project.build.testOutputDirectory}</directory>
+                                    <includes>
+                                        <include>**/*__*.class</include>
+                                        <include>**/*$$SpringCGLIB$$*.class</include>
+                                        <include>META-INF/native-image/**</include>
+                                    </includes>
+                                </fileset>
+                                <fileset>
+                                    <directory>${project.build.directory}/spring-aot</directory>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
@@ -285,8 +328,18 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.plugin.version}</version>
+                <!-- The app's own classes: not the ones a native build's AOT step generates into
+                     target/classes (named with "__", or Spring CGLIB proxies), for the app or the
+                     libraries it uses. -->
                 <configuration>
                     <propertyName>jacocoArgLine</propertyName>
+                    <includes>
+                        <include>app/**</include>
+                    </includes>
+                    <excludes>
+                        <exclude>**/*__*</exclude>
+                        <exclude>**/*$$SpringCGLIB$$*</exclude>
+                    </excludes>
                 </configuration>
                 <executions>
                     <execution>
@@ -498,6 +551,146 @@
             <properties>
                 <e2e.skip>true</e2e.skip>
             </properties>
+        </profile>
+        <!--
+          The native binary (target/${project.artifactId}). Builds on spring-boot-starter-parent's own
+          native profile (process-aot, reachability metadata) and compiles at package.
+          Needs GraalVM 25 as JAVA_HOME.
+        -->
+        <profile>
+            <id>native</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>build-native</id>
+                                <goals>
+                                    <goal>compile-no-fork</goal>
+                                </goals>
+                                <phase>package</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!--
+          The native binary, then E2eIT against it: the same Playwright suite, with the binary
+          started as a process (-Dapp.binary) instead of Spring in-process. A profile cannot
+          activate another, so this one repeats what the parent's native profile sets up.
+        -->
+        <profile>
+            <id>native-e2e</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>process-aot</id>
+                                <goals>
+                                    <goal>process-aot</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <configuration>
+                            <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>add-reachability-metadata</id>
+                                <goals>
+                                    <goal>add-reachability-metadata</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>build-native</id>
+                                <goals>
+                                    <goal>compile-no-fork</goal>
+                                </goals>
+                                <phase>package</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <app.binary>${project.build.directory}/${project.artifactId}</app.binary>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!--
+          E2eIT against the jar on GraalVM's JVM under the tracing agent (-Dapp.trace-jar): records
+          the reflection, resource and proxy metadata the suite exercises into target/native-trace.
+          Needs GraalVM 25 as JAVA_HOME. See scripts/trace.sh.
+        -->
+        <profile>
+            <id>native-trace</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <app.trace-jar>${project.build.directory}/${project.build.finalName}.jar</app.trace-jar>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!--
+          With native or native-e2e: builds the binary with the metadata native-trace recorded.
+          That metadata is a measurement of what who and its stack are missing, not the app's to
+          ship; it stays under target/.
+        -->
+        <profile>
+            <id>traced</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <configuration>
+                            <buildArgs>
+                                <buildArg>-H:+UnlockExperimentalVMOptions</buildArg>
+                                <buildArg>-H:ConfigurationFileDirectories=${project.build.directory}/native-trace</buildArg>
+                            </buildArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!--
+          The Java tests compiled into a native image and run there: ./mvnw -PnativeTest test.
+          Spring Boot's parent has a profile of this name (process-test-aot and the native test
+          goal); naming it turns on both, and this one adds the plugin that runs that goal.
+          Needs GraalVM 25 as JAVA_HOME.
+        -->
+        <profile>
+            <id>nativeTest</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>
