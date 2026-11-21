@@ -85,7 +85,12 @@ class RouxUsersAutoConfigurationTest {
             context ->
                 assertThat(context)
                     .hasSingleBean(UsersController.class)
-                    .hasSingleBean(MeController.class));
+                    .hasSingleBean(MeController.class)
+                    .satisfies(
+                        endpoints -> {
+                          assertThat(endpoints.getBean(UsersController.class)).isNotNull();
+                          assertThat(endpoints.getBean(MeController.class)).isNotNull();
+                        }));
   }
 
   @Test
@@ -99,7 +104,11 @@ class RouxUsersAutoConfigurationTest {
 
   @Test
   void users_who_join_get_an_app_user() {
-    runner.run(context -> assertThat(context).hasSingleBean(AppUsers.class));
+    runner.run(
+        context -> {
+          assertThat(context).hasSingleBean(AppUsers.class);
+          assertThat(context.getBean(AppUsers.class)).isNotNull();
+        });
   }
 
   @Test
