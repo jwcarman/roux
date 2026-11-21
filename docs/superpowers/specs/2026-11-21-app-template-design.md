@@ -9,8 +9,8 @@ feature in minutes, with nothing in it that roux already owns and no domain at a
 Today that starting point is `noir-app-template`, a separate repository that predates most of roux
 and carries its own copies of members, invitations, the shell and Appearance. The dojo
 (`examples/dojo`) has since become the most current roux app. The new template is the dojo with its
-domain removed, kept inside the roux repository so it can never fall behind roux, and copied out by a
-script that only has to set a name.
+domain removed, kept inside the roux repository so it can never fall behind roux, and published as a Maven
+archetype built from it, which only has to set a name and versions. `roux-new.sh` is the front door.
 
 The person who signs in to a demo is the solution's owner (the factory's customer, seeing what was
 built for them). They get in by an emailed sign-in link: noir sets `roux.owner.email` to their address
@@ -27,7 +27,8 @@ when it deploys, and roux makes them the owner. Locally, Mailpit catches the sam
   Playwright suite run by `E2eIT` inside `./mvnw verify`.
 - The template is a module of roux's build: `./mvnw verify` in roux runs its tests and E2E suite on
   every change, as it does the dojo's.
-- What a new app gets is exactly what is in `templates/app` at a roux release tag, plus the name.
+- What a new app gets is exactly what is in `templates/app` at a roux release, plus the name and
+  released versions.
 
 ## Non-goals
 
@@ -60,7 +61,7 @@ when it deploys, and roux makes them the owner. Locally, Mailpit catches the sam
 - The frontend links `web/roux-web` from the repository, as the dojo does
   (`"@jwcarman/roux-web": "file:../../../web/roux-web"`).
 - Releases tag a commit whose versions are still `-SNAPSHOT` (release.yml sets versions in CI and
-  does not commit them), so the script, not the tag, supplies the released version.
+  does not commit them), so the archetype, built in the release job, carries the released version.
 - Two E2E suites in CI instead of one: the template's is small (a handful of specs), so the added
   time should be small too.
 
@@ -86,6 +87,15 @@ when it deploys, and roux makes them the owner. Locally, Mailpit catches the sam
    is a copy plus setting the name and versions in a few places. The template in roux is exactly what
    an app gets, and roux's build already proves it.
 4. An agent writes it from the guides. Different every time; rejected.
+
+**How an app is delivered (revised):** first designed as `roux-new.sh` fetching `templates/app` from a
+release tag with `git clone` and setting names and versions itself. Changed to: **a Maven archetype
+built from `templates/app`, published to Central with each release, behind the same `roux-new.sh`
+front door.** The archetype pins versions for free (the 0.3.0 archetype makes a 0.3.0 app), needs no
+tag lookup or clone, works offline from `~/.m2`, and `archetype:integration-test` proves the
+generated app inside roux's build. Option 2's objection (source becomes templates) does not apply:
+the archetype's resources are copied from the real app at build time, never edited by hand. The
+script covers what an archetype cannot do (the executable bit, `git init`).
 
 **When:** build the template now, carrying the dojo's current frontend frame and users screens
 (about 20 files), rather than first finishing the app-skeleton UI in roux. James chose now: a
@@ -135,7 +145,7 @@ Cut from the dojo with every domain package, changelog, route, page, test and E2
 
 ### Names
 
-The script sets the name in exactly these places, and nothing else in the template contains the
+The archetype sets the name in exactly these places, and nothing else in the template contains the
 name:
 
 - `pom.xml`: `artifactId` (the name's slug, e.g. `acme-gym`) and `name`.
@@ -150,19 +160,41 @@ In the repository the template's name is `App` (slug `app`).
 
 - In the repository, `roux.version` is roux's current version and roux-web is linked from
   `web/roux-web`.
-- The script sets `roux.version` to the release it copied from, and `@jwcarman/roux-web` to that same
-  version from npm, then regenerates `frontend/package-lock.json` (`npm install --package-lock-only`).
-- roux's version bumps (`versions:set` in release.yml and after a release) must also bump the
-  template's `roux.version`. A test in roux's build fails if they differ.
+- The archetype carries the released versions: `roux.version` and `@jwcarman/roux-web` are set to the
+  archetype's own version when it is built, and `frontend/package-lock.json` is regenerated against
+  that published roux-web (`npm install --package-lock-only`). release.yml publishes npm before
+  Central, so the version exists when the archetype is built in the Central job.
+- roux's version bumps must also bump the template's `roux.version` (a property `versions:set` does
+  not reach). A test in roux's build fails if they differ.
+
+### The archetype
+
+- Module `runtime/roux-app-archetype` (artifactId `roux-app-archetype`), released to Central with
+  roux's other modules and aligned by `roux-bom`'s versioning.
+- Its build copies `templates/app` (minus `target/`, `node_modules/`, build output) into
+  `archetype-resources`, then turns only the name spots (see Names) into `${artifactId}` and
+  `${appName}` and the versions into the release's. Nothing under `archetype-resources` is edited by
+  hand or committed.
+- `archetype-metadata.xml` filters only the name and version files. Everything else, TSX included,
+  is copied raw (Velocity would break on `${…}` and `#`). Dotfiles and dot-folders (`.gitignore`,
+  `.mvn/`, `.github/`, `.noir/`) get explicit file sets, with default excludes off.
+- Required properties: `artifactId` and `appName`. `groupId` and `version` default to `app` and
+  `0.0.1-SNAPSHOT`, and `package` is not used (the Java package is fixed).
+- `archetype:integration-test` generates an app in roux's build and runs its `verify` with
+  `-DskipITs`, so the generated output compiles and its unit and Vitest tests pass. The E2E suite runs
+  once, in `templates/app` itself.
 
 ### The script
 
-- `plugins/roux/scripts/roux-new.sh <dir> --name "<name>" [--version <x.y.z>] [--from <path>]`.
-- By default it reads `templates/app` from `https://github.com/jwcarman/roux` at the latest release
-  tag; `--version` picks a tag; `--from` reads a local checkout's working tree instead (for roux's own
-  tests and for offline use). It refuses a non-empty `<dir>`.
-- It writes the files, sets names and versions as above, then `git init` and one commit.
-- noir and an agent at a terminal call the same script.
+- `plugins/roux/scripts/roux-new.sh <dir> --name "<name>" [--version <x.y.z>]` is the front door
+  noir and an agent at a terminal both call. It refuses a non-empty `<dir>` and stops with a clear
+  message if `mvn` is missing.
+- It runs `mvn archetype:generate` (non-interactive) with `roux-app-archetype` at `--version`, or at
+  the latest version on Central by default (from Central's `maven-metadata.xml`). It passes
+  `artifactId` (the name's slug) and `appName`, then makes `mvnw` executable, runs `git init`, and
+  makes one commit.
+- Before 0.3.0 is released, `./mvnw install` in a roux checkout puts the SNAPSHOT archetype in
+  `~/.m2`, and `--version 0.3.0-SNAPSHOT` uses it.
 
 ### Settled after the builder check (Claude's calls, for James to check)
 
@@ -184,13 +216,8 @@ In the repository the template's name is `App` (slug `app`).
 - **Ports.** The template's E2E and compose ports follow the dojo's (`${POSTGRES_PORT:-5432}` style
   overrides, Testcontainers in `E2eIT`). The reactor builds the two apps one after the other. If
   anything still clashes, the template takes different defaults and the dojo stays as it is.
-- **Before the first release containing the template**, the default fetch has no tag to read.
-  `--from` is the path until 0.3.0 is released, and noir switches to the template only after that.
-  The script fetches with `git clone --depth 1 --branch <tag>` from the public repository (no
-  credentials needed). "Latest release" is the highest plain-version tag from `git ls-remote --tags`.
-- **roux-web on npm.** release.yml publishes npm before Central, so a usable release always has
-  both. The script still checks `npm view @jwcarman/roux-web@<version>` and stops with a clear message
-  if the version is missing.
+- **Before the first release containing the template**, a locally installed SNAPSHOT archetype is
+  the path (see The script). noir switches to the template only after 0.3.0 is released.
 - **Tests that name packages** (`PackageLayoutTest` and the like) are written for package `app` in the
   template. It is a new copy, not a generated rewrite, so this is not "rewriting code to generate".
   The plugin's eval scripts (`eval-fixture.sh`, `check-roux-way.sh`) keep using the dojo and are not
@@ -203,9 +230,8 @@ In the repository the template's name is `App` (slug `app`).
   the template (the users rename is decided; the dojo just has not caught up).
 - The slug rule (lowercase, non-alphanumerics to `-`) and the script's argument parsing.
 - How the "template version equals roux version" test is written, and how release.yml bumps it.
-- A test of the script itself: at least `--from` the working tree, checking every name and version
-  was set and that no `file:` link or `roux-parent` reference remains. Building a generated app
-  against published artifacts can only run after a release; whether release.yml gets a job that does
-  it is the builder's call.
+- Tests of the generated app beyond `archetype:integration-test`: at least that every name and version
+  was set and no `file:` link or `roux-parent` reference remains. Whether release.yml also builds an
+  app generated from the just-published archetype is the builder's call.
 - Updating roux's README and the getting-started guide to name `roux-new.sh` as the way to start an
   app.
