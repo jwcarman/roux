@@ -6,14 +6,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.test.AppTest;
 import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.web.util.HtmlUtils;
+
+import com.jayway.jsonpath.JsonPath;
 
 import app.identity.Roles;
 
@@ -25,8 +32,16 @@ import app.identity.Roles;
 @AppTest
 class ShellThemeTest {
 
+  /** The theme the shell carries: a script element holding one JSON object. */
+  private static final Pattern THEME_SCRIPT =
+      Pattern.compile("<script[^>]*>(\\{\"appName\".*?)</script>");
+
   @Autowired TestUsers users;
   @Autowired JdbcTemplate jdbc;
+
+  /** What the app is called until the owner renames it. */
+  @Value("${roux.theme.app-name}")
+  String appName;
 
   @BeforeEach
   void cleanSlate() {
@@ -57,12 +72,18 @@ class ShellThemeTest {
 
   @Test
   void thePageCarriesTheAppsNameAndTheStockLookBeforeAnythingIsSaved() throws Exception {
-    assertThat(signedOutPage())
-        .contains("<title>Roux App</title>")
-        .contains(
-            ">{\"appName\":\"Roux App\",\"palette\":\"gray\",\"brandColor\":\"#3b82f6\","
-                + "\"shape\":\"medium\",\"headingFont\":\"standard\",\"bodyFont\":\"standard\"}"
-                + "</script>");
+    String page = signedOutPage();
+    Matcher theme = THEME_SCRIPT.matcher(page);
+
+    assertThat(page).contains("<title>" + HtmlUtils.htmlEscape(appName) + "</title>");
+    assertThat(theme.find()).as("the theme's script element").isTrue();
+    String json = theme.group(1);
+    assertThat(JsonPath.<String>read(json, "$.appName")).isEqualTo(appName);
+    assertThat(JsonPath.<String>read(json, "$.palette")).isEqualTo("gray");
+    assertThat(JsonPath.<String>read(json, "$.brandColor")).isEqualTo("#3b82f6");
+    assertThat(JsonPath.<String>read(json, "$.shape")).isEqualTo("medium");
+    assertThat(JsonPath.<String>read(json, "$.headingFont")).isEqualTo("standard");
+    assertThat(JsonPath.<String>read(json, "$.bodyFont")).isEqualTo("standard");
   }
 
   @Test

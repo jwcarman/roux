@@ -8,3 +8,5 @@ frontend/dist/
 playwright-report/
 test-results/
 frontend/*.tsbuildinfo
+.mutation-history/
+reports/
