@@ -10,7 +10,7 @@ Today that starting point is `noir-app-template`, a separate repository that pre
 and carries its own copies of members, invitations, the shell and Appearance. The dojo
 (`examples/dojo`) has since become the most current roux app. The new template is the dojo with its
 domain removed, kept inside the roux repository so it can never fall behind roux, and published as a Maven
-archetype built from it, which only has to set a name and versions. `roux-new.sh` is the front door.
+archetype built from it, which only has to set a name and versions. noir generates apps from the archetype directly.
 
 The person who signs in to a demo is the solution's owner (the factory's customer, seeing what was
 built for them). They get in by an emailed sign-in link: noir sets `roux.owner.email` to their address
@@ -18,7 +18,7 @@ when it deploys, and roux makes them the owner. Locally, Mailpit catches the sam
 
 ## Goals
 
-- `roux-new.sh <dir> --name "Acme Gym"` writes a new app that builds, passes its tests and runs with
+- `mvn archetype:generate` with `roux-app-archetype`, an `artifactId` and an `appName`, writes a new app that builds, passes its tests and runs with
   `docker compose up` + `./mvnw spring-boot:run`, with no further edits.
 - Day one, the app has: sign-in (email link with code, passkeys), the first owner from config, the
   sidebar frame with nav, account menu and colour mode, a Users page (invite, rename, change roles,
@@ -45,7 +45,7 @@ when it deploys, and roux makes them the owner. Locally, Mailpit catches the sam
 
 - **A template that is not a real app.** No placeholders, no Velocity or mustache markers: the files
   in `templates/app` compile, test and run as they are.
-- **Rewriting code to generate an app.** The script sets names and versions in a fixed, small set of
+- **Rewriting code to generate an app.** The archetype sets names and versions in a fixed, small set of
   places; it never renames a Java package or edits source code.
 - **Drift.** A roux change that breaks the template fails roux's build, the same as the dojo.
 
@@ -74,8 +74,8 @@ when it deploys, and roux makes them the owner. Locally, Mailpit catches the sam
 - B. A new template repository, cut from the dojo. Most current starting point, but a second app
   outside roux's build, so it drifts too.
 - **C. Cut from the dojo, kept in the roux repository (chosen).** Built and tested with roux, so it
-  never falls behind and each release's template matches that release. Costs: noir fetches a folder
-  from a release instead of cloning a repository; the script supplies released versions.
+  never falls behind and each release's template matches that release. Costs: a release has to
+  carry the template out of the repository with released versions (the archetype does).
 
 **How an app is generated:**
 
@@ -90,12 +90,12 @@ when it deploys, and roux makes them the owner. Locally, Mailpit catches the sam
 
 **How an app is delivered (revised):** first designed as `roux-new.sh` fetching `templates/app` from a
 release tag with `git clone` and setting names and versions itself. Changed to: **a Maven archetype
-built from `templates/app`, published to Central with each release, behind the same `roux-new.sh`
-front door.** The archetype pins versions for free (the 0.3.0 archetype makes a 0.3.0 app), needs no
+built from `templates/app`, published to Central with each release, used directly by noir (no
+wrapper command).** The archetype pins versions for free (the 0.3.0 archetype makes a 0.3.0 app), needs no
 tag lookup or clone, works offline from `~/.m2`, and `archetype:integration-test` proves the
 generated app inside roux's build. Option 2's objection (source becomes templates) does not apply:
-the archetype's resources are copied from the real app at build time, never edited by hand. The
-script covers what an archetype cannot do (the executable bit, `git init`).
+the archetype's resources are copied from the real app at build time, never edited by hand. What an
+archetype cannot do (the executable bit on `mvnw`, `git init` and a first commit) is noir's job.
 
 **When:** build the template now, carrying the dojo's current frontend frame and users screens
 (about 20 files), rather than first finishing the app-skeleton UI in roux. James chose now: a
@@ -184,17 +184,15 @@ In the repository the template's name is `App` (slug `app`).
   `-DskipITs`, so the generated output compiles and its unit and Vitest tests pass. The E2E suite runs
   once, in `templates/app` itself.
 
-### The script
+### How noir uses it
 
-- `plugins/roux/scripts/roux-new.sh <dir> --name "<name>" [--version <x.y.z>]` is the front door
-  noir and an agent at a terminal both call. It refuses a non-empty `<dir>` and stops with a clear
-  message if `mvn` is missing.
-- It runs `mvn archetype:generate` (non-interactive) with `roux-app-archetype` at `--version`, or at
-  the latest version on Central by default (from Central's `maven-metadata.xml`). It passes
-  `artifactId` (the name's slug) and `appName`, then makes `mvnw` executable, runs `git init`, and
-  makes one commit.
+- noir runs `mvn -B archetype:generate -DarchetypeGroupId=org.jwcarman.roux
+  -DarchetypeArtifactId=roux-app-archetype -DarchetypeVersion=<x.y.z> -DartifactId=<slug>
+  -DappName="<name>"` (non-interactive), then makes `mvnw` executable, runs `git init` and makes one
+  commit. noir picks the version and the slug; roux ships no wrapper command.
+- The template's README says the same for a person starting an app by hand.
 - Before 0.3.0 is released, `./mvnw install` in a roux checkout puts the SNAPSHOT archetype in
-  `~/.m2`, and `--version 0.3.0-SNAPSHOT` uses it.
+  `~/.m2`, and `-DarchetypeVersion=0.3.0-SNAPSHOT` uses it.
 
 ### Settled after the builder check (Claude's calls, for James to check)
 
@@ -217,7 +215,7 @@ In the repository the template's name is `App` (slug `app`).
   overrides, Testcontainers in `E2eIT`). The reactor builds the two apps one after the other. If
   anything still clashes, the template takes different defaults and the dojo stays as it is.
 - **Before the first release containing the template**, a locally installed SNAPSHOT archetype is
-  the path (see The script). noir switches to the template only after 0.3.0 is released.
+  the path (see How noir uses it). noir switches to the template only after 0.3.0 is released.
 - **Tests that name packages** (`PackageLayoutTest` and the like) are written for package `app` in the
   template. It is a new copy, not a generated rewrite, so this is not "rewriting code to generate".
   The plugin's eval scripts (`eval-fixture.sh`, `check-roux-way.sh`) keep using the dojo and are not
@@ -228,10 +226,9 @@ In the repository the template's name is `App` (slug `app`).
 - Exactly which dojo tests and E2E specs survive, and trimming them to the template's features.
 - Whether the frontend's users screens are renamed from the dojo's `members/` folder to `users/` in
   the template (the users rename is decided; the dojo just has not caught up).
-- The slug rule (lowercase, non-alphanumerics to `-`) and the script's argument parsing.
 - How the "template version equals roux version" test is written, and how release.yml bumps it.
 - Tests of the generated app beyond `archetype:integration-test`: at least that every name and version
   was set and no `file:` link or `roux-parent` reference remains. Whether release.yml also builds an
   app generated from the just-published archetype is the builder's call.
-- Updating roux's README and the getting-started guide to name `roux-new.sh` as the way to start an
+- Updating roux's README and the getting-started guide to name the archetype as the way to start an
   app.
