@@ -1,4 +1,4 @@
-import { Button, Field, Input, Stack, Text } from "@chakra-ui/react";
+import { Button, Field, Flex, Input, Stack, Text } from "@chakra-ui/react";
 import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { useAppForm } from "../form/form";
@@ -9,6 +9,19 @@ import { who } from "./who";
 /** The address to email a sign-in link to, in roux's words. */
 const linkRequestSchema = z.object({ email: email() });
 
+/** What a visitor is told when who could not email the link. */
+export const SEND_FAILED = "Could not send the link. Try again.";
+
+/** Asks who to email a sign-in link and code to `address`: "sent" when it did, else "failed". */
+export async function sendLink(address: string): Promise<"sent" | "failed"> {
+  try {
+    return (await who.email.send(address)).ok ? "sent" : "failed";
+  } catch {
+    // who answers a server error by throwing.
+    return "failed";
+  }
+}
+
 /**
  * Sign-in by email: "Email me a link" for an address, then, with `Check your email`, either open the
  * link or type the code from the same email (`autoComplete="one-time-code"`), which signs in here and
@@ -16,44 +29,10 @@ const linkRequestSchema = z.object({ email: email() });
  */
 export function EmailSignIn() {
   const [sentTo, setSentTo] = useState<string | null>(null);
-  const [sendError, setSendError] = useState<string | null>(null);
-
-  const form = useAppForm({
-    defaultValues: { email: "" },
-    validators: { onBlur: linkRequestSchema, onSubmit: linkRequestSchema },
-    onSubmit: async ({ value }) => {
-      setSendError(null);
-      try {
-        const result = await who.email.send(value.email);
-        if (result.ok) {
-          setSentTo(value.email);
-        } else {
-          setSendError("Could not send the link. Try again.");
-        }
-      } catch {
-        // who answers a server error by throwing.
-        setSendError("Could not send the link. Try again.");
-      }
-    },
-  });
 
   return (
     <Stack gap="6">
-      <form.AppForm>
-        <form.Form>
-          <Stack gap="4">
-            <form.AppField name="email">
-              {(field) => <field.InputField label="Email" type="email" autoComplete="username webauthn" />}
-            </form.AppField>
-            <form.SubmitButton>Email me a link</form.SubmitButton>
-          </Stack>
-        </form.Form>
-      </form.AppForm>
-      {sendError !== null && (
-        <Text role="alert" color="fg.error">
-          {sendError}
-        </Text>
-      )}
+      <LinkRequestForm initialEmail="" onSent={setSentTo} />
       {sentTo !== null && (
         <Stack gap="4">
           <Text role="status" fontWeight="bold">
@@ -67,10 +46,57 @@ export function EmailSignIn() {
   );
 }
 
+export interface LinkRequestFormProps {
+  /** The address the field starts with. */
+  initialEmail: string;
+  /** Called with the address once who has emailed it. */
+  onSent: (address: string) => void;
+}
+
+/** The address field and "Email me a link"; a send that fails is told under it. */
+export function LinkRequestForm({ initialEmail, onSent }: LinkRequestFormProps) {
+  const [sendError, setSendError] = useState<string | null>(null);
+
+  const form = useAppForm({
+    defaultValues: { email: initialEmail },
+    validators: { onBlur: linkRequestSchema, onSubmit: linkRequestSchema },
+    onSubmit: async ({ value }) => {
+      setSendError(null);
+      if ((await sendLink(value.email)) === "sent") {
+        onSent(value.email);
+      } else {
+        setSendError(SEND_FAILED);
+      }
+    },
+  });
+
+  return (
+    <Stack gap="3">
+      <form.AppForm>
+        <form.Form>
+          <Stack gap="3">
+            <form.AppField name="email">
+              {(field) => <field.InputField label="Email" type="email" autoComplete="username webauthn" />}
+            </form.AppField>
+            <Flex justify="flex-end">
+              <form.SubmitButton>Email me a link</form.SubmitButton>
+            </Flex>
+          </Stack>
+        </form.Form>
+      </form.AppForm>
+      {sendError !== null && (
+        <Text role="alert" color="fg.error" textStyle="sm">
+          {sendError}
+        </Text>
+      )}
+    </Stack>
+  );
+}
+
 const NOT_ACCEPTED = "That code did not work. Check it, or ask for a new email.";
 
-/** The code from the emailed message, for the address it was sent to. */
-function CodeForm({ email }: { email: string }) {
+/** The code from the emailed message, for the address it was sent to: a short field with Sign in beside it. */
+export function CodeForm({ email }: { email: string }) {
   const finish = useSignInReturn();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -93,14 +119,20 @@ function CodeForm({ email }: { email: string }) {
 
   return (
     <form onSubmit={(event) => void submit(event)}>
-      <Stack gap="4">
-        <Field.Root invalid={error !== null}>
-          <Field.Label>Code from the email</Field.Label>
-          <Input value={code} onChange={(event) => setCode(event.target.value)} autoComplete="one-time-code" />
-          <Field.ErrorText>{error}</Field.ErrorText>
-        </Field.Root>
-        <Button type="submit">Sign in</Button>
-      </Stack>
+      <Field.Root invalid={error !== null}>
+        <Field.Label>Code from the email</Field.Label>
+        <Flex gap="2" align="center">
+          <Input
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            autoComplete="one-time-code"
+            maxW="10rem"
+            letterSpacing="wider"
+          />
+          <Button type="submit">Sign in</Button>
+        </Flex>
+        <Field.ErrorText>{error}</Field.ErrorText>
+      </Field.Root>
     </form>
   );
 }

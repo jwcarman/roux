@@ -1,10 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
 import { Button, Stack, type ButtonProps } from "@chakra-ui/react";
-import { unwrap, type SignInProvider } from "@jwcarman/who-client";
 import type { ReactNode } from "react";
 import { FaApple, FaGithub, FaGitlab } from "react-icons/fa6";
 import { LuLogIn } from "react-icons/lu";
 import { SiOkta } from "react-icons/si";
+import { useSignInOptions } from "./options";
 import { who } from "./who";
 
 /** A button's colors in one color mode. */
@@ -158,20 +157,13 @@ export function ProviderSignInButton({ provider, name, label, icon, ...props }: 
  * order and with who's display names; nothing when there are none, or while they load.
  */
 export function ProviderSignInButtons() {
-  const options = useQuery({ queryKey: SIGN_IN_OPTIONS, queryFn: signInOptions });
+  const options = useSignInOptions();
 
   return (
     <Stack gap="3">
-      {options.data?.map((provider) => (
+      {options.data?.providers.map((provider) => (
         <ProviderSignInButton key={provider.id} provider={provider.id} name={provider.name} />
       ))}
     </Stack>
   );
-}
-
-/** What a signed-out page asks who for: the providers it reports as on. */
-const SIGN_IN_OPTIONS = ["roux", "signInOptions"] as const;
-
-async function signInOptions(): Promise<SignInProvider[]> {
-  return unwrap(await who.signInOptions()).providers;
 }

@@ -3,8 +3,11 @@ import { useState } from "react";
 import { useSignInReturn } from "./returnTo";
 import { who } from "./who";
 
-/** Signs in with a passkey the browser holds, then goes where the visitor was going. A refusal is told under the button. */
-export function PasskeySignInButton(props: Omit<ButtonProps, "onClick" | "children">) {
+/**
+ * Signing in with a passkey the browser holds: `signIn` asks for one, then goes where the visitor was
+ * going; `error` is the refusal to tell, or null.
+ */
+export function usePasskeySignIn() {
   const finish = useSignInReturn();
   const [error, setError] = useState<string | null>(null);
 
@@ -21,6 +24,13 @@ export function PasskeySignInButton(props: Omit<ButtonProps, "onClick" | "childr
       setError("Passkey sign-in failed.");
     }
   }
+
+  return { signIn, error };
+}
+
+/** Signs in with a passkey the browser holds, then goes where the visitor was going. A refusal is told under the button. */
+export function PasskeySignInButton(props: Omit<ButtonProps, "onClick" | "children">) {
+  const { signIn, error } = usePasskeySignIn();
 
   return (
     <Stack gap="2">

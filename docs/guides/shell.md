@@ -62,27 +62,41 @@ is the route guard: guard it with `theme.manage`, which the server enforces too.
 
 ## Sign-in
 
-`@jwcarman/roux-web/signin` ships the pieces; the page is the app's (`routes/signin/index.tsx`
-composes them, and is the app's to change). who is `@jwcarman/who-client` (a peer dependency).
+`@jwcarman/roux-web/signin` ships the sign-in page whole, and the pieces for an app that lays out its
+own. who is `@jwcarman/who-client` (a peer dependency).
 
 ```tsx
-import { EmailSignIn, PasskeySignInButton, ProviderSignInButtons } from "@jwcarman/roux-web/signin";
+import { SignInCard, SignInFrame } from "@jwcarman/roux-web/signin";
 
+// The signed-out layout: the card centred on a tinted page, the mode switch in the corner.
+<SignInFrame tools={<ColorModeButton />}>
+  <Outlet />
+</SignInFrame>;
+
+// The sign-in page (routes/signin/index.tsx).
 export function SignIn() {
-  return (
-    <Stack gap="6">
-      <Heading as="h2">Sign in</Heading>
-      <EmailSignIn />
-      <PasskeySignInButton />
-      <ProviderSignInButtons />
-    </Stack>
-  );
+  const appName = useShellTheme().shown.appName;
+  return <SignInCard appName={appName} logo={<Logo boxSize="9" />} />;
 }
 ```
 
+- `SignInFrame`: a card no wider than 400px, centred on a tinted page from a small screen up; on a
+  phone the card is the page. `tools` sit in the top corner. Its children are the card's contents, so
+  the emailed link's landing page (`/signin/link`) wears the same card.
+- `SignInCard`: "Sign in to `appName`" under `logo`, then the ways who reports as on
+  (`who.signInOptions()`; email and a passkey when who cannot be asked). The emailed link comes first,
+  with "Email me a link" at the field's right edge; below a divider, "Have a passkey?" beside "Use a
+  passkey" when that is the only other way, or "Other ways to sign in" above a wrapping row of the
+  passkey and a `ProviderSignInButton` per provider. Buttons are their label's width. Once the link is
+  sent the card turns to `Check your email`: the address it went to, the code beside "Sign in", "Use a
+  different email" (back, the address kept) and "Send it again" (who has no cooldown, so neither does
+  the card). Refusals are told on the card (`role="alert"`).
+
+The pieces, for a page of the app's own:
+
 - `EmailSignIn`: "Email me a link" for an address (`email()` rule), then `Check your email` and "Open the
-  link, or type the code from the email": a code field (`autoComplete="one-time-code"`) whose
-  "Sign in" calls `who.email.signIn({ email, code })`; who's refusal is told under the field.
+  link, or type the code from the email": a short code field (`autoComplete="one-time-code"`) with
+  "Sign in" beside it, which calls `who.email.signIn({ email, code })`; who's refusal is told under the field.
 - `PasskeySignInButton`: "Sign in with a passkey"; a refusal or cancel is told under it (`role="alert"`).
 - `ProviderSignInButtons`: one `ProviderSignInButton` per provider `who.signInOptions()` reports, with
   who's display names; nothing when there are none. `ProviderSignInButton provider="google"` alone is
