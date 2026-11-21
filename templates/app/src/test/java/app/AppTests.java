@@ -33,6 +33,21 @@ class AppTests {
         .contains("who_identity", "who_role", "who_email_credential", "who_passkey_credential");
   }
 
+  /**
+   * Liquibase locks with a PostgreSQL advisory lock (liquibase-sessionlock), held by its session:
+   * an app that dies mid-migration leaves no lock behind, so the next start never waits on it. The
+   * table-based lock it replaces is never created.
+   */
+  @Test
+  void liquibaseLocksWithTheSessionNotATable() {
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from information_schema.tables where table_name ="
+                    + " 'databasechangeloglock'",
+                Integer.class))
+        .isZero();
+  }
+
   @Test
   void virtualThreadsAreOn() throws Exception {
     assertThat(env.getProperty("spring.threads.virtual.enabled", Boolean.class)).isTrue();

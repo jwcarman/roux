@@ -1,7 +1,8 @@
 # Roux App
 
 A [roux](https://github.com/jwcarman/roux) app: Spring Boot 4 with roux's starter (who for sign-in,
-by emailed link or passkey), PostgreSQL through Liquibase, and a React SPA in `frontend/` on
+by emailed link or passkey; no passwords), PostgreSQL through Liquibase (locked with a database
+session lock, so a start that dies mid-migration leaves no stale lock), and a React SPA in `frontend/` on
 `@jwcarman/roux-web` (Chakra UI v3, TanStack Router, Query, Form and Table).
 
 It starts with no features of its own: sign-in, the first owner, the sidebar frame, Users (invite,
@@ -20,9 +21,13 @@ mvn -B archetype:generate \
   -DartifactId=acme-gym \
   -DappName="Acme Gym"
 cd acme-gym
-chmod +x mvnw
+mvn -N wrapper:wrapper
 git init && git add . && git commit -m "Start from roux-app-archetype"
 ```
+
+The app is just the app: its code, its tests and their configuration. It carries no CI workflows
+and no Maven wrapper; `mvn -N wrapper:wrapper` adds the wrapper (`./mvnw`), and the CI is whatever
+your environment uses.
 
 `artifactId` is lowercase letters, digits and dashes; `appName` is what people see until the owner
 renames the app on the Appearance page. The Java package is `app` in every app.

@@ -2,7 +2,7 @@
 import { screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { server } from "@jwcarman/roux-web/testing";
+import { server, settle } from "@jwcarman/roux-web/testing";
 import { renderRoute } from "../../testing/route";
 
 describe("/signin", () => {
@@ -12,6 +12,20 @@ describe("/signin", () => {
 
     expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
     expect(screen.getByRole("banner")).toHaveTextContent(/\S/);
+  });
+
+  it("offers only the emailed link and a passkey, even when who has other providers", async () => {
+    server.use(
+      http.get("/who/sign-in", () =>
+        HttpResponse.json({ email: true, passkey: true, providers: [{ id: "google", name: "Google" }] }),
+      ),
+    );
+    renderRoute("/signin", { permissions: null });
+
+    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    await settle();
+    expect(screen.getByRole("button", { name: /passkey/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Continue with Google" })).toBeNull();
   });
 
   it("signs in from the emailed link's page", async () => {

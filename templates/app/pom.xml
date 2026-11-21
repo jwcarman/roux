@@ -101,6 +101,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-liquibase</artifactId>
         </dependency>
+        <!-- Liquibase locks with a PostgreSQL advisory lock, not a table: a start that dies
+             mid-migration leaves no stale lock for the next one to wait on. -->
+        <dependency>
+            <groupId>com.github.blagerweij</groupId>
+            <artifactId>liquibase-sessionlock</artifactId>
+        </dependency>
         <!-- Sessions in PostgreSQL (Spring Session JDBC); the tables come from Liquibase. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

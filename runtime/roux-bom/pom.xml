@@ -61,6 +61,7 @@
     <properties>
         <who.version>0.25.0</who.version>
         <jpa-utils.version>0.2.0</jpa-utils.version>
+        <liquibase-sessionlock.version>1.6.9</liquibase-sessionlock.version>
 
         <!-- Plugin Versions -->
         <gpg.plugin.version>3.2.8</gpg.plugin.version>
@@ -69,6 +70,13 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Liquibase's lock as a database session lock (a PostgreSQL advisory lock): a start that
+                 dies mid-migration leaves no lock behind. An app adds it beside spring-boot-starter-liquibase. -->
+            <dependency>
+                <groupId>com.github.blagerweij</groupId>
+                <artifactId>liquibase-sessionlock</artifactId>
+                <version>${liquibase-sessionlock.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.jwcarman.roux</groupId>
                 <artifactId>roux-problems</artifactId>
