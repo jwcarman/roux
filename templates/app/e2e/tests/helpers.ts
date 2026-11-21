@@ -138,7 +138,7 @@ export async function signInByLink(
   page: Page,
   request: APIRequestContext,
   address: string,
-  landsOn: { name: string; level: number } = { name: "Home", level: 2 },
+  landsOn: { name: string | RegExp; level: number } = { name: /^Welcome/, level: 2 },
 ) {
   await expect(page.getByRole("heading", { name: /^Sign in to /, level: 1 })).toBeVisible();
   const seen = await inboxSnapshot(request, address);
@@ -222,7 +222,7 @@ export async function signOut(page: Page) {
 
 export async function signInWithPasskey(page: Page) {
   await page.getByRole("button", { name: "Use a passkey" }).click();
-  await expect(page.getByRole("heading", { name: "Home", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Welcome/, level: 2 })).toBeVisible();
 }
 
 /**
@@ -264,7 +264,7 @@ export async function signedInThrough(browser: Browser, link: string) {
   const context = await browser.newContext();
   const page = await context.newPage();
   await openLink(page, link);
-  await expect(page.getByRole("heading", { name: "Home", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Welcome/, level: 2 })).toBeVisible();
   return { context, page };
 }
 

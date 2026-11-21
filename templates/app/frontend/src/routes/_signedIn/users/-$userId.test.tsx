@@ -62,7 +62,7 @@ describe("/users/$userId", () => {
 
   it("sends someone who may not read users to Home", async () => {
     const { router } = renderRoute("/users/u-1", { permissions: [] });
-    expect(await screen.findByRole("heading", { name: "Home" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Welcome/ })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/");
   });
 });

@@ -28,7 +28,7 @@ describe("/appearance", () => {
 
   it("sends someone who may not change them to Home", async () => {
     const { router } = renderRoute("/appearance", { permissions: [] });
-    expect(await screen.findByRole("heading", { name: "Home" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Welcome/ })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/");
   });
 });

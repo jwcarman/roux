@@ -1,28 +1,21 @@
-import { Heading, Link, Stack, Text } from "@chakra-ui/react";
-import { Link as RouterLink } from "@tanstack/react-router";
-import { useMe } from "../routes/_signedIn";
-import { USERS_READ } from "../permissions.gen";
+import { Heading, Stack, Text } from "@chakra-ui/react";
+import { useShellTheme } from "@jwcarman/roux-web/theme";
 import { useSession } from "./session";
 
+/**
+ * The page the app opens on: a welcome, and nothing else yet. It is the blank page to start from;
+ * the sidebar already leads everywhere else.
+ */
 export function Home() {
-  const me = useMe();
   const { profile } = useSession();
-  const canSeeUsers = me.permissions.includes(USERS_READ);
+  const appName = useShellTheme().shown.appName;
 
   return (
-    <Stack gap="4">
+    <Stack gap="2">
       <Heading as="h2" size="lg">
-        Home
+        {profile ? `Welcome, ${profile.displayName}` : "Welcome"}
       </Heading>
-      {profile && <Text>Welcome, {profile.displayName}</Text>}
-      <Link asChild>
-        <RouterLink to="/settings">Settings</RouterLink>
-      </Link>
-      {canSeeUsers && (
-        <Link asChild>
-          <RouterLink to="/users">Users</RouterLink>
-        </Link>
-      )}
+      <Text color="fg.muted">You're signed in to {appName}.</Text>
     </Stack>
   );
 }

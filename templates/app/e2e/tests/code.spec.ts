@@ -45,7 +45,7 @@ test("the owner signs in with the code from the email instead of the link", asyn
   // Typed the way a person might: lower case, the dash kept.
   await field.fill(code.toLowerCase());
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Home", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Welcome/, level: 2 })).toBeVisible();
 
   // The code worked once; the same code again is refused.
   expect(await postCode(page, ownerEmail, code)).toBe(401);

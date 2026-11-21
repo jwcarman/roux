@@ -4,7 +4,7 @@ import { openDialog, ownerEmail, ownerName, signInByLink } from "./helpers";
 test("the owner sees their name and sorts the directory by role name", async ({ page, request }) => {
   await page.goto("/");
   await signInByLink(page, request, ownerEmail);
-  await expect(page.getByText(`Welcome, ${ownerName}`)).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Welcome, ${ownerName}`, level: 2 })).toBeVisible();
   await expect(page.getByRole("region", { name: "Account" }).getByText(ownerName, { exact: true })).toBeVisible();
 
   await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Users" }).click();

@@ -9,13 +9,13 @@ describe("renderRoute", () => {
   it("opens the path for a signed-in caller", async () => {
     renderRoute("/", { permissions: [] });
 
-    expect(await screen.findByRole("heading", { name: "Home" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Welcome/ })).toBeInTheDocument();
   });
 
   it("starts at the path it was given", async () => {
     const { router } = renderRoute("/?home=true", { permissions: [] });
 
-    await screen.findByRole("heading", { name: "Home" });
+    await screen.findByRole("heading", { name: /^Welcome/ });
     expect(router.state.location.search).toEqual({ home: true });
   });
 

@@ -38,7 +38,7 @@ describe("/signin", () => {
 
   it("sends someone already signed in to Home", async () => {
     const { router } = renderRoute("/signin", { permissions: [] });
-    expect(await screen.findByRole("heading", { name: "Home" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Welcome/ })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/");
   });
 });

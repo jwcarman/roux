@@ -25,7 +25,7 @@ describe("opening the app when another page is the start", () => {
   it("shows Home itself, not the start page, to a caller a guard turned away", async () => {
     // May open the start page (Users) but not Appearance: Appearance's guard sends them to Home.
     const { router } = renderRoute("/appearance", { permissions: [USERS_READ] });
-    expect(await screen.findByRole("heading", { name: "Home" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Welcome/ })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/");
   });
 });

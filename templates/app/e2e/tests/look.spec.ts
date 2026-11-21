@@ -42,7 +42,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     await expectAccessible(page);
 
     await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Home" }).click();
-    await expect(page.getByRole("heading", { name: "Home", level: 2 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Welcome/, level: 2 })).toBeVisible();
     await expectAccessible(page);
   });
 }

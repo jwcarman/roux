@@ -31,8 +31,7 @@ test("an invited user signs in by link, sees the directory, and cannot invite", 
   const userContext = await browser.newContext();
   const userPage = await userContext.newPage();
   await openLink(userPage, link);
-  await expect(userPage.getByRole("heading", { name: "Home", level: 2 })).toBeVisible();
-  await expect(userPage.getByText("Welcome, Ada Lovelace")).toBeVisible();
+  await expect(userPage.getByRole("heading", { name: "Welcome, Ada Lovelace", level: 2 })).toBeVisible();
 
   // A user sees the directory, with themselves in it, but no invite form.
   await userPage.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Users" }).click();

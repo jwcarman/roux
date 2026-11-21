@@ -92,7 +92,7 @@ describe("the root route", () => {
   it("sends the caller to sign in when the session ends on the server", async () => {
     server.use(http.get("/who/sign-in", () => HttpResponse.json({ providers: [] })));
     const { router } = renderRoute("/", { permissions: [] });
-    await screen.findByRole("heading", { name: "Home" });
+    await screen.findByRole("heading", { name: /^Welcome/ });
     server.use(
       http.get("/who/me", () => new HttpResponse(null, { status: 401 })),
       http.get("/api/anything", () => new HttpResponse(null, { status: 401 })),

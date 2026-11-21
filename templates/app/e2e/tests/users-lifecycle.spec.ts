@@ -26,7 +26,7 @@ test("an owner invites, deactivates and reactivates a user, with the history to 
   const graceContext = await browser.newContext();
   const gracePage = await graceContext.newPage();
   await openLink(gracePage, await nextSignInLink(request, email, seen));
-  await expect(gracePage.getByText(`Welcome, ${name}`)).toBeVisible();
+  await expect(gracePage.getByRole("heading", { name: `Welcome, ${name}`, level: 2 })).toBeVisible();
 
   // Her name in the directory leads to her page.
   await page.getByLabel("Search users").fill(tag);
