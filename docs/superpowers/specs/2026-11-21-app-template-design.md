@@ -29,6 +29,13 @@ when it deploys, and roux makes them the owner. Locally, Mailpit catches the sam
   every change, as it does the dojo's.
 - What a new app gets is exactly what is in `templates/app` at a roux release, plus the name and
   released versions.
+- **Native out of the box.** A generated app builds a GraalVM native binary (`./mvnw -Pnative
+  package`) and passes its whole Playwright suite against it (`./mvnw -Pnative-e2e verify`), with
+  no edits.
+- **Zero surviving mutants and 100% coverage**, Java and frontend, in the template and so in every
+  generated app: JaCoCo at 100% lines and branches in `./mvnw verify`, PIT with no survivors under
+  `./mvnw -Ppit verify`, Vitest coverage at 100% in `npm run coverage`, Stryker with `break: 100`
+  in `npm run mutate`. Both mutation runs are incremental (`.mutation-history/`, git-ignored).
 
 ## Non-goals
 
@@ -210,7 +217,35 @@ In the repository the template's name is `App` (slug `app`).
   `sed`. A test in roux's build reads both and fails if they differ.
 - **CI and wrapper.** The template has its own Maven wrapper (real files, no symlinks) and a
   `.github/workflows/ci.yml` modelled on `noir-app-template`'s (`./mvnw -B verify` with Chromium's
-  system libraries, logs uploaded on failure). It has no native-image workflow.
+  system libraries, logs uploaded on failure), and `noir-app-template`'s `native.yml` (nightly and on
+  demand: GraalVM 25, `./mvnw -Pnative-e2e verify`).
+
+### Native
+
+- The template's pom carries `noir-app-template`'s native profiles: `native` (binary at package),
+  `native-e2e` (the binary, then `E2eIT` against it), `native-trace` and `traced` (record and use
+  tracing-agent metadata), plus its `remove-aot-output` clean-up and `scripts/trace.sh`.
+- Missing reflection, resource or proxy metadata is fixed **in the roux module that needs it**
+  (`RuntimeHints` registered through `aot.factories` or auto-configuration, as roux-problems and
+  roux-validation do), never in the template. The template carries no hints of its own except for
+  its own classes.
+- roux's CI gets a nightly and on-demand `native` workflow that runs `./mvnw -Pnative-e2e verify`
+  in `templates/app`, so a roux change that breaks native shows up within a day.
+
+### Quality gates
+
+- Java: the template's pom has roux's JaCoCo check (100% lines and branches, `verify`) and its
+  `pit` profile (pitest-maven with the JUnit 5 and history plugins, no survivors allowed,
+  incremental history in `.mutation-history/`), with versions copied from roux's root pom.
+- Frontend: `npm run coverage` (Vitest v8 coverage, 100% thresholds on lines, branches, functions,
+  statements) runs in the build instead of `npm test`. `npm run mutate` (Stryker, vitest runner,
+  `perTest`, `break: 100`, incremental) is run like roux-web's, not inside `verify`. Exclusions copy
+  roux-web's rules: tests, test helpers, generated files (`routeTree.gen.ts`, `permissions.gen.ts`).
+- The dojo never met these gates. The template's copies of the shell and users screens get the tests
+  they need until both gates pass; no code is excluded to pass them.
+- roux's own `-Ppit` run still leaves the template out (the `examples` profile is off). The template's
+  gates run in its own build, and CI runs `./mvnw -Ppit verify` and `npm run mutate` in
+  `templates/app` as a separate job.
 - **Ports.** The template's E2E and compose ports follow the dojo's (`${POSTGRES_PORT:-5432}` style
   overrides, Testcontainers in `E2eIT`). The reactor builds the two apps one after the other. If
   anything still clashes, the template takes different defaults and the dojo stays as it is.
