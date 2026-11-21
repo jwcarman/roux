@@ -52,6 +52,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 public class RouxAuditingAutoConfiguration {
 
   @Bean
+  static AuditingHandlerWiring rouxAuditingHandlerWiring() {
+    return new AuditingHandlerWiring();
+  }
+
+  @Bean
   @ConditionalOnBean(Clock.class)
   @ConditionalOnMissingBean(DateTimeProvider.class)
   DateTimeProvider auditingDateTimeProvider(Clock clock) {

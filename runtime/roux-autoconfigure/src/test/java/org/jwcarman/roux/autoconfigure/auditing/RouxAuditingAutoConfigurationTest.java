@@ -25,13 +25,19 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.jpa.ClockDateTimeProvider;
 import org.jwcarman.roux.jpa.IdentityAuditor;
+import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
+import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.data.auditing.AuditingHandler;
 import org.springframework.data.auditing.DateTimeProvider;
 import org.springframework.data.domain.Auditable;
@@ -77,26 +83,66 @@ class RouxAuditingAutoConfigurationTest {
     }
   }
 
-  /** What {@code @EnableJpaAuditing} registers: a handler whose properties are set by type. */
+  /**
+   * What {@code @EnableJpaAuditing} registers, the way it registers it (while the configuration is
+   * read): a handler whose properties are set by type.
+   */
   @Configuration(proxyBeanMethods = false)
+  @Import(HandlerRegistrar.class)
   static class WithAnAuditingHandler {
 
     @Bean
     PersistentEntities persistentEntities() {
       return PersistentEntities.of();
     }
+  }
+
+  static class HandlerRegistrar implements ImportBeanDefinitionRegistrar {
+
+    @Override
+    public void registerBeanDefinitions(
+        AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
+      registry.registerBeanDefinition(
+          "jpaAuditingHandler",
+          BeanDefinitionBuilder.rootBeanDefinition(AuditingHandler.class)
+              .setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE)
+              .addConstructorArgReference("persistentEntities")
+              .getBeanDefinition());
+    }
+  }
+
+  /** A handler an application gave its own auditor and clock by name. */
+  @Configuration(proxyBeanMethods = false)
+  @Import(NamedHandlerRegistrar.class)
+  static class WithAHandlerWiredByName {
 
     @Bean
-    static org.springframework.beans.factory.config.BeanFactoryPostProcessor handler() {
-      return beanFactory ->
-          ((org.springframework.beans.factory.support.BeanDefinitionRegistry) beanFactory)
-              .registerBeanDefinition(
-                  "jpaAuditingHandler",
-                  BeanDefinitionBuilder.rootBeanDefinition(AuditingHandler.class)
-                      .setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE)
-                      .addConstructorArgReference("persistentEntities")
-                      .getBeanDefinition());
+    PersistentEntities persistentEntities() {
+      return PersistentEntities.of();
     }
+  }
+
+  static class NamedHandlerRegistrar implements ImportBeanDefinitionRegistrar {
+
+    @Override
+    public void registerBeanDefinitions(
+        AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
+      registry.registerBeanDefinition(
+          "jpaAuditingHandler",
+          BeanDefinitionBuilder.rootBeanDefinition(AuditingHandler.class)
+              .addConstructorArgReference("persistentEntities")
+              .addPropertyReference("auditorAware", "ownAuditor")
+              .addPropertyReference("dateTimeProvider", "ownProvider")
+              .getBeanDefinition());
+    }
+  }
+
+  private static Object handlerProperty(ConfigurableApplicationContext context, String name) {
+    return context
+        .getBeanFactory()
+        .getBeanDefinition("jpaAuditingHandler")
+        .getPropertyValues()
+        .get(name);
   }
 
   /** The simplest thing the auditing handler stamps: it needs no mapping context. */
@@ -241,6 +287,45 @@ class RouxAuditingAutoConfigurationTest {
               context.getBean(AuditingHandler.class).markCreated(visit);
 
               assertThat(visit.getCreatedBy()).contains(IdentityAuditor.DEFAULT_SYSTEM_AUDITOR);
+            });
+  }
+
+  // An ahead-of-time (native) build keeps a bean's named references but not "set by type": the
+  // handler is given its auditor and clock by name, or it would stamp no auditor there.
+  @Test
+  void theHandlerIsGivenTheAuditorAndClockByName() {
+    runner
+        .withUserConfiguration(WithAClock.class, WithAnAuditingHandler.class)
+        .run(
+            context -> {
+              assertThat(handlerProperty(context, "auditorAware"))
+                  .isEqualTo(new RuntimeBeanReference("identityAuditor"));
+              assertThat(handlerProperty(context, "dateTimeProvider"))
+                  .isEqualTo(new RuntimeBeanReference("auditingDateTimeProvider"));
+            });
+  }
+
+  @Test
+  void withoutAClockTheHandlerIsGivenNoProvider() {
+    runner
+        .withUserConfiguration(WithAnAuditingHandler.class)
+        .run(context -> assertThat(handlerProperty(context, "dateTimeProvider")).isNull());
+  }
+
+  @Test
+  void aHandlerWiredByNameKeepsItsOwn() {
+    runner
+        .withUserConfiguration(
+            WithAClock.class,
+            WithAProviderOfItsOwn.class,
+            WithAnAuditorOfItsOwn.class,
+            WithAHandlerWiredByName.class)
+        .run(
+            context -> {
+              assertThat(handlerProperty(context, "auditorAware"))
+                  .isEqualTo(new RuntimeBeanReference("ownAuditor"));
+              assertThat(handlerProperty(context, "dateTimeProvider"))
+                  .isEqualTo(new RuntimeBeanReference("ownProvider"));
             });
   }
 
