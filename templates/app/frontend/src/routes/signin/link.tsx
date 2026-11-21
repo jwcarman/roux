@@ -5,7 +5,9 @@ import { EmailLinkLanding } from "@jwcarman/roux-web/signin";
 function LinkLanding() {
   return (
     <Stack gap="4">
-      <Heading as="h2">Signing you in</Heading>
+      <Heading as="h1" size="lg">
+        Signing you in
+      </Heading>
       <EmailLinkLanding />
     </Stack>
   );

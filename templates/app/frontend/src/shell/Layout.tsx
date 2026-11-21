@@ -1,7 +1,8 @@
-import { Box, Button, Container, Flex, Heading, Text } from "@chakra-ui/react";
+import { Button, Flex, Text } from "@chakra-ui/react";
 import { Outlet } from "@tanstack/react-router";
 import { LuLogOut } from "react-icons/lu";
 import { AppShell, RAIL_LABELS, type AccountLayout } from "@jwcarman/roux-web/navigation";
+import { SignInFrame } from "@jwcarman/roux-web/signin";
 import { useShellTheme } from "@jwcarman/roux-web/theme";
 import { ColorModeButton } from "./colorMode";
 import { Logo } from "./Logo";
@@ -10,7 +11,8 @@ import { useSession } from "./session";
 
 /**
  * The app's frame. Signed in: roux's `AppShell` (a sidebar, an icon rail and a drawer) with this
- * app's account area. Signed out: a slim header.
+ * app's account area. Signed out: roux's `SignInFrame`, a card centred on the page, with the mode
+ * switch in the corner.
  */
 export function Layout() {
   const { me } = useSession();
@@ -18,18 +20,9 @@ export function Layout() {
 
   if (!me) {
     return (
-      <Box minH="100dvh" bg="bg">
-        <Flex as="header" px="6" py="3" align="center" justify="space-between" borderBottomWidth="1px">
-          <Heading size="md" as="h1" display="flex" alignItems="center" gap="2">
-            <Logo />
-            {appName}
-          </Heading>
-          <ColorModeButton />
-        </Flex>
-        <Container maxW="3xl" py="6" as="main">
-          <Outlet />
-        </Container>
-      </Box>
+      <SignInFrame tools={<ColorModeButton />}>
+        <Outlet />
+      </SignInFrame>
     );
   }
 

@@ -1,17 +1,13 @@
-import { Heading, Stack } from "@chakra-ui/react";
-import { EmailSignIn, PasskeySignInButton } from "@jwcarman/roux-web/signin";
+import { SignInCard } from "@jwcarman/roux-web/signin";
+import { useShellTheme } from "@jwcarman/roux-web/theme";
+import { Logo } from "./Logo";
 
 /**
- * The sign-in page: an emailed link (or its typed code) and a passkey, the two ways that need no
- * password and no outside provider. Its own to change: roux-web's `ProviderSignInButtons` adds the
- * OIDC providers who is configured with.
+ * The sign-in page: roux's `SignInCard`, which offers the ways of signing in who has on. The
+ * template turns on an emailed link (or its typed code) and a passkey, the two that need no password
+ * and no outside provider; an OIDC provider configured in who shows on the same card.
  */
 export function SignIn() {
-  return (
-    <Stack gap="6">
-      <Heading as="h2">Sign in</Heading>
-      <EmailSignIn />
-      <PasskeySignInButton />
-    </Stack>
-  );
+  const appName = useShellTheme().shown.appName;
+  return <SignInCard appName={appName} logo={<Logo boxSize="9" />} />;
 }

@@ -140,12 +140,12 @@ export async function signInByLink(
   address: string,
   landsOn: { name: string; level: number } = { name: "Home", level: 2 },
 ) {
-  await expect(page.getByRole("heading", { name: "Sign in", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Sign in to /, level: 1 })).toBeVisible();
   const seen = await inboxSnapshot(request, address);
   await page.getByLabel("Email").fill(address);
   const ask = page.getByRole("button", { name: "Email me a link" });
   await ask.click();
-  await expect(page.getByRole("status").filter({ hasText: "Check your email" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Check your email", level: 1 })).toBeVisible();
   let link: string;
   try {
     link = await nextSignInLink(request, address, seen, 5_000);
@@ -217,11 +217,11 @@ export async function registerPasskey(page: Page, label: string) {
 
 export async function signOut(page: Page) {
   await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page.getByRole("heading", { name: "Sign in", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Sign in to /, level: 1 })).toBeVisible();
 }
 
 export async function signInWithPasskey(page: Page) {
-  await page.getByRole("button", { name: "Sign in with a passkey" }).click();
+  await page.getByRole("button", { name: "Use a passkey" }).click();
   await expect(page.getByRole("heading", { name: "Home", level: 2 })).toBeVisible();
 }
 

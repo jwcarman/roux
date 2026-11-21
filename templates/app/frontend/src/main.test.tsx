@@ -25,7 +25,7 @@ describe("main", () => {
 
     await import("./main");
 
-    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /^Sign in to / })).toBeInTheDocument();
   });
 
   it("says on the page why the app could not start", async () => {

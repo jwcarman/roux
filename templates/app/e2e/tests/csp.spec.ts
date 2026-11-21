@@ -57,7 +57,7 @@ test("the app runs under its Content-Security-Policy without a violation", async
 test("a script injected into the page does not run", async ({ page }) => {
   await recordViolations(page);
   await page.goto("/signin");
-  await expect(page.getByRole("heading", { name: "Sign in", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Sign in to /, level: 1 })).toBeVisible();
 
   await page.evaluate(() => {
     const script = document.createElement("script");
@@ -79,7 +79,7 @@ test("dark mode is set as the page is parsed, before the app starts", async ({ p
     });
   });
   await page.goto("/signin");
-  await expect(page.getByRole("heading", { name: "Sign in", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Sign in to /, level: 1 })).toBeVisible();
 
   expect(await page.evaluate(() => window.modeAtParse)).toContain("dark");
 });

@@ -62,9 +62,9 @@ test("a passkey the owner removes can no longer sign in", async ({ page, request
   // The browser still holds the passkey; the server no longer accepts it.
   expect(await heldPasskeys(cdp, authenticatorId)).toHaveLength(1);
   await signOut(page);
-  await page.getByRole("button", { name: "Sign in with a passkey" }).click();
+  await page.getByRole("button", { name: "Use a passkey" }).click();
   await expect(page.getByRole("alert")).toHaveText("Passkey sign-in failed.");
-  await expect(page.getByRole("heading", { name: "Sign in", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Sign in to /, level: 1 })).toBeVisible();
 });
 
 test("removing the passkey this session signed in with signs the owner out", async ({
@@ -83,9 +83,9 @@ test("removing the passkey this session signed in with signs the owner out", asy
   // credential ends the session at once. The app must notice and send the owner to sign in.
   await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Settings" }).click();
   await page.getByRole("button", { name: "Remove Only device" }).click();
-  await expect(page.getByRole("heading", { name: "Sign in", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Sign in to /, level: 1 })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Sign in with a passkey" }).click();
+  await page.getByRole("button", { name: "Use a passkey" }).click();
   await expect(page.getByRole("alert")).toHaveText("Passkey sign-in failed.");
 });

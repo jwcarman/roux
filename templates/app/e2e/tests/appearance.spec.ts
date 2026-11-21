@@ -55,7 +55,7 @@ test("the owner's new look reaches every visitor", async ({ page, request, brows
       await recordViolations(signIn);
       await signIn.goto("/signin");
       await expect(signIn).toHaveTitle("Renamed App");
-      await expect(signIn.getByRole("banner").getByText("Renamed App")).toBeVisible();
+      await expect(signIn.getByRole("heading", { name: "Sign in to Renamed App", level: 1 })).toBeVisible();
       const button = signIn.getByRole("button", { name: "Email me a link" });
       await expect(button).toBeVisible();
       await expect

@@ -20,12 +20,12 @@ async function postCode(page: Page, email: string, code: string): Promise<number
 
 test("the owner signs in with the code from the email instead of the link", async ({ page, request }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Sign in", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Sign in to /, level: 1 })).toBeVisible();
   const seen = await inboxSnapshot(request, ownerEmail);
   await page.getByLabel("Email").fill(ownerEmail);
   const ask = page.getByRole("button", { name: "Email me a link" });
   await ask.click();
-  await expect(page.getByRole("status").filter({ hasText: "Check your email" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Check your email", level: 1 })).toBeVisible();
   let code: string;
   try {
     code = await nextSignInCode(request, ownerEmail, seen, 5_000);

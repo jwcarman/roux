@@ -15,4 +15,13 @@ describe("queryKeys", () => {
   it("gives each feature its own prefix", () => {
     expect([queryKeys.users.all, queryKeys.roles.all, queryKeys.passkeys]).toEqual([["users"], ["roles"], ["passkeys"]]);
   });
+
+  it("keys each user's detail under the users prefix, one per user", () => {
+    expect(queryKeys.users.detail("u-1")).toEqual(["users", "detail", "u-1"]);
+    expect(queryKeys.users.detail("u-1")).not.toEqual(queryKeys.users.detail("u-2"));
+  });
+
+  it("keys the roles an invitation may give under the roles prefix", () => {
+    expect(queryKeys.roles.invitable()).toEqual(["roles", "invitable"]);
+  });
 });
