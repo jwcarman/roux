@@ -15,7 +15,7 @@ function Appearance() {
   );
 }
 
-export const Route = createFileRoute("/_signedIn/appearance")({
-  beforeLoad: ({ context }) => requirePermission(context.session.currentMe(), THEME_MANAGE),
+export const Route = createFileRoute<"/_signedIn/appearance">()({
+  beforeLoad: ({ context }) => requirePermission(context.me, THEME_MANAGE),
   component: Appearance,
 });

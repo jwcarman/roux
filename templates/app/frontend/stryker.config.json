@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vite.config.ts"
+  },
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "src/**/*.{ts,tsx}",
+    "!src/**/*.test.*",
+    "!src/testing/**",
+    "!src/routeTree.gen.ts",
+    "!src/permissions.gen.ts"
+  ],
+  "reporters": [
+    "clear-text",
+    "progress",
+    "html"
+  ],
+  "thresholds": {
+    "break": 100
+  },
+  "incremental": true,
+  "incrementalFile": "../.mutation-history/stryker-incremental.json",
+  "tsconfigFile": "tsconfig.stryker-skip.json"
+}

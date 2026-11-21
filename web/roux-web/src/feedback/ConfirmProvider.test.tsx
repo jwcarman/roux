@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { Button } from "@chakra-ui/react";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { paletteOf } from "../testing/css";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderHookWithProviders, renderWithProviders } from "../testing/render";
@@ -37,20 +38,6 @@ async function ask(destructive = true) {
   await user.click(screen.getByRole("button", { name: "Ask" }));
   const dialog = await screen.findByRole("alertdialog", { name: "Deactivate Grace Hopper?" });
   return { answers, user, dialog };
-}
-
-/** The colour palette Chakra's stylesheet gives `button`, by the name of the palette it points at. */
-function paletteOf(button: HTMLElement): string | undefined {
-  const rules = Array.from(document.styleSheets).flatMap((sheet) => Array.from(sheet.cssRules));
-  for (const rule of rules) {
-    if (rule instanceof CSSStyleRule && button.matches(rule.selectorText)) {
-      const palette = /--chakra-colors-color-palette-500: var\(--chakra-colors-([a-z]+)-500\)/.exec(rule.cssText);
-      if (palette !== null) {
-        return palette[1];
-      }
-    }
-  }
-  return undefined;
 }
 
 describe("useConfirm", () => {

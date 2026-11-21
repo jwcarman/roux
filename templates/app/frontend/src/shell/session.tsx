@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useSyncExternalStore, type ReactNode } from "react";
 import { getJson, onSessionLost, useClearQueriesOnIdentityChange } from "@jwcarman/roux-web/api";
 import { fetchMe, type Me, type Profile } from "../api";
 import { who } from "../who";
@@ -19,57 +19,72 @@ export interface Session {
   signOut: () => Promise<void>;
 }
 
+/** Both start unset: loading. */
+interface SessionState {
+  me?: Me | null;
+  profile?: Profile | null;
+}
+
+/**
+ * The session outside React: what it holds, and what changes it. The provider subscribes once it
+ * mounts, which loads the caller and starts listening for a session that ended, and unsubscribes
+ * when it unmounts, which stops.
+ */
+function createSession() {
+  let state: SessionState = {};
+  // Set by subscribe, before anything can update the session (subscribing is what starts it).
+  let changed: () => void;
+
+  function update(next: Partial<SessionState>) {
+    state = { ...state, ...next };
+    changed();
+  }
+
+  async function refreshProfile() {
+    try {
+      update({ profile: await getJson<Profile>("/api/users/me") });
+    } catch {
+      update({ profile: null });
+    }
+  }
+
+  async function refresh() {
+    const me = await fetchMe();
+    update({ me });
+    if (me) {
+      await refreshProfile();
+    } else {
+      update({ profile: null });
+    }
+    return me;
+  }
+
+  async function signOut() {
+    await who.signOut(); // also fetches a fresh XSRF-TOKEN cookie
+    update({ me: null, profile: null });
+  }
+
+  function subscribe(onChange: () => void) {
+    changed = onChange;
+    // Any API call that answers 401 means the session is gone: refresh, and the guards send the
+    // user to sign in.
+    const stopListening = onSessionLost(() => {
+      void refresh();
+    });
+    void refresh();
+    return stopListening;
+  }
+
+  return { subscribe, state: () => state, currentMe: () => state.me, refresh, refreshProfile, signOut };
+}
+
 const SessionContext = createContext<Session | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [me, setMe] = useState<Me | null | undefined>(undefined);
-  const meNow = useRef<Me | null | undefined>(undefined);
-  const currentMe = useCallback(() => meNow.current, []);
-  const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
-  useClearQueriesOnIdentityChange(me === undefined ? undefined : (me?.identityId ?? null));
-
-  const refresh = useCallback(async () => {
-    const current = await fetchMe();
-    meNow.current = current;
-    setMe(current);
-    return current;
-  }, []);
-
-  const refreshProfile = useCallback(async () => {
-    try {
-      setProfile(await getJson<Profile>("/api/users/me"));
-    } catch {
-      setProfile(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (me) {
-      void refreshProfile();
-    } else if (me !== undefined) {
-      setProfile(null);
-    }
-  }, [me, refreshProfile]);
-
-  const signOut = useCallback(async () => {
-    await who.signOut(); // also fetches a fresh XSRF-TOKEN cookie
-    meNow.current = null;
-    setMe(null);
-  }, []);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  // Any API call that answers 401 means the session is gone: refresh, and the signed-out pages send
-  // the user to sign in.
-  useEffect(
-    () =>
-      onSessionLost(() => {
-        void refresh();
-      }),
-    [refresh],
-  );
+  const [session] = useState(createSession);
+  const { me, profile } = useSyncExternalStore(session.subscribe, session.state);
+  useClearQueriesOnIdentityChange(me === null ? null : me?.identityId);
+  const { currentMe, refresh, refreshProfile, signOut } = session;
 
   return (
     <SessionContext value={{ me, currentMe, profile, refresh, refreshProfile, signOut }}>{children}</SessionContext>

@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "mutate": "stryker run"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.38.0",
@@ -30,6 +32,8 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "10.1.1",
+    "@stryker-mutator/vitest-runner": "10.1.1",
     "@tanstack/router-plugin": "^1.169.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
@@ -39,6 +43,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.2.1",
+    "@vitest/coverage-v8": "5.1.0",
     "jsdom": "^31.0.0",
     "msw": "^3.0.5",
     "typescript": "^7.0.2",

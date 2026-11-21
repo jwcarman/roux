@@ -31,8 +31,3 @@ export function listPasskeys() {
 export function removePasskey(credentialId: string) {
   return who.me.passkeys.remove(credentialId);
 }
-
-/** Signs in with a passkey the browser holds. */
-export function signInWithPasskey() {
-  return who.passkeys.signIn();
-}

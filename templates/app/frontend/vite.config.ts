@@ -38,5 +38,13 @@ export default defineConfig({
     include: ["src/**/*.test.{ts,tsx}"],
     setupFiles: ["src/testing/setup.ts"],
     server: { deps: { inline: ["@jwcarman/roux-web"] } },
+    // Every line, branch, function and statement covered, or the build fails. Generated files and
+    // test helpers are not the app's code.
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/**/*.test.*", "src/testing/**", "src/routeTree.gen.ts", "src/permissions.gen.ts"],
+      thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 },
+    },
   },
 });

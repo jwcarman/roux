@@ -1,12 +1,10 @@
-import { QueryClientProvider } from "@tanstack/react-query";
-import { createBrowserHistory, createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
+import {
+  createBrowserHistory,
+  createMemoryHistory,
+} from "@tanstack/react-router";
 import { render } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import { ColorModeProvider } from "../shell/colorMode";
-import { ConfirmProvider, Toaster } from "@jwcarman/roux-web/feedback";
-import { routeTree } from "../routeTree.gen";
-import { SessionProvider, useSession } from "../shell/session";
-import { ThemeProvider } from "@jwcarman/roux-web/theme";
+import { App, createAppRouter } from "../App";
 import { server, testQueryClient } from "@jwcarman/roux-web/testing";
 
 /**
@@ -18,7 +16,10 @@ import { server, testQueryClient } from "@jwcarman/roux-web/testing";
  */
 export function renderRoute(
   path: string,
-  { permissions, browserHistory = false }: { permissions: string[] | null; browserHistory?: boolean },
+  {
+    permissions,
+    browserHistory = false,
+  }: { permissions: string[] | null; browserHistory?: boolean },
 ) {
   server.use(
     http.get("/who/me", () =>
@@ -30,37 +31,24 @@ export function renderRoute(
     http.get("/api/users/me", () =>
       permissions === null
         ? new HttpResponse(null, { status: 401 })
-        : HttpResponse.json({ id: "id-1", displayName: "Test User", email: "test@example.org", version: 0 }),
+        : HttpResponse.json({
+            id: "id-1",
+            displayName: "Test User",
+            email: "test@example.org",
+            version: 0,
+          }),
     ),
   );
   const client = testQueryClient();
   if (browserHistory) {
     window.history.replaceState({}, "", path);
   }
-  const router = createRouter({
-    routeTree,
-    history: browserHistory ? createBrowserHistory() : createMemoryHistory({ initialEntries: [path] }),
-    context: { queryClient: client, session: undefined! },
-  });
-
-  function Routes() {
-    const session = useSession();
-    return session.me === undefined ? null : <RouterProvider router={router} context={{ session }} />;
-  }
-
-  render(
-    <QueryClientProvider client={client}>
-      <ThemeProvider>
-        <ColorModeProvider>
-          <ConfirmProvider>
-            <SessionProvider>
-              <Routes />
-              <Toaster />
-            </SessionProvider>
-          </ConfirmProvider>
-        </ColorModeProvider>
-      </ThemeProvider>
-    </QueryClientProvider>,
+  const router = createAppRouter(
+    client,
+    browserHistory
+      ? createBrowserHistory()
+      : createMemoryHistory({ initialEntries: [path] }),
   );
+  render(<App queryClient={client} router={router} />);
   return { router, client };
 }

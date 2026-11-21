@@ -4,9 +4,9 @@ import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import type { TableSearch } from "@jwcarman/roux-web/paging";
 import { DEFAULT_PAGE_SIZE, DebouncedSearchInput, FilterChips, QueryTable } from "@jwcarman/roux-web/table";
 import { type User } from "../api";
+import { useMe } from "../routes/_signedIn";
 import { USERS_INVITE } from "../permissions.gen";
 import { usersPage, ROLE_LABELS } from "./users";
-import { useSession } from "../shell/session";
 import { InviteForm } from "./InviteForm";
 
 /** The directory's sorts: the column ids, and `UserSort`'s values on the server (roux). */
@@ -70,7 +70,7 @@ const route = getRouteApi("/_signedIn/users/");
  * page, sort and search live in the URL, so a reload, Back and a shared link keep them.
  */
 export function Users() {
-  const { me } = useSession();
+  const me = useMe();
   const search = route.useSearch();
   const navigate = route.useNavigate();
   const filters = { search: search.search, role: search.role, status: search.status };
@@ -79,7 +79,7 @@ export function Users() {
     <Stack gap="6">
       <Flex justify="space-between" align="center" gap="3" wrap="wrap">
         <Heading as="h2">Users</Heading>
-        {me?.permissions.includes(USERS_INVITE) && (
+        {me.permissions.includes(USERS_INVITE) && (
           <InviteForm />
         )}
       </Flex>
@@ -92,8 +92,7 @@ export function Users() {
           navigate({ search: (previous) => ({ ...previous, search: term, pageIndex: undefined }), replace: true })
         }
       />
-      <Flex justify="space-between" align="center" gap="3" wrap="wrap">
-        <Flex gap="4" wrap="wrap">
+      <Flex gap="4" wrap="wrap">
           <FilterChips
             label="Status"
             options={STATUS_CHIPS}
@@ -115,7 +114,6 @@ export function Users() {
             allLabel="All roles"
             onChange={(role) => navigate({ search: (previous) => ({ ...previous, role, pageIndex: undefined }) })}
           />
-        </Flex>
       </Flex>
       <QueryTable
         aria-label="Users"
@@ -128,7 +126,6 @@ export function Users() {
             search: (previous) => ({ ...previous, ...next, sortBy: USER_SORTS.find((sort) => sort === next.sortBy) }),
           })
         }
-        getRowId={(user) => user.id}
         emptyText="No users found."
         errorText="Could not load the users."
       />

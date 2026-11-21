@@ -11,4 +11,8 @@ describe("queryKeys", () => {
   it("keys each search on its own", () => {
     expect(queryKeys.users.list({ search: "ada" })).not.toEqual(queryKeys.users.list({ search: "grace" }));
   });
+
+  it("gives each feature its own prefix", () => {
+    expect([queryKeys.users.all, queryKeys.roles.all, queryKeys.passkeys]).toEqual([["users"], ["roles"], ["passkeys"]]);
+  });
 });

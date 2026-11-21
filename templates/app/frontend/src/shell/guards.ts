@@ -1,6 +1,5 @@
 import { redirect } from "@tanstack/react-router";
 import type { Me } from "../api";
-import { rememberSignInReturn } from "@jwcarman/roux-web/signin";
 
 /**
  * Route guards, for `beforeLoad`. Each throws a redirect when the caller may not see the route;
@@ -8,15 +7,16 @@ import { rememberSignInReturn } from "@jwcarman/roux-web/signin";
  * cannot use.
  */
 
-/**
- * The signed-in caller; a signed-out visitor goes to sign in, and signing in sends them on to
- * `returnTo` (the page they asked for, with its search) when it is given.
- */
-export function requireSignedIn(me: Me | null | undefined, returnTo?: string): Me {
+declare module "@tanstack/history" {
+  interface HistoryState {
+    /** Set by a guard that sends the caller to Home: show Home itself, not the start place. */
+    home?: true;
+  }
+}
+
+/** The signed-in caller; a signed-out visitor goes to sign in. */
+export function requireSignedIn(me: Me | null | undefined): Me {
   if (!me) {
-    if (returnTo !== undefined) {
-      rememberSignInReturn(returnTo);
-    }
     throw redirect({ to: "/signin" });
   }
   return me;
@@ -30,11 +30,12 @@ export function requireSignedOut(me: Me | null | undefined): void {
 }
 
 /**
- * A caller without `permission` goes to Home itself (`home: true` stops `/` sending them on to the
- * start place, which could be this very page); a signed-out visitor goes to sign in.
+ * A caller without `permission` goes to Home itself (`home` in the history state stops `/` sending them on to the
+ * start place, which could be this very page). For a route under `_signedIn`, whose guard has
+ * already sent a signed-out visitor to sign in: `requirePermission(context.me, ...)`.
  */
-export function requirePermission(me: Me | null | undefined, permission: string): void {
-  if (!requireSignedIn(me).permissions.includes(permission)) {
-    throw redirect({ to: "/", search: { home: true } });
+export function requirePermission(me: Me, permission: string): void {
+  if (!me.permissions.includes(permission)) {
+    throw redirect({ to: "/", state: { home: true } });
   }
 }

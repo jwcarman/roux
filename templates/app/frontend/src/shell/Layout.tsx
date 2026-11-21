@@ -1,5 +1,5 @@
 import { Box, Button, Container, Flex, Heading, Text } from "@chakra-ui/react";
-import { Outlet, useNavigate } from "@tanstack/react-router";
+import { Outlet } from "@tanstack/react-router";
 import { LuLogOut } from "react-icons/lu";
 import { AppShell, RAIL_LABELS, type AccountLayout } from "@jwcarman/roux-web/navigation";
 import { useShellTheme } from "@jwcarman/roux-web/theme";
@@ -47,17 +47,11 @@ export function Layout() {
 }
 
 /** The person's name, the mode switch and sign out, small in the rail. */
-function Account({ compact, close }: AccountLayout) {
+function Account({ compact }: AccountLayout) {
   const { profile, signOut } = useSession();
-  const navigate = useNavigate();
   const labels = compact ? RAIL_LABELS : {};
 
-  async function onSignOut() {
-    close();
-    await signOut();
-    await navigate({ to: "/signin" });
-  }
-
+  // Signing out ends the session, and the guards then send the caller to sign in.
   return (
     <>
       {profile && (
@@ -70,7 +64,7 @@ function Account({ compact, close }: AccountLayout) {
         <Button
           size="sm"
           variant="outline"
-          onClick={onSignOut}
+          onClick={() => void signOut()}
           aria-label="Sign out"
           title="Sign out"
           // Stretched beside the mode button when labelled; its own size in the rail's column.

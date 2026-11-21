@@ -20,4 +20,20 @@ describe("the app's navigation", () => {
   it("opens on Home", () => {
     expect(openingRedirect(nav, [USERS_READ], false)).toBeNull();
   });
+
+  it("says where each page is and what it is for, opening on Home", () => {
+    expect(
+      navItemsFor(nav, [USERS_READ, THEME_MANAGE]).map(({ label, to, description, start }) => ({
+        label,
+        to,
+        description,
+        start,
+      })),
+    ).toEqual([
+      { label: "Home", to: "/", description: "A welcome page.", start: true },
+      { label: "Users", to: "/users", description: "Who can use the app and what they may do.", start: undefined },
+      { label: "Appearance", to: "/appearance", description: "The app's colours, corners and font.", start: undefined },
+      { label: "Settings", to: "/settings", description: "Your own account settings.", start: undefined },
+    ]);
+  });
 });

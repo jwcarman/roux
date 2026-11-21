@@ -25,6 +25,10 @@ details.
   `nav.ts` is the one its route's `requirePermission` checks, imported from
   `frontend/src/permissions.gen.ts`. A new URL needs nothing on the server: roux serves the shell for
   any page URL.
+- A route file names its path as a type argument, `createFileRoute<"/_signedIn/widgets/">()({...})`:
+  the router plugin supplies the path itself, so a string there is code no test can check. A page
+  under `_signedIn` reads the caller with `useMe()` (from `routes/_signedIn.tsx`); a route's guard
+  is `beforeLoad: ({ context }) => requirePermission(context.me, WIDGETS_READ)`.
 
 ## Rules that are easy to miss
 

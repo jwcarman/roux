@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Toaster, toaster } from "@jwcarman/roux-web/feedback";
 import { type Profile } from "../api";
 import { SessionProvider } from "../shell/session";
-import { renderWithProviders, server, stale } from "@jwcarman/roux-web/testing";
+import { renderWithProviders, server, serverError, stale } from "@jwcarman/roux-web/testing";
 import { ProfileForm } from "./ProfileForm";
 
 /** The signed-in user's profile, as last saved; a rename at another version is a 409. */
@@ -80,5 +80,16 @@ describe("ProfileForm", () => {
     await user.click(screen.getByRole("button", { name: "Save profile" }));
     await waitFor(() => expect(renames).toHaveLength(2));
     expect(renames[1]).toEqual({ displayName: "Countess of Lovelace", version: 3 });
+  });
+
+  it("says the profile could not be saved when the server fails", async () => {
+    serveProfile();
+    server.use(http.put("/api/users/me", () => serverError()));
+    const { user, name } = await show();
+
+    await user.type(name, " King");
+    await user.click(screen.getByRole("button", { name: "Save profile" }));
+
+    expect(await screen.findByText("Could not save the profile")).toBeInTheDocument();
   });
 });

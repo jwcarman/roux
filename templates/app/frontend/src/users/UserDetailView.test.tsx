@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserDetail } from "../api";
 import { ConfirmProvider, Toaster, toaster } from "@jwcarman/roux-web/feedback";
 import { queryKeys } from "../queryKeys";
-import { invariantViolation, pageOf, renderWithProviders, server } from "@jwcarman/roux-web/testing";
+import { invariantViolation, pageOf, paletteOf, renderWithProviders, server, serverError } from "@jwcarman/roux-web/testing";
 import { UserDetailView } from "./UserDetailView";
 
 const GRACE: UserDetail = {
@@ -119,5 +119,46 @@ describe("UserDetailView", () => {
     const dialog = await screen.findByRole("alertdialog");
     await user.click(within(dialog).getByRole("button", { name: "Deactivate" }));
     expect(await screen.findByText("The team needs at least one active owner")).toBeInTheDocument();
+  });
+
+  it("asks in red, since deactivating is hard to undo", async () => {
+    answer(() => HttpResponse.json(GRACE));
+    const { user } = show(GRACE, true);
+    await user.click(screen.getByRole("button", { name: "Deactivate" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(paletteOf(within(dialog).getByRole("button", { name: "Deactivate" }))).toBe("red");
+  });
+
+  it("says what could not be done when the server fails", async () => {
+    answer(() => serverError());
+    const { user } = show(GRACE, true);
+    await user.click(screen.getByRole("button", { name: "Deactivate" }));
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "Deactivate" }));
+    expect(await screen.findByText("Could not deactivate Grace Hopper")).toBeInTheDocument();
+  });
+
+  it("offers Reactivate only for a deactivated user, and only to someone who manages users", () => {
+    answer(() => HttpResponse.json(GRACE));
+    show(GRACE, true);
+    expect(screen.queryByRole("button", { name: "Reactivate" })).toBeNull();
+  });
+
+  it("does not offer Reactivate to someone who does not manage users", () => {
+    answer(() => HttpResponse.json(GRACE));
+    show({ ...GRACE, status: "DEACTIVATED" }, false);
+    expect(screen.queryByRole("button", { name: "Reactivate" })).toBeNull();
+  });
+
+  it("marks a deactivated user's status in red, and an active one's not", () => {
+    answer(() => HttpResponse.json(GRACE));
+    show({ ...GRACE, status: "DEACTIVATED" }, false);
+    expect(paletteOf(screen.getByText("Deactivated"))).toBe("red");
+  });
+
+  it("does not mark an active user's status in red", () => {
+    answer(() => HttpResponse.json(GRACE));
+    show(GRACE, false);
+    expect(paletteOf(screen.getByText("Active"))).not.toBe("red");
   });
 });
