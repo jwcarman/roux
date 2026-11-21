@@ -1,0 +1,211 @@
+# The roux app template
+
+## Intent
+
+noir builds every app on roux, and James bootstraps demonstrations and rapid prototypes the same way.
+Both need the same starting point: an app that runs, signs people in, and is ready for its first
+feature in minutes, with nothing in it that roux already owns and no domain at all.
+
+Today that starting point is `noir-app-template`, a separate repository that predates most of roux
+and carries its own copies of members, invitations, the shell and Appearance. The dojo
+(`examples/dojo`) has since become the most current roux app. The new template is the dojo with its
+domain removed, kept inside the roux repository so it can never fall behind roux, and copied out by a
+script that only has to set a name.
+
+The person who signs in to a demo is the solution's owner (the factory's customer, seeing what was
+built for them). They get in by an emailed sign-in link: noir sets `roux.owner.email` to their address
+when it deploys, and roux makes them the owner. Locally, Mailpit catches the same email.
+
+## Goals
+
+- `roux-new.sh <dir> --name "Acme Gym"` writes a new app that builds, passes its tests and runs with
+  `docker compose up` + `./mvnw spring-boot:run`, with no further edits.
+- Day one, the app has: sign-in (email link with code, passkeys), the first owner from config, the
+  sidebar frame with nav, account menu and colour mode, a Users page (invite, rename, change roles,
+  deactivate/reactivate), Settings (profile, emails, passkeys), Appearance, and a Home placeholder.
+- Day one, the app has tests wired: `@AppTest` + `TestUsers`, Vitest + MSW with `renderRoute`, and a
+  Playwright suite run by `E2eIT` inside `./mvnw verify`.
+- The template is a module of roux's build: `./mvnw verify` in roux runs its tests and E2E suite on
+  every change, as it does the dojo's.
+- What a new app gets is exactly what is in `templates/app` at a roux release tag, plus the name.
+
+## Non-goals
+
+- Any domain code, sample data, seed data or demo personas (the parked "demo personas" work comes
+  after this).
+- A way into a demo other than the emailed link (such as through the factory's own sign-in).
+- CSV export (the dojo's `Csv`, `ExportTooLargeException`, `ExportButton`, `UsersExportController`).
+- noir's old generators and their `noir-gen:` markers (noir no longer has them).
+- Migrating `noir-app-template` or any existing noir app onto this template.
+- Thinning the frontend frame and users screens into roux-web. That is the app-skeleton UI work
+  (`2026-11-20-app-skeleton-design.md`), which comes next and slims the dojo and the template together.
+
+## Anti-goals
+
+- **A template that is not a real app.** No placeholders, no Velocity or mustache markers: the files
+  in `templates/app` compile, test and run as they are.
+- **Rewriting code to generate an app.** The script sets names and versions in a fixed, small set of
+  places; it never renames a Java package or edits source code.
+- **Drift.** A roux change that breaks the template fails roux's build, the same as the dojo.
+
+## Constraints
+
+- roux's fixed stack (Java 25, Spring Boot 4.1, Maven, PostgreSQL + Liquibase, who, React 19, Chakra
+  UI v3, TanStack, Zod 4, Vitest + MSW, Playwright).
+- The template's pom is an ordinary app's pom, as `docs/guides/getting-started.md` describes: parent
+  `spring-boot-starter-parent`, `roux-bom` imported at `${roux.version}`. Not the dojo's
+  `roux-parent` parent.
+- Inside roux's reactor, `roux.version` must equal roux's own version, so the template builds
+  against the roux modules beside it.
+- The frontend links `web/roux-web` from the repository, as the dojo does
+  (`"@jwcarman/roux-web": "file:../../../web/roux-web"`).
+- Releases tag a commit whose versions are still `-SNAPSHOT` (release.yml sets versions in CI and
+  does not commit them), so the script, not the tag, supplies the released version.
+- Two E2E suites in CI instead of one: the template's is small (a handful of specs), so the added
+  time should be small too.
+
+## Approaches
+
+**Where the template lives:**
+
+- A. Rebuild `noir-app-template` in place. noir changes nothing, but it stays outside roux, drifts,
+  and strips its copies of roux's code one by one.
+- B. A new template repository, cut from the dojo. Most current starting point, but a second app
+  outside roux's build, so it drifts too.
+- **C. Cut from the dojo, kept in the roux repository (chosen).** Built and tested with roux, so it
+  never falls behind and each release's template matches that release. Costs: noir fetches a folder
+  from a release instead of cloning a repository; the script supplies released versions.
+
+**How an app is generated:**
+
+1. Copy and rename (artifactId, Java package, title). Simple, but renaming a Java package across
+   sources and tests is the fragile, silent-breakage part.
+2. A Maven archetype. Versions pinned for free, but the source becomes templates rather than a real
+   app, awkward for TSX, and proving it means generating then building.
+3. **Copy with nothing to rename (chosen).** Every app uses the fixed Java package `app`; generating
+   is a copy plus setting the name and versions in a few places. The template in roux is exactly what
+   an app gets, and roux's build already proves it.
+4. An agent writes it from the guides. Different every time; rejected.
+
+**When:** build the template now, carrying the dojo's current frontend frame and users screens
+(about 20 files), rather than first finishing the app-skeleton UI in roux. James chose now: a
+working starting point for prototypes immediately, and a second consumer that keeps the coming
+extraction general.
+
+## Decided
+
+### Location and build
+
+- `templates/app` in the roux repository, a module of the `examples` profile (on by default, off
+  under `-P release` and `-P pit`), beside `examples/dojo`. Never deployed, published, analysed or
+  counted by roux's coverage gate (the dojo's `maven.deploy.skip`, `skipPublishing`, `sonar.skip`,
+  `jacoco.skip`).
+- CI runs it as it runs the dojo, including Playwright and uploading its logs and reports on failure.
+
+### What is in it
+
+Cut from the dojo with every domain package, changelog, route, page, test and E2E spec removed:
+
+- Java, package `app`: `App` (`@SpringBootApplication`), `identity/Roles` and
+  `identity/Permissions` (one example invitable role, `USER`, granted nothing yet; the owner role is
+  roux's `RouxRoles.OWNER`), `persistence/PersistenceConfig`, and whatever `AppProperties` the
+  remaining config needs.
+- Resources: `application.yml`, `application-dev.yml`, `application-prod.yml` (real SMTP, the
+  owner from the environment), changelogs `spring-session.xml`, the users/roles/theme ones the
+  remaining features need, and the master.
+- Java tests: the dojo's non-domain tests (application context, `SpaRoutingTest`,
+  `ProductionProfileTest`, `SessionCookieTest`, `SpringSessionTest`, `PackageLayoutTest`,
+  `PermissionsTest` writing `permissions.gen.ts`, `ShellThemeTest`, problems tests, invitation tests,
+  `E2eIT`).
+- Frontend: `main.tsx`, `api.ts`, `queryKeys.ts`, `who.ts`, `permissions.gen.ts`, the dojo's `shell/`
+  (minus `ExportButton`) and its users screens, routes `__root`, `_signedIn`, `signin/index`,
+  `signin/link`, `_signedIn/index` (Home), users list and detail, `settings`, `appearance`, and
+  `testing/`.
+- E2E: the non-domain specs (owner signs in, users lifecycle, appearance and look, CSP, caching,
+  problems, URL) with their helpers.
+- `compose.yaml` (PostgreSQL + Mailpit), `.noir/project.yaml` (the same services noir's
+  `noir-app-template` declares), `lombok.config`, `.gitignore`, the Maven wrapper.
+- `README.md`: how to run it, the production settings, how to add a first feature.
+- `CLAUDE.md`: where things go and the rules that are easy to miss, written for roux (pointing at the
+  roux plugin's skill for the how), replacing the dojo's.
+- Home is a placeholder: a heading, a welcome line, links to what the signed-in user may open. The
+  first feature replaces it.
+- `roux.organization` (time zone, locale) keeps neutral defaults with a comment saying to set them.
+  `roux-money` is not a dependency; an app adds it when it has money.
+
+### Names
+
+The script sets the name in exactly these places, and nothing else in the template contains the
+name:
+
+- `pom.xml`: `artifactId` (the name's slug, e.g. `acme-gym`) and `name`.
+- `application.yml`: `spring.application.name` (slug), `roux.theme.app-name` (the name), and
+  `who.email.from` (`noreply@<slug>.test`, a development value; prod sets its own).
+- `frontend/package.json` and `e2e/package.json`: `name` (slug).
+- `README.md`: the title line.
+
+In the repository the template's name is `App` (slug `app`).
+
+### Versions
+
+- In the repository, `roux.version` is roux's current version and roux-web is linked from
+  `web/roux-web`.
+- The script sets `roux.version` to the release it copied from, and `@jwcarman/roux-web` to that same
+  version from npm, then regenerates `frontend/package-lock.json` (`npm install --package-lock-only`).
+- roux's version bumps (`versions:set` in release.yml and after a release) must also bump the
+  template's `roux.version`. A test in roux's build fails if they differ.
+
+### The script
+
+- `plugins/roux/scripts/roux-new.sh <dir> --name "<name>" [--version <x.y.z>] [--from <path>]`.
+- By default it reads `templates/app` from `https://github.com/jwcarman/roux` at the latest release
+  tag; `--version` picks a tag; `--from` reads a local checkout's working tree instead (for roux's own
+  tests and for offline use). It refuses a non-empty `<dir>`.
+- It writes the files, sets names and versions as above, then `git init` and one commit.
+- noir and an agent at a terminal call the same script.
+
+### Settled after the builder check (Claude's calls, for James to check)
+
+- **The pom is self-contained.** It declares everything the dojo inherits from `roux-parent` that a
+  real app needs (Java 25 compiler and Lombok, failsafe + `E2eIT`, frontend-maven-plugin, Spotless,
+  enforcer if the guide asks for it), as a generated app's pom must. The duplication with the dojo is
+  accepted. It carries none of roux's reactor-only properties: `skipPublishing`, `sonar.skip` and
+  `jacoco.skip` only act on `roux-parent`'s children, and the `examples` profile already keeps it out
+  of `-P release`. The one that would matter, `maven.deploy.skip`, is harmless in an app and stays out
+  too. Where the pom and `getting-started.md` disagree, one is fixed so they match.
+- **Versions in the repository.** The template's own `<version>` is `0.0.1-SNAPSHOT` and is never
+  touched by roux's version bumps. `roux.version` is a property, so `versions:set` does not reach it:
+  wherever roux's version is set (the post-release bump to the next `-SNAPSHOT`, and release.yml if it
+  builds the template), it is also set with `versions:set-property -Dproperty=roux.version` or a
+  `sed`. A test in roux's build reads both and fails if they differ.
+- **CI and wrapper.** The template has its own Maven wrapper (real files, no symlinks) and a
+  `.github/workflows/ci.yml` modelled on `noir-app-template`'s (`./mvnw -B verify` with Chromium's
+  system libraries, logs uploaded on failure). It has no native-image workflow.
+- **Ports.** The template's E2E and compose ports follow the dojo's (`${POSTGRES_PORT:-5432}` style
+  overrides, Testcontainers in `E2eIT`). The reactor builds the two apps one after the other. If
+  anything still clashes, the template takes different defaults and the dojo stays as it is.
+- **Before the first release containing the template**, the default fetch has no tag to read.
+  `--from` is the path until 0.3.0 is released, and noir switches to the template only after that.
+  The script fetches with `git clone --depth 1 --branch <tag>` from the public repository (no
+  credentials needed). "Latest release" is the highest plain-version tag from `git ls-remote --tags`.
+- **roux-web on npm.** release.yml publishes npm before Central, so a usable release always has
+  both. The script still checks `npm view @jwcarman/roux-web@<version>` and stops with a clear message
+  if the version is missing.
+- **Tests that name packages** (`PackageLayoutTest` and the like) are written for package `app` in the
+  template. It is a new copy, not a generated rewrite, so this is not "rewriting code to generate".
+  The plugin's eval scripts (`eval-fixture.sh`, `check-roux-way.sh`) keep using the dojo and are not
+  changed.
+
+## Left to the builder
+
+- Exactly which dojo tests and E2E specs survive, and trimming them to the template's features.
+- Whether the frontend's users screens are renamed from the dojo's `members/` folder to `users/` in
+  the template (the users rename is decided; the dojo just has not caught up).
+- The slug rule (lowercase, non-alphanumerics to `-`) and the script's argument parsing.
+- How the "template version equals roux version" test is written, and how release.yml bumps it.
+- A test of the script itself: at least `--from` the working tree, checking every name and version
+  was set and that no `file:` link or `roux-parent` reference remains. Building a generated app
+  against published artifacts can only run after a release; whether release.yml gets a job that does
+  it is the builder's call.
+- Updating roux's README and the getting-started guide to name `roux-new.sh` as the way to start an
+  app.
