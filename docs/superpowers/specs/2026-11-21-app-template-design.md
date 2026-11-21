@@ -267,3 +267,30 @@ In the repository the template's name is `App` (slug `app`).
   app generated from the just-published archetype is the builder's call.
 - Updating roux's README and the getting-started guide to name the archetype as the way to start an
   app.
+
+## Revisions (2026-11-21, after Task 2; these supersede the sections above where they differ)
+
+- **Just the app.** The template holds the Java code, the frontend, the E2E suite and their config,
+  nothing else: no `.github/` workflows, no `.noir/` config, no Maven wrapper. noir surrounds a
+  generated app with the automation for its environment. A person starting one by hand runs
+  `mvn wrapper:wrapper` to get `./mvnw`. In roux's repository the template builds with roux's own
+  wrapper, and roux's own workflows run it.
+- **Native tests as well as native E2E.** The template's native support is Spring Boot's:
+  `./mvnw -PnativeTest test` runs the Java tests compiled into a native image (tests that use Mockito
+  are `@DisabledInNativeImage`, since mocking does not work there), and the `native-e2e` profile runs
+  the Playwright suite against the shipped binary. Both must pass. roux's own nightly workflow runs
+  them; the template carries no workflow for it.
+- **Two sign-in methods.** Email link (with its typed code) and passkey; the sign-in page has no
+  provider (OIDC) buttons.
+- **Liquibase session lock.** `liquibase-sessionlock` (a PostgreSQL advisory lock instead of the
+  `DATABASECHANGELOGLOCK` table, so a crashed start leaves no stale lock) is managed by `roux-bom`
+  and a dependency of the template.
+- **A modern, elegant first impression.** Every page of the template, in light and dark, at phone,
+  tablet and desktop widths, is reviewed against what a brand-new app is expected to look like today
+  (simple, intuitive, polished). Changes are proposed to James before they are made; changes to the
+  frame (`AppShell`, sign-in pieces, settings pieces) are made in roux-web so every app gets them.
+- **Generators come next.** Code generators that add features to an app made from this template
+  (noir's `noir gen` is prior art) are designed separately, right after this work. Until then the
+  template's shared files carry no generator markers.
+- Archetype note: Velocity treats `##` as a comment and `$`/`#` specially, so the archetype's
+  filtered files are wrapped in `#[[ ]]#` with only the name tokens left outside.

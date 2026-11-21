@@ -60,6 +60,29 @@ frontend-maven-plugin 1.15.1), Spring Boot 4.1, Java 25, React 19 / Vite / Vites
    template's `roux.version` is left at `0.3.0-SNAPSHOT`). Task 5's build fails on a SNAPSHOT build
    whose template `roux.version` differs from the project version.
 
+## Revisions (2026-11-21, after Task 2)
+
+The spec's Revisions section applies. Changes to the tasks below:
+
+- **Task 3** also: no change to its gates; the template's mutation job is in roux's `mutation.yml`
+  (job `template`), run with roux's own wrapper (`./mvnw -f templates/app/pom.xml`).
+- **Task 3b (new, before Task 4): Just the app.** Remove `templates/app/.github/`, `.noir/`,
+  `mvnw`, `mvnw.cmd`, `.mvn/`; remove `ProviderSignInButtons` from `shell/SignIn.tsx` (and its
+  test expectations); add `liquibase-sessionlock` (version in `roux-bom`, dependency in the
+  template) with a test that the app starts with the lock in use (no `databasechangeloglock` row
+  held after startup); README: `mvn wrapper:wrapper` instead of `chmod +x mvnw`. Name-spot list
+  unchanged.
+- **Task 4** profiles: `nativeTest` (Spring Boot parent's) must pass alongside `native-e2e`;
+  `AppMainTest` gets `@DisabledInNativeImage`. No `native.yml` in the template; roux's own
+  `.github/workflows/native.yml` runs both against `templates/app`.
+- **Task 4b (new): Look and feel review.** Screenshot every page (sign-in, Home, Users, a user,
+  Settings, Appearance, not found) in light and dark at 390, 820 and 1440 px; review them for a
+  modern, simple, elegant first impression; propose changes to James; make the approved ones
+  (frame changes in roux-web, with its gates), with Playwright and Vitest coverage kept.
+- **Task 5** archetype: filtered files are wrapped in `#[[ ]]#` with only `${artifactId}` /
+  `${appName}` outside; the archetype's file sets no longer list `.github/`, `.noir/`, `.mvn/`;
+  Task 6's checks drop those files and instead assert they are absent.
+
 ---
 
 ### Task 1: Cut `templates/app` from the dojo
