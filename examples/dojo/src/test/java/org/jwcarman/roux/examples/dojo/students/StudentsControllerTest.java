@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +18,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.jwcarman.roux.examples.dojo.identity.Roles;
+import org.jwcarman.roux.organization.OrganizationCalendar;
 import org.jwcarman.roux.test.AppTest;
 import org.jwcarman.roux.test.TestClock;
 import org.jwcarman.roux.test.TestUser;
@@ -38,6 +38,7 @@ class StudentsControllerTest {
 
   @Autowired TestUsers users;
   @Autowired TestClock clock;
+  @Autowired OrganizationCalendar calendar;
   @Autowired ObjectMapper json;
 
   private TestUser owner;
@@ -193,7 +194,7 @@ class StudentsControllerTest {
   void aFutureBirthDateIsRefusedOnAnEditToo() throws Exception {
     JsonNode ada = add("Ada", "Lovelace", "2026-02-01");
     Map<String, Object> change = student("Ada", "Lovelace");
-    change.put("birthDate", LocalDate.now().plusDays(3).toString());
+    change.put("birthDate", calendar.today().plusDays(3).toString());
     change.put("version", 0);
 
     owner
@@ -204,10 +205,11 @@ class StudentsControllerTest {
 
   @Test
   void theLongestEmailAndPhoneAreAccepted() throws Exception {
+    clock.set("2026-03-11T03:00:00Z"); // 10pm on March 10 in New York, already March 11 in UTC
     Map<String, Object> body = student("Ada", "Lovelace");
     body.put("email", email(64, 255));
     body.put("phone", "+1 (555) 123-4567");
-    body.put("birthDate", LocalDate.now().toString());
+    body.put("birthDate", calendar.today().toString());
 
     owner.perform(send(post(STUDENTS), body)).andExpect(status().isCreated());
   }
