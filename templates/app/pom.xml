@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.3</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>app</groupId>
+    <artifactId>roux-app</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>roux-app</name>
+
+    <properties>
+        <java.version>25</java.version>
+        <!-- roux's version: roux-bom pins roux's modules, who and jpa-utils to it. -->
+        <roux.version>0.3.0-SNAPSHOT</roux.version>
+        <spotless.plugin.version>3.11.0</spotless.plugin.version>
+        <google-java-format.version>1.35.0</google-java-format.version>
+        <frontend.plugin.version>1.15.1</frontend.plugin.version>
+        <node.version>v24.15.0</node.version>
+        <!-- ./mvnw spring-boot:run is development over http://localhost (application-dev.yml). -->
+        <spring-boot.run.profiles>dev</spring-boot.run.profiles>
+        <!-- Set by the skip-tests and skip-its profiles below. -->
+        <frontend.test.skip>false</frontend.test.skip>
+        <e2e.skip>false</e2e.skip>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- roux's BOM pins roux, who and jpa-utils; Spring Boot's versions come from the parent. -->
+            <dependency>
+                <groupId>org.jwcarman.roux</groupId>
+                <artifactId>roux-bom</artifactId>
+                <version>${roux.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Brings who (email links and passkeys), jpa-utils, validation and Spring MVC. -->
+        <dependency>
+            <groupId>org.jwcarman.roux</groupId>
+            <artifactId>roux-spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <!-- The owner changes the app's look on the Appearance page; not in the starter, so a
+                 fixed-brand app leaves it out and sets roux.theme.* instead. -->
+            <groupId>org.jwcarman.roux</groupId>
+            <artifactId>roux-theme</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jwcarman.jpa</groupId>
+            <artifactId>jpa-utils</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <!-- delivers who's emails over SMTP, through the spring-boot-starter-mail above -->
+        <dependency>
+            <groupId>org.jwcarman.who</groupId>
+            <artifactId>who-email-smtp</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-liquibase</artifactId>
+        </dependency>
+        <!-- Sessions in PostgreSQL (Spring Session JDBC); the tables come from Liquibase. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-session-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-docker-compose</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <!-- roux's test kit: the whole app on PostgreSQL, signed-in users, a settable clock, mail -->
+            <groupId>org.jwcarman.roux</groupId>
+            <artifactId>roux-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <!-- The built SPA, served by Spring Boot as static content. -->
+                <directory>frontend/dist</directory>
+                <targetPath>static</targetPath>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!-- Runs E2eIT in integration-test; verify fails the build on its failure. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Mockito and Byte Buddy load as agents named up front (the JDK warns about agents
+                 attached at run time); maven-dependency-plugin's properties goal names their jars. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>-javaagent:"${org.mockito:mockito-core:jar}" -javaagent:"${net.bytebuddy:byte-buddy-agent:jar}" -Xshare:off</argLine>
+                </configuration>
+            </plugin>
+            <!-- JDK 23+ runs no annotation processor found only on the classpath; name Lombok's,
+                 at the version Spring Boot manages. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <!-- every javac warning, printed in full -->
+                    <showWarnings>true</showWarnings>
+                    <compilerArgs>
+                        <arg>-Xlint:all</arg>
+                    </compilerArgs>
+                    <annotationProcessorPathsUseDepMgmt>true</annotationProcessorPathsUseDepMgmt>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>${frontend.plugin.version}</version>
+                <configuration>
+                    <workingDirectory>frontend</workingDirectory>
+                    <installDirectory>${project.build.directory}</installDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>install-node</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>install-node-and-npm</goal>
+                        </goals>
+                        <configuration>
+                            <nodeVersion>${node.version}</nodeVersion>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-ci</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>ci</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-test</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <skip>${frontend.test.skip}</skip>
+                            <arguments>test</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-build</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <arguments>run build</arguments>
+                        </configuration>
+                    </execution>
+                    <!-- The Playwright suite (e2e/), run by E2eIT. -->
+                    <execution>
+                        <id>e2e-npm-ci</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <phase>pre-integration-test</phase>
+                        <configuration>
+                            <skip>${e2e.skip}</skip>
+                            <workingDirectory>e2e</workingDirectory>
+                            <arguments>ci</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>e2e-install-chromium</id>
+                        <goals>
+                            <goal>npx</goal>
+                        </goals>
+                        <phase>pre-integration-test</phase>
+                        <configuration>
+                            <skip>${e2e.skip}</skip>
+                            <workingDirectory>e2e</workingDirectory>
+                            <arguments>playwright install chromium</arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- google-java-format; ./mvnw spotless:apply writes it. -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless.plugin.version}</version>
+                <configuration>
+                    <java>
+                        <googleJavaFormat>
+                            <version>${google-java-format.version}</version>
+                            <style>GOOGLE</style>
+                        </googleJavaFormat>
+                        <removeUnusedImports/>
+                        <importOrder>
+                            <order>java,javax,jakarta,org,com,</order>
+                        </importOrder>
+                    </java>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- Only inside roux's repository, where the frontend links roux-web's source
+             (file:../../../web/roux-web): roux-web is built first, from roux's npm workspace. -->
+        <profile>
+            <id>roux-repository</id>
+            <activation>
+                <file>
+                    <exists>${basedir}/../../web/roux-web/package.json</exists>
+                </file>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.eirslett</groupId>
+                        <artifactId>frontend-maven-plugin</artifactId>
+                        <version>${frontend.plugin.version}</version>
+                        <configuration>
+                            <installDirectory>${project.build.directory}</installDirectory>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>roux-web-npm-ci</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>npm</goal>
+                                </goals>
+                                <configuration>
+                                    <workingDirectory>../../web</workingDirectory>
+                                    <arguments>ci</arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>roux-web-build</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>npm</goal>
+                                </goals>
+                                <configuration>
+                                    <workingDirectory>../../web</workingDirectory>
+                                    <arguments>run build -w @jwcarman/roux-web</arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!-- -DskipTests skips Vitest and the Playwright setup too; -DskipITs skips the setup. -->
+        <profile>
+            <id>skip-tests</id>
+            <activation>
+                <property>
+                    <name>skipTests</name>
+                </property>
+            </activation>
+            <properties>
+                <frontend.test.skip>true</frontend.test.skip>
+                <e2e.skip>true</e2e.skip>
+            </properties>
+        </profile>
+        <profile>
+            <id>skip-its</id>
+            <activation>
+                <property>
+                    <name>skipITs</name>
+                </property>
+            </activation>
+            <properties>
+                <e2e.skip>true</e2e.skip>
+            </properties>
+        </profile>
+    </profiles>
+</project>

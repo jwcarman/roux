@@ -36,9 +36,9 @@ jobs:
       - name: Install Chromium system libraries
         if: github.event_name == 'push'
         run: sudo npx -y "playwright@$(node -p "require('./examples/dojo/e2e/package.json').devDependencies['@playwright/test'].replace(/^[^0-9]*/, '')")" install-deps chromium
-      # roux's modules, then the dojo: its Java tests, Vitest and, on pushes, E2eIT.
+      # roux's modules, then the dojo and the app template: their Java tests, Vitest and, on pushes, E2eIT.
       - run: ./mvnw -B verify ${{ github.event_name != 'push' && '-DskipITs' || '' }}
-      - name: Upload the dojo's test logs
+      - name: Upload the dojo's and the app template's test logs
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -48,6 +48,10 @@ jobs:
             examples/dojo/target/app.log
             examples/dojo/target/surefire-reports/
             examples/dojo/target/failsafe-reports/
+            templates/app/target/playwright.log
+            templates/app/target/app.log
+            templates/app/target/surefire-reports/
+            templates/app/target/failsafe-reports/
           if-no-files-found: ignore
       # Analyses the build above (classes and JaCoCo reports). Pull requests from forks get no
       # secrets, so they skip it rather than fail.

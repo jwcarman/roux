@@ -342,7 +342,7 @@
     </build>
 
     <profiles>
-        <!-- The example apps, built against the roux code beside them. On by default; naming any
+        <!-- The example apps and the app template, built against the roux code beside them. On by default; naming any
              other profile (-P release, -P pit) turns it off, so they are never released or
              mutation-tested. -->
         <profile>
@@ -352,6 +352,7 @@
             </activation>
             <modules>
                 <module>examples/dojo</module>
+                <module>templates/app</module>
             </modules>
         </profile>
         <profile>

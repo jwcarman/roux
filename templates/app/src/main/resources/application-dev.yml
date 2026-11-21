@@ -1,0 +1,6 @@
+# Local development over plain HTTP (./mvnw spring-boot:run turns this profile on).
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false
