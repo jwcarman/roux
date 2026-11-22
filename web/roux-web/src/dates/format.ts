@@ -36,6 +36,15 @@ export function formatDateTime(iso: string | null): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone }).format(new Date(iso));
 }
 
+/** The day an instant falls on where the organization is (`Nov 20, 2026`); `""` for `null`. */
+export function formatInstantDate(iso: string | null): string {
+  if (iso === null) {
+    return "";
+  }
+  const { locale, timeZone } = organization();
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone }).format(new Date(iso));
+}
+
 /** A number in the organization's locale (`1,234.5`); `""` for `null`. */
 export function formatNumber(value: number | null): string {
   if (value === null) {

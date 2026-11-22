@@ -18,3 +18,4 @@ export {
   AccountMenuSwitch,
   type AccountMenuProps,
 } from "./AccountMenu";
+export { PageHeader, type PageHeaderProps } from "./PageHeader";

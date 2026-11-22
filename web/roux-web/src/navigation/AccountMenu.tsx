@@ -58,7 +58,12 @@ interface ItemProps {
 }
 
 /** A page to go to from the account menu; `onNavigate` closes the drawer (the shell's `close`). */
-export function AccountMenuLink({ to, icon, onNavigate, children }: ItemProps & { to: NavTo; onNavigate?: () => void }) {
+export function AccountMenuLink({
+  to,
+  icon,
+  onNavigate,
+  children,
+}: ItemProps & { to: NavTo; onNavigate?: () => void }) {
   return (
     <Menu.Item value={useId()} asChild onSelect={onNavigate}>
       <RouterLink to={to}>

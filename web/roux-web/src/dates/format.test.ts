@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { clearOrganization, setOrganization, testOrganization } from "../organization/organization";
-import { formatDate, formatDateTime, formatNumber, formatTime } from "./format";
+import { formatDate, formatDateTime, formatInstantDate, formatNumber, formatTime } from "./format";
 
 describe("formatDate", () => {
   it("writes a date on its own day, in the organization's locale", () => {
@@ -31,6 +31,18 @@ describe("formatDateTime", () => {
 
   it("writes nothing for no moment", () => {
     expect(formatDateTime(null)).toBe("");
+  });
+});
+
+describe("formatInstantDate", () => {
+  it("writes the day a moment falls on in the organization's zone, without the time", () => {
+    expect(formatInstantDate("2026-11-21T03:00:00Z")).toBe("Nov 20, 2026");
+    setOrganization(testOrganization({ timeZone: "Pacific/Auckland", locale: "fr-FR" }));
+    expect(formatInstantDate("2026-11-21T03:00:00Z")).toBe("21 nov. 2026");
+  });
+
+  it("writes nothing for no moment", () => {
+    expect(formatInstantDate(null)).toBe("");
   });
 });
 

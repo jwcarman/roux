@@ -163,6 +163,10 @@ account={({ compact, close }) => (
 )}
 ```
 
+`<PageHeader title>` (`PageHeaderProps`) is a page's title, its `h2`, with the page's actions as its
+children at the far side (`<PageHeader title="Users"><InviteForm /></PageHeader>`). It stands as tall
+as a button with or without one, so the title sits in the same place on every page.
+
 ## Don't
 
 - Don't mount `ChakraProvider` or Emotion's `CacheProvider` yourself next to `ThemeProvider`.
