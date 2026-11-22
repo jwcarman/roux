@@ -10,10 +10,9 @@ export const queryKeys = {
     list: (filters: { search?: string; role?: string; status?: string }) =>
       [...queryKeys.users.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.users.all, "detail", id] as const,
-    activities: (id: string) => [...queryKeys.users.all, "activities", id] as const,
+    activities: (id: string) =>
+      [...queryKeys.users.all, "activities", id] as const,
   },
-  /** The caller's own passkeys (Settings). */
-  passkeys: ["passkeys"] as const,
   roles: {
     all: ["roles"] as const,
     invitable: () => [...queryKeys.roles.all, "invitable"] as const,

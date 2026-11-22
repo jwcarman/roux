@@ -1,4 +1,4 @@
-import { who } from "../who";
+import { who } from "./who";
 
 /** The longest passkey label who takes. */
 export const PASSKEY_LABEL_MAX = 64;

@@ -108,6 +108,12 @@ The pieces, for a page of the app's own:
   `label` and `icon` override (`ProviderSignInButtonProps` also takes the button's own Chakra props).
 - `EmailLinkLanding`: the page who's `email-link.link-base-url` opens (`/signin/link`): redeems the token once,
   then goes on. A bad link says so, with a link to `signInPath` (`/signin`).
+- `PasskeySettings` (`PasskeySettingsProps`: `onSignedOut`) is the signed-in person's passkeys, for the
+  app's Settings page under its own heading: the list (each with "Added … · Last used …" as days in the
+  organization's zone, and Remove), "No passkeys yet.", and "Add a passkey" in a dialog that asks for a
+  label (`passkeyLabelError`, at most `PASSKEY_LABEL_MAX` characters, checked before the browser makes the
+  passkey). who's refusals are toasts (the last way to sign in stays). When who says the session ended,
+  it calls `onSignedOut`: pass the session's `refresh`, and the guards send the person to sign in.
 - `useSignInReturn()` returns the function every component calls on success: it opens the page the
   visitor asked for, else Home, as a full page load (so the app starts as the person who signed in).
   The route guard that sends a signed-out visitor to sign in calls `rememberSignInReturn(path)`
