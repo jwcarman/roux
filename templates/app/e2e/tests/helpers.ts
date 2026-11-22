@@ -205,10 +205,21 @@ export async function onlyAlgorithm(page: Page, alg: number) {
   });
 }
 
-/** Adds a passkey on the Settings page, reached through the app's own navigation. */
-export async function registerPasskey(page: Page, label: string) {
-  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Settings" }).click();
+/** Picks `item` from the account menu, at the foot of the sidebar. */
+export async function fromAccount(page: Page, item: string) {
+  await page.getByRole("button", { name: "Account" }).click();
+  await page.getByRole("menuitem", { name: item }).click();
+}
+
+/** Opens the Settings page from the account menu. */
+export async function openSettings(page: Page) {
+  await fromAccount(page, "Settings");
   await expect(page.getByRole("heading", { name: "Settings", level: 2 })).toBeVisible();
+}
+
+/** Adds a passkey on the Settings page, reached through the account menu. */
+export async function registerPasskey(page: Page, label: string) {
+  await openSettings(page);
   await page.getByLabel("Passkey label").fill(label);
   await page.getByRole("button", { name: "Add a passkey" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Passkey added" })).toBeVisible();
@@ -216,7 +227,7 @@ export async function registerPasskey(page: Page, label: string) {
 }
 
 export async function signOut(page: Page) {
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await fromAccount(page, "Sign out");
   await expect(page.getByRole("heading", { name: /^Sign in to /, level: 1 })).toBeVisible();
 }
 

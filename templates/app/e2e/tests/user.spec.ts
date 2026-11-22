@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { appName, expectEmailsNameApp, inboxSnapshot, nextSignInLink, openDialog, openLink, ownerEmail, signInByLink } from "./helpers";
+import { appName, expectEmailsNameApp, inboxSnapshot, nextSignInLink, openDialog, openLink, openSettings, ownerEmail, signInByLink } from "./helpers";
 
 test("an invited user signs in by link, sees the directory, and cannot invite", async ({
   browser,
@@ -72,7 +72,7 @@ test("an invited user signs in by link, sees the directory, and cannot invite", 
   expect(statuses).toEqual({ token: true, invitation: 403 });
 
   // The user renames themselves; the header follows.
-  await userPage.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Settings" }).click();
+  await openSettings(userPage);
   await expect(userPage.getByLabel("Email")).toHaveValue(user);
   await userPage.getByLabel("Display name").fill("Ada King");
   await userPage.getByRole("button", { name: "Save profile" }).click();

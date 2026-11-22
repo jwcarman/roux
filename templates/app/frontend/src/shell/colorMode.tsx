@@ -2,6 +2,7 @@ import { ClientOnly, IconButton, Skeleton, type IconButtonProps } from "@chakra-
 import { ThemeProvider, useTheme } from "next-themes";
 import type { ReactNode } from "react";
 import { LuMoon, LuSun } from "react-icons/lu";
+import { AccountMenuSwitch } from "@jwcarman/roux-web/navigation";
 import { cspNonce } from "@jwcarman/roux-web/theme";
 
 /** Light or dark mode, following the system's until the user picks one (kept in localStorage). */
@@ -30,5 +31,19 @@ export function ColorModeButton(props: Omit<IconButtonProps, "aria-label" | "onC
         {dark ? <LuSun /> : <LuMoon />}
       </IconButton>
     </ClientOnly>
+  );
+}
+
+/** "Dark mode" in the account menu: a switch that is on in dark mode. */
+export function ColorModeSwitch() {
+  const { resolvedTheme, setTheme } = useTheme();
+  return (
+    <AccountMenuSwitch
+      icon={LuMoon}
+      checked={resolvedTheme === "dark"}
+      onCheckedChange={(dark) => setTheme(dark ? "dark" : "light")}
+    >
+      Dark mode
+    </AccountMenuSwitch>
   );
 }

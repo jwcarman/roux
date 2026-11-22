@@ -1,10 +1,16 @@
-import { Button, Flex, Text } from "@chakra-ui/react";
 import { Outlet } from "@tanstack/react-router";
-import { LuLogOut } from "react-icons/lu";
-import { AppShell, RAIL_LABELS, type AccountLayout } from "@jwcarman/roux-web/navigation";
+import { LuLogOut, LuSettings } from "react-icons/lu";
+import {
+  AccountMenu,
+  AccountMenuItem,
+  AccountMenuLink,
+  AccountMenuSeparator,
+  AppShell,
+  type AccountLayout,
+} from "@jwcarman/roux-web/navigation";
 import { SignInFrame } from "@jwcarman/roux-web/signin";
 import { useShellTheme } from "@jwcarman/roux-web/theme";
-import { ColorModeButton } from "./colorMode";
+import { ColorModeButton, ColorModeSwitch } from "./colorMode";
 import { Logo } from "./Logo";
 import { nav } from "./nav";
 import { useSession } from "./session";
@@ -39,36 +45,21 @@ export function Layout() {
   );
 }
 
-/** The person's name, the mode switch and sign out, small in the rail. */
-function Account({ compact }: AccountLayout) {
+/** Who is signed in, as roux's account menu: their settings, dark mode and signing out. */
+function Account({ compact, close }: AccountLayout) {
   const { profile, signOut } = useSession();
-  const labels = compact ? RAIL_LABELS : {};
 
   // Signing out ends the session, and the guards then send the caller to sign in.
   return (
-    <>
-      {profile && (
-        <Text fontSize="sm" px="2" truncate {...labels}>
-          {profile.displayName}
-        </Text>
-      )}
-      <Flex gap="2" align="center" direction={compact ? { md: "column", lg: "row" } : "row"}>
-        <ColorModeButton />
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => void signOut()}
-          aria-label="Sign out"
-          title="Sign out"
-          // Stretched beside the mode button when labelled; its own size in the rail's column.
-          flex={compact ? { md: "none", lg: "1" } : "1"}
-        >
-          <LuLogOut aria-hidden />
-          <Text as="span" {...labels}>
-            Sign out
-          </Text>
-        </Button>
-      </Flex>
-    </>
+    <AccountMenu name={profile?.displayName} email={profile?.email} compact={compact}>
+      <AccountMenuLink to="/settings" icon={LuSettings} onNavigate={close}>
+        Settings
+      </AccountMenuLink>
+      <ColorModeSwitch />
+      <AccountMenuSeparator />
+      <AccountMenuItem icon={LuLogOut} onSelect={() => void signOut()}>
+        Sign out
+      </AccountMenuItem>
+    </AccountMenu>
   );
 }

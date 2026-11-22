@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ownerEmail, ownerName, signInByLink } from "./helpers";
+import { openSettings, ownerEmail, ownerName, signInByLink } from "./helpers";
 
 declare global {
   interface Window {
@@ -31,9 +31,10 @@ test("the app runs under its Content-Security-Policy without a violation", async
   await expect(page.getByText(/^Showing 1 to \d+ of \d+ rows$/)).toBeVisible();
   await table.getByRole("button", { name: "Email" }).click();
   await expect(table.getByRole("columnheader", { name: "Email" })).toHaveAttribute("aria-sort", "ascending");
-  await nav.getByRole("link", { name: "Settings" }).click();
-  await expect(page.getByRole("heading", { name: "Settings", level: 2 })).toBeVisible();
-  await page.getByRole("button", { name: /Switch to (dark|light) mode/ }).click();
+  await openSettings(page);
+  await page.getByRole("button", { name: "Account" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Dark mode" }).click();
+  await page.keyboard.press("Escape");
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Open navigation" }).click();

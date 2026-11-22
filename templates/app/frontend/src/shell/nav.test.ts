@@ -9,12 +9,11 @@ describe("the app's navigation", () => {
       "Home",
       "Users",
       "Appearance",
-      "Settings",
     ]);
   });
 
   it("leaves out a page that needs a permission the caller lacks", () => {
-    expect(navItemsFor(nav, []).map((item) => item.label)).toEqual(["Home", "Settings"]);
+    expect(navItemsFor(nav, []).map((item) => item.label)).toEqual(["Home"]);
   });
 
   it("opens on Home", () => {
@@ -33,7 +32,6 @@ describe("the app's navigation", () => {
       { label: "Home", to: "/", description: "A welcome page.", start: true },
       { label: "Users", to: "/users", description: "Who can use the app and what they may do.", start: undefined },
       { label: "Appearance", to: "/appearance", description: "The app's colours, corners and font.", start: undefined },
-      { label: "Settings", to: "/settings", description: "Your own account settings.", start: undefined },
     ]);
   });
 });

@@ -5,7 +5,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { getJson } from "@jwcarman/roux-web/api";
 import { takeSignInReturn } from "@jwcarman/roux-web/signin";
-import { rulesFor, server, serverError } from "@jwcarman/roux-web/testing";
+import { server, serverError } from "@jwcarman/roux-web/testing";
 import { USERS_READ } from "../permissions.gen";
 import { renderRoute } from "../testing/route";
 
@@ -18,6 +18,12 @@ const GRACE = {
   joinedAt: "2026-11-01T12:00:00Z",
 };
 
+/** Opens the account menu inside `scope` and picks `item`. */
+async function fromAccount(scope: HTMLElement, item: string) {
+  await userEvent.click(within(scope).getByRole("button", { name: "Account" }));
+  await userEvent.click(await within(scope).findByRole("menuitem", { name: item }));
+}
+
 describe("the root route", () => {
   it("signs out from the account area and lands on sign-in", async () => {
     server.use(
@@ -28,7 +34,7 @@ describe("the root route", () => {
     const { router } = renderRoute("/settings", { permissions: [] });
     await screen.findByRole("heading", { name: "Settings" });
 
-    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await fromAccount(screen.getByRole("complementary"), "Sign out");
 
     await waitFor(() => expect(router.state.location.pathname).toBe("/signin"));
     // Signing in again starts at Home, not the page they signed out on.
@@ -61,8 +67,8 @@ describe("the root route", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Open navigation", hidden: true }));
     const drawer = await screen.findByRole("dialog", { name: "Navigation" });
 
-    expect(within(drawer).getByText("Test User")).toBeInTheDocument();
-    await userEvent.click(within(drawer).getByRole("button", { name: "Sign out" }));
+    expect(within(drawer).getByRole("button", { name: "Account" })).toHaveTextContent("Test User");
+    await fromAccount(drawer, "Sign out");
 
     await waitFor(() => expect(router.state.location.pathname).toBe("/signin"));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Navigation" })).toBeNull());
@@ -104,25 +110,58 @@ describe("the root route", () => {
     await waitFor(() => expect(router.state.location.pathname).toBe("/signin"));
   });
 
-  it("stacks the account tools in the rail and lays them in a row in the sidebar and the drawer", async () => {
+  it("shows who is signed in on the account button: initials, name and email", async () => {
+    renderRoute("/", { permissions: [] });
+    const account = within(await screen.findByRole("complementary")).getByRole("button", { name: "Account" });
+
+    await waitFor(() => expect(account).toHaveTextContent("Test User"));
+    expect(account).toHaveTextContent("TU");
+    expect(account).toHaveTextContent("test@example.org");
+  });
+
+  it("keeps the person's settings in the account menu, not the navigation", async () => {
+    server.use(http.get("/who/me/passkeys", () => HttpResponse.json([])));
+    const { router } = renderRoute("/", { permissions: [] });
+    const sidebar = await screen.findByRole("complementary");
+    expect(within(sidebar).queryByRole("link", { name: "Settings" })).toBeNull();
+
+    await fromAccount(sidebar, "Settings");
+
+    expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/settings");
+  });
+
+  it("closes the phone's drawer on the way to settings", async () => {
+    server.use(http.get("/who/me/passkeys", () => HttpResponse.json([])));
+    renderRoute("/", { permissions: [] });
+    await userEvent.click(await screen.findByRole("button", { name: "Open navigation", hidden: true }));
+    const drawer = await screen.findByRole("dialog", { name: "Navigation" });
+
+    await fromAccount(drawer, "Settings");
+
+    expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("dialog", { name: "Navigation", hidden: true })).toHaveAttribute("data-state", "closed"),
+    );
+  });
+
+  it("turns dark mode on and off from the account menu", async () => {
+    window.localStorage.clear();
     renderRoute("/", { permissions: [] });
     const sidebar = await screen.findByRole("complementary");
-    const signOut = within(sidebar).getByRole("button", { name: "Sign out" });
+    await userEvent.click(within(sidebar).getByRole("button", { name: "Account" }));
+    const dark = await within(sidebar).findByRole("menuitemcheckbox", { name: "Dark mode" });
+    expect(dark).toHaveAttribute("aria-checked", "false");
 
-    const tools = rulesFor(signOut.parentElement!);
-    expect(tools).toMatch(/min-width: 48rem\)[^}]*flex-direction:column/);
-    expect(tools).toMatch(/min-width: 64rem\)[^}]*flex-direction:row/);
-    const button = rulesFor(signOut);
-    expect(button).toMatch(/min-width: 48rem\)[^}]*flex:none/);
-    expect(button).toMatch(/min-width: 64rem\)[^}]*flex:1/);
+    await userEvent.click(dark);
 
-    await userEvent.click(screen.getByRole("button", { name: "Open navigation", hidden: true }));
-    const drawer = await screen.findByRole("dialog", { name: "Navigation" });
-    const inDrawer = within(drawer).getByRole("button", { name: "Sign out" });
-    expect(rulesFor(inDrawer.parentElement!)).toContain("flex-direction:row");
-    expect(rulesFor(inDrawer.parentElement!)).not.toContain("flex-direction:column");
-    expect(rulesFor(inDrawer)).toContain("flex:1");
-    expect(rulesFor(inDrawer)).not.toContain("flex:none");
+    await waitFor(() => expect(document.documentElement).toHaveClass("dark"));
+    expect(dark).toHaveAttribute("aria-checked", "true");
+
+    await userEvent.click(dark);
+
+    await waitFor(() => expect(document.documentElement).toHaveClass("light"));
+    expect(dark).toHaveAttribute("aria-checked", "false");
   });
 
   it("puts the app's mark beside its name", async () => {

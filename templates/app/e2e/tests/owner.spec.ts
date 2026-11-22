@@ -3,6 +3,7 @@ import {
   ED25519,
   heldPasskeys,
   onlyAlgorithm,
+  openSettings,
   ownerEmail,
   P256,
   registerPasskey,
@@ -81,10 +82,10 @@ test("removing the passkey this session signed in with signs the owner out", asy
 
   // who resolves the session through its credential on every request, so revoking that
   // credential ends the session at once. The app must notice and send the owner to sign in.
-  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Settings" }).click();
+  await openSettings(page);
   await page.getByRole("button", { name: "Remove Only device" }).click();
   await expect(page.getByRole("heading", { name: /^Sign in to /, level: 1 })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Account" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Use a passkey" }).click();
   await expect(page.getByRole("alert")).toHaveText("Passkey sign-in failed.");

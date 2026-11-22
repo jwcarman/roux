@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { ownerEmail, signInByLink } from "./helpers";
+import { ownerEmail, ownerName, signInByLink } from "./helpers";
 
 // How the pages look, which jsdom cannot judge: color contrast and other WCAG A/AA rules in both
 // color modes, and no sideways scrolling at phone width.
@@ -77,10 +77,11 @@ test("at tablet width the sidebar is an icon rail whose links keep their names",
   await nav.getByRole("link", { name: "Users" }).click();
   await expect(page.getByRole("heading", { name: "Users", level: 2 })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Users" })).toHaveAttribute("aria-current", "page");
-  // The rail's buttons stay big enough to hit.
-  for (const name of ["Sign out", /Switch to (dark|light) mode/]) {
-    const box = await page.getByRole("button", { name }).boundingBox();
-    expect(box?.height ?? 0, String(name)).toBeGreaterThanOrEqual(32);
-  }
+  // The rail's account button is only the initials, and stays big enough to hit.
+  const account = page.getByRole("button", { name: "Account" });
+  await expect(account.getByText(ownerName, { exact: true })).toBeHidden();
+  const box = await account.boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(32);
+  expect(box?.width ?? 0).toBeGreaterThanOrEqual(32);
   await expectAccessible(page);
 });
