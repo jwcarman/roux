@@ -1,6 +1,6 @@
 import { Heading, Stack, Text } from "@chakra-ui/react";
 import { useShellTheme } from "@jwcarman/roux-web/theme";
-import { useSession } from "./session";
+import { useSession } from "@jwcarman/roux-web/session";
 
 /**
  * The page the app opens on: a welcome, and nothing else yet. It is the blank page to start from;

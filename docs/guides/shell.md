@@ -39,10 +39,11 @@ title. It replaces `ChakraProvider`. Mount no other Chakra provider, and no Emot
 ## The appearance page
 
 ```tsx
+import { requirePermission } from "@jwcarman/roux-web/session";
 import { AppearanceSettings } from "@jwcarman/roux-web/theme";
 
-export const Route = createFileRoute("/_signedIn/appearance")({
-  beforeLoad: ({ context }) => requirePermission(context.session.currentMe(), "theme.manage"),
+export const Route = createFileRoute<"/_signedIn/appearance">()({
+  beforeLoad: ({ context }) => requirePermission(context.me, THEME_MANAGE),
   component: () => (
     <Stack gap="8">
       <PageHeader title="Appearance" />
@@ -81,10 +82,10 @@ export function SignIn() {
 }
 ```
 
-- `SignInFrame`: a card no wider than 400px, centred on a tinted page from a small screen up; on a
+- `SignInFrame` (`SignInFrameProps`: `tools`, `children`): a card no wider than 400px, centred on a tinted page from a small screen up; on a
   phone the card is the page. `tools` sit in the top corner. Its children are the card's contents, so
   the emailed link's landing page (`/signin/link`) wears the same card.
-- `SignInCard`: "Sign in to `appName`" under `logo`, then the ways who reports as on
+- `SignInCard` (`SignInCardProps`: `appName`, `logo`): "Sign in to `appName`" under `logo`, then the ways who reports as on
   (`who.signInOptions()`; email and a passkey when who cannot be asked). The emailed link comes first,
   with "Email me a link" at the field's right edge; below a divider, "Have a passkey?" beside "Use a
   passkey" when that is the only other way, or "Other ways to sign in" above a wrapping row of the
@@ -119,6 +120,36 @@ The pieces, for a page of the app's own:
   The route guard that sends a signed-out visitor to sign in calls `rememberSignInReturn(path)`
   (`isReturnable` says which paths count: never Home, sign-in, `/api` or `/who`; `takeSignInReturn` reads it once).
   After a sign-in of your own, call `useSignInReturn()()`.
+
+## The session and route guards
+
+`@jwcarman/roux-web/session` knows who is signed in. Mount `SessionProvider` once, inside the query
+client's provider and around the router; `useSession()` reads it anywhere below as a `Session` (and
+throws outside one):
+
+```tsx
+const { me, profile, refresh, refreshProfile, signOut, currentMe } = useSession();
+```
+
+- `me` is who's `Me` (`identityId`, `permissions`, ...): `undefined` while it loads, `null` when signed out.
+- `profile` is the person's own `Profile` from roux-users' `/api/users/me` (`displayName`, `email`,
+  `version`): `undefined` while it loads, `null` when there is none to show. `refreshProfile()` reloads it
+  after a rename.
+- `refresh()` asks who again; it also runs whenever an API call answers 401, so a session that ends on
+  a page is noticed at once. `signOut()` signs out through who.
+- `currentMe()` answers the caller as of the server's last answer, before React re-renders: route guards
+  read it (`context.session.currentMe()`), so a navigation right after signing in sees the new session.
+- When the person changes (signing in, out, or as someone else), the query cache is emptied.
+
+The guards, for `beforeLoad`, throw TanStack's redirect:
+
+- `requireSignedIn(me)` returns the signed-in caller, or sends a signed-out visitor to `/signin`. The
+  signed-in layout route (`routes/_signedIn.tsx`) calls it with `context.session.currentMe()` and puts
+  the result in its context as `me` (after `rememberSignInReturn(location.href)` for a visitor).
+- `requireSignedOut(me)`, for the sign-in page, sends a signed-in caller to `/`.
+- `requirePermission(context.me, USERS_READ)`, on a route under the signed-in layout, sends a caller
+  without the permission to Home itself (`home` in the history state stops `/` sending them on to the
+  start place). The server enforces the same permission on every call.
 
 ## Navigation
 
@@ -156,8 +187,9 @@ from `lg`, an icon rail at `md`, and a drawer opened by "Open navigation" below.
 `<AccountMenu>` (`AccountMenuProps`: `name`, `email`, `compact`, `children`) is that area as one button,
 "Account": the person's initials, name and email, opening a menu above it (only the initials in the rail).
 Its items are `<AccountMenuLink to icon onNavigate>` (a page; pass the layout's `close`),
-`<AccountMenuItem icon onSelect>` (an action, such as signing out), `<AccountMenuSwitch icon checked
-onCheckedChange>` (a setting flipped in place, such as dark mode) and `<AccountMenuSeparator />`. The person's
+`<AccountMenuItem icon onSelect>` (an action, such as signing out),
+`<AccountMenuSwitch icon checked onCheckedChange>` (a setting flipped in place, such as dark mode) and
+`<AccountMenuSeparator />`. The person's
 own pages (their settings) belong here, not in the navigation:
 
 ```tsx

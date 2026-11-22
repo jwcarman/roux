@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { requireSignedOut } from "../../shell/guards";
+import { requireSignedOut } from "@jwcarman/roux-web/session";
 import { SignIn } from "../../shell/SignIn";
 
 export const Route = createFileRoute<"/signin/">()({

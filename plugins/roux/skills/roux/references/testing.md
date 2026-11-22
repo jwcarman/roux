@@ -303,6 +303,12 @@ server.use(http.get("/api/ranks", () => HttpResponse.json([{ id: "r1", name: "Wh
 without retries, so a failure shows at once. `renderHookWithProviders(hook, client?, initialProps?)`
 does the same for a hook. Both return the `client` with Testing Library's result.
 
+jsdom applies no stylesheet, so a responsive or state style (a column count from `md` up, a ring on
+a pressed button) is checked from the rules themselves: `rulesFor(element)` is every CSS rule for the
+element's classes, media queries included, as one string to match
+(`expect(rulesFor(grid)).toMatch(/min-width: 48rem\)[^}]*repeat\(5/)`). `paletteOf(element)` names the
+colour palette Chakra gives it (`"red"` for a destructive button), or `undefined`.
+
 A component that asks for confirmation or shows a toast needs those mounted in the test, as the app's
 shell mounts them:
 

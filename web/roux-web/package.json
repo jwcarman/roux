@@ -53,6 +53,10 @@
       "types": "./dist/signin/index.d.ts",
       "import": "./dist/signin/index.js"
     },
+    "./session": {
+      "types": "./dist/session/index.d.ts",
+      "import": "./dist/session/index.js"
+    },
     "./navigation": {
       "types": "./dist/navigation/index.d.ts",
       "import": "./dist/navigation/index.js"

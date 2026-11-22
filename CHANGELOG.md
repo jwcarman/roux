@@ -69,6 +69,15 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- `@jwcarman/roux-web/session`: `SessionProvider` and `useSession()` (the caller from who, their
+  `Profile` from roux-users, `refresh`, `refreshProfile`, `signOut`, `currentMe` for route guards; the
+  query cache emptied when the person changes) and the route guards `requireSignedIn`,
+  `requireSignedOut` and `requirePermission`. An app deletes its own session and guards and imports
+  these.
+- roux-web's `PasskeySettings` (from `/signin`): the signed-in person's passkeys for a Settings page, with
+  `passkeyLabelError` and `PASSKEY_LABEL_MAX`. It takes `onSignedOut` (the session's `refresh`).
+- roux-web's `PageHeader` (a page's title and actions) and `formatInstantDate` (a moment's day in the
+  organization's zone).
 - roux-users (in the starter): users on the server. `AppUser` (each user's display name, in roux's
   table `roux_user`, made by roux's `UserJoined` listener), the read-only directory
   (`roux_user_directory`, `UserDirectory`, `UserFilter`, `UserSort`), and the users endpoints under

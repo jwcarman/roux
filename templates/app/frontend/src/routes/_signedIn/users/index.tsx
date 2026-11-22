@@ -1,6 +1,6 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { USERS_READ } from "../../../permissions.gen";
-import { requirePermission } from "../../../shell/guards";
+import { requirePermission } from "@jwcarman/roux-web/session";
 import {
   USER_ROLES,
   USER_SORTS,

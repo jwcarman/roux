@@ -201,7 +201,7 @@ import { createQueryClient } from "@jwcarman/roux-web/api";
 import { ConfirmProvider, Toaster } from "@jwcarman/roux-web/feedback";
 import { loadOrganization, startDayWatch } from "@jwcarman/roux-web/organization";
 import { ThemeProvider } from "@jwcarman/roux-web/theme";
-import { SessionProvider } from "./session";
+import { SessionProvider } from "@jwcarman/roux-web/session";
 import { App } from "./App";
 
 const queryClient = createQueryClient();
@@ -232,54 +232,17 @@ createRoot(document.getElementById("root")!).render(
   `useConfirm` throws outside `ConfirmProvider`.
 - Pass the same `queryClient` to TanStack Router's context if route loaders prefetch.
 
-The session provider is app code (the template's `session.tsx`). It loads the caller from who, and it
-must do two roux things: clear the query cache when the identity changes, and reload the caller when
-an API call reports the session lost.
+`SessionProvider` is roux's ([The shell](shell.md#the-session-and-route-guards)): it loads the caller
+from who and their profile from roux-users, empties the query cache when the identity changes, and
+reloads the caller when an API call reports the session lost. Components read it with `useSession()`,
+and route guards with `context.session.currentMe()`.
 
-```tsx
-import { createContext, useCallback, useEffect, useState, type ReactNode } from "react";
-import { onSessionLost, useClearQueriesOnIdentityChange } from "@jwcarman/roux-web/api";
-import { fetchMe, type Me } from "./api";
-
-interface Session {
-  me: Me | null | undefined;
-  refresh: () => Promise<Me | null>;
-}
-
-const SessionContext = createContext<Session | null>(null);
-
-export function SessionProvider({ children }: { children: ReactNode }) {
-  // undefined while loading, null when signed out
-  const [me, setMe] = useState<Me | null | undefined>(undefined);
-  useClearQueriesOnIdentityChange(me === undefined ? undefined : (me?.identityId ?? null));
-
-  const refresh = useCallback(async () => {
-    const current = await fetchMe();
-    setMe(current);
-    return current;
-  }, []);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  // Any /api call that answers 401: reload the caller, and the signed-out routes send them to sign in.
-  useEffect(
-    () =>
-      onSessionLost(() => {
-        void refresh();
-      }),
-    [refresh],
-  );
-
-  return <SessionContext value={{ me, refresh }}>{children}</SessionContext>;
-}
-```
-
-`useClearQueriesOnIdentityChange(identityId: string | null | undefined): void` empties the query
+An app that keeps a session of its own does the same two roux things with
+`useClearQueriesOnIdentityChange(identityId: string | null | undefined): void`, which empties the query
 cache when the identity goes away (`null`) or changes, so nobody sees rows cached for the previous
-user; `undefined` (still loading) changes nothing. It must be called inside `QueryClientProvider`.
-`fetchMe` is in [API client](api-client.md#get-the-raw-response).
+user (`undefined`, still loading, changes nothing; call it inside `QueryClientProvider`), and
+`onSessionLost(listener)`, which runs `listener` whenever an `/api` call answers 401 and returns the
+function that stops it.
 
 ## Point the client at the API
 

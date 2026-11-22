@@ -10,7 +10,7 @@ import { ConfirmProvider, Toaster } from "@jwcarman/roux-web/feedback";
 import { ThemeProvider } from "@jwcarman/roux-web/theme";
 import { routeTree } from "./routeTree.gen";
 import { ColorModeProvider } from "./shell/colorMode";
-import { SessionProvider, useSession, type Session } from "./shell/session";
+import { SessionProvider, useSession, type Session } from "@jwcarman/roux-web/session";
 
 /** The app's router: its routes, with the query client their loaders use. `history` is the browser's unless given. */
 export function createAppRouter(

@@ -2,7 +2,7 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { ApiError } from "@jwcarman/roux-web/api";
 import { USERS_READ } from "../../../permissions.gen";
 import { NotFoundPage } from "@jwcarman/roux-web/feedback";
-import { requirePermission } from "../../../shell/guards";
+import { requirePermission } from "@jwcarman/roux-web/session";
 import { UserDetail } from "../../../users/UserDetail";
 import { userQuery } from "../../../users/users";
 

@@ -3,8 +3,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { getJson } from "@jwcarman/roux-web/api";
-import { renderWithProviders, server } from "@jwcarman/roux-web/testing";
+import { getJson } from "../api/client";
+import { renderWithProviders } from "../testing/render";
+import { server } from "../testing/server";
 import { SessionProvider, useSession } from "./session";
 
 /** Shows what the session holds, with buttons for what it does. */
@@ -24,7 +25,9 @@ function signedIn() {
   let signedInNow = true;
   server.use(
     http.get("/who/me", () =>
-      signedInNow ? HttpResponse.json({ identityId: "id-1", permissions: [] }) : new HttpResponse(null, { status: 401 }),
+      signedInNow
+        ? HttpResponse.json({ identityId: "id-1", permissions: [] })
+        : new HttpResponse(null, { status: 401 }),
     ),
     http.get("/api/users/me", () =>
       HttpResponse.json({ id: "id-1", displayName: "Test User", email: "test@example.org", version: 0 }),
@@ -140,6 +143,55 @@ describe("SessionProvider and the query cache", () => {
     await getJson("/api/anything").catch(() => undefined);
 
     expect(asked).toBe(0);
+  });
+});
+
+describe("the session's calls", () => {
+  it("answers the caller through currentMe as soon as it has loaded, for route guards", async () => {
+    signedIn();
+    let seen: unknown;
+    function Guard() {
+      const { me, currentMe } = useSession();
+      if (me) {
+        seen = currentMe();
+      }
+      return null;
+    }
+    renderWithProviders(
+      <SessionProvider>
+        <Guard />
+      </SessionProvider>,
+    );
+
+    await waitFor(() => expect(seen).toEqual({ identityId: "id-1", permissions: [] }));
+  });
+
+  it("reloads the profile with refreshProfile, as after a rename", async () => {
+    signedIn();
+    function Rename() {
+      const { profile, refreshProfile } = useSession();
+      return (
+        <>
+          <p>profile: {profile?.displayName ?? "loading"}</p>
+          <button onClick={() => void refreshProfile()}>Reload</button>
+        </>
+      );
+    }
+    renderWithProviders(
+      <SessionProvider>
+        <Rename />
+      </SessionProvider>,
+    );
+    await screen.findByText("profile: Test User");
+    server.use(
+      http.get("/api/users/me", () =>
+        HttpResponse.json({ id: "id-1", displayName: "Renamed", email: "test@example.org", version: 1 }),
+      ),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Reload" }));
+
+    expect(await screen.findByText("profile: Renamed")).toBeInTheDocument();
   });
 });
 

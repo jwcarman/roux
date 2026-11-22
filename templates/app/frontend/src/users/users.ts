@@ -4,7 +4,8 @@ import { email, text } from "@jwcarman/roux-web/form";
 import { pageQuery, type PageDto, type PageParams } from "@jwcarman/roux-web/paging";
 import { z } from "zod";
 import { historyQuery } from "@jwcarman/roux-web/activity";
-import type { User, UserDetail, Profile } from "../api";
+import type { Profile } from "@jwcarman/roux-web/session";
+import type { User, UserDetail } from "../api";
 import { queryKeys } from "../queryKeys";
 
 /** The longest name, as the server's AppUser.MAX_NAME allows. */

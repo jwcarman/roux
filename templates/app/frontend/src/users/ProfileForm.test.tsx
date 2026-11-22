@@ -4,8 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Toaster, toaster } from "@jwcarman/roux-web/feedback";
-import { type Profile } from "../api";
-import { SessionProvider } from "../shell/session";
+import type { Profile } from "@jwcarman/roux-web/session";
+import { SessionProvider } from "@jwcarman/roux-web/session";
 import { renderWithProviders, server, serverError, stale } from "@jwcarman/roux-web/testing";
 import { ProfileForm } from "./ProfileForm";
 

@@ -167,6 +167,13 @@ days ("yesterday"), months and years.
 `details` (`jsonb`). Indexed by anchor and time, and by related id. Rows are never updated. A test that
 starts from an empty history resets it with the app's other tables (`users.reset("roux_activity")`).
 
+## Native images
+
+The details records are read and written as JSON, so a native image needs reflection hints for them.
+`BusinessActivityAotProcessor` registers them at build time for every `BusinessActivity` record in
+roux's packages and the app's own (it scans `org.jwcarman.roux` and the application's package), so an
+app's kinds need nothing extra.
+
 ## Don't
 
 - Never rename a `type()` once rows exist: stored rows keep the old code. A new meaning is a new type.

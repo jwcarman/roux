@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { PageHeader } from "@jwcarman/roux-web/navigation";
 import { PasskeySettings } from "@jwcarman/roux-web/signin";
 import { useShellTheme } from "@jwcarman/roux-web/theme";
-import { useSession } from "./session";
+import { useSession } from "@jwcarman/roux-web/session";
 import { ProfileForm } from "../users/ProfileForm";
 
 /** One part of the page: its title, a line on what it is for, and its contents. */

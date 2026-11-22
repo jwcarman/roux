@@ -13,8 +13,9 @@ details.
   permissions.
 - One frontend folder per feature, `frontend/src/<feature>/`, mirroring the package: its pages and
   dialogs, a `<feature>.ts` with its calls, schemas and query options, and its tests beside them.
-  `frontend/src/users/` is the shape to follow. The app's frame (layout, nav, session, guards, colour
-  mode, sign-in, Appearance, Settings) is `frontend/src/shell/`.
+  `frontend/src/users/` is the shape to follow. The app's frame (layout, nav, colour mode, sign-in,
+  Appearance, Settings) is `frontend/src/shell/`; the session (`useSession`) and the route guards come
+  from `@jwcarman/roux-web/session`.
 - Schema changes: one changelog per feature in `src/main/resources/db/changelog`, included from
   `db.changelog-master.xml`. roux's modules ship their own tables.
 - A screen: a thin route file in `frontend/src/routes` (file-based) that opens its feature's page,
@@ -28,7 +29,8 @@ details.
 - A route file names its path as a type argument, `createFileRoute<"/_signedIn/widgets/">()({...})`:
   the router plugin supplies the path itself, so a string there is code no test can check. A page
   under `_signedIn` reads the caller with `useMe()` (from `routes/_signedIn.tsx`); a route's guard
-  is `beforeLoad: ({ context }) => requirePermission(context.me, WIDGETS_READ)`.
+  is `beforeLoad: ({ context }) => requirePermission(context.me, WIDGETS_READ)` (`requirePermission`
+  from `@jwcarman/roux-web/session`).
 
 ## Rules that are easy to miss
 

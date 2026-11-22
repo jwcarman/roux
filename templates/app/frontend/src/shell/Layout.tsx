@@ -13,7 +13,7 @@ import { useShellTheme } from "@jwcarman/roux-web/theme";
 import { ColorModeButton, ColorModeSwitch } from "./colorMode";
 import { Logo } from "./Logo";
 import { nav } from "./nav";
-import { useSession } from "./session";
+import { useSession } from "@jwcarman/roux-web/session";
 
 /**
  * The app's frame. Signed in: roux's `AppShell` (a sidebar, an icon rail and a drawer) with this

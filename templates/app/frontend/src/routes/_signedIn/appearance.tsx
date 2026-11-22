@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@jwcarman/roux-web/navigation";
 import { AppearanceSettings } from "@jwcarman/roux-web/theme";
 import { THEME_MANAGE } from "../../permissions.gen";
-import { requirePermission } from "../../shell/guards";
+import { requirePermission } from "@jwcarman/roux-web/session";
 
 function Appearance() {
   return (

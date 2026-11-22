@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, useRouter } from "@tanstack/react-router";
 import { ErrorPage, NotFoundPage } from "@jwcarman/roux-web/feedback";
 import { Layout } from "../shell/Layout";
-import type { Session } from "../shell/session";
+import type { Session } from "@jwcarman/roux-web/session";
 
 /** What every route's `beforeLoad` and `loader` can use. */
 export interface RouterContext {

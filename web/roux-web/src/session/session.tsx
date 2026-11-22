@@ -1,7 +1,23 @@
 import { createContext, useContext, useState, useSyncExternalStore, type ReactNode } from "react";
-import { getJson, onSessionLost, useClearQueriesOnIdentityChange } from "@jwcarman/roux-web/api";
-import { fetchMe, type Me, type Profile } from "../api";
-import { who } from "../who";
+import type { Me } from "@jwcarman/who-client";
+import { getJson, onSessionLost } from "../api/client";
+import { useClearQueriesOnIdentityChange } from "../api/queryClient";
+import { who } from "../signin/who";
+
+export type { Me };
+
+/** The signed-in person's own profile, from roux-users' `/api/users/me`; `version` goes back with a rename. */
+export interface Profile {
+  displayName: string;
+  email: string;
+  version: number;
+}
+
+/** The signed-in caller, or null when signed out. */
+async function fetchMe(): Promise<Me | null> {
+  const result = await who.me.get();
+  return result.ok ? result.value : null;
+}
 
 export interface Session {
   /** undefined while loading, null when signed out. */
@@ -80,6 +96,11 @@ function createSession() {
 
 const SessionContext = createContext<Session | null>(null);
 
+/**
+ * Who is signed in, for everything below it: it loads the caller from who and their profile from
+ * roux-users, asks again whenever an API call answers 401, and empties the query cache when the
+ * person changes. Mount it once, inside the query client's provider; `useSession()` reads it.
+ */
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [session] = useState(createSession);
   const { me, profile } = useSyncExternalStore(session.subscribe, session.state);
@@ -91,6 +112,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/** The session `SessionProvider` holds; throws outside one. */
 export function useSession(): Session {
   const session = useContext(SessionContext);
   if (session === null) {

@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { isRedirect } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
-import type { Me } from "../api";
-import { USERS_READ } from "../permissions.gen";
 import { requirePermission, requireSignedIn, requireSignedOut } from "./guards";
 
-const user: Me = { identityId: "ada", permissions: [USERS_READ] };
-const outsider: Me = { identityId: "eve", permissions: [] };
+const USERS_READ = "users.read";
+
+const user = { identityId: "ada", permissions: [USERS_READ] };
+const outsider = { identityId: "eve", permissions: [] };
 
 function redirectOf(guard: () => unknown): string | undefined {
   try {

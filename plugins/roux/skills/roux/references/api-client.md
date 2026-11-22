@@ -103,14 +103,13 @@ function get(path: string, options?: RequestOptions): Promise<Response>;
 function send(method: "POST" | "PUT" | "PATCH" | "DELETE", path: string, body?: unknown): Promise<Response>;
 ```
 
-Use them only when the status itself is the answer, as the template's session code does with who's
-endpoints:
+Use them only when the status itself is the answer:
 
 ```ts
-/** The signed-in caller, or null when signed out. */
-export async function fetchMe(): Promise<Me | null> {
-  const response = await get("/who/me");
-  return response.ok ? ((await response.json()) as Me) : null;
+/** Whether the export is ready: 204 until it is, 200 once it is. */
+export async function exportReady(id: string): Promise<boolean> {
+  const response = await get(`exports/${id}`);
+  return response.status === 200;
 }
 
 // For who's own endpoints, prefer who's typed client, @jwcarman/who-client: `who.me.get()`,
