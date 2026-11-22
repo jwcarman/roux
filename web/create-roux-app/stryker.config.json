@@ -1,0 +1,16 @@
+{
+  "$schema": "../node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vite.config.ts"
+  },
+  "coverageAnalysis": "perTest",
+  "mutate": ["src/**/*.ts", "!src/**/*.test.ts", "!src/bin.ts"],
+  "reporters": ["clear-text", "progress", "html"],
+  "thresholds": {
+    "break": 100
+  },
+  "tsconfigFile": "tsconfig.stryker-skip.json",
+  "incremental": true,
+  "incrementalFile": "../../.mutation-history/stryker-incremental-create-roux-app.json"
+}

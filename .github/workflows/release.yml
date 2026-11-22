@@ -40,6 +40,16 @@ jobs:
       - name: Rehearse the publish
         run: npm publish -w @jwcarman/roux-web --access public --dry-run
         working-directory: web
+      # The starter's locks need roux-web on npm, so the rehearsal bundles the template without them.
+      - name: Rehearse the starter's publish
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          npm version "$RELEASE_TAG" --no-git-tag-version --allow-same-version -w @jwcarman/create-roux-app
+          create-roux-app/bundle-template.sh "$RELEASE_TAG"
+          npm run build -w @jwcarman/create-roux-app
+          npm publish -w @jwcarman/create-roux-app --access public --dry-run
+        working-directory: web
 
   maven:
     needs: [verify, npm]
@@ -136,14 +146,15 @@ jobs:
         run: npm publish -w @jwcarman/roux-web --access public
         working-directory: web
 
-  # jwcarman/roux-app-template, the repository behind "Use this template": templates/app at this
-  # release, with roux from Maven Central and npm (scripts/export-app-template.sh). A pre-release
-  # leaves it alone. ROUX_APP_TEMPLATE_TOKEN is a fine-grained token for that one repository with
-  # Contents: read and write.
-  app-template:
-    needs: [maven, npm]
-    if: ${{ !github.event.release.prerelease }}
+  # @jwcarman/create-roux-app (npm create @jwcarman/roux-app): the app template at this release, with
+  # package locks for roux-web at this release, which the npm job has just published. A job of its
+  # own, so a failure here strands neither roux-web nor Maven Central.
+  starter:
+    needs: npm
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -151,30 +162,30 @@ jobs:
           node-version: 'lts/*'
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
-      # The locks need roux-web at this version on npm, which the npm job has just published; the
-      # registry can take a minute to serve it.
-      - name: Export the template
+      - name: Install web dependencies
+        run: npm ci --ignore-scripts
+        working-directory: web
+      - name: Set version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: npm version "$RELEASE_TAG" --no-git-tag-version --allow-same-version -w @jwcarman/create-roux-app
+        working-directory: web
+      # The registry can take a minute to serve the roux-web the npm job published.
+      - name: Bundle the template
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           for _ in 1 2 3 4 5 6; do
-            if scripts/export-app-template.sh --locks "$RELEASE_TAG" "$RUNNER_TEMP/exported"; then
+            if create-roux-app/bundle-template.sh --locks "$RELEASE_TAG"; then
               exit 0
             fi
-            rm -rf "$RUNNER_TEMP/exported"
             sleep 30
           done
           exit 1
-      - name: Push it to roux-app-template
-        env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-          TOKEN: ${{ secrets.ROUX_APP_TEMPLATE_TOKEN }}
-        run: |
-          git clone --quiet "https://x-access-token:${TOKEN}@github.com/jwcarman/roux-app-template.git" "$RUNNER_TEMP/repo"
-          mv "$RUNNER_TEMP/repo/.git" "$RUNNER_TEMP/exported/.git"
-          cd "$RUNNER_TEMP/exported"
-          git add -A
-          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit --quiet -m "roux $RELEASE_TAG"
-          git tag "$RELEASE_TAG"
-          git push --quiet origin HEAD:main "refs/tags/$RELEASE_TAG"
+        working-directory: web
+      - name: Build
+        run: npm run build -w @jwcarman/create-roux-app
+        working-directory: web
+      - name: Publish package
+        run: npm publish -w @jwcarman/create-roux-app --access public
+        working-directory: web

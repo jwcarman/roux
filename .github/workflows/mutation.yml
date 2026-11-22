@@ -49,6 +49,9 @@ jobs:
       - name: Mutation testing (web)
         run: npm run mutate -w @jwcarman/roux-web
         working-directory: web
+      - name: Mutation testing (starter)
+        run: npm run mutate -w @jwcarman/create-roux-app
+        working-directory: web
       # Saved after a failed run too (a survivor fails it): the mutants that did run keep their
       # results, so the fix's run retests only what changed instead of the whole package.
       - name: Save mutation history
@@ -81,7 +84,7 @@ jobs:
       # The template builds against the roux modules beside it.
       - name: Install roux
         run: ./mvnw -B install -DskipTests -Pexamples -pl templates/app -am
-      # The template ships no wrapper (noir adds one); roux's builds it.
+      # The template gets its own wrapper when it is exported (create-roux-app); here roux's builds it.
       - name: Mutation testing (Java)
         run: ./mvnw -B -Ppit verify -DskipITs -f templates/app/pom.xml
       - name: Mutation testing (web)

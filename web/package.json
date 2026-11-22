@@ -1,4 +1,7 @@
 {
   "private": true,
-  "workspaces": ["roux-web"]
+  "workspaces": [
+    "roux-web",
+    "create-roux-app"
+  ]
 }

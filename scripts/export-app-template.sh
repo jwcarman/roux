@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
-# Writes templates/app as an app of its own, for the jwcarman/roux-app-template repository: roux at
-# VERSION from Maven Central and npm, no link to roux's repository, and a Maven wrapper.
+# Writes templates/app as an app of its own, the template create-roux-app ships
+# (web/create-roux-app/bundle-template.sh): roux at VERSION from Maven Central and npm, no link to
+# roux's repository, and a Maven wrapper.
 #
 # Usage: scripts/export-app-template.sh [--from DIR] [--locks] VERSION OUT
 #

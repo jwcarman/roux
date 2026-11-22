@@ -2,8 +2,9 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-// ESLint config for web/roux-web, run from there (see README.md). Plugins and the parser resolve
-// from this directory's node_modules, because roux-web itself has no ESLint (it needs TypeScript 6).
+// ESLint config for web/roux-web and web/create-roux-app, run from each (see README.md). Plugins and
+// the parser resolve from this directory's node_modules, because the packages have no ESLint of their
+// own (it needs TypeScript 6).
 const here = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(join(here, "package.json"));
 const js = require("@eslint/js");
@@ -55,7 +56,9 @@ const defects = [
 ];
 
 export default tseslint.config(
-  { ignores: ["dist", "coverage", "reports", ".stryker-tmp"] },
+  // template: the app template create-roux-app bundles before a publish, linted where it lives
+  // (templates/app), not as the starter's code.
+  { ignores: ["dist", "coverage", "reports", ".stryker-tmp", "template"] },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   {

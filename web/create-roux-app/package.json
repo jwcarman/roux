@@ -1,0 +1,42 @@
+{
+  "name": "@jwcarman/create-roux-app",
+  "version": "0.1.0",
+  "description": "Starts a new roux app: npm create @jwcarman/roux-app acme-gym",
+  "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jwcarman/roux.git",
+    "directory": "web/create-roux-app"
+  },
+  "homepage": "https://github.com/jwcarman/roux#readme",
+  "bugs": "https://github.com/jwcarman/roux/issues",
+  "bin": {
+    "create-roux-app": "dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "template"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "mutate": "stryker run",
+    "format": "../lint-tools/node_modules/.bin/prettier --write .",
+    "format:check": "../lint-tools/node_modules/.bin/prettier --check .",
+    "lint": "../lint-tools/node_modules/.bin/eslint -c ../lint-tools/eslint.config.mjs ."
+  },
+  "devDependencies": {
+    "@stryker-mutator/core": "10.1.1",
+    "@stryker-mutator/vitest-runner": "10.1.1",
+    "@types/node": "26.6.6",
+    "@vitest/coverage-v8": "5.1.0",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
+  }
+}

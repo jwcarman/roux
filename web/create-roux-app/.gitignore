@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+reports/
+.stryker-tmp/
+*.tsbuildinfo
+# written by bundle-template.sh before a publish
+template/
