@@ -444,6 +444,7 @@ for the package or tree-shake it away.
 
 ## Next
 
+- [Entities and tables](entities.md): a feature's table, entity, repository, service and controller.
 - [Errors](errors.md): throwing errors on the server and showing them in the browser.
 - [API client](api-client.md): one API module per resource.
 - [Queries and mutations](queries-and-mutations.md), [Forms](forms.md),

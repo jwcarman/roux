@@ -111,6 +111,7 @@ sections you need.
 | The task | Read |
 | --- | --- |
 | Add roux to an app, required settings, the app root (`main.tsx`), session provider, one origin, CSP | `references/getting-started.md` |
+| A new resource on the server: its table (Liquibase changeset, column types), entity (`AuditableEntity`), repository, records, service and controller; a new field's column | `references/entities.md` |
 | Refuse a request on the server: 404, a broken rule, a bad field, a 409, a stale save | `references/errors.md` (Return 404 ... Refuse a stale save) |
 | What the browser shows for each refusal; `ApiError`, `problemOf` | `references/errors.md` (In the browser) |
 | A resource's API functions, query params, path values, raw `Response`, CSRF, `configureApi` | `references/api-client.md` |
@@ -145,10 +146,15 @@ that part.
 
 ## Before you finish
 
-- Build and run the tests on both sides (`mvn verify`, and the frontend's test and type-check
-  scripts in `package.json`). Add tests in the shape `references/testing.md` gives: the Java test
-  asserts the Problem Details a refusal answers, and the Vitest test answers with MSW, never by
-  mocking roux, who, the API module or the query client.
+- Format the Java code: `./mvnw spotless:apply`. The build checks the format (google-java-format,
+  Spotless) and fails on any file that is not formatted, so run it after the last Java change.
+  `./mvnw test-compile` does not run that check; only the full build does.
+- Build and run the tests on both sides: `./mvnw verify` (its Java tests need Docker; without
+  Docker, at least `./mvnw spotless:apply test-compile`), and in `frontend/` `npm test` and
+  `npm run build` (the type check, `tsc -b`). Add tests in the shape `references/testing.md` gives:
+  the Java test asserts the Problem Details a refusal answers, and the Vitest test answers with MSW,
+  never by mocking roux, who, the API module or the query client. A test that fails is a finding to
+  fix, not to delete.
 - Check the change against each guide's "Don't" list.
 - If a guide does not cover what the task needs, say so to the user rather than inventing an API;
   roux's gaps are written in the guides, and an unlisted one is worth reporting.
