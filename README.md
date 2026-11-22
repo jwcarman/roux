@@ -20,16 +20,28 @@ Java, published to Maven Central under `org.jwcarman.roux`:
 - `runtime/roux-bom`: aligns the versions of the modules above.
 - `runtime/roux-contract-tests`: tests that hold the Java and web sides to the same contracts. Never published.
 
-Web, published to npm as `@jwcarman/roux-web` (`web/roux-web`), with one subpath per concern:
-`problem`, `api`, `paging`, `table`, `feedback` and `form`.
+Web, published to npm:
+
+- `@jwcarman/roux-web` (`web/roux-web`): the React side, with one subpath per concern (`problem`,
+  `api`, `paging`, `table`, `feedback`, `form`, `signin`, `session` and more).
+- `@jwcarman/create-roux-app` (`web/create-roux-app`): `npm create @jwcarman/roux-app acme-gym`
+  starts a new app from the reference app below, at the same release.
+
+Apps, never published as they are:
+
+- `templates/app`: the reference app every new app starts from (sign-in, the first owner, the
+  sidebar frame, Users, Settings and Appearance), built and tested in roux's build against the
+  modules beside it. `scripts/export-app-template.sh` turns it into an app of its own.
+- `examples/dojo`: a martial-arts school built on roux, where roux's pieces are proven before they
+  are extracted.
 
 ## Using roux
 
 Every roux app is a Spring Boot app with a React SPA on one origin, who for sign-in, and PostgreSQL.
 The guides in [`docs/guides/`](docs/guides/README.md) say how to build one, one concern each:
 
-- [Getting started](docs/guides/getting-started.md): the Maven and npm dependencies, who's required
-  settings, the app root, one origin.
+- [Getting started](docs/guides/getting-started.md): `npm create @jwcarman/roux-app`, or by hand the
+  Maven and npm dependencies, who's required settings, the app root, one origin.
 - [Errors](docs/guides/errors.md): throwing errors on the server as Problem Details, and showing them
   in the browser.
 - [API client](docs/guides/api-client.md): one typed API module per resource.
@@ -57,8 +69,9 @@ Mutation testing is incremental: PIT and Stryker keep each mutant's result in `.
 (git-ignored) and re-test only what changed. Delete that folder for a full run. In CI the
 `Mutation` workflow caches it between runs, and runs in full twice a month.
 
-For the web package, run in `web/` with `-w @jwcarman/roux-web` (after `npm ci` there and in `web/lint-tools`): `npm run format:check`,
-`lint`, `typecheck`, `coverage`, `build`, and `npm run mutate` for mutation testing.
+For the web packages, run in `web/` with `-w @jwcarman/roux-web` or `-w @jwcarman/create-roux-app` (after
+`npm ci` there and in `web/lint-tools`): `npm run format:check`, `lint`, `typecheck`, `coverage`, `build`, and
+`npm run mutate` for mutation testing. `web/create-roux-app/pack-test.sh` makes an app with the packed starter.
 
 Native (GraalVM) builds and tests never run on GitHub. They run on a Linux build host over ssh:
 `NATIVE_HOST=<ssh host> NATIVE_JAVA_HOME=<GraalVM home on the host> scripts/native-remote.sh` sends the
@@ -69,12 +82,17 @@ Java 25 and Spring Boot 4.1. Licensed under the [Apache License 2.0](LICENSE).
 ## Releasing
 
 Creating a GitHub Release triggers `.github/workflows/release.yml`; the release tag is the version. It publishes
-`@jwcarman/roux-web` to npm first, then the Java modules to Maven Central only if npm succeeded. If the Central job
-fails, use "Re-run failed jobs" rather than re-running everything: npm will not accept the same version twice.
+`@jwcarman/roux-web` to npm first, then the Java modules to Maven Central only if npm succeeded, and
+`@jwcarman/create-roux-app` (with the app template at that version) after roux-web. If a job fails, use "Re-run
+failed jobs" rather than re-running everything: npm will not accept the same version twice.
+
+After a release, the next SNAPSHOT is set in every pom with `versions:set`, and `templates/app/pom.xml`'s
+`roux.version` with it: CI fails while the template's `roux.version` is not roux's version.
 
 npm publishing uses [trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC), so there is no npm token
-secret. On npmjs.com, `@jwcarman/roux-web` → Settings → Trusted publishing names GitHub user `jwcarman`, repository
-`roux` and workflow `release.yml`; renaming the workflow file breaks publishing until that entry is updated. Provenance
+secret. On npmjs.com, each package (`@jwcarman/roux-web`, `@jwcarman/create-roux-app`) → Settings → Trusted
+publishing names GitHub user `jwcarman`, repository `roux` and workflow `release.yml`; renaming the workflow file
+breaks publishing until that entry is updated. Provenance
 is generated automatically.
 
 A maintainer needs these repository secrets:
