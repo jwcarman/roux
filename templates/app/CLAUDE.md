@@ -4,7 +4,8 @@ A roux app: Spring Boot 4, roux's starter with who for identity, PostgreSQL thro
 React SPA in `frontend/` on `@jwcarman/roux-web` (Chakra UI v3, TanStack Router, Query, Form and
 Table). **Use the `roux` skill (roux's Claude Code plugin) and read its guide for the task before
 writing code**: roux's names are its own, and guesses from general Spring or React are wrong in the
-details.
+details. `.claude/settings.json` names roux's plugin at this app's roux version; if the skill is
+missing, ask the person to run `/plugin install roux@roux`.
 
 ## Where things go
 

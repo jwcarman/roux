@@ -44,6 +44,8 @@ describe("main", () => {
       '  ./mvnw spring-boot:run -Dspring-boot.run.arguments="--roux.owner.email=you@example.com --roux.owner.name=You"',
       "",
       "Then sign in at http://localhost:8080 as that address: the link is in Mailpit, http://localhost:8025.",
+      "",
+      "Building with Claude Code? Open it in acme-gym and install roux's skill: /plugin install roux@roux",
     ]);
   });
 

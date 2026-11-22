@@ -23,6 +23,10 @@ another). The Java package is `app` in every app.
 The app is just the app: its code, its tests and their configuration, with a Maven wrapper
 (`./mvnw`). It carries no CI workflows; the CI is whatever your environment uses.
 
+Building with Claude Code: `.claude/settings.json` names roux's plugin at this app's roux version.
+Open the app in Claude Code, trust the folder, and run `/plugin install roux@roux` once; the `roux`
+skill then holds the guides an agent reads before writing code (`CLAUDE.md` tells it to).
+
 ## Prerequisites
 
 - **Docker**, for PostgreSQL and Mailpit (`compose.yaml` in development, Testcontainers in tests).

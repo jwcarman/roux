@@ -65,6 +65,15 @@ if removed != 1:
     sys.exit("error: the roux-repository profile was not found in pom.xml")
 open(pom_path, "w").write(pom)
 
+# roux's Claude Code plugin at this release: a SNAPSHOT leaves it on roux's main branch.
+if not version.endswith("-SNAPSHOT"):
+    settings_path = f"{out}/.claude/settings.json"
+    settings = json.load(open(settings_path))
+    settings["extraKnownMarketplaces"]["roux"]["source"]["ref"] = version
+    with open(settings_path, "w") as f:
+        json.dump(settings, f, indent=2)
+        f.write("\n")
+
 package_path = f"{out}/frontend/package.json"
 package = json.load(open(package_path))
 package["dependencies"]["@jwcarman/roux-web"] = version

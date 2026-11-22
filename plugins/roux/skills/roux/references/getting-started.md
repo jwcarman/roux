@@ -32,7 +32,8 @@ features use roux by importing from it; no plumbing is written in the app.
    and open it from Mailpit at <http://localhost:8025>. roux made that address the `OWNER` on the
    first start.
 4. **Add a first page.** Ask your agent for it: the app's `CLAUDE.md` and roux's Claude Code plugin
-   (the `roux` skill) say where each piece goes. By hand, a page is a feature folder in
+   (the `roux` skill) say where each piece goes. The app names the plugin at its roux version; in
+   Claude Code, trust the folder and run `/plugin install roux@roux` once. By hand, a page is a feature folder in
    `frontend/src/<feature>/`, a route file in `frontend/src/routes/_signedIn/`, and an entry in
    `frontend/src/shell/nav.ts`; [The shell](shell.md) shows each. `./mvnw verify` runs every test,
    the browser's included.

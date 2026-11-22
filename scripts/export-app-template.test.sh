@@ -44,12 +44,17 @@ grep -q '"@jwcarman/roux-web": "9.8.7"' "$out/frontend/package.json" && pass "ro
 grep -q 'roux-repository' "$out/pom.xml" && fail "the roux-repository profile is gone" || pass "the roux-repository profile is gone"
 [ -x "$out/mvnw" ] && [ -f "$out/mvnw.cmd" ] && [ -f "$out/.mvn/wrapper/maven-wrapper.properties" ] \
   && pass "the Maven wrapper is added" || fail "the Maven wrapper is added"
+python3 -c "import json,sys; s=json.load(open(sys.argv[1]))['extraKnownMarketplaces']['roux']['source']; sys.exit(0 if s=={'source':'github','repo':'jwcarman/roux','ref':'9.8.7'} else 1)" "$out/.claude/settings.json" \
+  && pass "roux's plugin marketplace is pinned to the release" || fail "roux's plugin marketplace is pinned to the release"
+grep -q '"roux@roux": true' "$out/.claude/settings.json" && pass "roux's plugin is enabled" || fail "roux's plugin is enabled"
 [ -e "$out/.factorypath" ] && fail "untracked files stay behind" || pass "untracked files stay behind"
 [ -f "$out/README.md" ] && [ -f "$out/frontend/src/App.tsx" ] && pass "tracked files are copied" || fail "tracked files are copied"
 
 # 2. A SNAPSHOT export checks the template follows roux's version.
 export_from "$ROOT/templates/app" "$ROUX_VERSION" "$WORK/out-snapshot" >"$WORK/snapshot.log" \
   && pass "a SNAPSHOT export at roux's version succeeds" || { fail "a SNAPSHOT export at roux's version succeeds"; cat "$WORK/snapshot.log"; }
+grep -q '"ref"' "$WORK/out-snapshot/.claude/settings.json" && fail "a SNAPSHOT export leaves the marketplace on main" \
+  || pass "a SNAPSHOT export leaves the marketplace on main"
 
 src="$(source_copy stale)"
 sed -i.bak "s:<roux.version>$ROUX_VERSION</roux.version>:<roux.version>0.0.1-SNAPSHOT</roux.version>:" "$src/pom.xml"

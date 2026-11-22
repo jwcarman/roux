@@ -28,6 +28,8 @@ export function main(argv: readonly string[], io: Io): number {
     '  ./mvnw spring-boot:run -Dspring-boot.run.arguments="--roux.owner.email=you@example.com --roux.owner.name=You"',
     "",
     "Then sign in at http://localhost:8080 as that address: the link is in Mailpit, http://localhost:8025.",
+    "",
+    `Building with Claude Code? Open it in ${directory} and install roux's skill: /plugin install roux@roux`,
   ].forEach((line) => io.out(line));
   return 0;
 }
