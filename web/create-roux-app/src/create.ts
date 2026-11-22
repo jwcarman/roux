@@ -37,9 +37,10 @@ export function directoryError(directory: string): string | undefined {
 
 export function nameError(name: string): string | undefined {
   const trimmed = name.trim();
-  return trimmed.length === 0 || trimmed.length > MAX_APP_NAME || /[\p{Cc}]/u.test(trimmed)
-    ? `The name is 1 to ${MAX_APP_NAME} characters on one line (Acme Gym).`
-    : undefined;
+  if (trimmed.length === 0 || trimmed.length > MAX_APP_NAME || /[\p{Cc}]/u.test(trimmed)) {
+    return `The name is 1 to ${MAX_APP_NAME} characters on one line (Acme Gym).`;
+  }
+  return trimmed.includes("${") ? "The name cannot contain ${ (Spring reads it as a placeholder)." : undefined;
 }
 
 /** `acme-gym` → `Acme Gym`. */
@@ -55,10 +56,11 @@ export function displayNameOf(directory: string): string {
  * it is quoted, which YAML reads the same way) and `roux-app` with the directory.
  */
 export function renameIn(text: string, { directory, name }: CreateOptions): string {
+  // Replacer functions: a replacement string would read $&, $' and $$ in the name as patterns.
   return text
-    .replaceAll('"Roux App"', JSON.stringify(name))
-    .replaceAll("Roux App", name)
-    .replaceAll("roux-app", directory);
+    .replaceAll('"Roux App"', () => JSON.stringify(name))
+    .replaceAll("Roux App", () => name)
+    .replaceAll("roux-app", () => directory);
 }
 
 export function parseArgs(argv: readonly string[]): ParsedArgs {
@@ -119,12 +121,15 @@ export function create(options: CreateOptions, { template, cwd, git }: CreateCon
     }
   }
   const wrapper = join(directory, "mvnw");
-  if (existsSync(wrapper)) {
+  const hasWrapper = existsSync(wrapper);
+  if (hasWrapper) {
     chmodSync(wrapper, 0o755);
   }
   const committed = [
     ["init", "--quiet"],
     ["add", "--all"],
+    // Executable in the commit even where the file system keeps no such bit (Windows).
+    ...(hasWrapper ? [["update-index", "--chmod=+x", "mvnw"]] : []),
     ["commit", "--quiet", "--message", `Start ${options.name} from roux's app template`],
   ].every((args) => git(args, directory));
   return { ok: true, directory, committed };

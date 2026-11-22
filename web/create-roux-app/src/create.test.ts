@@ -66,6 +66,11 @@ describe("nameError", () => {
   it.each(["", "   ", "x".repeat(61), "Acme\nGym", "Acme\tGym"])("refuses %j", (name) => {
     expect(nameError(name)).toBe("The name is 1 to 60 characters on one line (Acme Gym).");
   });
+
+  it("refuses ${, which Spring would read as a placeholder and refuse to start", () => {
+    expect(nameError("Deals ${today}")).toBe("The name cannot contain ${ (Spring reads it as a placeholder).");
+    expect(nameError("Deals $ {today}")).toBeUndefined();
+  });
 });
 
 describe("displayNameOf", () => {
@@ -79,6 +84,14 @@ describe("renameIn", () => {
   it("puts the name in a quoted value as a quoted string, so YAML reads it back", () => {
     expect(renameIn('app-name: "Roux App"', OPTIONS)).toBe('app-name: "Acme Gym"');
     expect(renameIn('app-name: "Roux App"', { ...OPTIONS, name: 'Joe\'s "Gym"' })).toBe('app-name: "Joe\'s \\"Gym\\""');
+  });
+
+  it("takes a name's $ patterns literally", () => {
+    for (const name of ["Ca$$h Gym", "Tick$' Gym", "A$&B", "Pre$`Gym"]) {
+      expect(renameIn('app-name: "Roux App"\n# Roux App\n', { ...OPTIONS, name })).toBe(
+        `app-name: ${JSON.stringify(name)}\n# ${name}\n`,
+      );
+    }
   });
 
   it("puts the name elsewhere as it is, and the directory in place of roux-app", () => {
@@ -168,8 +181,18 @@ describe("create", () => {
     expect(run.mock.calls).toEqual([
       [["init", "--quiet"], dir],
       [["add", "--all"], dir],
+      // Executable in the commit even where the file system keeps no such bit (Windows).
+      [["update-index", "--chmod=+x", "mvnw"], dir],
       [["commit", "--quiet", "--message", "Start Acme Gym from roux's app template"], dir],
     ]);
+  });
+
+  it("marks no wrapper executable when the template has none", () => {
+    rmSync(join(template, "mvnw"));
+    const run = git();
+    create(OPTIONS, { template, cwd: work, git: run });
+
+    expect(run.mock.calls.map(([args]) => args[0])).toEqual(["init", "add", "commit"]);
   });
 
   it("says so when git could not make the first commit, and keeps the app", () => {

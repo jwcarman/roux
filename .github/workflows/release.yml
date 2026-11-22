@@ -37,8 +37,12 @@ jobs:
       - name: Build
         run: npm run build -w @jwcarman/roux-web
         working-directory: web
+      # A pre-release (1.2.0-rc.1) goes out under the dist-tag "next", so `npm install` and
+      # `npm create` keep giving the latest release.
       - name: Rehearse the publish
-        run: npm publish -w @jwcarman/roux-web --access public --dry-run
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: npm publish -w @jwcarman/roux-web --access public --dry-run --tag "$([[ "$RELEASE_TAG" == *-* ]] && echo next || echo latest)"
         working-directory: web
       # The starter's locks need roux-web on npm, so the rehearsal bundles the template without them.
       - name: Rehearse the starter's publish
@@ -48,7 +52,7 @@ jobs:
           npm version "$RELEASE_TAG" --no-git-tag-version --allow-same-version -w @jwcarman/create-roux-app
           create-roux-app/bundle-template.sh "$RELEASE_TAG"
           npm run build -w @jwcarman/create-roux-app
-          npm publish -w @jwcarman/create-roux-app --access public --dry-run
+          npm publish -w @jwcarman/create-roux-app --access public --dry-run --tag "$([[ "$RELEASE_TAG" == *-* ]] && echo next || echo latest)"
         working-directory: web
 
   maven:
@@ -143,14 +147,17 @@ jobs:
         run: npm run build -w @jwcarman/roux-web
         working-directory: web
       - name: Publish package
-        run: npm publish -w @jwcarman/roux-web --access public
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: npm publish -w @jwcarman/roux-web --access public --tag "$([[ "$RELEASE_TAG" == *-* ]] && echo next || echo latest)"
         working-directory: web
 
-  # @jwcarman/create-roux-app (npm create @jwcarman/roux-app): the app template at this release, with
-  # package locks for roux-web at this release, which the npm job has just published. A job of its
-  # own, so a failure here strands neither roux-web nor Maven Central.
+  # @jwcarman/create-roux-app (npm create @jwcarman/roux-app): the app template at this release, its
+  # frontend lock moved to the roux-web the npm job has just published. It waits for Maven Central
+  # too, so it never makes apps on a roux whose jars did not ship. A job of its own, so a failure here
+  # strands neither roux-web nor Maven Central; re-run it alone ("Re-run failed jobs").
   starter:
-    needs: npm
+    needs: [npm, maven]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -187,5 +194,7 @@ jobs:
         run: npm run build -w @jwcarman/create-roux-app
         working-directory: web
       - name: Publish package
-        run: npm publish -w @jwcarman/create-roux-app --access public
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: npm publish -w @jwcarman/create-roux-app --access public --tag "$([[ "$RELEASE_TAG" == *-* ]] && echo next || echo latest)"
         working-directory: web

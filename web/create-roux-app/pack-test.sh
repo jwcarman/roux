@@ -31,6 +31,8 @@ app="$work/apps/acme-gym"
 
 left="$(grep -rIl --exclude-dir=.git -e 'Roux App' -e 'roux-app' "$app" || true)"
 [ -z "$left" ] && pass "no template name is left" || fail "no template name is left: $left"
+mangled="$(grep -rIl --exclude-dir=.git -e '@jwcarman/acme-gym' -e 'create-acme-gym' "$app" || true)"
+[ -z "$mangled" ] && pass "no starter name was renamed into the app's" || fail "no starter name was renamed into the app's: $mangled"
 grep -q '<artifactId>acme-gym</artifactId>' "$app/pom.xml" && pass "the artifact is acme-gym" || fail "the artifact is acme-gym"
 grep -q 'app-name: "Acme Gym"' "$app/src/main/resources/application.yml" && pass "the app is called Acme Gym" || fail "the app is called Acme Gym"
 [ -f "$app/.gitignore" ] && [ ! -e "$app/_gitignore" ] && pass "the .gitignore is back" || fail "the .gitignore is back"

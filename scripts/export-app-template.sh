@@ -10,9 +10,9 @@
 #             roux.version must already be VERSION)
 #   OUT       the directory to write; it must not exist or be empty
 #   --from    the template to export (default templates/app); only its git-tracked files are copied
-#   --locks   regenerate the frontend and e2e package locks (npm, which must find roux-web VERSION
-#             on the registry: a release). Without it the frontend lock, which links roux's own
-#             roux-web, is left out.
+#   --locks   move the frontend lock's roux-web to VERSION from the registry (a release: npm must
+#             find it there); every other locked version stays the one roux's build tested. Without
+#             it the frontend lock, which links roux's own roux-web, is left out.
 #
 # It fails when the copy still names web/roux-web, roux-parent or roux-repository, or ships
 # node_modules, target, dist or test-results.
@@ -83,8 +83,8 @@ with open(package_path, "w") as f:
 EOF
 
 if $LOCKS; then
-  (cd "$OUT/frontend" && rm -f package-lock.json && npm install --package-lock-only --ignore-scripts --no-audit --no-fund >/dev/null)
-  (cd "$OUT/e2e" && rm -f package-lock.json && npm install --package-lock-only --ignore-scripts --no-audit --no-fund >/dev/null)
+  # --prefer-online: a roux-web published minutes ago is not in a cached copy of the registry's list.
+  (cd "$OUT/frontend" && npm install --package-lock-only --prefer-online --ignore-scripts --no-audit --no-fund >/dev/null)
 else
   rm "$OUT/frontend/package-lock.json"
 fi

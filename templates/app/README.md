@@ -9,16 +9,12 @@ It starts with no features of its own: sign-in, the first owner, the sidebar fra
 rename, change roles, deactivate), Settings (profile, emails, passkeys), Appearance (the owner's
 theme) and a Home placeholder the first feature replaces.
 
-## Starting a new app from this template
+## Where it came from
 
-```bash
-npm create @jwcarman/roux-app acme-gym
-```
-
-That copies this template at the latest roux release into `acme-gym/`, gives it its names and makes
-the first commit. `acme-gym` is the directory, the Maven artifact and the npm name; the app is called
-"Acme Gym" until the owner renames it on the Appearance page (`-- --name "Acme Fitness"` picks
-another). The Java package is `app` in every app.
+This app started from roux's app template: roux's
+[getting-started guide](https://github.com/jwcarman/roux/blob/main/docs/guides/getting-started.md)
+says how new apps are made. The app is called by its name in `application.yml`
+(`roux.theme.app-name`) until the owner renames it on the Appearance page. The Java package is `app`.
 
 The app is just the app: its code, its tests and their configuration, with a Maven wrapper
 (`./mvnw`). It carries no CI workflows; the CI is whatever your environment uses.
