@@ -125,6 +125,9 @@ template's gates hold throughout.
   they come with it.
 - The template's `shell/session.tsx` and `shell/guards.ts` are deleted; routes import from roux-web.
 - Docs: `shell.md` (including the `context.me` form noted in Task 3), CHANGELOG.
+- Also close the guide gaps `check-guides.mjs` reports, so it passes: `SignInCardProps`,
+  `SignInFrameProps`, `AccountMenuSeparator`, `AccountMenuSwitch`, `paletteOf`, `rulesFor`,
+  `BusinessActivityAotProcessor`.
 
 ### Task 7: Tests of roux move into roux
 
