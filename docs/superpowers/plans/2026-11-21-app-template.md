@@ -158,7 +158,8 @@ template's gates hold throughout.
 - The old Task 7's release, README and CHANGELOG work, without the archetype: README's Modules
   list `templates/app` as the reference app; Releasing says its `roux.version` is bumped with
   roux's own.
-- Root `./mvnw -B verify` and `./mvnw -B -Ppit verify` pass; push to main; `gh workflow run native.yml`.
+- Root `./mvnw -B verify` and `./mvnw -B -Ppit verify` pass; push to main. Native builds and tests
+  (`-PnativeTest`, `-Pnative-e2e`) run locally on HODER, never on GitHub: roux has no `native.yml`.
 
 ---
 
