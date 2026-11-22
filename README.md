@@ -60,6 +60,10 @@ Mutation testing is incremental: PIT and Stryker keep each mutant's result in `.
 For the web package, run in `web/` with `-w @jwcarman/roux-web` (after `npm ci` there and in `web/lint-tools`): `npm run format:check`,
 `lint`, `typecheck`, `coverage`, `build`, and `npm run mutate` for mutation testing.
 
+Native (GraalVM) builds and tests never run on GitHub. They run on a Linux build host over ssh:
+`NATIVE_HOST=<ssh host> NATIVE_JAVA_HOME=<GraalVM home on the host> scripts/native-remote.sh` sends the
+committed HEAD as a git bundle and runs the template's `-PnativeTest` and `-Pnative-e2e` there.
+
 Java 25 and Spring Boot 4.1. Licensed under the [Apache License 2.0](LICENSE).
 
 ## Releasing
