@@ -9,6 +9,8 @@ cd "$(git rev-parse --show-toplevel)"
 ROOT="$PWD"
 EXPORT="$ROOT/scripts/export-app-template.sh"
 ROUX_VERSION="$(sed -n 's:^    <version>\(.*\)</version>$:\1:p' pom.xml | head -1)"
+# The test's own commits need an author; a CI runner has no git identity.
+export GIT_AUTHOR_NAME=test GIT_AUTHOR_EMAIL=test@example.test GIT_COMMITTER_NAME=test GIT_COMMITTER_EMAIL=test@example.test
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 failures=0

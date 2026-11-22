@@ -499,8 +499,8 @@ describe("AppearanceSettings", () => {
     const { saves } = serve();
     const { user, container } = show();
     await user.click(await screen.findByRole("button", { name: "More options" }));
-    await user.clear(screen.getByRole("textbox", { name: "Color code" }));
-    await user.type(screen.getByRole("textbox", { name: "Color code" }), "#FF8800");
+    // One change, not seven keystrokes: each keystroke renders the whole page again, slow under jsdom.
+    fireEvent.change(screen.getByRole("textbox", { name: "Color code" }), { target: { value: "#FF8800" } });
     await user.click(screen.getByRole("button", { name: "Save" }));
     await screen.findByText("The new look is saved");
 
