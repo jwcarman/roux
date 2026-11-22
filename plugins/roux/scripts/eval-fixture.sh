@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# The roux arms' eval fixture: a standalone copy of examples/dojo at <commit>, written into <dir>
-# (outside the repository), that builds without roux's checkout:
+# The roux arms' eval fixture: a standalone copy of examples/dojo at <commit> (a grown app, a dozen
+# features to copy from), or with --app a new app exported from templates/app at <commit> (only Users
+# to copy from), written into <dir> (outside the repository), that builds without roux's checkout:
 #   - roux's Maven modules at <commit> installed into the fixture's own local repository,
 #     <dir>/.m2repo, so the pom's parent (roux-parent) and the starter resolve from there, and a later
 #     `./mvnw install` in the checkout cannot change a fixture made earlier. .mvn/jvm.config points
@@ -13,11 +14,16 @@
 #   - git init and one commit, so a run's changes show as a diff (check-roux-way.sh judges those).
 # Prints <dir>.
 #
-# Usage: eval-fixture.sh <commit> <dir>
+# Usage: eval-fixture.sh [--app] <commit> <dir>
 set -euo pipefail
 
+app=false
+if [ "${1:-}" = "--app" ]; then
+  app=true
+  shift
+fi
 if [ "$#" -ne 2 ]; then
-  echo "usage: $(basename "$0") <commit> <dir>" >&2
+  echo "usage: $(basename "$0") [--app] <commit> <dir>" >&2
   exit 2
 fi
 
@@ -58,11 +64,23 @@ mkdir "$dir/vendor"
 tgz="$(cd "$work/roux/web/roux-web" && npm pack --silent --pack-destination "$dir/vendor" | tail -n 1)"
 [ -f "$dir/vendor/$tgz" ] || { echo "npm pack wrote no $tgz" >&2; exit 1; }
 
-# The dojo and the Maven wrapper beside it.
-cp -R "$work/roux/examples/dojo/." "$dir/"
-cp -R "$work/roux/mvnw" "$work/roux/mvnw.cmd" "$work/roux/.mvn" "$dir/"
-# FINDINGS.md is roux's log of its own gaps, not part of the app; it would tell a run it is graded.
-rm -f "$dir/FINDINGS.md"
+if $app; then
+  # A new app, as the starter writes it: the export of templates/app at roux's own version.
+  version="$(sed -n 's:^    <version>\(.*\)</version>$:\1:p' "$work/roux/pom.xml" | head -n 1)"
+  git -C "$work/roux/templates/app" init -q
+  git -C "$work/roux/templates/app" add -A
+  git -C "$work/roux/templates/app" -c user.name=eval-fixture -c user.email=eval-fixture@example.invalid commit -q -m template
+  "$work/roux/scripts/export-app-template.sh" --from "$work/roux/templates/app" "$version" "$work/app" >&2
+  cp -R "$work/app/." "$dir/"
+  # Both arms share the fixture: no project setting may bring roux's plugin into the arm without it.
+  rm -rf "$dir/.claude"
+else
+  # The dojo and the Maven wrapper beside it.
+  cp -R "$work/roux/examples/dojo/." "$dir/"
+  cp -R "$work/roux/mvnw" "$work/roux/mvnw.cmd" "$work/roux/.mvn" "$dir/"
+  # FINDINGS.md is roux's log of its own gaps, not part of the app; it would tell a run it is graded.
+  rm -f "$dir/FINDINGS.md"
+fi
 # Maven's launcher puts the fixture's own directory in for ${MAVEN_PROJECTBASEDIR}, so the local
 # repository is the copy's own wherever the copy is (place-dojo.sh copies .m2repo with it).
 [ ! -e "$dir/.mvn/jvm.config" ] || { echo "eval-fixture: .mvn/jvm.config exists already" >&2; exit 1; }
@@ -73,10 +91,18 @@ maven_home="$(dirname "$(dirname "$(find "$work/mvnhome/wrapper/dists" -type f -
 [ -x "$maven_home/bin/mvn" ] || { echo "eval-fixture: no Maven under $work/mvnhome" >&2; exit 1; }
 cp -R "$maven_home" "$dir/.mvn/maven"
 rm -f "$dir/mvnw.cmd"
+# The JDK too: an eval's sandbox cannot read one installed under the home directory, and macOS's
+# /usr/bin/java is only a stub. JAVA_HOME names the one to copy (the build below runs on it).
+[ -x "${JAVA_HOME:-}/bin/java" ] || { echo "eval-fixture: set JAVA_HOME to a JDK 25" >&2; exit 1; }
+cp -R "$JAVA_HOME" "$dir/.mvn/jdk"
 cat >"$dir/mvnw" <<'MVNW'
 #!/bin/sh
-# Maven, bundled with this copy of the app so it builds without a download.
-exec "$(cd "$(dirname "$0")" && pwd)/.mvn/maven/bin/mvn" "$@"
+# Maven and a JDK, bundled with this copy of the app so it builds without a download.
+base="$(cd "$(dirname "$0")" && pwd)"
+JAVA_HOME="$base/.mvn/jdk"
+PATH="$JAVA_HOME/bin:$PATH"
+export JAVA_HOME PATH
+exec "$base/.mvn/maven/bin/mvn" "$@"
 MVNW
 chmod +x "$dir/mvnw"
 # npm reads a relative cache against the folder holding .npmrc, so the cache travels with the copy.
@@ -96,6 +122,19 @@ rewrite() {
   fi
 }
 
+if $app; then
+  # The export's roux-web is the SNAPSHOT version on npm, which does not exist: use the tgz.
+  node -e '
+    const fs = require("node:fs");
+    const file = process.argv[1];
+    const pkg = JSON.parse(fs.readFileSync(file, "utf8"));
+    pkg.dependencies["@jwcarman/roux-web"] = "file:../vendor/" + process.argv[2];
+    fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + "\n");
+  ' "$dir/frontend/package.json" "$tgz"
+  # The arm without the plugin must not be told to stop and ask for it.
+  rewrite CLAUDE.md 's{\*\*Use the \x60roux\x60 skill \(roux.s Claude Code plugin\) and read its guide for the task before\nwriting code\*\*}{**When the \x60roux\x60 skill (roux\x27s Claude Code plugin) is available, read its guide for the task\nbefore writing code**}'
+  rewrite CLAUDE.md 's{ \x60\.claude/settings\.json\x60 names roux.s plugin at this app.s roux version; if the skill is\nmissing, ask the person to run \x60/plugin install roux\@roux\x60\.}{}'
+else
 # pom.xml: roux-parent from ~/.m2, and no build of roux-web from roux's npm workspace.
 rewrite pom.xml 's{<!-- roux.s reactor builds the dojo.*?-->}{<!-- roux-parent, from the local Maven repository. -->}s'
 rewrite pom.xml 's{<relativePath>\.\./\.\./pom\.xml</relativePath>}{<relativePath/>}'
@@ -123,6 +162,7 @@ rewrite README.md 's{From the repository.s root, build roux once \(\x60\./mvnw i
 rewrite README.md 's{From the repository.s root:\n\n\x60\x60\x60bash\n\./mvnw verify[^\n]*\n\./mvnw verify -pl examples/dojo -am[^\n]*\n}{\x60\x60\x60bash\n./mvnw verify\n}'
 # roux's guides, linked as they are at <commit>.
 rewrite README.md "s{\\]\\(\\.\\./\\.\\./docs/guides/}{](https://github.com/jwcarman/roux/blob/$commit/docs/guides/}g"
+fi
 
 if grep -n '\.\./\.\./\|reactor\|roux code beside\|examples/dojo -am' "$dir/pom.xml" "$dir/frontend/package.json" \
   "$dir/frontend/vite.config.ts" "$dir/README.md" "$dir/CLAUDE.md" >&2; then
@@ -138,11 +178,11 @@ echo "regenerating the frontend's lock" >&2
 # Tests need Docker; the end-to-end suite is left out.
 echo "building the fixture once, to fill its repository and caches" >&2
 (cd "$dir" && ./mvnw -B -q verify -DskipITs) >&2
-printf '%s\n' '.m2repo/' '.mvn/maven/' 'frontend/.npm-cache/' >>"$dir/.gitignore"
+printf '%s\n' '.m2repo/' '.mvn/maven/' '.mvn/jdk/' 'frontend/.npm-cache/' >>"$dir/.gitignore"
 
 git -C "$dir" init -q -b main
 git -C "$dir" add -A
 git -C "$dir" -c user.name=eval-fixture -c user.email=eval-fixture@example.invalid \
-  commit -q -m "The dojo at roux ${commit:0:7}"
+  commit -q -m "$($app && echo "A new app" || echo "The dojo") at roux ${commit:0:7}"
 
 echo "$dir"

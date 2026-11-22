@@ -13,7 +13,7 @@
 #   no-fetch              no fetch( (fetch (, window.fetch(, globalThis["fetch"]) in frontend/src
 #                         outside tests: calls go through roux's client. It does not catch another
 #                         HTTP client (axios, ky, XMLHttpRequest) or fetch passed around by another name
-#   no-roux-internals     roux-web is imported only by its six entry points, never dist/ or src/
+#   no-roux-internals     roux-web is imported only by its subpath exports, never dist/ or src/
 #   no-retyped-messages   none of roux's rule messages typed out as string literals in frontend/src
 #   no-exception-handler  no @ExceptionHandler or ResponseStatusException in src/main/java
 #   schema-form           no added line makes a form another way: useAppForm(, useForm(, a <form>
@@ -101,12 +101,14 @@ fi
 report no-fetch "$(grep_added "$(files_matching "$frontend_src")" \
   "(^|[^A-Za-z0-9_\$])fetch[[:space:]]*\(|\[[[:space:]]*[\"'\`]fetch[\"'\`][[:space:]]*\]")"
 
-# no-roux-internals
+# no-roux-internals: the entry points are roux-web's subpath exports, as its installed package.json lists them.
+entries="$(node -e 'const p = require(process.argv[1]); console.log(Object.keys(p.exports).map((k) => k.replace(/^\.\//, "")).join("|"))' \
+  "$dir/frontend/node_modules/@jwcarman/roux-web/package.json")"
 internals=""
 while IFS= read -r file; do
   [ -n "$file" ] || continue
   while IFS= read -r spec; do
-    [[ "$spec" =~ ^@jwcarman/roux-web/(problem|api|paging|table|feedback|form)$ ]] ||
+    [[ "$spec" =~ ^@jwcarman/roux-web/($entries)$ ]] ||
       internals+="$file: $spec"$'\n'
   done < <(added "$file" | grep -oE "@jwcarman/roux-web/[^'\"\`[:space:]]*" || true)
 done <<<"$(files_matching "$frontend_code" with-tests)"
