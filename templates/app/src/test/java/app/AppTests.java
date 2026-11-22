@@ -15,6 +15,8 @@ import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
+import app.identity.AppProperties;
+
 @AppTest
 class AppTests {
 
@@ -22,6 +24,7 @@ class AppTests {
   @Autowired MockMvc mvc;
   @Autowired Environment env;
   @Autowired ApplicationContext context;
+  @Autowired AppProperties app;
 
   @Test
   void contextStartsAndSchemaExists() {
@@ -54,6 +57,14 @@ class AppTests {
     AsyncTaskExecutor executor =
         context.getBean("applicationTaskExecutor", AsyncTaskExecutor.class);
     assertThat(executor.submit(() -> Thread.currentThread().isVirtual()).get()).isTrue();
+  }
+
+  /** The app's public base URL, which who's links and passkey origins follow (application.yml). */
+  @Test
+  void theBaseUrlIsBoundAndFollowedByWho() {
+    assertThat(app.baseUrl()).isEqualTo("http://localhost:8080");
+    assertThat(env.getProperty("who.email-link.link-base-url"))
+        .isEqualTo(app.baseUrl() + "/signin/link");
   }
 
   @Test

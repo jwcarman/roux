@@ -1,8 +1,6 @@
 import {
   expect,
   type APIRequestContext,
-  type Browser,
-  type CDPSession,
   type Locator,
   type Page,
 } from "@playwright/test";
@@ -15,10 +13,6 @@ export const ownerEmail = process.env.E2E_OWNER_EMAIL ?? "owner@example.test";
  */
 export const appName = required("E2E_APP_NAME");
 export const ownerName = process.env.E2E_OWNER_NAME ?? "Olive Owner";
-
-/** COSE algorithm ids. */
-export const P256 = -7;
-export const ED25519 = -8;
 
 interface MailpitSummary {
   ID: string;
@@ -35,7 +29,6 @@ async function messagesTo(request: APIRequestContext, address: string): Promise<
 }
 
 const SIGN_IN_LINK = /https?:\/\/[^\s"'<>]+\/signin\/link#token=[^\s"'<>]+/;
-const SIGN_IN_CODE = /enter this code: ([0-9A-Z]+-[0-9A-Z]+)/;
 
 /** The first match of the pattern in a message's text or HTML: the whole match, or group 1 if it has one. */
 async function findIn(request: APIRequestContext, id: string, pattern: RegExp): Promise<string | undefined> {
@@ -89,16 +82,6 @@ export async function nextSignInLink(
   timeout = 15_000,
 ): Promise<string> {
   return nextMatch(request, address, seen, SIGN_IN_LINK, "a sign-in link", timeout);
-}
-
-/** Waits for a typed sign-in code (as the email shows it, `K7F-2QM`) in a message not in `seen`. */
-export async function nextSignInCode(
-  request: APIRequestContext,
-  address: string,
-  seen: Set<string>,
-  timeout = 15_000,
-): Promise<string> {
-  return nextMatch(request, address, seen, SIGN_IN_CODE, "a sign-in code", timeout);
 }
 
 /**
@@ -159,52 +142,6 @@ export async function signInByLink(
   await expect(page.getByRole("heading", { name: landsOn.name, level: landsOn.level })).toBeVisible();
 }
 
-/** Chrome's virtual authenticator, standing in for Touch ID: it creates and uses real passkeys. */
-export async function virtualAuthenticator(
-  page: Page,
-): Promise<{ cdp: CDPSession; authenticatorId: string }> {
-  const cdp = await page.context().newCDPSession(page);
-  await cdp.send("WebAuthn.enable");
-  const { authenticatorId } = await cdp.send("WebAuthn.addVirtualAuthenticator", {
-    options: {
-      protocol: "ctap2",
-      transport: "internal",
-      hasResidentKey: true,
-      hasUserVerification: true,
-      isUserVerified: true,
-    },
-  });
-  return { cdp, authenticatorId };
-}
-
-/**
- * The key type of each passkey the virtual authenticator holds, read from its PKCS#8 private key:
- * the Ed25519 OID (1.3.101.112) or the EC public key OID (1.2.840.10045.2.1, which P-256 uses).
- */
-export async function heldPasskeys(cdp: CDPSession, authenticatorId: string): Promise<string[]> {
-  const { credentials } = await cdp.send("WebAuthn.getCredentials", { authenticatorId });
-  return credentials.map((c) => {
-    const key = Buffer.from(c.privateKey, "base64").toString("hex");
-    if (key.includes("06032b6570")) {
-      return "Ed25519";
-    }
-    if (key.includes("06072a8648ce3d0201")) {
-      return "P-256";
-    }
-    return "unknown";
-  });
-}
-
-/** Offers the authenticator only one key algorithm when a passkey is registered. */
-export async function onlyAlgorithm(page: Page, alg: number) {
-  await page.route("**/who/me/passkeys/options", async (route) => {
-    const response = await route.fetch();
-    const options = await response.json();
-    options.pubKeyCredParams = [{ type: "public-key", alg }];
-    await route.fulfill({ response, json: options });
-  });
-}
-
 /** Picks `item` from the account menu, at the foot of the sidebar. */
 export async function fromAccount(page: Page, item: string) {
   await page.getByRole("button", { name: "Account" }).click();
@@ -215,28 +152,6 @@ export async function fromAccount(page: Page, item: string) {
 export async function openSettings(page: Page) {
   await fromAccount(page, "Settings");
   await expect(page.getByRole("heading", { name: "Settings", level: 2 })).toBeVisible();
-}
-
-/** Adds a passkey on the Settings page, reached through the account menu. */
-export async function registerPasskey(page: Page, label: string) {
-  await openSettings(page);
-  await page.getByRole("button", { name: "Add a passkey" }).click();
-  const dialog = page.getByRole("dialog", { name: "Add a passkey" });
-  await dialog.getByLabel("Passkey label").fill(label);
-  await dialog.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Passkey added" })).toBeVisible();
-  await expect(dialog).toBeHidden();
-  await expect(page.getByRole("list", { name: "Passkeys" }).getByText(label, { exact: true })).toBeVisible();
-}
-
-export async function signOut(page: Page) {
-  await fromAccount(page, "Sign out");
-  await expect(page.getByRole("heading", { name: /^Sign in to /, level: 1 })).toBeVisible();
-}
-
-export async function signInWithPasskey(page: Page) {
-  await page.getByRole("button", { name: "Use a passkey" }).click();
-  await expect(page.getByRole("heading", { name: /^Welcome/, level: 2 })).toBeVisible();
 }
 
 /**
@@ -271,15 +186,6 @@ export async function invite(
   await expect(page.getByRole("status").filter({ hasText: "Invitation sent" })).toBeVisible();
   await expect(dialog).toBeHidden();
   return nextSignInLink(request, email, seen);
-}
-
-/** A browser of its own, signed in through `link`, on the home page. */
-export async function signedInThrough(browser: Browser, link: string) {
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  await openLink(page, link);
-  await expect(page.getByRole("heading", { name: /^Welcome/, level: 2 })).toBeVisible();
-  return { context, page };
 }
 
 function required(name: string): string {
