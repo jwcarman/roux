@@ -45,16 +45,17 @@ export const Route = createFileRoute("/_signedIn/appearance")({
   beforeLoad: ({ context }) => requirePermission(context.session.currentMe(), "theme.manage"),
   component: () => (
     <Stack gap="8">
-      <Heading as="h2" size="lg">Appearance</Heading>
+      <PageHeader title="Appearance" />
       <AppearanceSettings />
     </Stack>
   ),
 });
 ```
 
-`AppearanceSettings` is the whole form: five ready-made looks, then the app's name, a colour,
-shapes and lettering, with the owner's own colour and a live preview on the owner's own screen
-(through `useShellTheme().preview`) until it is saved. It reads and saves through roux-theme's
+`AppearanceSettings` is the whole form, in two sections: Name (the app's name), then Look (five
+ready-made looks, the one in use ringed, then a colour and a shape, with the owner's own colour and
+the lettering under "More options"). The owner's own screen previews the draft (through
+`useShellTheme().preview`) until it is saved. It reads and saves through roux-theme's
 `/api/theme` (a built-in `useSchemaForm`: a refusal from the server is under its field, a `409` starts
 the form over from the other owner's look), toasts `The new look is saved` with an Undo that puts the
 earlier look back, and `Cancel` drops the draft. It takes no props. Its page is the app's, and so

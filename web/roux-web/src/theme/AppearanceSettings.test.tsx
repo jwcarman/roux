@@ -5,6 +5,7 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Toaster, toaster } from "../feedback";
 import { createQueryClient } from "../api/queryClient";
+import { rulesFor } from "../testing/css";
 import { invalidFields, stale } from "../testing/problems";
 import { renderWithProviders } from "../testing/render";
 import { server } from "../testing/server";
@@ -550,5 +551,71 @@ describe("AppearanceSettings", () => {
     expect(whenPressed(rounded)).toContain("color:var(--chakra-colors-color-palette-contrast)");
     expect(whenPressed(gray)).toContain("outline:2px solid");
     expect(whenPressed(gray)).toContain("outline-color:var(--chakra-colors-color-palette-solid)");
+  });
+
+  it("rings the look in use in the palette's color", async () => {
+    serve();
+    show();
+    const clean = await screen.findByRole("button", { name: "Clean" });
+
+    expect(rulesFor(clean)).toMatch(
+      /aria-pressed=true[^{}]*\{[^}]*border-color:var\(--chakra-colors-color-palette-solid\)/,
+    );
+    expect(rulesFor(clean)).toMatch(/aria-pressed=true[^{}]*\{[^}]*outline:1px solid/);
+    expect(rulesFor(clean)).toMatch(
+      /aria-pressed=true[^{}]*\{[^}]*outline-color:var\(--chakra-colors-color-palette-solid\)/,
+    );
+  });
+
+  it("names the app first, then the look, each with a line on what it is for", async () => {
+    serve();
+    show();
+    await screen.findByRole("button", { name: "Clean" });
+
+    expect(screen.getAllByRole("heading").map((heading) => heading.textContent)).toEqual([
+      "Name",
+      "Look",
+      "Color",
+      "Shape",
+    ]);
+    expect(screen.getByRole("heading", { name: "Name" })).toHaveProperty("tagName", "H3");
+    expect(screen.getByRole("heading", { name: "Color" })).toHaveProperty("tagName", "H4");
+    const name = screen.getByRole("region", { name: "Name" });
+    expect(name).toHaveTextContent("What people see in the header, the browser tab and emails.");
+    expect(name).toContainElement(screen.getByRole("textbox", { name: "What should the app be called?" }));
+    const look = screen.getByRole("region", { name: "Look" });
+    expect(look).toHaveTextContent("Start from a ready-made look, then adjust the color and shape.");
+    expect(look).toContainElement(screen.getByRole("button", { name: "Clean" }));
+    expect(look).toContainElement(screen.getByRole("button", { name: "More options" }));
+    expect(screen.getByRole("separator")).toBeInTheDocument();
+  });
+
+  it("lays the looks out three to a row on a phone and five from md", async () => {
+    serve();
+    show();
+    const grid = (await screen.findByRole("button", { name: "Clean" })).parentElement!;
+
+    expect(rulesFor(grid)).toMatch(/grid-template-columns:repeat\(3, minmax\(0, 1fr\)\)/);
+    expect(rulesFor(grid)).toMatch(/min-width: 48rem\)[^}]*grid-template-columns:repeat\(5, minmax\(0, 1fr\)\)/);
+  });
+
+  it("shows More options as a tinted button that opens the extra options, its chevron turned when open", async () => {
+    serve();
+    const { user } = show();
+    const more = await screen.findByRole("button", { name: "More options" });
+    const chevron = more.querySelector<HTMLElement>("[data-part=indicator]")!;
+
+    // Filled with the palette's subtle tint, so it stands apart from the outlined shapes above it.
+    expect(rulesFor(more)).toMatch(/background:var\(--chakra-colors-color-palette-subtle\)/);
+    expect(rulesFor(chevron)).toMatch(/\[data-state=open\][^{}]*\{[^}]*transform:rotate\(180deg\)/);
+    expect(chevron).toHaveAttribute("data-state", "closed");
+    expect(screen.queryByRole("textbox", { name: "Color code" })).not.toBeInTheDocument();
+
+    await user.click(more);
+
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    expect(chevron).toHaveAttribute("data-state", "open");
+    const extra = document.getElementById(more.getAttribute("aria-controls")!)!;
+    expect(extra).toContainElement(screen.getByRole("textbox", { name: "Color code" }));
   });
 });

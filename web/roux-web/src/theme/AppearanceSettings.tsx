@@ -2,11 +2,13 @@ import {
   Box,
   Button,
   Center,
+  Collapsible,
   Field,
   Flex,
   Heading,
   HStack,
   Input,
+  Separator,
   SimpleGrid,
   Spinner,
   Stack,
@@ -15,6 +17,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useStore } from "@tanstack/react-form";
 import { useEffect, useState, type ReactNode } from "react";
+import { LuChevronDown } from "react-icons/lu";
 import { useServerAction } from "../api/serverAction";
 import { notify } from "../feedback/notify";
 import { useSchemaForm } from "../form/schemaForm";
@@ -45,6 +48,9 @@ const FONT_LABEL: Record<Font, string> = {
 
 /** How a chosen option looks: a pressed button is filled with the palette's color. */
 const PRESSED = { bg: "colorPalette.solid", color: "colorPalette.contrast" };
+
+/** The look in use is ringed in the palette's color: its border and one more pixel, so nothing moves. */
+const LOOK_PRESSED = { borderColor: "colorPalette.solid", outline: "1px solid", outlineColor: "colorPalette.solid" };
 
 /** A chosen color swatch is ringed in its own color. */
 const SWATCH_PRESSED = { outline: "2px solid", outlineColor: "colorPalette.solid" };
@@ -145,8 +151,16 @@ function AppearanceEditor({ saved }: { saved: SavedTheme }) {
     <form.AppForm>
       <form.Form>
         <Stack gap="8" maxW="3xl">
-          <Section title="Choose a look">
-            <SimpleGrid minChildWidth="32" gap="3">
+          <Section title="Name" description="What people see in the header, the browser tab and emails.">
+            <form.AppField name="appName">
+              {(f) => <f.InputField label="What should the app be called?" />}
+            </form.AppField>
+          </Section>
+
+          <Separator />
+
+          <Section title="Look" description="Start from a ready-made look, then adjust the color and shape.">
+            <SimpleGrid columns={{ base: 3, md: 5 }} gap="3">
               {LOOKS.map((look) => (
                 <Button
                   key={look.name}
@@ -158,6 +172,7 @@ function AppearanceEditor({ saved }: { saved: SavedTheme }) {
                     values.bodyFont === look.settings.bodyFont
                   }
                   variant="outline"
+                  _pressed={LOOK_PRESSED}
                   height="auto"
                   py="3"
                   flexDirection="column"
@@ -179,107 +194,118 @@ function AppearanceEditor({ saved }: { saved: SavedTheme }) {
                 </Button>
               ))}
             </SimpleGrid>
-          </Section>
 
-          <form.AppField name="appName">{(f) => <f.InputField label="What should the app be called?" />}</form.AppField>
-
-          <Section title="Color">
-            <HStack wrap="wrap" gap="2">
-              {PALETTES.filter((palette) => palette !== "brand").map((palette) => (
-                <Button
-                  key={palette}
-                  aria-label={capitalized(palette)}
-                  aria-pressed={values.palette === palette}
-                  colorPalette={palette}
-                  bg="colorPalette.solid"
-                  borderRadius="full"
-                  boxSize="9"
-                  minW="9"
-                  outlineOffset="2px"
-                  _pressed={SWATCH_PRESSED}
-                  onClick={() => form.setFieldValue("palette", palette)}
-                />
-              ))}
-            </HStack>
-          </Section>
-
-          <Section title="Shape">
-            <HStack wrap="wrap" gap="2">
-              {(moreOpen || !SIMPLE_SHAPES.includes(values.shape) ? SHAPES : SIMPLE_SHAPES).map((shape) => (
-                <Button
-                  key={shape}
-                  aria-pressed={values.shape === shape}
-                  variant="outline"
-                  _pressed={PRESSED}
-                  borderRadius={RADII[shape][1]}
-                  onClick={() => form.setFieldValue("shape", shape)}
-                >
-                  {SHAPE_LABEL[shape]}
-                </Button>
-              ))}
-            </HStack>
-          </Section>
-
-          <Box>
-            <Button variant="ghost" aria-expanded={moreOpen} onClick={() => setMoreOpen(!moreOpen)}>
-              More options
-            </Button>
-          </Box>
-
-          {moreOpen && (
-            <Stack gap="8">
-              <Section title="Your own color">
-                <Flex gap="3" align="end" wrap="wrap">
-                  <Input
-                    type="color"
-                    aria-label="Your own color"
-                    value={values.brandColor}
-                    width="16"
-                    p="1"
-                    onChange={(event) => {
-                      form.setFieldValue("brandColor", event.target.value);
-                      form.setFieldValue("palette", "brand");
-                    }}
+            <Part title="Color">
+              <HStack wrap="wrap" gap="2">
+                {PALETTES.filter((palette) => palette !== "brand").map((palette) => (
+                  <Button
+                    key={palette}
+                    aria-label={capitalized(palette)}
+                    aria-pressed={values.palette === palette}
+                    colorPalette={palette}
+                    bg="colorPalette.solid"
+                    borderRadius="full"
+                    boxSize="9"
+                    minW="9"
+                    outlineOffset="2px"
+                    _pressed={SWATCH_PRESSED}
+                    onClick={() => form.setFieldValue("palette", palette)}
                   />
-                  <Field.Root width="auto">
-                    <Field.Label>Color code</Field.Label>
-                    <Input
-                      value={code}
-                      maxLength={7}
-                      width="32"
-                      onChange={(event) => {
-                        setCode(event.target.value);
-                        if (HEX.test(event.target.value)) {
-                          form.setFieldValue("brandColor", event.target.value.toLowerCase());
+                ))}
+              </HStack>
+            </Part>
+
+            <Part title="Shape">
+              <HStack wrap="wrap" gap="2">
+                {(moreOpen || !SIMPLE_SHAPES.includes(values.shape) ? SHAPES : SIMPLE_SHAPES).map((shape) => (
+                  <Button
+                    key={shape}
+                    aria-pressed={values.shape === shape}
+                    variant="outline"
+                    _pressed={PRESSED}
+                    borderRadius={RADII[shape][1]}
+                    onClick={() => form.setFieldValue("shape", shape)}
+                  >
+                    {SHAPE_LABEL[shape]}
+                  </Button>
+                ))}
+              </HStack>
+            </Part>
+
+            <Collapsible.Root
+              open={moreOpen}
+              onOpenChange={(details) => setMoreOpen(details.open)}
+              lazyMount
+              unmountOnExit
+            >
+              <Collapsible.Trigger asChild>
+                <Button variant="subtle" size="sm">
+                  More options
+                  <Collapsible.Indicator transition="transform 0.2s" _open={{ transform: "rotate(180deg)" }}>
+                    <LuChevronDown aria-hidden />
+                  </Collapsible.Indicator>
+                </Button>
+              </Collapsible.Trigger>
+              <Collapsible.Content>
+                <Stack gap="8" pt="5">
+                  <Part title="Your own color">
+                    <Flex gap="3" align="end" wrap="wrap">
+                      <Input
+                        type="color"
+                        aria-label="Your own color"
+                        value={values.brandColor}
+                        width="16"
+                        p="1"
+                        onChange={(event) => {
+                          form.setFieldValue("brandColor", event.target.value);
                           form.setFieldValue("palette", "brand");
-                        }
-                      }}
+                        }}
+                      />
+                      <Field.Root width="auto">
+                        <Field.Label>Color code</Field.Label>
+                        <Input
+                          value={code}
+                          maxLength={7}
+                          width="32"
+                          onChange={(event) => {
+                            setCode(event.target.value);
+                            if (HEX.test(event.target.value)) {
+                              form.setFieldValue("brandColor", event.target.value.toLowerCase());
+                              form.setFieldValue("palette", "brand");
+                            }
+                          }}
+                        />
+                      </Field.Root>
+                    </Flex>
+                    {adjusted?.light && (
+                      <Text>In light mode, buttons use a slightly darker shade so they stand out.</Text>
+                    )}
+                    {adjusted?.dark && (
+                      <Text>In dark mode, buttons use a slightly lighter shade so they stand out.</Text>
+                    )}
+                  </Part>
+
+                  <Part title="Heading lettering">
+                    <FontChoices
+                      current={values.headingFont}
+                      sample={values.appName}
+                      suffix="headings"
+                      onChoose={(font) => form.setFieldValue("headingFont", font)}
                     />
-                  </Field.Root>
-                </Flex>
-                {adjusted?.light && <Text>In light mode, buttons use a slightly darker shade so they stand out.</Text>}
-                {adjusted?.dark && <Text>In dark mode, buttons use a slightly lighter shade so they stand out.</Text>}
-              </Section>
+                  </Part>
 
-              <Section title="Heading lettering">
-                <FontChoices
-                  current={values.headingFont}
-                  sample={values.appName}
-                  suffix="headings"
-                  onChoose={(font) => form.setFieldValue("headingFont", font)}
-                />
-              </Section>
-
-              <Section title="Text lettering">
-                <FontChoices
-                  current={values.bodyFont}
-                  sample={values.appName}
-                  suffix="text"
-                  onChoose={(font) => form.setFieldValue("bodyFont", font)}
-                />
-              </Section>
-            </Stack>
-          )}
+                  <Part title="Text lettering">
+                    <FontChoices
+                      current={values.bodyFont}
+                      sample={values.appName}
+                      suffix="text"
+                      onChoose={(font) => form.setFieldValue("bodyFont", font)}
+                    />
+                  </Part>
+                </Stack>
+              </Collapsible.Content>
+            </Collapsible.Root>
+          </Section>
 
           <HStack gap="3">
             <form.SubmitButton>Save</form.SubmitButton>
@@ -291,10 +317,28 @@ function AppearanceEditor({ saved }: { saved: SavedTheme }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+/** One part of the page: its title, a line on what it is for, and its contents. */
+function Section({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+  return (
+    <Stack gap="5" as="section" aria-label={title}>
+      <Stack gap="1">
+        <Heading as="h3" size="md">
+          {title}
+        </Heading>
+        <Text textStyle="sm" color="fg.muted">
+          {description}
+        </Text>
+      </Stack>
+      {children}
+    </Stack>
+  );
+}
+
+/** A group of choices within a section, under its own small heading. */
+function Part({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Stack gap="3" as="section" aria-label={title}>
-      <Heading as="h3" size="md">
+      <Heading as="h4" size="sm">
         {title}
       </Heading>
       {children}

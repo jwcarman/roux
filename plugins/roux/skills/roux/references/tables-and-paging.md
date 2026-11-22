@@ -270,8 +270,11 @@ The page never calls `studentsApi` or builds a key: it passes `query={studentsPa
 ## A paged table
 
 `QueryTable` is the whole thing: the rows, sortable headers, the pager, the row count and the page
-size, a spinner while the first page loads, `emptyText` when there are no rows, and `errorText` above
-the table when a page fails. The students page (`src/students/StudentsPage.tsx`) keeps the page, sort,
+size, placeholder rows while the first page loads, `emptyText` when there are no rows, and `errorText` above
+the table when a page fails. It sits on the page without a box: small muted headings that stay in view
+down a long list (from `md` up), an arrow only on the sorted column, and the row under the pointer
+highlighted. The pager shows only when there is more than one page, and the page size only when a
+smaller size would show fewer rows; on one page the count is just `7 rows`. The students page (`src/students/StudentsPage.tsx`) keeps the page, sort,
 search and status filter in the URL, so a reload, Back and a shared link keep them:
 
 ```tsx
@@ -565,12 +568,14 @@ export function ActiveStudentsTable() {
   }`: the TanStack `table`, the `PageDto` on screen (the last one loaded while the next loads),
   `isLoading` while the first page loads, `isError` when a page failed.
 - `TanstackTable` (`TanstackTableProps<T>`: `table`, `isLoading?`, `isError?`, `emptyText?`, and
-  Chakra `Table.Root` props) draws the rows and the sortable headers.
+  Chakra `Table.Root` props) draws the rows and the sortable headers; while it loads with no rows, three
+  placeholder rows and a `status` named "Loading".
 - `TableView` (`TableViewProps<T>`: `TanstackTable`'s props plus `pageSizes?`) is `TanstackTable`
-  with the pager, the status and the page size below it, shown once there are rows.
+  with the pager (more than one page), the status and the page size (more rows than the smallest size)
+  below it, shown once there are rows.
 - `TablePagination` (`{ table }`): first, previous, a page number field (`Page <n> of <count>`), next,
   last. A number typed past the end goes to the last page.
-- `TableStatus` (`{ table }`, plus Chakra `Text` props): `Showing 26 to 50 of 60 rows`, announced
+- `TableStatus` (`{ table }`, plus Chakra `Text` props): `Showing 26 to 50 of 60 rows` (`7 rows` on one page), announced
   politely as it changes. `rowRange(pagination, rowsOnPage)` gives its `{ first, last, total }`.
 - `TablePageSizeSelect` (`TablePageSizeSelectProps<T>`: `table`, `pageSizes?`): rows per page, from
   `PAGE_SIZES` unless given; sizes above `MAX_PAGE_SIZE` are left out, and the current size is always

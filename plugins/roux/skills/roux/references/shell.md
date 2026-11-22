@@ -45,16 +45,17 @@ export const Route = createFileRoute("/_signedIn/appearance")({
   beforeLoad: ({ context }) => requirePermission(context.session.currentMe(), "theme.manage"),
   component: () => (
     <Stack gap="8">
-      <Heading as="h2" size="lg">Appearance</Heading>
+      <PageHeader title="Appearance" />
       <AppearanceSettings />
     </Stack>
   ),
 });
 ```
 
-`AppearanceSettings` is the whole form: five ready-made looks, then the app's name, a colour,
-shapes and lettering, with the owner's own colour and a live preview on the owner's own screen
-(through `useShellTheme().preview`) until it is saved. It reads and saves through roux-theme's
+`AppearanceSettings` is the whole form, in two sections: Name (the app's name), then Look (five
+ready-made looks, the one in use ringed, then a colour and a shape, with the owner's own colour and
+the lettering under "More options"). The owner's own screen previews the draft (through
+`useShellTheme().preview`) until it is saved. It reads and saves through roux-theme's
 `/api/theme` (a built-in `useSchemaForm`: a refusal from the server is under its field, a `409` starts
 the form over from the other owner's look), toasts `The new look is saved` with an Undo that puts the
 earlier look back, and `Cancel` drops the draft. It takes no props. Its page is the app's, and so
@@ -62,27 +63,41 @@ is the route guard: guard it with `theme.manage`, which the server enforces too.
 
 ## Sign-in
 
-`@jwcarman/roux-web/signin` ships the pieces; the page is the app's (`routes/signin/index.tsx`
-composes them, and is the app's to change). who is `@jwcarman/who-client` (a peer dependency).
+`@jwcarman/roux-web/signin` ships the sign-in page whole, and the pieces for an app that lays out its
+own. who is `@jwcarman/who-client` (a peer dependency).
 
 ```tsx
-import { EmailSignIn, PasskeySignInButton, ProviderSignInButtons } from "@jwcarman/roux-web/signin";
+import { SignInCard, SignInFrame } from "@jwcarman/roux-web/signin";
 
+// The signed-out layout: the card centred on a tinted page, the mode switch in the corner.
+<SignInFrame tools={<ColorModeButton />}>
+  <Outlet />
+</SignInFrame>;
+
+// The sign-in page (routes/signin/index.tsx).
 export function SignIn() {
-  return (
-    <Stack gap="6">
-      <Heading as="h2">Sign in</Heading>
-      <EmailSignIn />
-      <PasskeySignInButton />
-      <ProviderSignInButtons />
-    </Stack>
-  );
+  const appName = useShellTheme().shown.appName;
+  return <SignInCard appName={appName} logo={<Logo boxSize="9" />} />;
 }
 ```
 
+- `SignInFrame`: a card no wider than 400px, centred on a tinted page from a small screen up; on a
+  phone the card is the page. `tools` sit in the top corner. Its children are the card's contents, so
+  the emailed link's landing page (`/signin/link`) wears the same card.
+- `SignInCard`: "Sign in to `appName`" under `logo`, then the ways who reports as on
+  (`who.signInOptions()`; email and a passkey when who cannot be asked). The emailed link comes first,
+  with "Email me a link" at the field's right edge; below a divider, "Have a passkey?" beside "Use a
+  passkey" when that is the only other way, or "Other ways to sign in" above a wrapping row of the
+  passkey and a `ProviderSignInButton` per provider. Buttons are their label's width. Once the link is
+  sent the card turns to `Check your email`: the address it went to, the code beside "Sign in", "Use a
+  different email" (back, the address kept) and "Send it again" (who has no cooldown, so neither does
+  the card). Refusals are told on the card (`role="alert"`).
+
+The pieces, for a page of the app's own:
+
 - `EmailSignIn`: "Email me a link" for an address (`email()` rule), then `Check your email` and "Open the
-  link, or type the code from the email": a code field (`autoComplete="one-time-code"`) whose
-  "Sign in" calls `who.email.signIn({ email, code })`; who's refusal is told under the field.
+  link, or type the code from the email": a short code field (`autoComplete="one-time-code"`) with
+  "Sign in" beside it, which calls `who.email.signIn({ email, code })`; who's refusal is told under the field.
 - `PasskeySignInButton`: "Sign in with a passkey"; a refusal or cancel is told under it (`role="alert"`).
 - `ProviderSignInButtons`: one `ProviderSignInButton` per provider `who.signInOptions()` reports, with
   who's display names; nothing when there are none. `ProviderSignInButton provider="google"` alone is
@@ -131,6 +146,27 @@ from `lg`, an icon rail at `md`, and a drawer opened by "Open navigation" below.
 (`({ compact, close }) => ...`: `compact` in the rail, `close` closes the drawer). `<NavLinks>`
 (`NavLinksProps`) is the link list alone, and `RAIL_LABELS` hides labels in the rail. Needs
 `@tanstack/react-router`.
+
+`<AccountMenu>` (`AccountMenuProps`: `name`, `email`, `compact`, `children`) is that area as one button,
+"Account": the person's initials, name and email, opening a menu above it (only the initials in the rail).
+Its items are `<AccountMenuLink to icon onNavigate>` (a page; pass the layout's `close`),
+`<AccountMenuItem icon onSelect>` (an action, such as signing out), `<AccountMenuSwitch icon checked
+onCheckedChange>` (a setting flipped in place, such as dark mode) and `<AccountMenuSeparator />`. The person's
+own pages (their settings) belong here, not in the navigation:
+
+```tsx
+account={({ compact, close }) => (
+  <AccountMenu name={profile?.displayName} email={profile?.email} compact={compact}>
+    <AccountMenuLink to="/settings" icon={LuSettings} onNavigate={close}>Settings</AccountMenuLink>
+    <AccountMenuSeparator />
+    <AccountMenuItem icon={LuLogOut} onSelect={() => void signOut()}>Sign out</AccountMenuItem>
+  </AccountMenu>
+)}
+```
+
+`<PageHeader title>` (`PageHeaderProps`) is a page's title, its `h2`, with the page's actions as its
+children at the far side (`<PageHeader title="Users"><InviteForm /></PageHeader>`). It stands as tall
+as a button with or without one, so the title sits in the same place on every page.
 
 ## Don't
 

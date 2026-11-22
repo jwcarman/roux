@@ -134,6 +134,8 @@ naming the fix. There is no fallback to the device's date or locale.
 - `formatTime("16:30:00")`: a time of day (`4:30 PM`);
 - `formatDateTime("2026-11-21T03:00:00Z")`: a moment, where the organization is
   (`Nov 20, 2026, 10:00 PM`);
+- `formatInstantDate("2026-11-21T03:00:00Z")`: the day a moment falls on, where the organization is
+  (`Nov 20, 2026`);
 - `formatNumber(1234.5)`: `1,234.5`;
 - `formatRelativeTime("2026-11-17T12:00:00Z")`: how long ago, from this device's time (`3 days ago`,
   `yesterday`, `now`) ([The activity log](activity-log.md#the-browser-activitylist));
