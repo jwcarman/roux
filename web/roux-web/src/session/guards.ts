@@ -1,9 +1,10 @@
-import { redirect } from "@tanstack/react-router";
+import { redirect, type AnyRouter } from "@tanstack/react-router";
 
 /**
  * Route guards, for `beforeLoad`. Each throws a redirect when the caller may not see the route; the
  * server enforces the same rules on every API call, so these only spare the person a page they
- * cannot use.
+ * cannot use. They name no app's routes, so each redirect is typed for any router (`AnyRouter`):
+ * `/signin` and `/` are what every roux app has.
  */
 
 declare module "@tanstack/history" {
@@ -19,13 +20,13 @@ export function requireSignedIn<M>(me: M | null | undefined): M {
     return me;
   }
   // `throw: true` makes redirect throw TanStack's redirect itself; its declared type does not say so.
-  return redirect({ to: "/signin", throw: true }) as never;
+  return redirect<AnyRouter>({ to: "/signin", throw: true }) as never;
 }
 
 /** For the sign-in page: a signed-in caller goes home. */
 export function requireSignedOut(me: unknown): void {
   if (me) {
-    redirect({ to: "/", throw: true });
+    redirect<AnyRouter>({ to: "/", throw: true });
   }
 }
 
@@ -37,6 +38,6 @@ export function requireSignedOut(me: unknown): void {
  */
 export function requirePermission(me: { permissions: readonly string[] }, permission: string): void {
   if (!me.permissions.includes(permission)) {
-    redirect({ to: "/", state: { home: true }, throw: true });
+    redirect<AnyRouter>({ to: "/", state: { home: true }, throw: true });
   }
 }

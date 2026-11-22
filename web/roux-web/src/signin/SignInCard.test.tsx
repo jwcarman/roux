@@ -61,10 +61,7 @@ describe("SignInCard", () => {
     options(true, true);
     card();
 
-    expect(await screen.findByRole("textbox", { name: "Email" })).toHaveAttribute(
-      "autocomplete",
-      "username webauthn",
-    );
+    expect(await screen.findByRole("textbox", { name: "Email" })).toHaveAttribute("autocomplete", "username webauthn");
     expect(screen.getByText("We'll email you a link to sign in.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Email me a link" })).toBeInTheDocument();
     expect(screen.getByRole("separator")).toBeInTheDocument();
@@ -286,9 +283,7 @@ describe("SignInCard", () => {
   it("tells a refused passkey on the card", async () => {
     options(true, true);
     server.use(
-      http.post("/who/passkey/sign-in/options", () =>
-        HttpResponse.json({ challenge: "AAAA", allowCredentials: [] }),
-      ),
+      http.post("/who/passkey/sign-in/options", () => HttpResponse.json({ challenge: "AAAA", allowCredentials: [] })),
     );
     vi.stubGlobal("navigator", {
       ...navigator,
