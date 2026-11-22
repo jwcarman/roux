@@ -102,6 +102,11 @@ base="$(cd "$(dirname "$0")" && pwd)"
 JAVA_HOME="$base/.mvn/jdk"
 PATH="$JAVA_HOME/bin:$PATH"
 export JAVA_HOME PATH
+# Java's home inside the copy: Spotless reads ~/.gitconfig through JGit, which the sandbox forbids,
+# and every such read prints an [ERROR] that reads like a failed build.
+mkdir -p "$base/.mvn/home"
+MAVEN_OPTS="-Duser.home=$base/.mvn/home ${MAVEN_OPTS:-}"
+export MAVEN_OPTS
 exec "$base/.mvn/maven/bin/mvn" "$@"
 MVNW
 chmod +x "$dir/mvnw"
@@ -178,11 +183,23 @@ echo "regenerating the frontend's lock" >&2
 # Tests need Docker; the end-to-end suite is left out.
 echo "building the fixture once, to fill its repository and caches" >&2
 (cd "$dir" && ./mvnw -B -q verify -DskipITs) >&2
-printf '%s\n' '.m2repo/' '.mvn/maven/' '.mvn/jdk/' 'frontend/.npm-cache/' >>"$dir/.gitignore"
+# From here npm never asks the registry (the sandbox has none): the cache the build above filled
+# holds everything.
+rewrite frontend/.npmrc 's{^prefer-offline=true$}{offline=true}m'
+# And the build installs with `npm install`, not `npm ci`. The sandbox refuses any write under an
+# .idea directory, and a package (tunnel, through Stryker) ships one: `npm ci` deletes node_modules
+# first, fails on that file and leaves node_modules half gone, with no vitest or tsc. `npm install`
+# finds node_modules already matching the lock file and touches nothing. A fixture-only change: the
+# template keeps `npm ci`, and the run's diff starts after it.
+rewrite pom.xml 's{<arguments>ci</arguments>}{<arguments>install --offline</arguments>}g'
+printf '%s\n' '.m2repo/' '.mvn/maven/' '.mvn/jdk/' '.mvn/home/' 'frontend/.npm-cache/' >>"$dir/.gitignore"
 
 git -C "$dir" init -q -b main
 git -C "$dir" add -A
 git -C "$dir" -c user.name=eval-fixture -c user.email=eval-fixture@example.invalid \
   commit -q -m "$($app && echo "A new app" || echo "The dojo") at roux ${commit:0:7}"
+
+# Prove it works in the eval's sandbox before any run is spent on it.
+"$(dirname "$0")/eval-preflight.sh" "$dir"
 
 echo "$dir"
