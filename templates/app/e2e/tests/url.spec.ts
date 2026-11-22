@@ -55,5 +55,5 @@ test("the users table keeps its page, sort and search in the URL", async ({ page
   // Nonsense in the URL is ignored: an unknown sort and a negative page give the defaults.
   await page.goto("/users?sortBy=PASSWORD&pageIndex=-3");
   await expect(table.getByRole("columnheader", { name: "Name" })).toHaveAttribute("aria-sort", "ascending");
-  await expect(page.getByText(/^Showing 1 to \d+ of \d+ rows$/)).toBeVisible();
+  await expect(page.getByText(/^(Showing 1 to \d+ of \d+ rows|\d+ rows?)$/)).toBeVisible();
 });

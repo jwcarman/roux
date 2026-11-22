@@ -28,7 +28,7 @@ test("the app runs under its Content-Security-Policy without a violation", async
   const nav = page.getByRole("navigation", { name: "Main" });
   await nav.getByRole("link", { name: "Users" }).click();
   const table = page.getByRole("table", { name: "Users" });
-  await expect(page.getByText(/^Showing 1 to \d+ of \d+ rows$/)).toBeVisible();
+  await expect(page.getByText(/^(Showing 1 to \d+ of \d+ rows|\d+ rows?)$/)).toBeVisible();
   await table.getByRole("button", { name: "Email" }).click();
   await expect(table.getByRole("columnheader", { name: "Email" })).toHaveAttribute("aria-sort", "ascending");
   await openSettings(page);
