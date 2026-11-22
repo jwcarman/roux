@@ -1,5 +1,7 @@
 # App Template Implementation Plan
 
+> **Revised 2026-11-22:** no archetype; see "Revisions (2026-11-22)". Tasks 5 to 9 there replace the old Tasks 5 to 7 below.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A domain-free roux app that builds native and meets roux's coverage and mutation gates at `templates/app`, tested in roux's build, released to Maven Central as `roux-app-archetype` so noir generates new apps with `mvn archetype:generate`.
@@ -82,6 +84,81 @@ The spec's Revisions section applies. Changes to the tasks below:
 - **Task 5** archetype: filtered files are wrapped in `#[[ ]]#` with only `${artifactId}` /
   `${appName}` outside; the archetype's file sets no longer list `.github/`, `.noir/`, `.mvn/`;
   Task 6's checks drop those files and instead assert they are absent.
+
+## Revisions (2026-11-22, during Task 4b): noir owns its template; roux thins this one
+
+James's ruling: an app template is noir's own business; roux ships the components and the common
+bits. `templates/app` stays in roux as the **reference app**: where roux proves its pieces work
+together, and what noir's template (and a person's app) starts from. It must be thin: whatever it
+holds, every copy maintains forever, so code that would be the same in every roux app moves into
+roux, and a roux upgrade is a version bump, not a merge. roux should also be easy for a person to
+start with, without noir.
+
+**Old Tasks 5, 6 and 7 are replaced** by Tasks 5 to 9 below. The archetype is dropped: no
+`runtime/roux-app-archetype`, no `archetype:integration-test`. The Global Constraints lines about
+archetype properties and regexes no longer apply. Review Focus 1 and 2 go with the archetype;
+3, 4 and 5 now apply to the template repository (Task 8). Task 4b's Appearance review is still to
+do before Task 5.
+
+Each new roux API below is a proposal: its exact shape goes to James at the task's start, and the
+task builds only what he approves. roux-web's gates (lint, 100% coverage, Stryker 100%) and the
+template's gates hold throughout.
+
+### Task 5: The passkeys section moves into roux-web
+
+- `PasskeySettings` (in `@jwcarman/roux-web/signin`, beside the other who-backed pieces): the
+  Passkeys list, "No passkeys yet.", the load error, Remove, and "Add a passkey" in a dialog, as
+  approved in Task 4b. It takes one prop, `onSignedOut: () => Promise<unknown>` (the session's
+  `refresh`), called when who says the session ended. `passkeyLabelError` and `PASSKEY_LABEL_MAX`
+  move with it.
+- The template's Settings keeps its Profile section and renders `<PasskeySettings onSignedOut={refresh} />`
+  in the Passkeys section; `users/passkeys.ts` is deleted.
+- The template's Settings tests shrink to what the template composes; the passkey tests move to
+  roux-web. e2e `registerPasskey` is unchanged (same labels and roles).
+- Docs: `shell.md` (Settings), CHANGELOG.
+
+### Task 6: The session and the route guards move into roux-web
+
+- `@jwcarman/roux-web/session`: `SessionProvider`, `useSession()`, and the guards
+  `requireSignedIn`, `requireSignedOut`, `requirePermission` (typed by the app's permissions, as
+  `defineNav` is). `Me` and the `/api/me` and `/api/users/me` calls are roux's own contract, so
+  they come with it.
+- The template's `shell/session.tsx` and `shell/guards.ts` are deleted; routes import from roux-web.
+- Docs: `shell.md` (including the `context.me` form noted in Task 3), CHANGELOG.
+
+### Task 7: Tests of roux move into roux
+
+- Sort every template Java test and e2e spec into "tests this app" or "tests roux through the app"
+  (security, invitations, the owner, the shell and its caching and CSP, sessions, problems). Show
+  James the sorted list before moving anything.
+- Roux's go to the module that owns the behaviour, or into `roux-test` as a kit an app can run
+  against itself (for example, one `@AppTest` that checks the app is wired the way roux expects).
+  The template keeps a thin smoke test per concern, so a broken wiring still fails its build.
+- e2e: generic helpers (sign in through Mailpit, register a passkey, the virtual authenticator)
+  become a roux kit if James approves one; otherwise they stay in the template.
+- Coverage and mutation gates hold in both places.
+
+### Task 8: A template repository and a getting-started guide
+
+- `jwcarman/roux-app-template`, a GitHub template repository ("Use this template"), written by
+  roux's release workflow from `templates/app` at each release: `roux.version` set to the release,
+  roux-web from npm at the release version, the `roux-repository` profile removed, the Maven
+  wrapper added, the frontend and e2e locks regenerated. The workflow fails if the copy still
+  names `web/roux-web`, `roux-parent` or `roux-repository`, ships `node_modules`, `target`,
+  `dist` or `test-results`, or (on a SNAPSHOT build) the template's `roux.version` differs from
+  roux's version.
+- Creating the repository and the token the workflow pushes with are James's to set up; the task
+  says exactly what to create.
+- `docs/guides/getting-started.md` opens with "Start a new app": use the template, rename the
+  name spots (`Roux App`, `roux-app`; the seven files Task 2 lists), start Postgres and Mailpit,
+  run, sign in as the owner, add a first page. Synced to the plugin's references.
+
+### Task 9: Release, docs and push
+
+- The old Task 7's release, README and CHANGELOG work, without the archetype: README's Modules
+  list `templates/app` as the reference app; Releasing says its `roux.version` is bumped with
+  roux's own.
+- Root `./mvnw -B verify` and `./mvnw -B -Ppit verify` pass; push to main; `gh workflow run native.yml`.
 
 ---
 
