@@ -15,9 +15,9 @@ export default defineConfig({
     tanstackRouter({ codeSplittingOptions: { addHmr: !process.env.VITEST } }),
     react(),
   ],
-  // roux-web is linked from roux's source (file:../../../web/roux-web). Resolving through the link
-  // rather than to its real path makes its imports of React and the other peers find this app's
-  // node_modules, so there is one React. Vitest reads this too.
+  // Inside roux's own repository roux-web is a link to its source. Resolving through a link rather
+  // than to its real path makes its imports of React and the other peers find this app's
+  // node_modules, so there is one React; from npm it changes nothing. Vitest reads this too.
   resolve: { preserveSymlinks: true },
   build: { outDir: "dist", emptyOutDir: true },
   // Every script and style tag Vite writes carries this placeholder, and a <meta property="csp-nonce">
@@ -31,8 +31,9 @@ export default defineConfig({
     },
   },
   // Tests run in Node; a component or hook test opts into jsdom with a `@vitest-environment jsdom` docblock.
-  // roux-web goes through Vite, not Node's loader: Node would follow the link to roux's source and
-  // load React and the other peers from roux's own node_modules, a second React.
+  // roux-web goes through Vite, not Node's loader: inside roux's repository Node would follow the
+  // link to roux's source and load React and the other peers from roux's own node_modules, a second
+  // React.
   test: {
     environment: "node",
     include: ["src/**/*.test.{ts,tsx}"],

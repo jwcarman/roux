@@ -2,8 +2,38 @@
 
 roux is the base a Spring Boot + React application is built on: a Java starter that answers every
 API error as a Problem Detail, and a web package (`@jwcarman/roux-web`) with the matching API client,
-paging, tables, forms and feedback. This guide adds both to an app and wires the app root. After it,
+paging, tables, forms and feedback. A new app starts from roux's app template (below); the rest of
+this guide is what the template already does, for adding roux to an app by hand. Either way,
 features use roux by importing from it; no plumbing is written in the app.
+
+## Start a new app
+
+1. **Use the template.** On GitHub, open
+   [jwcarman/roux-app-template](https://github.com/jwcarman/roux-app-template) and press
+   **Use this template**, then clone your new repository. It is roux's app at the latest release:
+   sign-in, the first owner, the sidebar frame, Users, Settings and Appearance, with roux from Maven
+   Central and npm and a Maven wrapper.
+2. **Name it.** The name is in seven files: `pom.xml` (`roux-app`, twice), `application.yml`
+   (`spring.application.name`, `roux.theme.app-name: "Roux App"`, `who.email.from`),
+   `frontend/package.json` and `frontend/package-lock.json` (`roux-app-web`), `e2e/package.json`
+   and `e2e/package-lock.json` (`roux-app-e2e`), and the `README.md` title.
+   `git grep -n -e 'Roux App' -e 'roux-app'` finds every one.
+3. **Run it.** With Docker running and JDK 25 installed (the build downloads Node itself):
+
+   ```bash
+   ./mvnw spring-boot:run -Dspring-boot.run.arguments="--roux.owner.email=you@example.com --roux.owner.name=You"
+   ```
+
+   Spring Boot starts PostgreSQL and Mailpit from `compose.yaml` by itself. The app is at
+   <http://localhost:8080>.
+4. **Sign in as the owner.** On the sign-in page, ask for a link for the `roux.owner.email` address
+   and open it from Mailpit at <http://localhost:8025>. roux made that address the `OWNER` on the
+   first start.
+5. **Add a first page.** Ask your agent for it: the app's `CLAUDE.md` and roux's Claude Code plugin
+   (the `roux` skill) say where each piece goes. By hand, a page is a feature folder in
+   `frontend/src/<feature>/`, a route file in `frontend/src/routes/_signedIn/`, and an entry in
+   `frontend/src/shell/nav.ts`; [The shell](shell.md) shows each. `./mvnw verify` runs every test,
+   the browser's included.
 
 ## Requirements
 

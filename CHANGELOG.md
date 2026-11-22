@@ -69,6 +69,11 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- A new app starts from [jwcarman/roux-app-template](https://github.com/jwcarman/roux-app-template)
+  ("Use this template"): roux's app template at each release, with roux from Maven Central and npm and
+  a Maven wrapper. roux's release workflow writes it (`scripts/export-app-template.sh`);
+  `docs/guides/getting-started.md` opens with "Start a new app".
+
 - `@jwcarman/roux-web/session`: `SessionProvider` and `useSession()` (the caller from who, their
   `Profile` from roux-users, `refresh`, `refreshProfile`, `signOut`, `currentMe` for route guards; the
   query cache emptied when the person changes) and the route guards `requireSignedIn`,

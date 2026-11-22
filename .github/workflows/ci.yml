@@ -74,6 +74,19 @@ jobs:
       - name: Check the guides and references
         run: node plugins/roux/scripts/check-guides.mjs
 
+  # The app template as jwcarman/roux-app-template gets it at a release: no link to roux's
+  # repository left, and its roux.version is roux's own (bumped with it after each release).
+  app-template:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Test the export script
+        run: scripts/export-app-template.test.sh
+      - name: Export the template at roux's version
+        run: |
+          version="$(sed -n 's:^    <version>\(.*\)</version>$:\1:p' pom.xml | head -1)"
+          scripts/export-app-template.sh "$version" "$RUNNER_TEMP/roux-app-template"
+
   web:
     runs-on: ubuntu-latest
     steps:

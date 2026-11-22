@@ -11,26 +11,30 @@ theme) and a Home placeholder the first feature replaces.
 
 ## Starting a new app from this template
 
-The template is published as a Maven archetype with each roux release:
+On GitHub, [jwcarman/roux-app-template](https://github.com/jwcarman/roux-app-template) holds this
+app at each roux release: press **Use this template**, then clone your new repository. Or, without
+GitHub's button:
 
 ```bash
-mvn -B archetype:generate \
-  -DarchetypeGroupId=org.jwcarman.roux \
-  -DarchetypeArtifactId=roux-app-archetype \
-  -DarchetypeVersion=<roux version> \
-  -DartifactId=acme-gym \
-  -DappName="Acme Gym"
-cd acme-gym
-mvn -N wrapper:wrapper
-git init && git add . && git commit -m "Start from roux-app-archetype"
+git clone --depth 1 https://github.com/jwcarman/roux-app-template.git acme-gym
+cd acme-gym && rm -rf .git && git init && git add . && git commit -m "Start from roux-app-template"
 ```
 
-The app is just the app: its code, its tests and their configuration. It carries no CI workflows
-and no Maven wrapper; `mvn -N wrapper:wrapper` adds the wrapper (`./mvnw`), and the CI is whatever
-your environment uses.
+Then give the app its name. It is in seven places, and nothing else needs it:
 
-`artifactId` is lowercase letters, digits and dashes; `appName` is what people see until the owner
-renames the app on the Appearance page. The Java package is `app` in every app.
+| File | What to change |
+|---|---|
+| `pom.xml` | `<artifactId>roux-app</artifactId>` and `<name>roux-app</name>` |
+| `src/main/resources/application.yml` | `spring.application.name: roux-app`, `roux.theme.app-name: "Roux App"`, `who.email.from` |
+| `frontend/package.json`, `frontend/package-lock.json` | `"name": "roux-app-web"` |
+| `e2e/package.json`, `e2e/package-lock.json` | `"name": "roux-app-e2e"` |
+| `README.md` | the `# Roux App` title |
+
+`git grep -n -e 'Roux App' -e 'roux-app'` finds them. `roux.theme.app-name` is what people see until
+the owner renames the app on the Appearance page. The Java package is `app` in every app.
+
+The app is just the app: its code, its tests and their configuration, with a Maven wrapper
+(`./mvnw`). It carries no CI workflows; the CI is whatever your environment uses.
 
 ## Prerequisites
 
