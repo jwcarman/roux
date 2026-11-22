@@ -1,8 +1,14 @@
-import { Flex, Heading, Link, Stack } from "@chakra-ui/react";
+import { Flex, Link, Stack } from "@chakra-ui/react";
 import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
+import { PageHeader } from "@jwcarman/roux-web/navigation";
 import type { TableSearch } from "@jwcarman/roux-web/paging";
-import { DEFAULT_PAGE_SIZE, DebouncedSearchInput, FilterChips, QueryTable } from "@jwcarman/roux-web/table";
+import {
+  DEFAULT_PAGE_SIZE,
+  DebouncedSearchInput,
+  FilterChips,
+  QueryTable,
+} from "@jwcarman/roux-web/table";
 import { type User } from "../api";
 import { useMe } from "../routes/_signedIn";
 import { USERS_INVITE } from "../permissions.gen";
@@ -49,7 +55,10 @@ const COLUMNS: ColumnDef<User, unknown>[] = [
     header: "Name",
     cell: (info) => (
       <Link asChild>
-        <RouterLink to="/users/$userId" params={{ userId: info.row.original.id }}>
+        <RouterLink
+          to="/users/$userId"
+          params={{ userId: info.row.original.id }}
+        >
           {info.getValue()}
         </RouterLink>
       </Link>
@@ -73,47 +82,63 @@ export function Users() {
   const me = useMe();
   const search = route.useSearch();
   const navigate = route.useNavigate();
-  const filters = { search: search.search, role: search.role, status: search.status };
+  const filters = {
+    search: search.search,
+    role: search.role,
+    status: search.status,
+  };
 
   return (
     <Stack gap="6">
-      <Flex justify="space-between" align="center" gap="3" wrap="wrap">
-        <Heading as="h2">Users</Heading>
-        {me.permissions.includes(USERS_INVITE) && (
-          <InviteForm />
-        )}
-      </Flex>
+      <PageHeader title="Users">
+        {me.permissions.includes(USERS_INVITE) && <InviteForm />}
+      </PageHeader>
       <DebouncedSearchInput
         label="Search users"
         placeholder="Search users"
         term={search.search}
         // Typing replaces the history entry: Back skips the letters, not the searches.
         onSearchChange={(term) =>
-          navigate({ search: (previous) => ({ ...previous, search: term, pageIndex: undefined }), replace: true })
+          navigate({
+            search: (previous) => ({
+              ...previous,
+              search: term,
+              pageIndex: undefined,
+            }),
+            replace: true,
+          })
         }
       />
       <Flex gap="4" wrap="wrap">
-          <FilterChips
-            label="Status"
-            options={STATUS_CHIPS}
-            value={search.status ?? "ACTIVE"}
-            onChange={(status) =>
-              navigate({
-                search: (previous) => ({
-                  ...previous,
-                  status: status === "ACTIVE" ? undefined : status,
-                  pageIndex: undefined,
-                }),
-              })
-            }
-          />
-          <FilterChips
-            label="Role"
-            options={ROLE_CHIPS}
-            value={search.role}
-            allLabel="All roles"
-            onChange={(role) => navigate({ search: (previous) => ({ ...previous, role, pageIndex: undefined }) })}
-          />
+        <FilterChips
+          label="Status"
+          options={STATUS_CHIPS}
+          value={search.status ?? "ACTIVE"}
+          onChange={(status) =>
+            navigate({
+              search: (previous) => ({
+                ...previous,
+                status: status === "ACTIVE" ? undefined : status,
+                pageIndex: undefined,
+              }),
+            })
+          }
+        />
+        <FilterChips
+          label="Role"
+          options={ROLE_CHIPS}
+          value={search.role}
+          allLabel="All roles"
+          onChange={(role) =>
+            navigate({
+              search: (previous) => ({
+                ...previous,
+                role,
+                pageIndex: undefined,
+              }),
+            })
+          }
+        />
       </Flex>
       <QueryTable
         aria-label="Users"
@@ -123,7 +148,11 @@ export function Users() {
         params={search}
         onParamsChange={(next) =>
           navigate({
-            search: (previous) => ({ ...previous, ...next, sortBy: USER_SORTS.find((sort) => sort === next.sortBy) }),
+            search: (previous) => ({
+              ...previous,
+              ...next,
+              sortBy: USER_SORTS.find((sort) => sort === next.sortBy),
+            }),
           })
         }
         emptyText="No users found."

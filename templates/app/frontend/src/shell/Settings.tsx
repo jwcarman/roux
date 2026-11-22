@@ -1,7 +1,20 @@
-import { Button, Heading, Stack, Table, Text } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  List,
+  Separator,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
+import type { ReactNode } from "react";
+import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { notify } from "@jwcarman/roux-web/feedback";
-import { useAppForm } from "@jwcarman/roux-web/form";
+import { FormDialog, useAppForm } from "@jwcarman/roux-web/form";
+import { PageHeader } from "@jwcarman/roux-web/navigation";
+import { useShellTheme } from "@jwcarman/roux-web/theme";
 import type { Passkey } from "@jwcarman/who-client";
 import {
   listPasskeys,
@@ -13,15 +26,40 @@ import {
 import { queryKeys } from "../queryKeys";
 import { useSession } from "./session";
 import { ProfileForm } from "../users/ProfileForm";
-import { formatDateTime } from "@jwcarman/roux-web/dates";
+import { formatInstantDate } from "@jwcarman/roux-web/dates";
 
 function labelError({ value }: { value: string }) {
   return passkeyLabelError(value);
 }
 
-/** A passkey's moment in the organization's zone, or "Never". */
+/** The day of a passkey's moment in the organization's zone, or "never". */
 function formatUse(value: string | null): string {
-  return value ? formatDateTime(value) : "Never";
+  return value ? formatInstantDate(value) : "never";
+}
+
+/** One part of the page: its title, a line on what it is for, and its contents. */
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <Stack gap="5">
+      <Stack gap="1">
+        <Heading as="h3" size="md">
+          {title}
+        </Heading>
+        <Text textStyle="sm" color="fg.muted">
+          {description}
+        </Text>
+      </Stack>
+      {children}
+    </Stack>
+  );
 }
 
 /** Why a passkey was not added, by who's reason; any other reason gets the general message. */
@@ -32,6 +70,8 @@ const NOT_ADDED: Partial<Record<string, string>> = {
 
 export function Settings() {
   const { refresh } = useSession();
+  const appName = useShellTheme().shown.appName;
+  const [adding, setAdding] = useState(false);
   const passkeys = useQuery({
     queryKey: queryKeys.passkeys,
     // null: they could not be loaded.
@@ -64,11 +104,12 @@ export function Settings() {
 
   const addForm = useAppForm({
     defaultValues: { label: "" },
-    onSubmit: async ({ value, formApi }) => {
+    onSubmit: async ({ value }) => {
       try {
         const result = await register.mutateAsync(value.label.trim());
         if (result.ok) {
-          formApi.reset();
+          // Closing is enough: the dialog puts the form back once it has closed.
+          setAdding(false);
           notify.success("Passkey added");
         } else {
           notify.error(
@@ -98,56 +139,48 @@ export function Settings() {
   }
 
   return (
-    <Stack gap="6">
-      <Heading as="h2">Settings</Heading>
-      <ProfileForm />
-      <Heading as="h3" size="md">
-        Passkeys
-      </Heading>
-      <addForm.AppForm>
-        <addForm.Form>
-          <Stack gap="4">
-            <addForm.AppField
-              name="label"
-              validators={{ onBlur: labelError, onSubmit: labelError }}
-            >
-              {(field) => (
-                <field.InputField
-                  label="Passkey label"
-                  placeholder="Work laptop"
-                  maxLength={PASSKEY_LABEL_MAX}
-                />
-              )}
-            </addForm.AppField>
-            <addForm.SubmitButton>Add a passkey</addForm.SubmitButton>
-          </Stack>
-        </addForm.Form>
-      </addForm.AppForm>
-      {passkeys.data === null && (
-        <Text role="alert" color="fg.error">
-          Could not load the passkeys.
-        </Text>
-      )}
-      {passkeys.data?.length === 0 && (
-        <Text color="fg.muted">No passkeys yet.</Text>
-      )}
-      {passkeys.data && passkeys.data.length > 0 && (
-        <Table.Root aria-label="Passkeys">
-          <Table.Header>
-            <Table.Row>
-              <Table.ColumnHeader>Label</Table.ColumnHeader>
-              <Table.ColumnHeader>Created</Table.ColumnHeader>
-              <Table.ColumnHeader>Last used</Table.ColumnHeader>
-              <Table.ColumnHeader />
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
+    <Stack gap="8" maxW="xl">
+      <PageHeader title="Settings" />
+      <Section
+        title="Profile"
+        description={`How you appear to others in ${appName}.`}
+      >
+        <ProfileForm />
+      </Section>
+      <Separator />
+      <Section
+        title="Passkeys"
+        description="Sign in with your fingerprint, face or device PIN."
+      >
+        {passkeys.data === null && (
+          <Text role="alert" color="fg.error" textStyle="sm">
+            Could not load the passkeys.
+          </Text>
+        )}
+        {passkeys.data?.length === 0 && (
+          <Text color="fg.muted" textStyle="sm">
+            No passkeys yet.
+          </Text>
+        )}
+        {passkeys.data && passkeys.data.length > 0 && (
+          <List.Root aria-label="Passkeys" variant="plain" gap="4">
             {passkeys.data.map((passkey) => (
-              <Table.Row key={passkey.credentialId}>
-                <Table.Cell>{passkey.label}</Table.Cell>
-                <Table.Cell>{formatUse(passkey.createdAt)}</Table.Cell>
-                <Table.Cell>{formatUse(passkey.lastUsedAt)}</Table.Cell>
-                <Table.Cell>
+              <List.Item key={passkey.credentialId}>
+                <Flex
+                  align="center"
+                  justify="space-between"
+                  gap="3"
+                  width="full"
+                >
+                  <Box minW="0">
+                    <Text textStyle="sm" fontWeight="medium" truncate>
+                      {passkey.label}
+                    </Text>
+                    <Text textStyle="xs" color="fg.muted">
+                      Added {formatUse(passkey.createdAt)} · Last used{" "}
+                      {formatUse(passkey.lastUsedAt)}
+                    </Text>
+                  </Box>
                   <Button
                     size="xs"
                     variant="outline"
@@ -156,12 +189,37 @@ export function Settings() {
                   >
                     Remove
                   </Button>
-                </Table.Cell>
-              </Table.Row>
+                </Flex>
+              </List.Item>
             ))}
-          </Table.Body>
-        </Table.Root>
-      )}
+          </List.Root>
+        )}
+        <FormDialog
+          form={addForm}
+          title="Add a passkey"
+          trigger={
+            <Button variant="outline" alignSelf="start">
+              Add a passkey
+            </Button>
+          }
+          submitLabel="Add"
+          open={adding}
+          onOpenChange={setAdding}
+        >
+          <addForm.AppField
+            name="label"
+            validators={{ onBlur: labelError, onSubmit: labelError }}
+          >
+            {(field) => (
+              <field.InputField
+                label="Passkey label"
+                placeholder="Work laptop"
+                maxLength={PASSKEY_LABEL_MAX}
+              />
+            )}
+          </addForm.AppField>
+        </FormDialog>
+      </Section>
     </Stack>
   );
 }

@@ -33,7 +33,7 @@ beforeEach(() => {
 
 async function openSettings() {
   const rendered = renderRoute("/settings", { permissions: [] });
-  await screen.findByRole("heading", { name: "Settings" });
+  await screen.findByRole("heading", { level: 2, name: "Settings" });
   return rendered;
 }
 
@@ -55,34 +55,50 @@ function askedAgain() {
   return asked;
 }
 
+/** Opens "Add a passkey", the button under the list, and answers with `label`. */
 async function addPasskey(label: string) {
   const user = userEvent.setup();
-  await user.type(screen.getByRole("textbox", { name: /Passkey label/ }), label);
   await user.click(screen.getByRole("button", { name: "Add a passkey" }));
+  const dialog = await screen.findByRole("dialog", { name: "Add a passkey" });
+  if (label !== "") {
+    await user.type(within(dialog).getByRole("textbox", { name: /Passkey label/ }), label);
+  }
+  await user.click(within(dialog).getByRole("button", { name: "Add" }));
+  return dialog;
 }
 
 describe("/settings", () => {
+  it("has a section for the profile and one for passkeys, each saying what it is for", async () => {
+    await openSettings();
+    expect(screen.getByRole("heading", { level: 3, name: "Profile" })).toBeInTheDocument();
+    expect(screen.getByText(/^How you appear to others in /)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "Passkeys" })).toBeInTheDocument();
+    expect(screen.getByText("Sign in with your fingerprint, face or device PIN.")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /Passkey label/ })).toBeNull();
+  });
+
   it("says there are no passkeys yet", async () => {
     await openSettings();
     expect(await screen.findByText("No passkeys yet.")).toBeInTheDocument();
-    expect(screen.queryByRole("table", { name: "Passkeys" })).toBeNull();
+    expect(screen.queryByRole("list", { name: "Passkeys" })).toBeNull();
   });
 
   it("shows neither a list nor its absence until the passkeys have loaded", async () => {
     list.mockReturnValue(new Promise(() => undefined));
     await openSettings();
     expect(screen.queryByText("No passkeys yet.")).toBeNull();
-    expect(screen.queryByRole("table", { name: "Passkeys" })).toBeNull();
+    expect(screen.queryByRole("list", { name: "Passkeys" })).toBeNull();
   });
 
   it("lists the passkeys with when each was made and last used", async () => {
     list.mockResolvedValue({ ok: true, value: [LAPTOP] } as never);
     await openSettings();
 
-    const table = await screen.findByRole("table", { name: "Passkeys" });
-    const row = within(table).getByRole("row", { name: /Work laptop/ });
-    expect(within(row).getByText("Never")).toBeInTheDocument();
-    expect(within(row).getByText(/Jun 1, 2026/)).toBeInTheDocument();
+    const passkeys = await screen.findByRole("list", { name: "Passkeys" });
+    const [laptop] = within(passkeys).getAllByRole("listitem");
+    expect(within(laptop).getByText("Work laptop")).toBeInTheDocument();
+    expect(within(laptop).getByText("Added Jun 1, 2026 · Last used never")).toBeInTheDocument();
+    expect(within(laptop).getByRole("button", { name: "Remove Work laptop" })).toBeInTheDocument();
   });
 
   it("says when the passkeys cannot be loaded", async () => {
@@ -110,17 +126,22 @@ describe("/settings", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("adds a passkey under its trimmed label, then lists it and clears the form", async () => {
+  it("adds a passkey under its trimmed label, then closes, lists it, and opens empty next time", async () => {
     register.mockResolvedValue({ ok: true, value: undefined } as never);
     await openSettings();
     list.mockResolvedValue({ ok: true, value: [LAPTOP] } as never);
 
-    await addPasskey("  Work laptop  ");
+    const dialog = await addPasskey("  Work laptop  ");
 
     expect(await screen.findByText("Passkey added")).toBeInTheDocument();
     expect(register).toHaveBeenCalledWith("Work laptop");
-    expect(await screen.findByRole("table", { name: "Passkeys" })).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: /Passkey label/ })).toHaveValue("");
+    // Closed (jsdom keeps a closed dialog mounted, as no animation ends).
+    await waitFor(() => expect(dialog).toHaveAttribute("data-state", "closed"));
+    expect(await screen.findByRole("list", { name: "Passkeys" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Add a passkey" }));
+    const again = await screen.findByRole("dialog", { name: "Add a passkey" });
+    expect(within(again).getByRole("textbox", { name: /Passkey label/ })).toHaveValue("");
   });
 
   it.each([
@@ -131,9 +152,11 @@ describe("/settings", () => {
     register.mockResolvedValue({ ok: false, reason } as never);
     await openSettings();
 
-    await addPasskey("Phone");
+    const dialog = await addPasskey("Phone");
 
     expect(await screen.findByText(text)).toBeInTheDocument();
+    // Still open, to try again.
+    expect(dialog).toHaveAttribute("data-state", "open");
   });
 
   it("says a passkey was not added when registering throws", async () => {
@@ -148,7 +171,7 @@ describe("/settings", () => {
   it("refuses a blank label without asking the browser", async () => {
     await openSettings();
 
-    await userEvent.click(screen.getByRole("button", { name: "Add a passkey" }));
+    await addPasskey("");
 
     expect(await screen.findByText("Name this passkey, such as the device it is on")).toBeInTheDocument();
     expect(register).not.toHaveBeenCalled();

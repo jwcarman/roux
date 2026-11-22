@@ -220,10 +220,13 @@ export async function openSettings(page: Page) {
 /** Adds a passkey on the Settings page, reached through the account menu. */
 export async function registerPasskey(page: Page, label: string) {
   await openSettings(page);
-  await page.getByLabel("Passkey label").fill(label);
   await page.getByRole("button", { name: "Add a passkey" }).click();
+  const dialog = page.getByRole("dialog", { name: "Add a passkey" });
+  await dialog.getByLabel("Passkey label").fill(label);
+  await dialog.getByRole("button", { name: "Add", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Passkey added" })).toBeVisible();
-  await expect(page.getByRole("cell", { name: label, exact: true })).toBeVisible();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("list", { name: "Passkeys" }).getByText(label, { exact: true })).toBeVisible();
 }
 
 export async function signOut(page: Page) {

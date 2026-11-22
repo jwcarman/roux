@@ -73,7 +73,7 @@ test("an invited user signs in by link, sees the directory, and cannot invite", 
 
   // The user renames themselves; the header follows.
   await openSettings(userPage);
-  await expect(userPage.getByLabel("Email")).toHaveValue(user);
+  await expect(userPage.getByRole("main").getByText(user, { exact: true })).toBeVisible();
   await userPage.getByLabel("Display name").fill("Ada King");
   await userPage.getByRole("button", { name: "Save profile" }).click();
   await expect(userPage.getByRole("status").filter({ hasText: "Profile saved" })).toBeVisible();

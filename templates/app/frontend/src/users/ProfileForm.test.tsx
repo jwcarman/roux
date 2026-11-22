@@ -53,6 +53,13 @@ describe("ProfileForm", () => {
     act(() => toaster.remove());
   });
 
+  it("shows the email as text, as it cannot be changed here", async () => {
+    serveProfile();
+    await show();
+    expect(screen.getByText("ada@example.com")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Email" })).toBeNull();
+  });
+
   it("renames at the profile's version", async () => {
     const { renames } = serveProfile();
     const { user, name } = await show();

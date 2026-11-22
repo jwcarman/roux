@@ -1,5 +1,6 @@
-import { Heading, Stack } from "@chakra-ui/react";
+import { Stack } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
+import { PageHeader } from "@jwcarman/roux-web/navigation";
 import { AppearanceSettings } from "@jwcarman/roux-web/theme";
 import { THEME_MANAGE } from "../../permissions.gen";
 import { requirePermission } from "../../shell/guards";
@@ -7,9 +8,7 @@ import { requirePermission } from "../../shell/guards";
 function Appearance() {
   return (
     <Stack gap="8" maxW="3xl">
-      <Heading as="h2" size="lg">
-        Appearance
-      </Heading>
+      <PageHeader title="Appearance" />
       <AppearanceSettings />
     </Stack>
   );
