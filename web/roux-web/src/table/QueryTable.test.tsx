@@ -154,10 +154,11 @@ describe("QueryTable", () => {
     expect(query.mock.calls.at(-1)?.[0].pageSize).toBe(10);
   });
 
-  it("says when there are no rows, without a pager", async () => {
+  it("says when there are no rows, without a pager or a count", async () => {
     show(fakeEndpoint([]));
     expect(await screen.findByText("Nobody here.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Next page" })).toBeNull();
+    expect(screen.queryByText("0 rows")).toBeNull();
   });
 
   it("does not say there are no rows while the first page loads", async () => {
@@ -224,11 +225,33 @@ describe("QueryTable", () => {
     await waitFor(() => expect(screen.getByRole("spinbutton", { name: "Page" })).toHaveValue("2"));
   });
 
-  it("has nowhere to go to when everything fits on one page", async () => {
+  it("offers no paging when everything fits on one page, and says how many rows there are", async () => {
     show(fakeEndpoint(people(5)));
     await screen.findByText("Person 001");
-    expect(screen.getByText("of 1")).toBeInTheDocument();
-    expect(screen.getByRole("spinbutton", { name: "Page" })).toBeDisabled();
+    for (const name of ["First page", "Previous page", "Next page", "Last page"]) {
+      expect(screen.queryByRole("button", { name })).toBeNull();
+    }
+    expect(screen.queryByRole("spinbutton", { name: "Page" })).toBeNull();
+    expect(screen.getByText("5 rows")).toBeInTheDocument();
+  });
+
+  it("says one row, not one rows", async () => {
+    show(fakeEndpoint(people(1)));
+    expect(await screen.findByText("1 row")).toBeInTheDocument();
+  });
+
+  it("offers page sizes only when a smaller one would show fewer rows", async () => {
+    show(fakeEndpoint(people(10)));
+    await screen.findByText("Person 001");
+    expect(screen.queryByRole("combobox", { name: "Rows per page" })).toBeNull();
+  });
+
+  it("still offers page sizes on one page when the smallest would split it", async () => {
+    show(fakeEndpoint(people(11)));
+    await screen.findByText("Person 001");
+    expect(screen.getByRole("combobox", { name: "Rows per page" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next page" })).toBeNull();
+    expect(screen.getByText("11 rows")).toBeInTheDocument();
   });
 
   it("selects the page number when the field is focused, to type over it", async () => {

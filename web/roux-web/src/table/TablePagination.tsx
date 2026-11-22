@@ -2,7 +2,7 @@ import { HStack, IconButton, InputGroup, NumberInput } from "@chakra-ui/react";
 import type { Table } from "@tanstack/react-table";
 import { LuChevronLeft, LuChevronRight, LuChevronsLeft, LuChevronsRight } from "react-icons/lu";
 
-/** First, previous, a page number field, next and last; a page typed past the end goes to the last. */
+/** First, previous, a page number field, next and last; a page typed past the end goes to the last. For more than one page. */
 export function TablePagination<T>({ table }: { table: Table<T> }) {
   const pageCount = table.getPageCount();
   const pageIndex = table.getState().pagination.pageIndex;
@@ -37,10 +37,9 @@ export function TablePagination<T>({ table }: { table: Table<T> }) {
         <NumberInput.Root
           width="80px"
           min={1}
-          max={Math.max(pageCount, 1)}
+          max={pageCount}
           value={String(pageIndex + 1)}
           onValueChange={({ valueAsNumber }) => goTo(valueAsNumber)}
-          disabled={pageCount <= 1}
         >
           <NumberInput.Input aria-label="Page" onFocus={(event) => event.target.select()} />
           <NumberInput.Control>

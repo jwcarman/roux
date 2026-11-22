@@ -1,5 +1,5 @@
 import { Flex, Stack } from "@chakra-ui/react";
-import { TablePageSizeSelect } from "./TablePageSizeSelect";
+import { offeredPageSizes, PAGE_SIZES, TablePageSizeSelect } from "./TablePageSizeSelect";
 import { TablePagination } from "./TablePagination";
 import { TableStatus } from "./TableStatus";
 import { TanstackTable, type TanstackTableProps } from "./TanstackTable";
@@ -9,16 +9,21 @@ export type TableViewProps<T> = TanstackTableProps<T> & {
   pageSizes?: number[];
 };
 
-/** A paged table: the rows, then the pager, the row count and the page size, once there are rows. */
-export function TableView<T>({ table, pageSizes, ...props }: TableViewProps<T>) {
+/**
+ * A paged table: the rows, then, once there are rows, the pager (when there is more than one page),
+ * the row count, and the page size (when a smaller one would show fewer rows).
+ */
+export function TableView<T>({ table, pageSizes = PAGE_SIZES, ...props }: TableViewProps<T>) {
+  const rowCount = table.getRowCount();
+  const [smallest] = offeredPageSizes(pageSizes, table.getState().pagination.pageSize);
   return (
     <Stack gap="2" width="100%">
       <TanstackTable table={table} {...props} />
-      {table.getRowCount() > 0 && (
+      {rowCount > 0 && (
         <Flex wrap="wrap" gap="3" align="center" justify="space-between">
-          <TablePagination table={table} />
+          {table.getPageCount() > 1 && <TablePagination table={table} />}
           <TableStatus table={table} />
-          <TablePageSizeSelect table={table} pageSizes={pageSizes} />
+          {rowCount > smallest && <TablePageSizeSelect table={table} pageSizes={pageSizes} />}
         </Flex>
       )}
     </Stack>

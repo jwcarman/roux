@@ -10,12 +10,17 @@ export interface TablePageSizeSelectProps<T> {
   pageSizes?: number[];
 }
 
+/** The sizes {@link TablePageSizeSelect} offers, smallest first: `pageSizes` a Paginator returns, and `current`. */
+export function offeredPageSizes(pageSizes: number[], current: number): number[] {
+  return [...new Set([...pageSizes.filter((size) => size > 0 && size <= MAX_PAGE_SIZE), current])].sort(
+    (a, b) => a - b,
+  );
+}
+
 /** Rows per page. */
 export function TablePageSizeSelect<T>({ table, pageSizes = PAGE_SIZES }: TablePageSizeSelectProps<T>) {
   const current = table.getState().pagination.pageSize;
-  const offered = [...new Set([...pageSizes.filter((size) => size > 0 && size <= MAX_PAGE_SIZE), current])].sort(
-    (a, b) => a - b,
-  );
+  const offered = offeredPageSizes(pageSizes, current);
   return (
     <HStack gap="2">
       <NativeSelect.Root size="sm" width="80px">
