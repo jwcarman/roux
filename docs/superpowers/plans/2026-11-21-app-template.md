@@ -159,7 +159,7 @@ template's gates hold throughout.
   list `templates/app` as the reference app; Releasing says its `roux.version` is bumped with
   roux's own.
 - Root `./mvnw -B verify` and `./mvnw -B -Ppit verify` pass; push to main. Native builds and tests
-  (`-PnativeTest`, `-Pnative-e2e`) run locally on HODER, never on GitHub: roux has no `native.yml`.
+  (`-PnativeTest`, `-Pnative-e2e`) run locally on HODOR, never on GitHub: roux has no `native.yml`.
 
 ---
 
