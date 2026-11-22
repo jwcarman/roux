@@ -138,8 +138,8 @@ jobs:
 
   # jwcarman/roux-app-template, the repository behind "Use this template": templates/app at this
   # release, with roux from Maven Central and npm (scripts/export-app-template.sh). A pre-release
-  # leaves it alone. ROUX_APP_TEMPLATE_DEPLOY_KEY is the private half of a write deploy key on that
-  # one repository.
+  # leaves it alone. ROUX_APP_TEMPLATE_TOKEN is a fine-grained token for that one repository with
+  # Contents: read and write.
   app-template:
     needs: [maven, npm]
     if: ${{ !github.event.release.prerelease }}
@@ -168,15 +168,9 @@ jobs:
       - name: Push it to roux-app-template
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-          DEPLOY_KEY: ${{ secrets.ROUX_APP_TEMPLATE_DEPLOY_KEY }}
+          TOKEN: ${{ secrets.ROUX_APP_TEMPLATE_TOKEN }}
         run: |
-          key="$RUNNER_TEMP/deploy_key"
-          (umask 077 && printf '%s\n' "$DEPLOY_KEY" > "$key")
-          # github.com's host keys from GitHub's API, over HTTPS, so ssh checks the host it pushes to.
-          hosts="$RUNNER_TEMP/known_hosts"
-          curl -fsSL https://api.github.com/meta | jq -r '.ssh_keys[] | "github.com " + .' > "$hosts"
-          export GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$hosts"
-          git clone --quiet git@github.com:jwcarman/roux-app-template.git "$RUNNER_TEMP/repo"
+          git clone --quiet "https://x-access-token:${TOKEN}@github.com/jwcarman/roux-app-template.git" "$RUNNER_TEMP/repo"
           mv "$RUNNER_TEMP/repo/.git" "$RUNNER_TEMP/exported/.git"
           cd "$RUNNER_TEMP/exported"
           git add -A
@@ -184,4 +178,3 @@ jobs:
             commit --quiet -m "roux $RELEASE_TAG"
           git tag "$RELEASE_TAG"
           git push --quiet origin HEAD:main "refs/tags/$RELEASE_TAG"
-          rm -f "$key" "$hosts"
