@@ -146,6 +146,23 @@ from `lg`, an icon rail at `md`, and a drawer opened by "Open navigation" below.
 (`NavLinksProps`) is the link list alone, and `RAIL_LABELS` hides labels in the rail. Needs
 `@tanstack/react-router`.
 
+`<AccountMenu>` (`AccountMenuProps`: `name`, `email`, `compact`, `children`) is that area as one button,
+"Account": the person's initials, name and email, opening a menu above it (only the initials in the rail).
+Its items are `<AccountMenuLink to icon onNavigate>` (a page; pass the layout's `close`),
+`<AccountMenuItem icon onSelect>` (an action, such as signing out), `<AccountMenuSwitch icon checked
+onCheckedChange>` (a setting flipped in place, such as dark mode) and `<AccountMenuSeparator />`. The person's
+own pages (their settings) belong here, not in the navigation:
+
+```tsx
+account={({ compact, close }) => (
+  <AccountMenu name={profile?.displayName} email={profile?.email} compact={compact}>
+    <AccountMenuLink to="/settings" icon={LuSettings} onNavigate={close}>Settings</AccountMenuLink>
+    <AccountMenuSeparator />
+    <AccountMenuItem icon={LuLogOut} onSelect={() => void signOut()}>Sign out</AccountMenuItem>
+  </AccountMenu>
+)}
+```
+
 ## Don't
 
 - Don't mount `ChakraProvider` or Emotion's `CacheProvider` yourself next to `ThemeProvider`.

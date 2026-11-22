@@ -10,3 +10,11 @@ export {
   type Permissions,
 } from "./nav";
 export { NavLinks, RAIL_LABELS, type NavLinksProps } from "./NavLinks";
+export {
+  AccountMenu,
+  AccountMenuItem,
+  AccountMenuLink,
+  AccountMenuSeparator,
+  AccountMenuSwitch,
+  type AccountMenuProps,
+} from "./AccountMenu";
