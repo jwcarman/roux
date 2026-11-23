@@ -304,7 +304,7 @@ The permission, in three places:
    ```
 3. `frontend/src/permissions.gen.ts`, written by a test, never by hand:
    `./mvnw test -Dskip.npm -Dtest=PermissionsListTest`. The first run rewrites the file and fails;
-   run it again until it passes. No Docker needed.
+   run it again until it passes. No Docker needed; the check script does it for you.
 
 `PermissionsTest` (which checks the grants against the constants) needs Docker, so without it
 check by hand: every constant is granted to `OWNER` in `roles.xml`, and every grant names a constant.
@@ -724,21 +724,17 @@ PageParams params` in the controller answering `PageDto<Rank>`, `pageQuery(...)`
 
 ## Check
 
-Without Docker (an agent's sandbox), in this order, from the app's root:
-
-1. **If a permission changed:** `./mvnw test -Dskip.npm -Dtest=PermissionsListTest`, repeated until
-   it passes (it rewrites `frontend/src/permissions.gen.ts`). First, because everything after it
-   builds the frontend, which fails against a stale file.
-2. `cd frontend && npm run coverage` (Vitest with the 100% coverage gate) and `npm run build`
-   (bundle and `tsc -b` type check). Read every failure; `npm test` is the quicker loop.
-3. `./mvnw spotless:apply test-compile`, after the last Java change: formats the Java (the build
-   fails on unformatted files) and compiles main and test code. It also runs the frontend's
-   `npm ci`, coverage and build again (add `-Dskip.npm` to leave them out while iterating).
+From the app's root, run the skill's check script (`bash <skill base directory>/scripts/check.sh`)
+and fix what it reports until it ends `check: ok`. It runs, in the order the build needs: every
+changelog parsed as XML; `./mvnw spotless:apply` (every later Maven run fails on unformatted Java);
+`PermissionsListTest`, which rewrites `permissions.gen.ts` (the frontend fails to build against a
+stale one); `./mvnw test-compile`, which also runs the frontend's tests with the 100% gate and its
+type-checked build. While iterating on the frontend alone, `cd frontend && npm test` is quicker.
 
 With Docker, `./mvnw verify` runs all of it plus the Java tests, the Java coverage gate (100%),
 `PermissionsTest` and Playwright (`-DskipITs` leaves out Playwright). Without Docker the Java tests
-cannot run: read each test against this recipe (role names exist in `Roles`, the JSON matches the
-request, `users.reset()` takes no tables) and every service branch has a test.
+cannot run: read each test against step 11 (role names exist in `Roles`, bodies satisfy the rules,
+one sign-in per address, the stale edit changes a value, every service branch has a test).
 
 ## Pitfalls
 

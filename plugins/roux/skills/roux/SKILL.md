@@ -69,16 +69,14 @@ example, the check and the pitfalls.
 
 ## Before you finish
 
-Without Docker (an agent's sandbox), from the app's root, in this order:
+From the app's root, **run** `bash <this skill's base directory>/scripts/check.sh`. It does the checks
+that need no Docker in the order the build needs (changelogs well-formed, Java formatted, the
+permissions list rewritten, then compile plus the frontend's tests, 100% coverage and build), and
+stops at the first failure with what to fix. Fix it and run it again until it ends `check: ok`.
 
-1. After a permission change, `./mvnw test -Dskip.npm -Dtest=PermissionsListTest` until it passes
-   (it rewrites `permissions.gen.ts`; every later step builds the frontend against it).
-2. `cd frontend && npm run coverage` (tests with the 100% gate), then `npm run build` (type check).
-3. `./mvnw spotless:apply test-compile` after the last Java change: the build fails on unformatted
-   Java, and this also compiles the tests.
-
-With Docker, `./mvnw verify` runs everything: Java tests, coverage on both sides, Playwright.
-Without it, check your Java tests by reading them against `feature.md`.
+The Java tests and their 100% coverage gate need Docker (`./mvnw verify`). Without Docker, read your
+Java tests against `feature.md` step 11: every service branch has a test, and every request body
+satisfies the rules it isn't testing.
 
 Then check the change against the **Pitfalls** of each reference you used. A test that fails is a
 finding to fix, not to delete. If no reference covers what the task needs, say so to the user

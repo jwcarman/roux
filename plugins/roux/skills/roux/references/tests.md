@@ -85,8 +85,8 @@ script and expects none while it walks the app; add each new kind of screen to t
 
 ## Check
 
-- Java: `./mvnw verify` (Docker). Without Docker, `./mvnw spotless:apply test-compile` only compiles
-  them.
+- Java: `./mvnw verify` (Docker). Without Docker, the skill's `scripts/check.sh` only compiles
+  them: read each against `feature.md` step 11.
 - Frontend: `cd frontend && npm test`; coverage must be 100%.
 
 ## Pitfalls
