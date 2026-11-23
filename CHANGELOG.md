@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- `TestUsers.reset()` takes no tables: it empties every table that was empty when the app started
+  (after its migrations, before any test), so a test never names the app's tables, and a wrong name
+  can no longer fail every test in a class. What the changelogs put in stays. Replace
+  `users.reset("plan", "student")` with `users.reset()`.
 - The app template's and the dojo's roles test is two: `PermissionsTest` checks the grants (it needs
   the database), and `PermissionsListTest`, a plain test that runs without Docker, writes
   `permissions.gen.ts`. Both read `PermissionClasses.ALL`, the one list of permission classes. An app

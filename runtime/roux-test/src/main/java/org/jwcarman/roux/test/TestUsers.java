@@ -15,8 +15,9 @@
  */
 package org.jwcarman.roux.test;
 
-import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.jwcarman.roux.roles.OwnerBootstrap;
@@ -58,10 +59,13 @@ public class TestUsers {
   private final ApplicationEventPublisher events;
   private final TransactionTemplate tx;
   private final String[] startupRoles;
+  private final List<String> emptyAtStartup;
 
   /**
    * Creates the users, remembering the roles that exist now (from the changelogs) as the ones
-   * {@link #reset(String...)} keeps.
+   * {@link #reset()} keeps, and the tables that are empty now as the ones it empties. Made as the
+   * app starts, after its migrations and before any test, so a table the changelogs fill (roles,
+   * grants, roux-theme's theme) is kept and every other one is emptied.
    *
    * @param jdbc empties tables and reads roles
    * @param bootstrap makes the owner again on reset
@@ -94,18 +98,18 @@ public class TestUsers {
     this.tx = new TransactionTemplate(transactionManager);
     this.startupRoles =
         jdbc.queryForList("select name from who_role", String.class).toArray(String[]::new);
+    this.emptyAtStartup = emptyTables(jdbc);
   }
 
   /**
-   * Starts a test from a clean slate: removes every user and empties {@code appTables}, deletes the
-   * roles tests made, makes the owner again as roux does at startup, and puts the clock back on
-   * real time.
-   *
-   * @param appTables the app's tables to empty as well (cascading to what refers to them)
+   * Starts a test from a clean slate: removes every user, empties every table that was empty when
+   * the app started (the app's own tables among them, with no need to name them), deletes the roles
+   * tests made, makes the owner again as roux does at startup, and puts the clock back on real
+   * time.
    */
-  public void reset(String... appTables) {
-    List<String> truncated = new ArrayList<>(WHO_TABLES);
-    truncated.addAll(List.of(appTables));
+  public void reset() {
+    Set<String> truncated = new LinkedHashSet<>(WHO_TABLES);
+    truncated.addAll(emptyAtStartup);
     jdbc.execute("truncate " + String.join(", ", truncated) + " cascade");
     jdbc.update("delete from who_role where name <> all (?)", (Object) startupRoles);
     clock.useRealTime();
@@ -176,5 +180,23 @@ public class TestUsers {
 
   private WhoMockMvcBrowser browserFor(UUID id, EmailCredential credential) {
     return new WhoMockMvcBrowser(mvc).signedInAs(id, credential.id());
+  }
+
+  /** The tables of the current schema that hold no rows, quoted for SQL. */
+  private static List<String> emptyTables(JdbcTemplate jdbc) {
+    return jdbc
+        .queryForList(
+            "select table_name from information_schema.tables"
+                + " where table_schema = current_schema() and table_type = 'BASE TABLE'"
+                + " order by table_name",
+            String.class)
+        .stream()
+        .map(table -> '"' + table.replace("\"", "\"\"") + '"')
+        .filter(
+            table ->
+                !Boolean.TRUE.equals(
+                    jdbc.queryForObject(
+                        "select exists (select 1 from " + table + ")", Boolean.class)))
+        .toList();
   }
 }

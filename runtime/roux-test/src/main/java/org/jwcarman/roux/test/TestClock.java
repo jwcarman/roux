@@ -26,7 +26,7 @@ import org.springframework.context.annotation.Primary;
 
 /**
  * The app's clock in an {@link AppTest}: UTC, like who's, and on real time until a test sets it.
- * {@link TestUsers#reset(String...)} puts it back on real time.
+ * {@link TestUsers#reset()} puts it back on real time.
  */
 @Primary
 public class TestClock extends Clock {

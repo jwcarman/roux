@@ -50,7 +50,7 @@ class PromotionsControllerTest {
 
   @BeforeEach
   void cleanSlate() throws Exception {
-    users.reset("promotion", "student", "rank", "roux_activity");
+    users.reset();
     owner = users.owner();
     white = rank("White", "WHITE");
     yellow = rank("Yellow", "YELLOW");

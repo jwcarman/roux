@@ -47,7 +47,7 @@ feature" section is the full worked example (member profiles); read the part you
 
 ## Tests
 
-- Spring tests use `@AppTest`, `TestUsers` (`users.reset(...)` in `@BeforeEach`,
+- Spring tests use `@AppTest`, `TestUsers` (`users.reset()` in `@BeforeEach`, naming no tables,
   `users.signedIn(...)` for a browser) and `TestClock`.
 - Client tests use Vitest, Testing Library and MSW, beside the code they test. **The fake server
   is strict: a request no handler answers fails the test.** When a page starts calling a new

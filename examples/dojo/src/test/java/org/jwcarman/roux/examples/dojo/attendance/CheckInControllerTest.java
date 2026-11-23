@@ -60,7 +60,7 @@ class CheckInControllerTest {
 
   @BeforeEach
   void cleanSlate() throws Exception {
-    users.reset("attendance", "school_class", "student");
+    users.reset();
     owner = users.owner();
     clock.set("2026-03-12T10:00:00Z");
     tuesdayClass = schoolClass("Tuesday Karate", "TUESDAY");

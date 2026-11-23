@@ -81,14 +81,25 @@ class AppTestTest {
   }
 
   @Test
-  void resetEmptiesTheTablesItIsGiven() {
+  void resetEmptiesTheTablesTheAppFilledWithoutBeingTold() {
     jdbc.update(
         "insert into roux_activity (id, version, occurred_at, anchor_id, type, description, details)"
             + " values (gen_random_uuid(), 0, now(), gen_random_uuid(), 'x.y', 'y', '{}')");
 
-    users.reset("roux_activity");
+    users.reset();
 
     assertThat(jdbc.queryForObject("select count(*) from roux_activity", Integer.class)).isZero();
+  }
+
+  @Test
+  void resetKeepsWhatTheMigrationsMade() {
+    users.reset();
+
+    assertThat(jdbc.queryForObject("select count(*) from who_role_permission", Integer.class))
+        .isPositive();
+    assertThat(jdbc.queryForObject("select count(*) from databasechangelog", Integer.class))
+        .isPositive();
+    assertThat(jdbc.queryForList("select name from who_role", String.class)).contains("OWNER");
   }
 
   @Test

@@ -34,7 +34,7 @@ class PlansControllerTest {
 
   @BeforeEach
   void cleanSlate() {
-    users.reset("plan");
+    users.reset();
     owner = users.owner();
   }
 

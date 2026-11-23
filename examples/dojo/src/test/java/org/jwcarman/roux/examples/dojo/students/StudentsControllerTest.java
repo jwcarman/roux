@@ -45,7 +45,7 @@ class StudentsControllerTest {
 
   @BeforeEach
   void cleanSlate() {
-    users.reset("promotion", "student", "rank");
+    users.reset();
     owner = users.owner();
   }
 

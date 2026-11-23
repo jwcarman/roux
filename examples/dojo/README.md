@@ -313,7 +313,7 @@ class StudentsTest {
 
   @BeforeEach
   void cleanSlate() {
-    users.reset("student"); // every user gone, these tables emptied, the owner made again
+    users.reset(); // every user gone, the app's tables emptied, the owner made again
     clock.set("2026-11-10T17:32:00Z"); // optional: the app's clock stops here
   }
 

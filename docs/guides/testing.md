@@ -53,7 +53,7 @@ class SessionCookieTest { ... }
 ```
 
 Test classes with the same configuration share one running app and one database, so each test starts
-with `users.reset(...)`. A class that adds `@TestPropertySource` (or `@Import`) gets an app and a
+with `users.reset()`. A class that adds `@TestPropertySource` (or `@Import`) gets an app and a
 database of its own.
 
 ### The database: TestDatabase
@@ -72,7 +72,7 @@ the app at one with `TestDatabase.register(registry)`.
 
 @BeforeEach
 void clean_slate() {
-  users.reset("promotion", "student"); // the app's tables to empty
+  users.reset(); // every user gone, the app's tables emptied, the owner made again
 }
 
 TestUser ivy = users.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
@@ -81,10 +81,11 @@ users.owner().perform(delete("/api/plans/" + id)).andExpect(status().isNoContent
 users.anonymous().perform(get("/api/students")).andExpect(status().isUnauthorized());
 ```
 
-- `reset(String... appTables)` removes every user (who's tables, cascading to what refers to them),
-  empties `appTables`, deletes the roles a test made (any role that did not exist when the app
-  started), puts `TestClock` back on real time and makes the owner again, as roux does at startup. An
-  app table that refers to who's tables empties with them; list the others.
+- `reset()` removes every user (who's tables, cascading to what refers to them), empties every table
+  that was empty when the app started (after its migrations, before any test: the app's own tables,
+  without naming them), deletes the roles a test made (any role that did not exist when the app
+  started), puts `TestClock` back on real time and makes the owner again, as roux does at startup.
+  What the changelogs put in (roles, grants, roux-theme's theme) stays.
 - `signedIn(name, email, role)` makes a user as a real one is made: who's identity, the address and
   the role, and `UserJoined` (with that role) published, in one transaction ([Roles](roles.md)). The
   app's listener for `UserJoined` makes its own data for them, so a test person has what an invited
@@ -165,7 +166,7 @@ class StudentsControllerTest {
 
   @BeforeEach
   void clean_slate() {
-    users.reset("promotion", "student");
+    users.reset();
     instructor = users.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
   }
 

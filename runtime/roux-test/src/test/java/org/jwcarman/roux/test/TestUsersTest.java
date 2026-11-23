@@ -115,6 +115,41 @@ class TestUsersTest {
   }
 
   @Test
+  void reset_empties_a_table_that_was_empty_when_the_users_were_made() {
+    users.reset();
+    TestUsers made =
+        new TestUsers(jdbc, bootstrap, clock, mvc, who, rbac, emails, events, transactions);
+    insertActivity();
+
+    made.reset();
+
+    assertThat(activities()).isZero();
+  }
+
+  @Test
+  void reset_keeps_a_table_that_held_rows_when_the_users_were_made() {
+    users.reset();
+    insertActivity();
+    TestUsers made =
+        new TestUsers(jdbc, bootstrap, clock, mvc, who, rbac, emails, events, transactions);
+
+    made.reset();
+
+    assertThat(activities()).isOne();
+    users.reset();
+  }
+
+  private void insertActivity() {
+    jdbc.update(
+        "insert into roux_activity (id, version, occurred_at, anchor_id, type, description, details)"
+            + " values (gen_random_uuid(), 0, now(), gen_random_uuid(), 'x.y', 'y', '{}')");
+  }
+
+  private int activities() {
+    return jdbc.queryForObject("select count(*) from roux_activity", Integer.class);
+  }
+
+  @Test
   void a_role_given_as_a_role_joins_by_its_name() {
     Role member = rbac.findRequiredRole("MEMBER");
 

@@ -41,7 +41,7 @@ class StudentListPaymentTest {
 
   @BeforeEach
   void threeStudents() throws Exception {
-    users.reset("payment", "membership", "plan", "promotion", "student");
+    users.reset();
     clock.set("2026-04-01T12:00:00Z");
     owner = users.owner();
     UUID plan =

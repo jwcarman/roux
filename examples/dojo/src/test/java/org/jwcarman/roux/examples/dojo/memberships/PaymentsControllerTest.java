@@ -42,7 +42,7 @@ class PaymentsControllerTest {
 
   @BeforeEach
   void paymentsOverAYear() throws Exception {
-    users.reset("payment", "membership", "plan", "student");
+    users.reset();
     clock.set("2026-04-15T12:00:00Z");
     owner = users.owner();
     UUID plan =

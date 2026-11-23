@@ -48,7 +48,7 @@ class InviteTest {
 
   @BeforeEach
   void cleanSlate() {
-    users.reset("who_email_link_token");
+    users.reset();
     mail.clear();
   }
 

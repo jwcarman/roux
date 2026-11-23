@@ -53,7 +53,7 @@ class StudentAttendanceTest {
 
   @BeforeEach
   void cleanSlate() throws Exception {
-    users.reset("attendance", "promotion", "school_class", "student", "rank");
+    users.reset();
     owner = users.owner();
     clock.set("2026-03-20T10:00:00Z");
     kids = schoolClass("Kids", "MONDAY");

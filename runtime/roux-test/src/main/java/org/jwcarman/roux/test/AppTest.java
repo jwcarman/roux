@@ -32,7 +32,7 @@ import org.springframework.test.context.ContextConfiguration;
  * The whole app on a test database, with MockMvc, {@link TestUsers} and {@link TestClock}.
  *
  * <p>Test classes with the same configuration share one running app and one database, so each test
- * starts with {@link TestUsers#reset(String...)}. A class that needs other properties adds
+ * starts with {@link TestUsers#reset()}. A class that needs other properties adds
  * {@code @TestPropertySource}; it then gets an app and a database of its own.
  */
 @Target(ElementType.TYPE)

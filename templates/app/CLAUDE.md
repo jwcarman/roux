@@ -61,7 +61,7 @@ missing, ask the person to run `/plugin install roux@roux`.
 
 ## Tests
 
-- Spring tests use `@AppTest`, `TestUsers` (`users.reset(...)` in `@BeforeEach`,
+- Spring tests use `@AppTest`, `TestUsers` (`users.reset()` in `@BeforeEach`, naming no tables,
   `users.signedIn(...)` for a browser) and `TestClock`.
 - Client tests use Vitest, Testing Library and MSW, beside the code they test; a component test
   starts with `// @vitest-environment jsdom`. **The fake server is strict: a request no handler

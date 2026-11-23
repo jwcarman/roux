@@ -46,7 +46,7 @@ class ClassesControllerTest {
 
   @BeforeEach
   void cleanSlate() {
-    users.reset("school_class");
+    users.reset();
     owner = users.owner();
     ivy = users.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
     mo = users.signedIn("Mo Member", "mo@example.org", Roles.MEMBER);

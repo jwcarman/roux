@@ -57,7 +57,7 @@ class MembershipsControllerTest {
 
   @BeforeEach
   void cleanSlate() {
-    users.reset("payment", "membership", "plan", "student", "roux_activity");
+    users.reset();
     clock.set("2026-04-01T12:00:00Z");
     ivy = users.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
     monthly =

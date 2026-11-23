@@ -29,7 +29,7 @@ class RankConstraintsTest {
 
   @BeforeEach
   void cleanSlate() {
-    users.reset("rank");
+    users.reset();
   }
 
   @Test
