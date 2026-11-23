@@ -285,18 +285,22 @@ The permission, in three places:
    (`public final class`, private constructor) and add `Permissions.class` to
    `PermissionClasses.ALL` in `src/test/java/app/identity/PermissionClasses.java`.
 2. A **new** changeset in `db/changelog/roles.xml` granting it ("only the owner" = granted to
-   `OWNER` alone):
+   `OWNER` alone). It goes inside the file's `<databaseChangeLog>`, just before the closing tag:
+   anything after `</databaseChangeLog>` is not well-formed XML, and the app (and every test) fails
+   to start.
 
    ```xml
-   <changeSet id="ranks-permissions" author="app">
-     <sql>
-       INSERT INTO who_role_permission (role_id, permission)
-         SELECT r.id, p.permission FROM who_role r
-         CROSS JOIN (VALUES ('ranks.read'), ('ranks.manage')) AS p(permission)
-         WHERE r.name = 'OWNER'
-         ON CONFLICT DO NOTHING;
-     </sql>
-   </changeSet>
+     <!-- ...the changesets already here, unchanged... -->
+     <changeSet id="ranks-permissions" author="app">
+       <sql>
+         INSERT INTO who_role_permission (role_id, permission)
+           SELECT r.id, p.permission FROM who_role r
+           CROSS JOIN (VALUES ('ranks.read'), ('ranks.manage')) AS p(permission)
+           WHERE r.name = 'OWNER'
+           ON CONFLICT DO NOTHING;
+       </sql>
+     </changeSet>
+   </databaseChangeLog>
    ```
 3. `frontend/src/permissions.gen.ts`, written by a test, never by hand:
    `./mvnw test -Dskip.npm -Dtest=PermissionsListTest`. The first run rewrites the file and fails;
@@ -492,9 +496,17 @@ import { LuMedal } from "react-icons/lu"; // beside nav.ts's other icon imports
 
 ### 11. The Java test: `src/test/java/app/ranks/RanksControllerTest.java`
 
+The app's Java coverage gate is 100%, lines and branches: these tests reach every line of the
+service and controller above, and both sides of `requireUniqueName`'s filter. Keep one test per
+behaviour when you adapt them.
+
 ```java
+package app.ranks;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -509,14 +521,19 @@ import org.jwcarman.roux.test.TestUser;
 import org.jwcarman.roux.test.TestUsers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import app.identity.Roles;
+import tools.jackson.databind.ObjectMapper;
 
 @AppTest
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores.class)
 class RanksControllerTest {
 
+  private static final String RANKS = "/api/ranks";
+
   @Autowired TestUsers users;
+  @Autowired ObjectMapper json;
 
   private TestUser owner;
 
@@ -527,27 +544,91 @@ class RanksControllerTest {
   }
 
   @Test
-  void a_user_is_refused_with_403() throws Exception {
-    users.signedIn("Uma User", "uma@example.org", Roles.USER) // a role without ranks.manage
-        .perform(delete("/api/ranks/" + UUID.randomUUID()))
-        .andExpect(status().isForbidden());
+  void the_owner_adds_lists_edits_and_removes_a_rank() throws Exception {
+    String id = create("White", "WHITE");
+    owner.perform(get(RANKS)).andExpect(status().isOk()).andExpect(jsonPath("$[0].name").value("White"));
+    owner.perform(send(put(RANKS + "/" + id), "Snow", "WHITE", 0L))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.version").value(1));
+    owner.perform(delete(RANKS + "/" + id)).andExpect(status().isNoContent());
+  }
+
+  @Test
+  void an_edit_that_keeps_its_own_name_is_saved() throws Exception {
+    // requireUniqueName finds the rank itself: the filter's other side, which the gate needs.
+    String id = create("White", "WHITE");
+    owner.perform(send(put(RANKS + "/" + id), "White", "YELLOW", 0L)).andExpect(status().isOk());
+  }
+
+  @Test
+  void a_name_another_rank_has_is_a_400_on_the_name_field() throws Exception {
+    create("White", "WHITE");
+    owner.perform(send(post(RANKS), "white", "BLACK", null))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[0].field").value("name"))
+        .andExpect(jsonPath("$.errors[0].message").value("Another rank has this name"));
   }
 
   @Test
   void a_blank_name_is_a_400_on_the_name_field() throws Exception {
-    owner.perform(post("/api/ranks").contentType(MediaType.APPLICATION_JSON)
-            .content("{\"name\":\" \",\"colour\":\"WHITE\"}"))
+    owner.perform(send(post(RANKS), " ", "WHITE", null))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.errors[?(@.field == 'name')].message").value("Must not be blank"));
+        .andExpect(jsonPath("$.errors[0].field").value("name"))
+        .andExpect(jsonPath("$.errors[0].message").value("Must not be blank"));
   }
+
+  @Test
+  void an_edit_at_a_stale_version_is_a_409() throws Exception {
+    String id = create("White", "WHITE");
+    // The first edit must change something: an edit that changes nothing leaves the version at 0.
+    owner.perform(send(put(RANKS + "/" + id), "Snow", "WHITE", 0L)).andExpect(status().isOk());
+    owner.perform(send(put(RANKS + "/" + id), "Ivory", "WHITE", 0L)).andExpect(status().isConflict());
+  }
+
+  @Test
+  void an_unknown_rank_is_a_404() throws Exception {
+    owner.perform(delete(RANKS + "/" + UUID.randomUUID())).andExpect(status().isNotFound());
+  }
+
+  @Test
+  void a_user_without_the_permission_is_a_403() throws Exception {
+    // One sign-in per address: signing the same address in twice throws EmailAddressTakenException.
+    TestUser uma = users.signedIn("Uma User", "uma@example.org", Roles.USER);
+    uma.perform(get(RANKS)).andExpect(status().isForbidden());
+    uma.perform(send(post(RANKS), "White", "WHITE", null)).andExpect(status().isForbidden());
+  }
+
+  @Test
+  void signed_out_is_a_401() throws Exception {
+    users.anonymous().perform(get(RANKS)).andExpect(status().isUnauthorized());
+  }
+
+  private String create(String name, String colour) throws Exception {
+    String body = owner.perform(send(post(RANKS), name, colour, null))
+        .andExpect(status().isCreated())
+        .andReturn().getResponse().getContentAsString();
+    return json.readTree(body).get("id").asString();
+  }
+
+  private MockHttpServletRequestBuilder send(
+      MockHttpServletRequestBuilder request, String name, String colour, Long version) {
+    return request.contentType(MediaType.APPLICATION_JSON)
+        .content(json.writeValueAsString(new Body(name, colour, version)));
+  }
+
+  private record Body(String name, String colour, Long version) {}
 }
 ```
 
-`AppTest`, `TestUser`, `TestUsers` are in `org.jwcarman.roux.test`; role names are the app's `Roles` constants (a new app has `USER`). One test per refusal (401
-signed out, 403 without the permission, 400 per field rule, 404, 409 stale `version`) and the happy
-path (create, list, update at the version read, remove). Assert `$.detail` and field messages word
-for word. Sign in only through `TestUsers`; no `csrf()`, no `user(...)`. The app's coverage gate is
-100%: every branch of the service needs a test. More: `tests.md`.
+- `AppTest`, `TestUser`, `TestUsers` are in `org.jwcarman.roux.test`; role names are the app's
+  `Roles` constants (a new app has `USER`, without the feature's permission).
+- Build request bodies from a record through `ObjectMapper`, not hand-written JSON: a typo in a
+  string is a 400 your test reads as the rule it meant to check.
+- Every value a test sends must satisfy the rules it isn't testing (a name within the limit, an end
+  after its start): without Docker you cannot run these, so read each body against the request
+  record's annotations.
+- Assert `$.detail` and field messages word for word. Sign in only through `TestUsers`; no
+  `csrf()`, no `user(...)`. More: `tests.md`.
 
 ### 12. The Vitest tests: beside the code
 
@@ -664,6 +745,13 @@ request, `users.reset()` takes no tables) and every service branch has a test.
 - Test data that breaks your own rules (an end equal to its start, a name over the limit, a role
   without the permission): without Docker the Java tests cannot run, so read every request body in
   your tests against the request record's annotations before you finish.
+- A changeset written after `</databaseChangeLog>`: the file is not XML, and nothing starts.
+- A stale-version test whose first edit changes nothing: the version stays at 0, so the "stale"
+  edit is a 200. Change a value in the first edit.
+- `users.signedIn(...)` twice with the same address in one test: the second throws
+  `EmailAddressTakenException`. Sign in once and keep the `TestUser`.
+- No test of an edit that keeps the record's own unique name: half of `requireUniqueName`'s branch
+  is never run and the 100% gate fails.
 - A changeset edited after it ran: every existing database refuses to start. Add a new one.
 - `@Table` name and changelog `tableName` differ, or a column type is off: every `@AppTest` fails
   at startup.
