@@ -84,7 +84,7 @@ and in `db.changelog-master.xml`, after the includes already there:
 
   A required field is `nullable="false"`; an optional one leaves the constraint out.
 - **Unique ignoring case** is a unique index on `lower(...)`, named (`rank_name_key`): the service
-  checks first and names the index when it catches the race (below).
+  checks first (below), and the index guards the race the check cannot see.
 - **A reference to another row** is a `uuid` column with a foreign key:
   `<column name="rank_id" type="uuid"><constraints nullable="false" foreignKeyName="student_rank_fk"
   references="rank(id)"/></column>`. A feature that must refuse a removal another feature's rows
@@ -218,19 +218,14 @@ package app.ranks;
 import java.util.List;
 import java.util.UUID;
 
-import org.hibernate.exception.ConstraintViolationException;
 import org.jwcarman.roux.jpa.Versions;
 import org.jwcarman.roux.problems.InvalidFieldException;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
 public class RankService {
-
-  /** The unique index on {@code lower(name)} (ranks.xml). */
-  static final String NAME_INDEX = "rank_name_key";
 
   private static final String NAME_TAKEN = "Another rank has this name";
 
@@ -252,7 +247,7 @@ public class RankService {
 
   public Rank create(RankRequest request) {
     requireUniqueName(request.name(), null);
-    return Rank.of(saveAndFlush(new RankEntity(request.name(), request.colour())));
+    return Rank.of(ranks.saveAndFlush(new RankEntity(request.name(), request.colour())));
   }
 
   public Rank update(UUID id, RankRequest request) {
@@ -261,7 +256,7 @@ public class RankService {
     Versions.require(rank, request.version());
     requireUniqueName(request.name(), id);
     rank.change(request.name(), request.colour());
-    return Rank.of(saveAndFlush(rank));
+    return Rank.of(ranks.saveAndFlush(rank));
   }
 
   public void remove(UUID id) {
@@ -281,26 +276,17 @@ public class RankService {
               throw new InvalidFieldException("name", NAME_TAKEN);
             });
   }
-
-  /** Saves now, so a race the check above missed is caught here, as the same field error. */
-  private RankEntity saveAndFlush(RankEntity rank) {
-    try {
-      return ranks.saveAndFlush(rank);
-    } catch (DataIntegrityViolationException e) {
-      if (e.getCause() instanceof ConstraintViolationException violation
-          && NAME_INDEX.equals(violation.getConstraintName())) {
-        throw new InvalidFieldException("name", NAME_TAKEN);
-      }
-      throw e;
-    }
-  }
 }
 ```
 
 - `@Transactional` on the class; `readOnly = true` on the reads.
 - **A uniqueness clash on what the user typed is an `InvalidFieldException` on that field**, so
-  the form shows it under the field; checked before the save, and caught by the index's name on
-  `saveAndFlush` for two saves at once. Any other violation is rethrown (roux answers it 409).
+  the form shows it under the field, checked before the save. The unique index stays as the
+  database's guard: two saves at once that both pass the check break it, and roux answers that
+  `409` (`This conflicts with existing data`). Don't catch `DataIntegrityViolationException` to
+  turn that race into the field error: no test can make two saves race, so the catch is code the
+  app's 100% coverage rule refuses.
+- `saveAndFlush`, so the answer carries the version the save gave the row.
 - **An edit calls `Versions.require(entity, request.version())` first.** Never compare versions
   by hand ([Errors](errors.md#refuse-a-stale-save-optimistic-locking)).
 - A missing row is the feature's `NotFoundException` subclass, `super("No rank %s", id)`; every
@@ -400,4 +386,4 @@ public class RanksController {
 - Don't edit a changeset that has run; add one.
 - Don't return or accept an entity in a controller; map it to a record.
 - Don't add setters; give the entity methods named for what they do.
-- Don't catch `DataIntegrityViolationException` except to turn one named index into a field error.
+- Don't catch `DataIntegrityViolationException`: roux answers it `409`.
