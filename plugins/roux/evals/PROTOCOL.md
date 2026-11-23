@@ -242,3 +242,12 @@ than no skill (above), for guides Sonnet did not need.
 
 **What would support the claim:** the rewritten skill succeeds at least as often as the current one,
 at a lower mean cost. Anything else is reported as not supported.
+
+## Result: the current skill (fixture f029cf3)
+
+| Arm | Successes | Hidden tests all passed | Build passed | Mean turns | Mean time | Mean cost |
+|---|---|---|---|---|---|---|
+| Sonnet + current skill | 3 of 3 | 3 of 3 | 3 of 3 | 35 (32–39) | 149 s (145–155) | $0.73 ($0.62–$0.87) |
+
+Every run passed all 11 hidden tests and all six of check-roux-way's checks. Close to the same arm
+on 6fa8fdf (3 of 3, 31 turns, 157 s, $0.73).
