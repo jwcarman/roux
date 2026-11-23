@@ -39,6 +39,7 @@ written (`frontend/src/users/` shows the frontend shape).
 
 ### 1. The table: `src/main/resources/db/changelog/ranks.xml`
 
+<!-- fragment: changelog -->
 ```xml
 <changeSet id="rank" author="app">
   <createTable tableName="rank">
@@ -69,6 +70,7 @@ Wrap it in `<databaseChangeLog>` (copy the header of an existing changelog) and 
 
 ### 2. The entity: `app/ranks/RankEntity.java`, and its enum
 
+<!-- file: src/main/java/app/ranks/BeltColour.java -->
 ```java
 package app.ranks;
 
@@ -78,6 +80,7 @@ public enum BeltColour {
 }
 ```
 
+<!-- file: src/main/java/app/ranks/RankEntity.java -->
 ```java
 package app.ranks;
 
@@ -126,11 +129,23 @@ public class RankEntity extends AuditableEntity {
 
 ### 3. Repository, records, not-found
 
-One file each. Imports: `java.util.List`, `java.util.Optional`, `java.util.UUID`,
-`org.springframework.data.jpa.repository.JpaRepository`, `jakarta.validation.constraints.NotBlank`,
-`NotNull`, `Size`, `org.jwcarman.roux.problems.NotFoundException`. No star imports.
+One file per type, each with the package line and the imports it uses (no star imports):
 
+<!-- files: src/main/java/app/ranks/ -->
 ```java
+package app.ranks;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+import org.jwcarman.roux.problems.NotFoundException;
+import org.springframework.data.jpa.repository.JpaRepository;
+
 public interface RankRepository extends JpaRepository<RankEntity, UUID> {
   List<RankEntity> findAllByOrderByNameAsc();
   Optional<RankEntity> findByNameIgnoreCase(String name);
@@ -163,7 +178,10 @@ public class RankNotFoundException extends NotFoundException {
 
 ### 4. The service: `app/ranks/RankService.java`
 
+<!-- file: src/main/java/app/ranks/RankService.java -->
 ```java
+package app.ranks;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -225,7 +243,10 @@ public class RankService {
 
 ### 5. The controller and its permission
 
+<!-- file: src/main/java/app/ranks/RanksController.java -->
 ```java
+package app.ranks;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -288,15 +309,29 @@ permission a caller gets 403, signed out 401.
 
 The permission, in three places:
 
-1. `app/identity/Permissions.java`: `public static final String RANKS_READ = "ranks.read";` and
-   `RANKS_MANAGE = "ranks.manage"`. A new app has no `Permissions` class yet: create it
-   (`public final class`, private constructor) and add `Permissions.class` to
-   `PermissionClasses.ALL` in `src/test/java/app/identity/PermissionClasses.java`.
+1. `src/main/java/app/identity/Permissions.java`: one constant per permission. A new app has no
+   `Permissions` class yet: create it, and add `Permissions.class` to the front of
+   `PermissionClasses.ALL` in `src/test/java/app/identity/PermissionClasses.java` (roux checks only
+   the classes listed there).
+
+   <!-- file: src/main/java/app/identity/Permissions.java -->
+   ```java
+   package app.identity;
+
+   /** The app's permissions: what a role may do. */
+   public final class Permissions {
+     public static final String RANKS_READ = "ranks.read";
+     public static final String RANKS_MANAGE = "ranks.manage";
+
+     private Permissions() {}
+   }
+   ```
 2. A **new** changeset in `db/changelog/roles.xml` granting it ("only the owner" = granted to
    `OWNER` alone). It goes inside the file's `<databaseChangeLog>`, just before the closing tag:
    anything after `</databaseChangeLog>` is not well-formed XML, and the app (and every test) fails
    to start.
 
+   <!-- fragment: roles -->
    ```xml
      <!-- ...the changesets already here, unchanged... -->
      <changeSet id="ranks-permissions" author="app">
@@ -319,6 +354,9 @@ check by hand: every constant is granted to `OWNER` in `roles.xml`, and every gr
 
 ### 6. Query keys: `frontend/src/queryKeys.ts`
 
+One more entry in `queryKeys`:
+
+<!-- fragment: query-keys -->
 ```ts
 ranks: {
   all: ["ranks"] as const,
@@ -329,6 +367,7 @@ ranks: {
 
 ### 7. The resource module: `frontend/src/ranks/ranks.ts`
 
+<!-- file: frontend/src/ranks/ranks.ts -->
 ```ts
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
@@ -358,7 +397,6 @@ export const ranksApi = {
   create: (request: RankRequest) => sendJson<Rank>("POST", "ranks", request),
   update: (id: string, request: RankRequest & { version: number }) =>
     sendJson<Rank>("PUT", path`ranks/${id}`, request),
-  remove: (id: string) => sendJson<void>("DELETE", path`ranks/${id}`),
 };
 
 export const ranksQuery = queryOptions({
@@ -376,13 +414,10 @@ export const updateRank = (id: string, version: number) =>
     mutationFn: (request: RankRequest) => ranksApi.update(id, { ...request, version }),
     meta: { refreshes: [queryKeys.ranks.detail(id), queryKeys.ranks.lists()] },
   });
-
-export const removeRank = mutationOptions({
-  mutationFn: (id: string) => ranksApi.remove(id),
-  meta: { refreshes: [queryKeys.ranks.lists()] },
-});
 ```
 
+- Only what a page uses: every line must run in some test (the 100% gate). A remove button adds
+  `remove` to `ranksApi` and a `removeRank` mutation, with its tests.
 - Paths are relative to `/api/` (`"ranks"`, ``path`ranks/${id}` ``). `path` encodes the values.
 - Helpers mirror the annotations: `text()` ↔ `@NotBlank`, `.max(n)` ↔ `@Size(max = n)`,
   `oneOf(values)` ↔ `@NotNull` enum, `date()` ↔ `@NotNull LocalDate`, `id()` ↔ `@NotNull UUID`,
@@ -392,6 +427,7 @@ export const removeRank = mutationOptions({
 
 ### 8. The form dialog: `frontend/src/ranks/RankFormDialog.tsx`
 
+<!-- file: frontend/src/ranks/RankFormDialog.tsx -->
 ```tsx
 import type { ReactElement } from "react";
 import { notify } from "@jwcarman/roux-web/feedback";
@@ -429,6 +465,7 @@ export function RankFormDialog({ rank, trigger }: { rank?: Rank; trigger: ReactE
 
 A short list (never more than a few hundred rows) is fetched whole with `SimpleQueryTable`:
 
+<!-- file: frontend/src/ranks/RanksPage.tsx -->
 ```tsx
 import { Button, Stack, VisuallyHidden } from "@chakra-ui/react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
@@ -478,6 +515,7 @@ export function RanksPage() {
 
 `frontend/src/routes/_signedIn/ranks.tsx` (thin: guard and component):
 
+<!-- file: frontend/src/routes/_signedIn/ranks.tsx -->
 ```tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { requirePermission } from "@jwcarman/roux-web/session";
@@ -496,6 +534,7 @@ The router plugin writes `routeTree.gen.ts` on build and test.
 `frontend/src/shell/nav.ts`, one more entry (`icon` from `react-icons/lu` only; `permission` the
 one the route checks):
 
+<!-- fragment: nav -->
 ```ts
 import { LuMedal } from "react-icons/lu"; // beside nav.ts's other icon imports
 
@@ -508,6 +547,7 @@ The app's Java coverage gate is 100%, lines and branches: these tests reach ever
 service and controller above, and both sides of `requireUniqueName`'s filter. Keep one test per
 behaviour when you adapt them.
 
+<!-- file: src/test/java/app/ranks/RanksControllerTest.java -->
 ```java
 package app.ranks;
 
@@ -640,6 +680,7 @@ class RanksControllerTest {
 
 ### 12. The Vitest tests: beside the code
 
+<!-- file: frontend/src/ranks/RankFormDialog.test.tsx -->
 ```tsx
 // @vitest-environment jsdom
 import { Button } from "@chakra-ui/react";
@@ -647,7 +688,7 @@ import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { toaster } from "@jwcarman/roux-web/feedback";
+import { Toaster, toaster } from "@jwcarman/roux-web/feedback";
 import { invalidFields, renderWithProviders, server } from "@jwcarman/roux-web/testing";
 import { RankFormDialog } from "./RankFormDialog";
 
@@ -669,12 +710,37 @@ describe("RankFormDialog", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByText("Another rank has this name")).toBeInTheDocument();
   });
+
+  it("edits a rank at the version it read", async () => {
+    let sent: unknown;
+    server.use(
+      http.put("/api/ranks/r1", async ({ request }) => {
+        sent = await request.json();
+        return HttpResponse.json({ id: "r1", name: "Snow", colour: "WHITE", version: 4 });
+      }),
+    );
+    const rank = { id: "r1", name: "White", colour: "WHITE" as const, version: 3 };
+    renderWithProviders(
+      <>
+        <RankFormDialog rank={rank} trigger={<Button>Edit</Button>} />
+        <Toaster />
+      </>,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    await user.clear(screen.getByLabelText(/^Name/));
+    await user.type(screen.getByLabelText(/^Name/), "Snow");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Snow was saved")).toBeInTheDocument();
+    expect(sent).toEqual({ name: "Snow", colour: "WHITE", version: 3 });
+  });
 });
 ```
 
 The page and its guard, through the router (`routes/_signedIn/-ranks.test.tsx`; the `-` keeps it
 out of the route tree):
 
+<!-- file: frontend/src/routes/_signedIn/-ranks.test.tsx -->
 ```tsx
 // @vitest-environment jsdom
 import { screen, within } from "@testing-library/react";
@@ -700,6 +766,7 @@ describe("/ranks", () => {
 });
 ```
 
+- A toast is seen only with `<Toaster />` rendered beside the component.
 - Answer with MSW (`server.use`), never by mocking roux, who, the module or the query client.
   `invalidFields`, `notFound`, `stale`, `serverError` build the server's problems.
 - The fake server is strict: a request no handler answers fails the test. A page that starts

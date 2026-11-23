@@ -64,6 +64,8 @@ jobs:
 
   # The Claude Code plugin: every public roux name is in a guide and in the skill's references,
   # every roux import a reference shows exists, and the skill's index gives each reference's size.
+  # Then the skill's recipe: its feature, built into a fresh copy of the app template, passes that
+  # app's whole build (Java tests on Docker, both 100% coverage gates).
   plugin:
     runs-on: ubuntu-latest
     steps:
@@ -73,6 +75,13 @@ jobs:
           node-version: 'lts/*'
       - name: Check the guides and references
         run: node plugins/roux/scripts/check-guides.mjs
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          java-version: '25'
+          distribution: 'liberica'
+          cache: maven
+      - name: Build the recipe's feature into a fresh app
+        run: plugins/roux/scripts/check-recipe.sh
 
   # The app template as create-roux-app ships it: the export leaves no link to roux's repository and
   # follows roux's version (bumped with it after each release), and the packed starter makes an app
