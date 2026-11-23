@@ -18,7 +18,7 @@ example, the check and the pitfalls.
 ## First, look at the project
 
 - **Versions:** `roux.version` in `pom.xml` and `@jwcarman/roux-web` in `frontend/package.json`
-  must match each other and the version `references/app-setup.md` names. If not, tell the user
+  must match each other and the version `references/app-setup.md` (~1,800 tokens) names. If not, tell the user
   before anything else.
 - **The nearest feature:** in a grown app, find the existing feature most like the task and copy its
   shape (package, folder, files, imports, tests). Java is packaged by feature (`app.<feature>`), the
@@ -58,19 +58,19 @@ example, the check and the pitfalls.
 
 | The task | Read |
 | --- | --- |
-| **A new resource, list, form, page or endpoint; adding a field to one** | `references/feature.md` (start here) |
-| A refusal: 404, a rule, a field, a 409, a stale save, another feature holds it, "already done"; what the browser shows | `references/errors.md` |
-| Rule helpers, a two-field rule (`@After`/`after()`), every field type, a form on a page, 409s on a form, a custom field, a form that doesn't save | `references/forms.md` |
-| A list paged by the server, search and filter chips, URL state, a growing list, a picker, row selection, ordered rows, a column only some see, a view-backed list | `references/lists.md` |
-| Permissions, roles, `permissions.gen.ts`, `UserJoined`, invitable roles, the last owner | `references/permissions.md` |
-| Users, invitations, the signed-in user, an entity per user, who's invitation rules | `references/users.md` |
-| Toasts, confirmations, a button that runs a mutation, a control that saves on change, error pages | `references/feedback.md` |
-| `@AppTest`, `TestUsers`, `TestClock`, mail in tests, MSW answers, route tests, Playwright | `references/tests.md` |
+| **A new resource, list, form, page or endpoint; adding a field to one** | `references/feature.md` (~8,100 tokens) — start here |
+| A refusal: 404, a rule, a field, a 409, a stale save, another feature holds it, "already done"; what the browser shows | `references/errors.md` (~1,400 tokens) |
+| Rule helpers, a two-field rule (`@After`/`after()`), every field type, a form on a page, 409s on a form, a custom field, a form that doesn't save | `references/forms.md` (~1,600 tokens) |
+| A list paged by the server, search and filter chips, URL state, a growing list, a picker, row selection, ordered rows, a column only some see, a view-backed list | `references/lists.md` (~1,900 tokens) |
+| Permissions, roles, `permissions.gen.ts`, `UserJoined`, invitable roles, the last owner | `references/permissions.md` (~1,200 tokens) |
+| Users, invitations, the signed-in user, an entity per user, who's invitation rules | `references/users.md` (~1,400 tokens) |
+| Toasts, confirmations, a button that runs a mutation, a control that saves on change, error pages | `references/feedback.md` (~1,300 tokens) |
+| `@AppTest`, `TestUsers`, `TestClock`, mail in tests, MSW answers, route tests, Playwright | `references/tests.md` (~1,400 tokens) |
 | A new app, required settings, `main.tsx`, the session and guards, navigation, theme, sign-in, CSP | `references/app-setup.md` |
-| Money | `references/money.md` |
-| Today, the organization's zone, formatting dates, times and numbers | `references/dates.md` |
-| A record's history | `references/activity-log.md` |
-| who's emails: wording, subjects, brand | `references/email.md` |
+| Money | `references/money.md` (~800 tokens) |
+| Today, the organization's zone, formatting dates, times and numbers | `references/dates.md` (~1,000 tokens) |
+| A record's history | `references/activity-log.md` (~900 tokens) |
+| who's emails: wording, subjects, brand | `references/email.md` (~600 tokens) |
 
 ## Before you finish
 

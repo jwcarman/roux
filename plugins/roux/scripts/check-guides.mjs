@@ -4,7 +4,9 @@
 //      backticks in some docs/guides/*.md,
 //  (b) every public roux name appears in backticks in some plugins/roux/skills/roux/references/*.md,
 //  (c) every name a reference imports from "@jwcarman/roux-web/<sub>" is an export of that subpath, and
-//  (d) every org.jwcarman.roux type a reference imports is a public roux type.
+//  (d) every org.jwcarman.roux type a reference imports is a public roux type, and
+//  (e) SKILL.md's index names every reference with its size, "(~N tokens)", within 20% of the
+//      file's bytes / 4, so an agent can tell a whole read from a grep before it opens one.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -113,6 +115,19 @@ for (const reference of markdownFiles(referencesDir)) {
   }
   for (const [, fqcn, type] of text.matchAll(/import\s+(?:static\s+)?(org\.jwcarman\.roux\.[\w.]*?\.([A-Z]\w*))(?:\.\w+)?\s*;/g)) {
     if (!javaNames.has(type) && !excludedJava.has(type)) problems.push(`unknown import in ${reference}: ${fqcn}`);
+  }
+}
+
+const skillFile = join(root, "plugins/roux/skills/roux/SKILL.md");
+const skill = readFileSync(skillFile, "utf8");
+for (const reference of markdownFiles(referencesDir)) {
+  const tokens = Math.round(statSync(join(referencesDir, reference)).size / 4);
+  const row = skill.split("\n").find((line) => line.includes(`\`references/${reference}\``));
+  const label = row?.match(/\(~([\d,]+) tokens\)/);
+  if (!label) {
+    problems.push(`no size in SKILL.md for references/${reference}: add (~${tokens} tokens)`);
+  } else if (Math.abs(Number(label[1].replace(",", "")) - tokens) > tokens * 0.2) {
+    problems.push(`stale size in SKILL.md for references/${reference}: says ~${label[1]}, is ~${tokens} tokens`);
   }
 }
 
