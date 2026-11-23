@@ -360,3 +360,25 @@ Against the same day's runs this is a historical comparison: the model or the ev
 have changed in between. It is reported as such.
 
 Secondary: mean cost, turns and time; how many runs ran `check.sh`; why each build failed.
+
+## Result: round 2
+
+| Arm | Successes | Hidden tests all passed | Build passed | Mean turns | Mean time | Mean cost |
+|---|---|---|---|---|---|---|
+| Haiku + rewritten skill (earlier today) | 20 of 30 | 28 of 30 | 20 of 30 | 40 | 188 s | $0.08 |
+| Haiku + round-2 skill | 28 of 30 | 29 of 30 | 29 of 30 | 28 | 154 s | $0.05 |
+
+**Supported:** 28 of 30 (one-sided Fisher's exact p = 0.011 against 20 of 30) at $0.05 a run. Against
+the current skill's 21 of 30 at $0.28, round 2 succeeds more often at less than a fifth of the cost.
+26 of 30 runs ran `check.sh`. A historical comparison: the earlier arms ran the same day on the same
+fixture, not interleaved with this one.
+
+The two failures:
+
+- One run never ran `check.sh` and failed on Java formatting (Spotless), the failure the script
+  exists to prevent.
+- One run did nothing: every Read and Glob it made was denied by the eval's sandbox, and it stopped
+  after 8 turns saying so. An environment failure, counted as a failure as the rules say.
+
+None of round 1's recipe-caused failures (changeset placement, stale-version test, double sign-in,
+the untested own-name branch) recurred.
