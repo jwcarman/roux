@@ -33,9 +33,11 @@ rm -rf "$app/src/test/java"
 git -C "$app" checkout -q "$base" -- src/test/java
 # Except the list of the app's permission classes, which a run adds to (wiring, not a test of its
 # own): PermissionClasses, or in a fixture from before it, PermissionsTest's ALL.
+# Found by name, so the template's app and the dojo, whose packages differ, both work.
 for wiring in PermissionClasses PermissionsTest; do
-  if [ -f "$2/src/test/java/app/identity/$wiring.java" ]; then
-    cp "$2/src/test/java/app/identity/$wiring.java" "$app/src/test/java/app/identity/$wiring.java"
+  found="$(cd "$2" && find src/test/java -name "$wiring.java" -path '*/identity/*' | head -n 1)"
+  if [ -n "$found" ]; then
+    cp "$2/$found" "$app/$found"
     break
   fi
 done
@@ -59,7 +61,7 @@ log="$work/acceptance.log"
   -Dspotless.check.skip=true) >"$work/permissions.log" 2>&1 || true
 its=(-DskipITs)
 if $e2e; then its=(-Dit.test=E2eIT -Dfailsafe.failIfNoSpecifiedTests=false); fi
-(cd "$app" && ./mvnw -B verify -Dtest='app.acceptance.**' -Dsurefire.failIfNoSpecifiedTests=false \
+(cd "$app" && ./mvnw -B verify -Dtest='**.acceptance.**' -Dsurefire.failIfNoSpecifiedTests=false \
   "${its[@]}" -Dmaven.test.failure.ignore=true -Dfrontend.test.skip=true -Dspotless.check.skip=true \
   -Djacoco.skip=true) >"$log" 2>&1 || true
 
@@ -80,7 +82,7 @@ for path in sorted(glob.glob(f"{accept}/e2e/*.spec.ts")):
     src = open(path).read()
     expected += [f"e2e: {t}" for t in re.findall(r'^test\("((?:[^"\\]|\\.)*)"', src, re.M)]
 
-for path in glob.glob(f"{app}/target/surefire-reports/TEST-app.acceptance.*.xml"):
+for path in glob.glob(f"{app}/target/surefire-reports/TEST-*.acceptance.*.xml"):
     for case in ET.parse(path).getroot().iter("testcase"):
         name = f"{case.get('classname').split('.')[-1]}.{case.get('name')}"
         bad = case.find("failure")

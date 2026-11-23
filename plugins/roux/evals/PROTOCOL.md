@@ -176,3 +176,26 @@ the skill on its own and compacted correctly, but in 51 steps it wrote nothing: 
 then the app's files, then, after compacting, roux-web's compiled code in `node_modules`. At that
 pace each run would have taken the full 60 minutes. Neither local model tried (Qwen3-Coder 30B,
 Qwen3.8 27B) can do this task: one writes without checking, the other reads without writing.
+
+## A harder case: Events on the dojo (written before it runs)
+
+**Question:** does the cheaper-model result hold on a harder task? Haiku + skill succeeded 6 of 8
+on Locations against Sonnet without the skill's 0 of 8. Events adds what Locations lacked: a rule
+across two fields (an end date after the start date, with a message the prompt fixes), dates, and
+a grown app (the dojo, a dozen features) to find one's way around.
+
+- **Case:** `dojo-events`, its contract pinned in the prompt as Locations' is. Fixture: the dojo
+  at 6fa8fdf (`eval-fixture.sh 6fa8fdf`), whose preflight passes.
+- **Hidden tests:** 9 Spring tests of the API contract and 2 Playwright tests in the browser
+  (`dojo-events/acceptance`). Proven before any run: the untouched dojo fails all 11 (404s, as it has
+  no events API); a reference implementation passes all 11; and each of 7 mutants of it fails only
+  the tests for what it broke.
+- **Arms and runs:** Haiku + skill (`--ablation none --model haiku`) and the Sonnet pair
+  (`--ablation with-without --model sonnet`), 3 runs each. Every run is reported.
+- **Scoring:** as for Locations: all 11 hidden tests pass, and `./mvnw verify -DskipITs` passes on
+  the run's work with nothing applied after it.
+
+**What would support the claim:** Haiku + skill succeeds at least as often as Sonnet without the
+skill, at a lower mean cost. Sonnet + skill against Sonnet without is reported, against the
+efficiency rule as before (at least as often, at lower mean cost and time). Anything else is
+reported as not supported.
