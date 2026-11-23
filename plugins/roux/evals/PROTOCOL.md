@@ -168,3 +168,11 @@ gives it (`run-opencode.sh --context`, written into the model's `limit`), and a 
 window showed OpenCode compacting. All 6 runs start again; the stopped run is not counted. (The
 Qwen3-Coder runs above had the same gap but never came near their 64K window: their largest prompt
 was 51K.)
+
+## Result of Qwen3.8 27B: stopped, not supported
+
+Stopped by decision 35 minutes into the first run (with the skill), so no run is scored. It loaded
+the skill on its own and compacted correctly, but in 51 steps it wrote nothing: it read the guides,
+then the app's files, then, after compacting, roux-web's compiled code in `node_modules`. At that
+pace each run would have taken the full 60 minutes. Neither local model tried (Qwen3-Coder 30B,
+Qwen3.8 27B) can do this task: one writes without checking, the other reads without writing.
