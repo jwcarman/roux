@@ -6,14 +6,16 @@ mistake is not feedback: it stays under the field.
 
 ## Rules
 
-- Toast only through `notify`; never `toaster.create`, Chakra's toaster or `window.confirm`.
+- Toast only through `notify`; never `toaster.create`, Chakra's toaster or `window.confirm`: `notify`
+  keeps every toast's look and timing the same, and tests clear it with `toaster.remove()`.
 - Don't toast what `useSchemaForm` or `useServerAction` already showed (success via `onSuccess`,
   refusal via `failure`).
 - A button that changes data uses `useServerAction`; one with consequences asks first with
   `useConfirm`.
 - Titles are the outcome in plain words naming the thing: `Ada was promoted`, `Could not remove
   Yellow belt`. A confirm's `confirmLabel` is the verb (`Deactivate`), not `OK`.
-- Use `NotFoundPage` and `ErrorPage`; never write those pages.
+- Use `NotFoundPage` and `ErrorPage`; never write those pages: the router and the error boundary
+  already show them.
 
 ## Names
 

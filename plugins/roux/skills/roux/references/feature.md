@@ -13,19 +13,27 @@ written (`frontend/src/users/` shows the frontend shape).
 
 ## Rules
 
-- Records over the wire, never entities. `Rank` answers, `RankRequest` is sent, and both carry
-  `version`.
+- Records over the wire, never entities: `Rank` answers, `RankRequest` is sent, and both carry
+  `version` (an entity leaks lazy fields and Hibernate's state; `version` is how a stale save is
+  refused).
 - Refusals are exceptions from `org.jwcarman.roux.problems`; no `@ExceptionHandler`, no error
-  `ResponseEntity`. Messages are shown verbatim: write them for people.
-- Every endpoint has `@RequiresPermission(Permissions.X)`: a permission, never a role.
-- The browser's rules come from roux's helpers (`text()`, `oneOf()`...), never `z.string().min(1, "...")`.
-- Pages never call the API or `fetch`; they use the module's queries and mutations.
-- A mutation names what it changes in `meta.refreshes`; never `invalidateQueries`.
-- Query keys only from `src/queryKeys.ts`.
-- Import roux-web only from its subpaths (`@jwcarman/roux-web/api`, `/form`, `/table`, ...).
-- Never edit a Liquibase changeset that has run; add one. Never hand-edit `permissions.gen.ts` or
-  `routeTree.gen.ts`.
-- Time comes from the injected `Clock`; today from `OrganizationCalendar` (see `dates.md`).
+  `ResponseEntity`: roux turns them into Problem Details the browser's form and toasts already read.
+  Messages are shown verbatim: write them for people.
+- Every endpoint has `@RequiresPermission(Permissions.X)`, a permission, never a role: roles are
+  data the owner can change, permissions are code.
+- The browser's rules come from roux's helpers (`text()`, `oneOf()`...), never
+  `z.string().min(1, "...")`: the helpers carry the server's messages word for word.
+- Pages never call the API or `fetch`; they use the module's queries and mutations, which add the
+  CSRF header and turn errors into problems.
+- A mutation names what it changes in `meta.refreshes`, never `invalidateQueries`: the form waits
+  for those refreshes before it closes.
+- Query keys only from `src/queryKeys.ts`, so a refresh names the same key the query used.
+- Import roux-web only from its subpaths (`@jwcarman/roux-web/api`, `/form`, `/table`, ...): the
+  package has no root export.
+- Never edit a Liquibase changeset that has run (every existing database refuses to start); add
+  one. Never hand-edit `permissions.gen.ts` or `routeTree.gen.ts`: the build rewrites them.
+- Time comes from the injected `Clock`, today from `OrganizationCalendar` (see `dates.md`), so tests
+  can set the time.
 
 ## Steps
 

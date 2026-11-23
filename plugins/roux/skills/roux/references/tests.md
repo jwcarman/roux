@@ -7,8 +7,10 @@ time, mail, the database, route tests, paged answers and Playwright.
 
 - Nothing is mocked: Java tests run the whole app on PostgreSQL; Vitest answers requests with MSW.
   Never mock roux, who, the API module or the query client; never H2.
-- Sign in only through `TestUsers`; no Spring Security Test `user(...)`, no `csrf().asHeader()`.
-- Never `new QueryClient()` in a test: `testQueryClient()` or `renderWithProviders`.
+- Sign in only through `TestUsers`, once per address in a test; no Spring Security Test `user(...)`,
+  no `csrf().asHeader()`: `TestUsers` signs in through who as the browser does, with its CSRF.
+- Never `new QueryClient()` in a test: `testQueryClient()` or `renderWithProviders`, or
+  `meta.refreshes` never runs and forms never close.
 - Build problems with the kit (`invalidFields`, `invariantViolation`, `notFound`, `stale`,
   `serverError`), in the server's words.
 - A test that fails is a finding to fix, not to delete.

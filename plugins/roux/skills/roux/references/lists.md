@@ -5,11 +5,13 @@ shown with `QueryTable`, its state in the URL.
 
 ## Rules
 
-- Never page, sort or filter a long list in the browser; never hand-write a pager or a "Showing x to
-  y" line.
-- Sort enum constant names = column ids; a column the server can't sort has `enableSorting: false`.
+- Never page, sort or filter a long list in the browser (it would fetch every row); never
+  hand-write a pager or a "Showing x to y" line: `QueryTable` has them.
+- Sort enum constant names = column ids (the table sends the column id as the sort); a column the
+  server can't sort has `enableSorting: false`, or clicking it asks for a sort the server refuses.
 - The list's key and fetch live in the module as `pageQuery(...)`; the page passes it as `query`.
-- Read URL state only through `tableSearchOf`, `enumSearchOf`, `idSearchOf`, `dateSearchOf`.
+- Read URL state only through `tableSearchOf`, `enumSearchOf`, `idSearchOf`, `dateSearchOf`: they
+  drop a hand-edited bad value instead of failing the page.
 - Define columns at module scope (or `useMemo`): rebuilt columns remount a row's open dialog.
 
 ## Steps: a paged list

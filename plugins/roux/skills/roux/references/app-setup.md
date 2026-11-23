@@ -15,8 +15,8 @@ app already has all of it; read this when changing it.
 - Import roux-web only from subpaths: `/problem`, `/api`, `/paging`, `/table`, `/feedback`, `/form`,
   `/dates`, `/theme`, `/signin`, `/session`, `/navigation`, `/money`, `/activity`, `/organization`,
   `/testing`. No root import, nothing from its source.
-- No versions on roux's, who's or jpa-utils' dependencies (`roux-bom` pins them); don't add who's
-  starter yourself.
+- No versions on roux's, who's or jpa-utils' dependencies (`roux-bom` pins versions tested
+  together); don't add who's starter yourself: roux's starter brings it.
 - Never write the theme, nonce or title into `index.html`, mount `ChakraProvider` or an Emotion
   `CacheProvider`, or hand-write sign-in calls.
 

@@ -11,7 +11,7 @@ in its brand colour. Delivery is the app's: `who-email-smtp` (with `spring-boot-
   other wording.
 - `{{ }}`, never `{{{ }}}`, in `.html` (the app's name is typed by the owner).
 - Never hard-code the app's name or colour: read `extra.roux`.
-- No images or web fonts.
+- No images or web fonts: many mail clients block them.
 
 ## Names
 

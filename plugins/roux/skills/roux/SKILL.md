@@ -1,6 +1,6 @@
 ---
 name: roux
-description: Builds features the roux way in a Spring Boot 4 + React 19 app built on roux (org.jwcarman.roux, roux-bom, roux-spring-boot-starter, @jwcarman/roux-web) - Problem Details errors and roux's exceptions, the API client, TanStack Query modules with meta.refreshes, Zod forms through useSchemaForm and the rule helpers, server-paged QueryTable lists, toasts and confirmations, and tests with MSW and @AppTest. Use this skill whenever the project depends on org.jwcarman.roux or @jwcarman/roux-web, or the user asks to add or change a list, table, form, dialog, page, endpoint, error, query or mutation in such an app - even when they don't say "roux" but the code clearly uses it (imports from @jwcarman/roux-web/..., NotFoundException from org.jwcarman.roux.problems, PageDto, useSchemaForm, QueryTable).
+description: Builds and changes features in a Spring Boot + React app built on roux (org.jwcarman.roux, roux-bom, @jwcarman/roux-web) - entities and endpoints, errors, permissions, lists and tables, forms and dialogs, pages, and their tests. Use it whenever the project depends on roux or its code uses @jwcarman/roux-web, useSchemaForm, QueryTable, PageDto or org.jwcarman.roux.problems, even when the user does not say "roux".
 ---
 
 # roux
@@ -31,22 +31,27 @@ example, the check and the pitfalls.
 ## The conventions
 
 - Controllers take and return records (`Rank`, `RankRequest`, `PageDto<Rank>`), never entities; an
-  edit's request carries `version`.
+  edit's request carries `version`, which is how a stale save becomes a 409.
 - Refusals are exceptions (`NotFoundException` subclass, `InvariantViolationException`,
   `InvalidFieldException`, `ConflictException`) and `Versions.require`. No `@ExceptionHandler`, no
-  error `ResponseEntity`. Messages are for people.
-- Every endpoint has `@RequiresPermission` with a permission, never a role.
+  error `ResponseEntity`: roux makes the Problem Details the browser reads. Messages are for people.
+- Every endpoint has `@RequiresPermission` with a permission, never a role: roles are data the
+  owner edits.
 - One frontend module per resource: schema, API object (`getJson`, `sendJson`, `path`), queries,
-  mutations. Pages never call the API or `fetch`.
-- Mutations name what they refresh in `meta.refreshes`; never `invalidateQueries`. Use
-  `createQueryClient()` (`testQueryClient()` in tests), never `new QueryClient()`.
+  mutations. Pages never call the API or `fetch` (the module adds CSRF and reads problems).
+- Mutations name what they refresh in `meta.refreshes`, never `invalidateQueries`; use
+  `createQueryClient()` (`testQueryClient()` in tests), never `new QueryClient()`: only roux's client
+  runs the refreshes, and forms wait for them.
 - Forms go through `useSchemaForm` with roux's rule helpers (`text()`, `oneOf()`...); never retype a
-  server message.
+  server message: the helpers carry the server's words, so the two never disagree.
 - Buttons that change data use `useServerAction`; consequences ask first with `useConfirm`; outcomes
   are told with `notify`.
-- Long lists are paged by the server and shown with `QueryTable`, state in the URL.
-- Import roux-web only from its subpaths (`@jwcarman/roux-web/api`, `/form`, `/table`...).
-- Time from the injected `Clock`; today from `OrganizationCalendar` / `today()`.
+- Long lists are paged by the server and shown with `QueryTable`, state in the URL (so a link or
+  reload keeps the page).
+- Import roux-web only from its subpaths (`@jwcarman/roux-web/api`, `/form`, `/table`...): it has
+  no root export.
+- Time from the injected `Clock`; today from `OrganizationCalendar` / `today()`, so tests set the
+  time and "today" is the organization's, not the server's.
 - Never suppress a warning; no star imports.
 
 ## Which reference

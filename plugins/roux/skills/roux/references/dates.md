@@ -10,8 +10,10 @@ this month, default dates and "not in the future" are the organization's on both
 - Time comes from the injected `Clock`; never `now()` without it.
 - Never store a date computed from the clock and a zone: store the `Instant`, or the date the person
   picked.
-- Never pass a locale or zone to a formatter, or use `Intl`/`toLocaleString`: use roux's formatters.
-- `@NotInFuture`, never `@PastOrPresent`, for a picked date.
+- Never pass a locale or zone to a formatter, or use `Intl`/`toLocaleString`: use roux's formatters,
+  which use the organization's locale and zone so every viewer sees the same date.
+- `@NotInFuture`, never `@PastOrPresent`, for a picked date: `@PastOrPresent` uses the server's
+  zone, so near midnight it refuses the organization's today.
 - Date arithmetic with date-fns (`addDays`, `isAfter`); no hand-written date math.
 
 ## Names
