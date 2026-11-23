@@ -149,3 +149,14 @@ loaded it); so this measured the model, not the skill. Qwen never ran `./mvnw` i
 `mvn` once), and two runs never ran a build at all. The roux-way checks were cleaner with the skill
 present (fetch, roux internals and forms failed 4 times without it, once with it), but the skill was
 never loaded, so that is not credited to it.
+
+## A second local model: Qwen3.8 27B (written before it runs)
+
+Same as the Qwen3-Coder test above (agent, container, fixture, prompt, scoring, 3 runs per arm,
+alternating, 60-minute limit), with one model change: Qwen3.8 27B (LM Studio's
+`qwen/qwen3.8-27b`, 4-bit MLX, 128K context). The context is larger because Qwen3-Coder's runs
+reached 51K of their 64K without the skill loaded, and the skill's guides would add more.
+
+**What would support the claim:** with the skill, it succeeds more often than without. Anything
+else is reported as not supported, along with whether the skill was loaded. If neither arm
+succeeds, the 8-bit build of the same model may be tried next, under its own rules written first.
