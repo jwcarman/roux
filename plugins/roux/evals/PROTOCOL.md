@@ -251,3 +251,18 @@ at a lower mean cost. Anything else is reported as not supported.
 
 Every run passed all 11 hidden tests and all six of check-roux-way's checks. Close to the same arm
 on 6fa8fdf (3 of 3, 31 turns, 157 s, $0.73).
+
+## Result: the rewritten skill (fixture f029cf3)
+
+| Arm | Successes | Hidden tests all passed | Build passed | Mean turns | Mean time | Mean cost |
+|---|---|---|---|---|---|---|
+| Sonnet + current skill | 3 of 3 | 3 of 3 | 3 of 3 | 35 (32–39) | 149 s (145–155) | $0.73 ($0.62–$0.87) |
+| Sonnet + rewritten skill | 2 of 3 | 3 of 3 | 2 of 3 | 32 (24–39) | 157 s (129–177) | $0.61 ($0.50–$0.70) |
+| *For reference, 6fa8fdf:* Sonnet, no skill | 3 of 3 | 3 of 3 | 3 of 3 | 25 | 143 s | $0.58 |
+
+**Not supported.** The rewritten skill cost 17% less a run, but succeeded 2 of 3 against 3 of 3,
+and the rule asked for at least as often. Run 2 built a working feature (all 11 hidden tests
+passed). Its build failed on one of its own Java tests: `eventsAreAnsweredSoonestFirst` created an
+event that ends on the day it starts, which the run's own `@After` rule refuses (400). The sandbox
+has no Docker, so the run could not run the test to see it. With 3 runs per arm, one failure is
+within the spread seen on Locations (Sonnet + skill, 5 of 8).
