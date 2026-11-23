@@ -5,8 +5,9 @@ expected_outcome: |
   (name and kind) and a dialog to add and edit one. A name is required, at most 40 characters and
   unique; a duplicate is refused by the server as an error on the name field and shown under it in
   the dialog. Anyone but the owner is refused (403) by the locations API.
-  The full build and roux's way are also checked by script after the run (check-roux-way.sh on the
-  run's directory). The graders named NN-roux-* judge roux's way (roux-web's client and forms,
-  roux's rule messages and exceptions, no roux internals).
+  Scored by script after the run, not by the graders here: eval-acceptance.sh runs the case's
+  hidden acceptance tests (acceptance/: Spring tests of the API contract the prompt pins, and
+  Playwright in the browser), and check-roux-way.sh runs the app's own build and roux's way. The one
+  grader here says whether the skill fired.
 context:
   scaffold_script: place-app.sh
