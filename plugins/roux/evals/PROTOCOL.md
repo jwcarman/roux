@@ -266,3 +266,37 @@ passed). Its build failed on one of its own Java tests: `eventsAreAnsweredSoones
 event that ends on the day it starts, which the run's own `@After` rule refuses (400). The sandbox
 has no Docker, so the run could not run the test to see it. With 3 runs per arm, one failure is
 within the spread seen on Locations (Sonnet + skill, 5 of 8).
+
+## Does agent-friendly wording help where the skill is needed? (written before it runs)
+
+**Hypothesis:** on a new app with nothing to copy, an agent with the rewritten skill (written for
+agents) reaches a green build more often than with the current skill (copies of the guides), at no
+higher cost. The dojo could not test this: there, agents copy the nearest feature and mostly do not
+read the skill.
+
+- **Model:** Haiku only, where wording should matter most (it leans on the docs; Haiku + current
+  skill went 6 of 8 on Locations).
+- **Case:** `app-locations` only: the one new-app case with hidden acceptance tests (10). The other
+  new-app cases are scored by LLM graders.
+- **Fixture:** the app template at 143165c (`eval-fixture.sh --app 143165c`).
+- **Arms:** Haiku + current skill (the skill at 0afcc0a, the last commit before the rewrite, run from
+  a worktree there) and Haiku + rewritten skill (at 143165c, which adds a pitfall on test data that
+  breaks the feature's own rules), 30 runs each (`--ablation none --model haiku`). The arms alternate
+  in batches of 5 (current first). Every run is reported; none is rerun or dropped. A run that errors
+  or times out is a failure.
+- **Scoring:** unchanged: all 10 hidden tests pass, and `./mvnw verify -DskipITs` passes on the run's
+  work with nothing applied after it.
+- **Not possible:** letting agents run their Java tests. A probe showed the eval sandbox refuses a
+  TCP connection to a local PostgreSQL and drops outside environment variables, so
+  `ROUX_TEST_DATABASE_URL` cannot reach it. Both arms are equally without Docker.
+
+**Decision rule.** Primary: successes, by a one-sided Fisher's exact test.
+
+- **Supported:** the rewritten skill succeeds more often, p < 0.05.
+- **Refuted:** the current skill succeeds more often, p < 0.05; or the rewrite succeeds no more
+  often and costs more.
+- **Not shown:** anything else. With about 75% for the current skill, 30 runs per arm detect a rise
+  to 95% about 60% of the time, so a null result is weak evidence of no effect, not proof.
+
+Secondary, reported for both arms: mean cost, turns and time; the hidden tests and the build as
+separate pass counts; which references each run read; why each build failed.
