@@ -1,0 +1,5 @@
+# What build-image.sh leaves out of the fixture it sends to Docker: the Mac's own binaries.
+.mvn/jdk
+target
+frontend/node_modules
+e2e/node_modules

@@ -111,3 +111,26 @@ PermissionsTest writes it") meeting a sandbox with no Docker, where PermissionsT
 
 One case, 8 runs per arm, written and scored by the skill's author: a result for this case, not yet
 for roux's skill in general.
+
+## A local open-weight model (written before it runs)
+
+**Question:** does the skill help a local open-weight model do the same task?
+
+- **Agent and model:** OpenCode v2.2.5 with Qwen3-Coder 30B (LM Studio's `qwen/qwen3-coder-30b`,
+  8-bit, 64K context), served by LM Studio on a MacBook Pro (M5 Max, 64 GB).
+- **Where it runs:** a Docker container (`scripts/opencode/`), one run at a time, holding a Linux
+  copy of the same fixture (built from the fixture at d8443ee by `build-image.sh`). The container
+  sees only its own copy of the app: not this repository, not the hidden tests. With the skill, roux's
+  skill is copied into the app's `.claude/skills/roux/`; without, there is no roux skill anywhere in
+  the container (a probe confirmed both; OpenCode's own two built-in skills are in both arms).
+- **Arms and runs:** with the skill and without, 3 runs each, alternating (with-1, without-1, …).
+  Same prompt. A run is stopped after 60 minutes and scored on what it left; every run is reported.
+- **Scoring:** unchanged. The run's diff is applied to the Mac fixture and scored by the same
+  hidden tests and the same `./mvnw verify -DskipITs`, with nothing applied after the run.
+- **Differences from the Claude Code runs:** a different agent; no API cost (turns are OpenCode's
+  steps; tokens are reported); the container can reach the internet, where the eval sandbox
+  refused (the fixture already holds everything a run needs); no Docker, as before.
+
+**What would support the claim:** the model with the skill succeeds more often than without it.
+Anything else is reported as not supported. The comparison with the Claude Code arms is reported
+side by side, not as a measured difference: the agent and the model both differ.
