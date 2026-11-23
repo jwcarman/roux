@@ -7,7 +7,7 @@ import { requireSignedIn } from "@jwcarman/roux-web/session";
  * The routes under `_signedIn/` need a signed-in caller; a signed-out visitor goes to sign in and,
  * once signed in, back to the page they asked for. Their pages read the caller with `useMe()`.
  */
-export const Route = createFileRoute<"/_signedIn">()({
+export const Route = createFileRoute("/_signedIn")({
   beforeLoad: ({ context, location, cause }) => {
     const me = context.session.currentMe();
     // Only a page being opened is remembered: when the session ends on a page (signing out, or it

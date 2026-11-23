@@ -13,6 +13,6 @@ function LinkLanding() {
   );
 }
 
-export const Route = createFileRoute<"/signin/link">()({
+export const Route = createFileRoute("/signin/link")({
   component: LinkLanding,
 });

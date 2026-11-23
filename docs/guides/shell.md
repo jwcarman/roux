@@ -42,7 +42,7 @@ title. It replaces `ChakraProvider`. Mount no other Chakra provider, and no Emot
 import { requirePermission } from "@jwcarman/roux-web/session";
 import { AppearanceSettings } from "@jwcarman/roux-web/theme";
 
-export const Route = createFileRoute<"/_signedIn/appearance">()({
+export const Route = createFileRoute("/_signedIn/appearance")({
   beforeLoad: ({ context }) => requirePermission(context.me, THEME_MANAGE),
   component: () => (
     <Stack gap="8">

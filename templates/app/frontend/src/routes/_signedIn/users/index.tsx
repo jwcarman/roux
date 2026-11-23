@@ -11,7 +11,7 @@ import {
 } from "../../../users/UsersPage";
 import { enumSearchOf, tableSearchOf } from "@jwcarman/roux-web/paging";
 
-export const Route = createFileRoute<"/_signedIn/users/">()({
+export const Route = createFileRoute("/_signedIn/users/")({
   beforeLoad: ({ context }) => requirePermission(context.me, USERS_READ),
   validateSearch: (raw: Record<string, unknown>): UsersSearch => ({
     ...tableSearchOf(raw, USER_SORTS),

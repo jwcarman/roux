@@ -7,7 +7,7 @@ import { UserDetail } from "../../../users/UserDetail";
 import { userQuery } from "../../../users/users";
 
 /** A user's page. The loader fetches the user first; a user that does not exist is a 404. */
-export const Route = createFileRoute<"/_signedIn/users/$userId">()({
+export const Route = createFileRoute("/_signedIn/users/$userId")({
   beforeLoad: ({ context }) => requirePermission(context.me, USERS_READ),
   loader: async ({ context, params }) => {
     try {

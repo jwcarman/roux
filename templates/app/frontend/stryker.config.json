@@ -5,6 +5,13 @@
     "configFile": "vite.config.ts"
   },
   "coverageAnalysis": "perTest",
+  "plugins": [
+    "@stryker-mutator/vitest-runner",
+    "./stryker-route-paths.mjs"
+  ],
+  "ignorers": [
+    "route-path"
+  ],
   "mutate": [
     "src/**/*.{ts,tsx}",
     "!src/**/*.test.*",
