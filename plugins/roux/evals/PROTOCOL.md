@@ -160,3 +160,11 @@ reached 51K of their 64K without the skill loaded, and the skill's guides would 
 **What would support the claim:** with the skill, it succeeds more often than without. Anything
 else is reported as not supported, along with whether the skill was loaded. If neither arm
 succeeds, the 8-bit build of the same model may be tried next, under its own rules written first.
+
+**Restarted (harness bug).** The first attempt was stopped 11 minutes into its first run (with the
+skill, 26 steps, reading only, no code yet): OpenCode's config gave the model no context limit, so
+OpenCode never compacted, and the run was about to overflow LM Studio's 128K window. The config now
+gives it (`run-opencode.sh --context`, written into the model's `limit`), and a probe at a small
+window showed OpenCode compacting. All 6 runs start again; the stopped run is not counted. (The
+Qwen3-Coder runs above had the same gap but never came near their 64K window: their largest prompt
+was 51K.)
