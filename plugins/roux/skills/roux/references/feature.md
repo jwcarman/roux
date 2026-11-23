@@ -148,7 +148,8 @@ public class RankNotFoundException extends NotFoundException {
   `Must be between 0 and 40 characters`) are the ones the browser's helpers show.
 - `version` is a nullable `Long` with no annotation: one record for create and edit.
 - A rule between two fields is `@After(field = "endsOn", other = "startsOn")` on the record
-  (`org.jwcarman.roux.validation.After`), never a service check: see `forms.md`.
+  (`org.jwcarman.roux.validation.After`), never a service check: see `forms.md`. Equal is not after:
+  an event that ends the day it starts is refused.
 - A long list's repository extends `SearchableRepository<RankEntity, UUID>` instead: see "A long
   list" below.
 
@@ -660,6 +661,9 @@ request, `users.reset()` takes no tables) and every service branch has a test.
 
 ## Pitfalls
 
+- Test data that breaks your own rules (an end equal to its start, a name over the limit, a role
+  without the permission): without Docker the Java tests cannot run, so read every request body in
+  your tests against the request record's annotations before you finish.
 - A changeset edited after it ran: every existing database refuses to start. Add a new one.
 - `@Table` name and changelog `tableName` differ, or a column type is off: every `@AppTest` fails
   at startup.
