@@ -69,15 +69,15 @@ example, the check and the pitfalls.
 
 ## Before you finish
 
-Without Docker (an agent's sandbox), from the app's root:
+Without Docker (an agent's sandbox), from the app's root, in this order:
 
-1. `./mvnw spotless:apply test-compile` after the last Java change: the build fails on unformatted
+1. After a permission change, `./mvnw test -Dskip.npm -Dtest=PermissionsListTest` until it passes
+   (it rewrites `permissions.gen.ts`; every later step builds the frontend against it).
+2. `cd frontend && npm run coverage` (tests with the 100% gate), then `npm run build` (type check).
+3. `./mvnw spotless:apply test-compile` after the last Java change: the build fails on unformatted
    Java, and this also compiles the tests.
-2. After a permission change, `./mvnw test -Dskip.npm -Dtest=PermissionsListTest` until it passes
-   (it rewrites `permissions.gen.ts`).
-3. `cd frontend && npm test`, then `npm run build` (the type check).
 
-With Docker, `./mvnw verify` runs everything: Java tests, 100% coverage on both sides, Playwright.
+With Docker, `./mvnw verify` runs everything: Java tests, coverage on both sides, Playwright.
 Without it, check your Java tests by reading them against `feature.md`.
 
 Then check the change against the **Pitfalls** of each reference you used. A test that fails is a

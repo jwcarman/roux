@@ -59,9 +59,31 @@ Wrap it in `<databaseChangeLog>` (copy the header of an existing changelog) and 
 - A table name that is a SQL word (`event`, `order`, `user`) is fine quoted by Liquibase, but
   prefer the feature's name as is; the entity's `@Table(name = ...)` must match it exactly.
 
-### 2. The entity: `app/ranks/RankEntity.java`
+### 2. The entity: `app/ranks/RankEntity.java`, and its enum
 
 ```java
+package app.ranks;
+
+/** A rank's belt colour; the constants are the browser's BELT_COLOURS. */
+public enum BeltColour {
+  WHITE, YELLOW, ORANGE, GREEN, BLUE, BROWN, BLACK
+}
+```
+
+```java
+package app.ranks;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Table;
+
+import org.jwcarman.jpa.spring.audit.AuditableEntity;
+
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
 @Entity
 @Table(name = "rank")
 @Getter
@@ -96,6 +118,10 @@ public class RankEntity extends AuditableEntity {
 
 ### 3. Repository, records, not-found
 
+One file each. Imports: `java.util.List`, `java.util.Optional`, `java.util.UUID`,
+`org.springframework.data.jpa.repository.JpaRepository`, `jakarta.validation.constraints.NotBlank`,
+`NotNull`, `Size`, `org.jwcarman.roux.problems.NotFoundException`. No star imports.
+
 ```java
 public interface RankRepository extends JpaRepository<RankEntity, UUID> {
   List<RankEntity> findAllByOrderByNameAsc();
@@ -129,6 +155,14 @@ public class RankNotFoundException extends NotFoundException {
 ### 4. The service: `app/ranks/RankService.java`
 
 ```java
+import java.util.List;
+import java.util.UUID;
+
+import org.jwcarman.roux.jpa.Versions;
+import org.jwcarman.roux.problems.InvalidFieldException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
 @Transactional
 public class RankService {
@@ -183,6 +217,25 @@ public class RankService {
 ### 5. The controller and its permission
 
 ```java
+import java.util.List;
+import java.util.UUID;
+
+import jakarta.validation.Valid;
+
+import org.jwcarman.who.spring.security.RequiresPermission;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+import app.identity.Permissions;
+
 @RestController
 @RequestMapping("/api/ranks")
 public class RanksController {
@@ -247,6 +300,9 @@ The permission, in three places:
 3. `frontend/src/permissions.gen.ts`, written by a test, never by hand:
    `./mvnw test -Dskip.npm -Dtest=PermissionsListTest`. The first run rewrites the file and fails;
    run it again until it passes. No Docker needed.
+
+`PermissionsTest` (which checks the grants against the constants) needs Docker, so without it
+check by hand: every constant is granted to `OWNER` in `roles.xml`, and every grant names a constant.
 
 ### 6. Query keys: `frontend/src/queryKeys.ts`
 
@@ -428,12 +484,33 @@ The router plugin writes `routeTree.gen.ts` on build and test.
 one the route checks):
 
 ```ts
+import { LuMedal } from "react-icons/lu"; // beside nav.ts's other icon imports
+
 { label: "Ranks", to: "/ranks", icon: LuMedal, permission: "ranks.read", description: "The belts a student can hold." },
 ```
 
 ### 11. The Java test: `src/test/java/app/ranks/RanksControllerTest.java`
 
 ```java
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.UUID;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayNameGeneration;
+import org.junit.jupiter.api.DisplayNameGenerator;
+import org.junit.jupiter.api.Test;
+import org.jwcarman.roux.test.AppTest;
+import org.jwcarman.roux.test.TestUser;
+import org.jwcarman.roux.test.TestUsers;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+
+import app.identity.Roles;
+
 @AppTest
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores.class)
 class RanksControllerTest {
@@ -505,6 +582,34 @@ describe("RankFormDialog", () => {
 });
 ```
 
+The page and its guard, through the router (`routes/_signedIn/-ranks.test.tsx`; the `-` keeps it
+out of the route tree):
+
+```tsx
+// @vitest-environment jsdom
+import { screen, within } from "@testing-library/react";
+import { http, HttpResponse } from "msw";
+import { describe, expect, it } from "vitest";
+import { server } from "@jwcarman/roux-web/testing";
+import { RANKS_READ } from "../../permissions.gen";
+import { renderRoute } from "../../testing/route";
+
+describe("/ranks", () => {
+  it("lists the ranks", async () => {
+    server.use(http.get("/api/ranks", () => HttpResponse.json([{ id: "r1", name: "White", colour: "WHITE", version: 0 }])));
+    renderRoute("/ranks", { permissions: [RANKS_READ] });
+    const table = await screen.findByRole("table", { name: "Ranks" });
+    expect(await within(table).findByText("White")).toBeInTheDocument();
+  });
+
+  it("sends someone without the permission home", async () => {
+    const { router } = renderRoute("/ranks", { permissions: [] });
+    await screen.findByRole("heading", { name: /^Welcome/ });
+    expect(router.state.location.pathname).toBe("/");
+  });
+});
+```
+
 - Answer with MSW (`server.use`), never by mocking roux, who, the module or the query client.
   `invalidFields`, `notFound`, `stale`, `serverError` build the server's problems.
 - The fake server is strict: a request no handler answers fails the test. A page that starts
@@ -512,8 +617,9 @@ describe("RankFormDialog", () => {
   `grep -rlE "RanksPage|/ranks|/api/ranks" frontend/src --include=*.test.tsx` and add handlers.
 - A route test starts its file name with `-` (`routes/_signedIn/-ranks.test.tsx`) and uses
   `renderRoute` from `src/testing/route.tsx`.
-- Frontend coverage is 100% too: test the page (rows, empty text), the dialog (create, edit, field
-  error) and any button.
+- Frontend coverage is 100% (`npm run coverage` enforces it): every line of the module, page, dialog
+  and route must run in some test. Test create and edit in the dialog, the page's rows and empty
+  text, the guard, and every button (remove: confirm, then the request).
 
 ## A long list (paged by the server)
 
@@ -536,19 +642,21 @@ PageParams params` in the controller answering `PageDto<Rank>`, `pageQuery(...)`
 
 ## Check
 
-Without Docker (an agent's sandbox), in order, from the app's root:
+Without Docker (an agent's sandbox), in this order, from the app's root:
 
-1. `./mvnw spotless:apply test-compile` — formats the Java (the build fails on unformatted files)
-   and compiles main and test code. Run it after the last Java change.
-2. `./mvnw test -Dskip.npm -Dtest=PermissionsListTest` — repeat until it passes, after any
-   permission change.
-3. `cd frontend && npm test` — Vitest; read every failure.
-4. `cd frontend && npm run build` — the type check (`tsc -b`) and the bundle.
+1. **If a permission changed:** `./mvnw test -Dskip.npm -Dtest=PermissionsListTest`, repeated until
+   it passes (it rewrites `frontend/src/permissions.gen.ts`). First, because everything after it
+   builds the frontend, which fails against a stale file.
+2. `cd frontend && npm run coverage` (Vitest with the 100% coverage gate) and `npm run build`
+   (bundle and `tsc -b` type check). Read every failure; `npm test` is the quicker loop.
+3. `./mvnw spotless:apply test-compile`, after the last Java change: formats the Java (the build
+   fails on unformatted files) and compiles main and test code. It also runs the frontend's
+   `npm ci`, coverage and build again (add `-Dskip.npm` to leave them out while iterating).
 
-With Docker, `./mvnw verify` runs all of it plus the Java tests, both coverage gates (100%) and
-Playwright; `-DskipITs` leaves out Playwright. Without Docker the Java tests cannot run: read your
-test against the recipe instead (the role names exist in `Roles`, the JSON matches the request,
-`users.reset()` takes no tables).
+With Docker, `./mvnw verify` runs all of it plus the Java tests, the Java coverage gate (100%),
+`PermissionsTest` and Playwright (`-DskipITs` leaves out Playwright). Without Docker the Java tests
+cannot run: read each test against this recipe (role names exist in `Roles`, the JSON matches the
+request, `users.reset()` takes no tables) and every service branch has a test.
 
 ## Pitfalls
 
