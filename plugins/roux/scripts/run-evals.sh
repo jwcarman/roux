@@ -8,19 +8,22 @@
 # The fixtures come from evals/fixture.local (the dojo) and evals/fixture-app.local (a new app),
 # written by eval-fixture.sh; an app-* case runs on the new app.
 #
-# Usage: run-evals.sh [--runs N] [--model M] <out dir> <case>...   (defaults: 3 runs, sonnet)
+# Usage: run-evals.sh [--runs N] [--model M] [--ablation with-without|none] <out dir> <case>...
+#        (defaults: 3 runs, sonnet, with-without; none runs only the arm with the plugin)
 set -uo pipefail
 runs=3
 model=sonnet
+ablation=with-without
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --runs) runs="$2"; shift 2 ;;
     --model) model="$2"; shift 2 ;;
+    --ablation) ablation="$2"; shift 2 ;;
     *) break ;;
   esac
 done
 if [ "$#" -lt 2 ]; then
-  echo "usage: $(basename "$0") [--runs N] [--model M] <out dir> <case>..." >&2
+  echo "usage: $(basename "$0") [--runs N] [--model M] [--ablation with-without|none] <out dir> <case>..." >&2
   exit 2
 fi
 OUT="$1"; shift
@@ -31,7 +34,7 @@ mkdir -p "$OUT"
 for case in "$@"; do
   fixture="$DOJO"; [[ "$case" == app-* ]] && fixture="$APP"
   echo "== $case $(date +%T)"
-  (cd "$PLUGIN" && claude plugin eval . --scaffold --trust-plugin --ablation with-without --runs "$runs" \
+  (cd "$PLUGIN" && claude plugin eval . --scaffold --trust-plugin --ablation "$ablation" --runs "$runs" \
     --model "$model" --concurrency 3 --case "$case" --allow-tools Bash Write Edit --no-publish \
     --max-cost-usd 25 --keep-temp --json "$OUT/$case.json" --output-dir "$OUT/$case-out" \
     >"$OUT/$case.log" 2>&1)

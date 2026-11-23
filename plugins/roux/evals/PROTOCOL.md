@@ -51,3 +51,28 @@ this case before any wider claim.
 The person who wrote the skill also wrote the case and its hidden tests. The case is an ordinary
 feature request of the kind roux's users send, and its contract is pinned in the prompt so the
 hidden tests can check it, which may make the task easier for both arms alike.
+
+## Result of the measured run (fixture at d8443ee)
+
+| Arm | Successes | Mean turns | Mean time | Mean cost |
+|---|---|---|---|---|
+| Sonnet, no skill | 0 of 3 | 39 | 206 s | $0.88 |
+| Sonnet + skill | 2 of 3 | 33 | 163 s | $0.77 |
+| Haiku, no skill | 1 of 3 | 65 | 396 s | $0.56 |
+| Haiku + skill | 3 of 3 | 56 | 265 s | $0.37 |
+
+Every run passed all 10 hidden tests; the build decided success. Both claims were supported, as a
+signal. (The skill-fired grader also passed in two Sonnet no-skill runs, which called a `roux`
+skill that did not exist; it is not part of the scoring.)
+
+## Follow-up (written before it runs)
+
+Same case, fixture, skill and scoring as above, with no change but the driver's `--ablation`
+option. 5 more runs each of Haiku + skill (`--ablation none --model haiku`) and of the Sonnet pair
+(`--ablation with-without --model sonnet`: the eval has no way to run only its no-skill arm, so
+Sonnet + skill runs too and is reported). Every run is reported.
+
+The cheaper-model claim stands if, over all 8 runs of each arm (the 3 above and these 5), Haiku +
+skill succeeds at least as often as Sonnet without the skill, at a lower mean cost. The efficiency
+claim stands if, over all 8, Sonnet + skill succeeds at least as often as Sonnet without, at a lower
+mean cost and time. The follow-up's 5 runs are also reported on their own.
