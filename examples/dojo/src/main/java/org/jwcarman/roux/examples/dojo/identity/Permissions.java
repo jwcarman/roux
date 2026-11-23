@@ -2,8 +2,8 @@ package org.jwcarman.roux.examples.dojo.identity;
 
 /**
  * The dojo's permissions. Its roles grant them in {@code db/changelog/roles.xml}; adding one means
- * a constant here and a changeset there. {@code PermissionsTest} checks the two agree and writes
- * the frontend's {@code permissions.gen.ts} from these.
+ * a constant here and a changeset there. {@code PermissionsTest} checks the two agree, and {@code
+ * PermissionsListTest} writes the frontend's {@code permissions.gen.ts} from these.
  */
 public final class Permissions {
 

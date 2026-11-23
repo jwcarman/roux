@@ -11,7 +11,7 @@
 # It works on a copy of the run's directory. The run's own Java tests are set back to the fixture's
 # (acceptance judges the app, and a test the agent broke must not hide an app that works), and its
 # frontend tests and Spotless and JaCoCo's checks are skipped: check-roux-way.sh's build judges those.
-# permissions.gen.ts is first written as the app's PermissionsTest writes it.
+# permissions.gen.ts is first written as the app's PermissionsListTest writes it.
 # Needs Docker (Testcontainers) and, the first time, the network for Playwright's browser.
 #
 # Usage: eval-acceptance.sh <case dir> <run dir with the fixture's git history>
@@ -31,12 +31,14 @@ base="$(git -C "$app" rev-list --max-parents=0 HEAD | tail -n 1)"
 # The fixture's own Java tests, none of the run's, then the hidden ones.
 rm -rf "$app/src/test/java"
 git -C "$app" checkout -q "$base" -- src/test/java
-# Except PermissionsTest: its ALL lists the app's permission classes, which a run adds to (wiring,
-# not a test of its own).
-permissions_test=src/test/java/app/identity/PermissionsTest.java
-if [ -f "$2/$permissions_test" ]; then
-  cp "$2/$permissions_test" "$app/$permissions_test"
-fi
+# Except the list of the app's permission classes, which a run adds to (wiring, not a test of its
+# own): PermissionClasses, or in a fixture from before it, PermissionsTest's ALL.
+for wiring in PermissionClasses PermissionsTest; do
+  if [ -f "$2/src/test/java/app/identity/$wiring.java" ]; then
+    cp "$2/src/test/java/app/identity/$wiring.java" "$app/src/test/java/app/identity/$wiring.java"
+    break
+  fi
+done
 if [ -d "$accept/java" ]; then
   cp -R "$accept/java/." "$app/src/test/java/"
 fi
@@ -48,10 +50,11 @@ if compgen -G "$accept/e2e/*.spec.ts" >/dev/null; then
 fi
 
 log="$work/acceptance.log"
-# permissions.gen.ts as the app's PermissionsTest writes it (it needs Docker, which the eval's
-# sandbox has not, so a run that kept the rule never to edit it by hand could not write it). The
+# permissions.gen.ts as the app writes it: PermissionsListTest, or in a fixture from before it,
+# PermissionsTest (which needed Docker, so a run in the eval's sandbox could not write the file). The
 # frontend steps are off: they would build against the stale file. Its result is not judged here.
-(cd "$app" && ./mvnw -B -q test -Dtest=PermissionsTest -Dsurefire.failIfNoSpecifiedTests=false \
+(cd "$app" && ./mvnw -B -q test -Dtest='PermissionsListTest,PermissionsTest' \
+  -Dsurefire.failIfNoSpecifiedTests=false \
   -Dskip.npm -Dskip.installnodenpm -Dfrontend.test.skip=true -Djacoco.skip=true \
   -Dspotless.check.skip=true) >"$work/permissions.log" 2>&1 || true
 its=(-DskipITs)

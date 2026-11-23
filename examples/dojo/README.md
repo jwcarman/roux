@@ -152,8 +152,8 @@ are the worked example. Copy their shape:
   `users.manage`, and the dojo's own (`classes.read`, `payments.record`, ...), gate the endpoints with
   `@RequiresPermission`. The dojo's constants live in `Permissions`; which role holds which is data, granted in `db/changelog/roles.xml` (OWNER
   is roux's, and roux's modules grant it their own). `PermissionsTest` fails when OWNER lacks a
-  constant or a role grants one that does not exist, and writes `frontend/src/permissions.gen.ts`
-  from the constants. A role that holds none of them is shut out of the members area with no code
+  constant or a role grants one that does not exist, and `PermissionsListTest` writes
+  `frontend/src/permissions.gen.ts` from the constants. A role that holds none of them is shut out of the members area with no code
   changes.
 - **Identity from the session.** `/api/users/me` acts as the signed-in identity, so nobody edits
   another member's name; an action on another member names them by id and needs its permission

@@ -9,7 +9,7 @@
        grants who-admin's permissions, roux-users grants it users.*, and roux-theme grants it
        theme.manage. Roles are named, never referred to by id. A new permission is a constant in
        identity/Permissions (the first one starts that class) and a changeset of its own here (a changeset that has run is never edited);
-       PermissionsTest checks they agree. -->
+       PermissionsTest checks they agree, and PermissionsListTest writes the frontend's list. -->
   <changeSet id="app-roles-1" author="app">
     <sql>
         INSERT INTO who_role (id, name) VALUES (gen_random_uuid(), 'USER')

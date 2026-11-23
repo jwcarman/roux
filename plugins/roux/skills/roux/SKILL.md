@@ -150,7 +150,9 @@ that part.
   Spotless) and fails on any file that is not formatted, so run it after the last Java change.
   `./mvnw test-compile` does not run that check; only the full build does.
 - Build and run the tests on both sides: `./mvnw verify` (its Java tests need Docker; without
-  Docker, at least `./mvnw spotless:apply test-compile`), and in `frontend/` `npm test` and
+  Docker, at least `./mvnw spotless:apply test-compile`, and after adding a permission
+  `./mvnw test -Dskip.npm -Dtest=PermissionsListTest` until it passes: it writes `permissions.gen.ts`), and in
+  `frontend/` `npm test` and
   `npm run build` (the type check, `tsc -b`). Add tests in the shape `references/testing.md` gives:
   the Java test asserts the Problem Details a refusal answers, and the Vitest test answers with MSW,
   never by mocking roux, who, the API module or the query client. A test that fails is a finding to

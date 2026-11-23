@@ -30,8 +30,10 @@ feature" section is the full worked example (member profiles); read the part you
 - Gate endpoints on a permission, never a role: `@RequiresPermission(Permissions.MEMBERS_READ)`.
   A new permission is a constant in `identity/Permissions` and a new changeset in
   `db/changelog/roles.xml` granting it to `OWNER` and any other role that holds it (never edit one
-  that has run). `PermissionsTest` checks the grants and rewrites `frontend/src/permissions.gen.ts`
-  when it is stale: run it and commit the file; never edit it by hand. See roux's
+  that has run). `PermissionsTest` checks the grants; `PermissionsListTest` rewrites
+  `frontend/src/permissions.gen.ts` when it is stale and fails (no Docker needed): run
+  `./mvnw test -Dskip.npm -Dtest=PermissionsListTest` until it passes and commit the file; never edit it by hand. A new class of permissions goes in
+  `PermissionClasses.ALL`. See roux's
   `docs/guides/roles.md`.
 - Errors are Problem Details. Throw `NotFoundException`, `InvariantViolationException` or
   `InvalidFieldException`; add no exception handlers. On the client `useSchemaForm` puts field

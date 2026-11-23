@@ -8,6 +8,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- The app template's and the dojo's roles test is two: `PermissionsTest` checks the grants (it needs
+  the database), and `PermissionsListTest`, a plain test that runs without Docker, writes
+  `permissions.gen.ts`. Both read `PermissionClasses.ALL`, the one list of permission classes. An app
+  made from the template moves its `ALL` there and its `frontendListIsCurrent` into the new test
+  (`docs/guides/roles.md`). `-Dskip.npm` now leaves the frontend's tests out too, not only its build:
+  `./mvnw test -Dskip.npm -Dtest=PermissionsListTest` rewrites the file even when the frontend
+  already uses a permission the stale file lacks.
 - Money reads the organization's context (roux-money is unreleased, so this changes the unreleased
   API): `money()`, `f.MoneyField` and `moneyInputOf(money)` take no settings; `formatMoney(money)` takes
   no locale and uses the server's digits; `moneySettingsQuery`, roux-web's `MoneySettings` and

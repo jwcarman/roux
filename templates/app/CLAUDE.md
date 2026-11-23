@@ -40,8 +40,11 @@ missing, ask the person to run `/plugin install roux@roux`.
   A permission is a `public static final String` in `app.identity.Permissions` and a new changeset in
   `db/changelog/roles.xml` granting it to `OWNER` and any other role that holds it (never edit a
   changeset that has run). **The first permission creates `Permissions`; add `Permissions.class` to
-  `PermissionsTest`'s `ALL` then.** `PermissionsTest` checks the grants and rewrites
-  `frontend/src/permissions.gen.ts` when it is stale: run it and commit the file; never edit it by hand.
+  `PermissionClasses.ALL` (src/test/.../identity) then.** `PermissionsTest` checks the grants (it
+  needs Docker). `PermissionsListTest` rewrites `frontend/src/permissions.gen.ts` when it is stale and
+  fails: run `./mvnw test -Dskip.npm -Dtest=PermissionsListTest` (no Docker needed; `-Dskip.npm`
+  leaves out the frontend, which cannot build against the stale file) until it passes, and commit
+  the file; never edit it by hand.
 - A new role is a constant in `app.identity.Roles`, a changeset in `roles.xml`, an entry in
   `roux.roles.invitable` (application.yml) if invitations may give it, and its label in
   `frontend/src/users/users.ts` (`ROLE_LABELS`) and `api.ts`'s `User.role`.
@@ -72,4 +75,4 @@ missing, ask the person to run `/plugin install roux@roux`.
 ## Generated files
 
 - Never hand-edit `frontend/src/routeTree.gen.ts` (TanStack's router plugin writes it) or
-  `frontend/src/permissions.gen.ts` (`PermissionsTest` writes it).
+  `frontend/src/permissions.gen.ts` (`PermissionsListTest` writes it).

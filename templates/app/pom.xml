@@ -33,8 +33,11 @@
         <node.version>v24.15.0</node.version>
         <!-- ./mvnw spring-boot:run is development over http://localhost (application-dev.yml). -->
         <spring-boot.run.profiles>dev</spring-boot.run.profiles>
-        <!-- Set by the skip-tests and skip-its profiles below. -->
-        <frontend.test.skip>false</frontend.test.skip>
+        <!-- -Dskip.npm leaves the whole frontend out (its build and its tests), as for
+             ./mvnw test -Dskip.npm -Dtest=PermissionsListTest; the skip-tests profile below skips only
+             its tests. -->
+        <skip.npm>false</skip.npm>
+        <frontend.test.skip>${skip.npm}</frontend.test.skip>
         <e2e.skip>false</e2e.skip>
     </properties>
 

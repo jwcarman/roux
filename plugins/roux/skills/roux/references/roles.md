@@ -137,32 +137,49 @@ Never change a changeset that has run; add a new one.
 No startup code creates or syncs roles. A sync breaks a rolling deploy: an old instance that restarts
 meets a role the new version added, or undoes its grants.
 
-## The app's roles test
+## The app's roles tests
 
-One test checks the constants and the grants agree, after every migration has run, and keeps the
-frontend's list of permissions generated:
+The app lists its classes of permission constants once, in its tests:
 
 ```java
-@SpringBootTest
-class PermissionsTest {
+final class PermissionClasses {
 
-  private static final Class<?>[] ALL = {
+  static final Class<?>[] ALL = {
     Permissions.class,
     RouxThemePermissions.class,
     RouxUserPermissions.class,
     WhoAdminPermissions.class
   };
 
+  private PermissionClasses() {}
+}
+```
+
+One test checks the constants and the grants agree, after every migration has run (it needs the
+database, so Docker):
+
+```java
+@AppTest
+class PermissionsTest {
+
   @Autowired JdbcClient jdbc;
 
   @Test
   void rolesGrantExactlyTheDeclaredPermissions() {
-    RoleGrantsCheck.check(jdbc, allOf(ALL)); // static import of org.jwcarman.roux.roles.Permissions.allOf
+    RoleGrantsCheck.check(jdbc, allOf(PermissionClasses.ALL)); // static import of Permissions.allOf
   }
+}
+```
+
+Another keeps the frontend's list of permissions generated. It is a plain test, with no Spring and no
+database, so it runs without Docker:
+
+```java
+class PermissionsListTest {
 
   @Test
   void frontendListIsCurrent() {
-    PermissionsTypeScript.verify(Path.of("frontend/src/permissions.gen.ts"), ALL);
+    PermissionsTypeScript.verify(Path.of("frontend/src/permissions.gen.ts"), PermissionClasses.ALL);
   }
 }
 ```
@@ -170,11 +187,14 @@ class PermissionsTest {
 - `RoleGrantsCheck.check` fails, naming each one, when `OWNER` lacks a constant, holds a permission no
   constant declares, or any role grants one (a typo in a changeset).
 - `PermissionsTypeScript.verify` writes `permissions.gen.ts` (each constant under its Java name, and
-  `PERMISSIONS`, the array `defineNav` takes) and fails when the committed file was stale: run the
-  test, commit the file. Never edit it by hand. Two classes that give one field name different
-  values fail: rename one.
-- List every class whose permissions the app's roles hold: the app's, `RouxThemePermissions` when the
-  app has roux-theme, `RouxUserPermissions` when it has roux-users, and `WhoAdminPermissions`.
+  `PERMISSIONS`, the array `defineNav` takes) and fails when the committed file was stale. After
+  adding a permission, run `./mvnw test -Dskip.npm -Dtest=PermissionsListTest`: the first run
+  rewrites the file and fails, the second passes; commit the file. `-Dskip.npm` leaves out the
+  frontend's build and tests, which run first and cannot pass against the stale file. Never edit it by hand. Two classes that give one
+  field name different values fail: rename one.
+- List every class whose permissions the app's roles hold in `PermissionClasses.ALL`: the app's,
+  `RouxThemePermissions` when the app has roux-theme, `RouxUserPermissions` when it has roux-users,
+  and `WhoAdminPermissions`.
 
 ## Keep someone who can manage people
 
@@ -215,7 +235,7 @@ active. Grant it to `OWNER` alone unless that is what you want.
   with their role; `UserInvitations`, invitations by name.
 - `InvitableRoles` (the checked list, from `RouxRolesProperties`, `roux.roles.*`),
   `InvitableRolesGuard` (the listener on who's `IdentityInvited`) and `InvitableRolesController`.
-- `RoleGrantsCheck` and `PermissionsTypeScript`, for the app's roles test.
+- `RoleGrantsCheck` and `PermissionsTypeScript`, for the app's roles tests.
 - `CallerPermissions`, for the parts of a response only some callers see.
 - `RouxThemePermissions`; `WhoAdminProblemsAdvice`, which answers `LastAdminException` on the app's
   endpoints.

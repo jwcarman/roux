@@ -26,8 +26,10 @@
         <jacoco.skip>true</jacoco.skip>
         <!-- ./mvnw spring-boot:run is development over http://localhost (application-dev.yml). -->
         <spring-boot.run.profiles>dev</spring-boot.run.profiles>
+        <!-- -Dskip.npm leaves the whole frontend out, its tests included. -->
+        <skip.npm>false</skip.npm>
         <!-- Set by the skip-tests and skip-its profiles below. -->
-        <frontend.test.skip>false</frontend.test.skip>
+        <frontend.test.skip>${skip.npm}</frontend.test.skip>
         <e2e.skip>false</e2e.skip>
     </properties>
 
