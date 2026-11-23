@@ -330,3 +330,33 @@ The rewrite fixed formatting (5 to 1) and introduced six failures that trace to 
 whose sign-in line was copied twice in one test, and no example of a stale-version test (the
 guides' example sends a version that was never read). Without them it would have succeeded 26 of 30.
 That is a hypothesis for the next run, not a result of this one.
+
+## Round 2: the recipe fixed where the runs broke (written before it runs)
+
+**Hypothesis:** the round-2 skill (6a6b942) removes the causes behind most of the rewritten skill's
+failed builds, so Haiku succeeds more often on a new app at about the same cost. Round 2:
+
+- the recipe's Java test reaches every branch, including an edit that keeps its own name, and
+  shows a stale edit that changes a value and one sign-in per address;
+- the `roles.xml` changeset is shown inside `<databaseChangeLog>`;
+- the skill has a check script (`scripts/check.sh`) that agents run instead of listing commands;
+- rules give their reasons;
+- the recipe's code is proven by building it into a fresh app (`check-recipe.sh`).
+
+- **Model, case, fixture:** Haiku; `app-locations`; the app template at 143165c (the same fixture
+  as the 60 runs above, so they stay the comparison).
+- **Arm:** Haiku + round-2 skill, 30 runs (`--ablation none --model haiku`, 6 batches of 5). Every
+  run is reported; none is rerun or dropped; an error or timeout is a failure.
+- **Scoring:** unchanged (all 10 hidden tests pass, and `./mvnw verify -DskipITs` passes on the
+  run's work).
+
+**Decision rule**, against the rewritten skill's 20 of 30, by a one-sided Fisher's exact test:
+
+- **Supported:** 27 or more successes (p < 0.05) at a mean cost of $0.12 or less.
+- **Refuted:** fewer than 20 successes.
+- **Not shown:** anything else.
+
+Against the same day's runs this is a historical comparison: the model or the eval harness could
+have changed in between. It is reported as such.
+
+Secondary: mean cost, turns and time; how many runs ran `check.sh`; why each build failed.
