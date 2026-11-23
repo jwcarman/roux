@@ -134,3 +134,18 @@ for roux's skill in general.
 **What would support the claim:** the model with the skill succeeds more often than without it.
 Anything else is reported as not supported. The comparison with the Claude Code arms is reported
 side by side, not as a measured difference: the agent and the model both differ.
+
+## Result of the local open-weight model
+
+| Arm | Successes | Hidden tests | Build | Mean steps | Mean time | Skill loaded |
+|---|---|---|---|---|---|---|
+| Qwen3-Coder 30B + skill | 0 of 3 | 0 of 3 | 0 of 3 | 77 | 616 s | 0 of 3 |
+| Qwen3-Coder 30B, no skill | 0 of 3 | 0 of 3 | 0 of 3 | 68 | 379 s | n/a |
+
+Not supported. No run passed a single hidden test: every run left a build that failed (Spotless
+twice, frontend tests or compilation four times), so the hidden tests never ran. In the arm with
+the skill, the model never loaded it, though OpenCode offered it (a probe asking for it by name
+loaded it); so this measured the model, not the skill. Qwen never ran `./mvnw` in any run (it tried
+`mvn` once), and two runs never ran a build at all. The roux-way checks were cleaner with the skill
+present (fetch, roux internals and forms failed 4 times without it, once with it), but the skill was
+never loaded, so that is not credited to it.
