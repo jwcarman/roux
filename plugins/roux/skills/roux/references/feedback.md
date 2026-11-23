@@ -1,268 +1,122 @@
-# Feedback
+# Feedback and buttons that act
 
-`@jwcarman/roux-web/feedback` is how a roux app tells the user what happened: a toast for the outcome
-of an action (`notify`), a confirmation before an action with consequences (`useConfirm`), an inline
-alert for something on the page that failed (`ErrorMessage`), and the pages for an address that leads
-nowhere (`NotFoundPage`) and a page that failed (`ErrorPage`). A field's mistake is not feedback: it
-stays under the field ([Forms](forms.md)).
+Toasts (`notify`), confirmations (`useConfirm`), buttons that run a mutation (`useServerAction`),
+controls that save on change (`optimisticMutation`), inline errors and error pages. A field's
+mistake is not feedback: it stays under the field.
 
-## Mount it once
+## Rules
 
-`main.tsx` mounts `Toaster` (where toasts appear) and `ConfirmProvider` (the one confirmation dialog),
-both inside Chakra's provider; see [Getting started](getting-started.md#set-up-the-app-root). Nothing
-else is set up.
+- Toast only through `notify`; never `toaster.create`, Chakra's toaster or `window.confirm`.
+- Don't toast what `useSchemaForm` or `useServerAction` already showed (success via `onSuccess`,
+  refusal via `failure`).
+- A button that changes data uses `useServerAction`; one with consequences asks first with
+  `useConfirm`.
+- Titles are the outcome in plain words naming the thing: `Ada was promoted`, `Could not remove
+  Yellow belt`. A confirm's `confirmLabel` is the verb (`Deactivate`), not `OK`.
+- Use `NotFoundPage` and `ErrorPage`; never write those pages.
 
-## Tell the user how an action went
+## Names
 
-```ts
-const notify: {
-  success(title: string, action?: { label: string; onClick: () => void }): void;
-  error(title: string, detail?: string): void;
-  problem(problem: Problem, title: string): void;
-};
-```
+`@jwcarman/roux-web/feedback`:
 
-```ts
-import { ApiError } from "@jwcarman/roux-web/api";
-import { notify } from "@jwcarman/roux-web/feedback";
+- `notify.success(title, action?)`, `notify.error(title, detail?)`, `notify.problem(problem, title)`
+  (only where you catch an `ApiError` yourself).
+- `useConfirm()` → `confirm(options: ConfirmOptions)` → `Promise<boolean>`; `ConfirmOptions` is
+  `{ title, message, confirmLabel, destructive? }`; `removal(title, message)` gives
+  `confirmLabel: "Remove"`, destructive.
+- `ErrorMessage` (`ErrorMessageProps`: `title?`, `children`): an inline alert for a section that
+  failed. Tables and lists already show their own.
+- `NotFoundPage` (`title?`), `ErrorPage` (`onRetry`).
+- `Toaster` and `ConfirmProvider`: mounted once in `main.tsx` (and in tests that need them);
+  `toaster` is only for tests (`toaster.remove()`).
 
-notify.success("Rank saved");
-notify.success("Ada was promoted to Green", { label: "Undo", onClick: undo });
-notify.error("The invitation could not be sent", "Ask them to sign in from the sign-in page.");
+`@jwcarman/roux-web/api`:
 
-// Only where you catch the error yourself:
-if (error instanceof ApiError) {
-  notify.problem(error.problem, "Could not promote Ada");
-}
-```
+- `useServerAction(mutation, { failure?, onSuccess? })` (`ServerActionOptions`) → `ServerAction`
+  `{ run(variables): Promise<boolean>, pending }`. A refusal is toasted and `run` resolves `false`.
+  `failure` may be a function of the variables.
+- `optimisticMutation(key, { mutationFn, meta: { refreshes } })` (`OptimisticMutation`,
+  `OptimisticMutationOptions`) with `useOptimisticToggle(mutation, serverValue, { failure })` →
+  `[shown, toggle]` or `useOptimisticValue(...)` → `[shown, set]` (`OptimisticOptions`).
 
-- `success`: a status toast. `action` adds a button to it, such as Undo.
-- `error`: a failure toast, `title` and an optional `detail` under it. For a failure the app itself
-  detects (a save that went through but whose email did not).
-- `problem`: a refused request. `title` names what failed (`Could not promote Ada`); under it go the
-  problem's `detail` and, for a 500, `Reference: <errorId>` on its own line. This is the toast
-  `useSchemaForm` and `useServerAction` show for a refusal ([Errors](errors.md#in-the-browser-what-the-user-sees)),
-  so call it only where you handle an `ApiError` yourself.
-
-Toasts appear at the bottom right (`bottom-end`; inset on small screens) and pause while the page is
-idle. A failure toast is an alert (`role="alert"`, announced at once); any other is a status
-(`role="status"`, announced when the reader is idle).
-
-Write titles as the outcome in plain words, naming the thing: `Ada was promoted`, `Rank saved`,
-`Could not remove Yellow belt`. A save made through `useSchemaForm` or `useServerAction` toasts its
-success in that hook's `onSuccess` and its failure through `failure`; do not toast either again.
-
-`toaster` is the toaster `Toaster` draws: show toasts through `notify`, not `toaster.create`. Tests use
-it to clear toasts between cases (`toaster.remove()`, see [Testing](testing.md#vitest-with-msw)).
-
-## Ask before an action with consequences
-
-```ts
-function useConfirm(): (options: ConfirmOptions) => Promise<boolean>;
-
-interface ConfirmOptions {
-  title: string;
-  message: string;
-  confirmLabel: string; // the action, such as "Deactivate"
-  destructive?: boolean; // colours the confirming button as a destructive action
-}
-
-function removal(title: string, message: string): ConfirmOptions; // confirmLabel "Remove", destructive
-```
-
-The mutation, in the resource module:
-
-```ts
-/** Deactivates a student; the student and the lists refresh. */
-export const deactivateStudent = (id: string) =>
-  mutationOptions({
-    mutationFn: () => sendJson<void>("POST", path`students/${id}/deactivation`),
-    meta: { refreshes: [queryKeys.students.detail(id), queryKeys.students.lists()] },
-  });
-```
-
-and the button:
+## Example: remove after asking
 
 ```tsx
 import { Button } from "@chakra-ui/react";
 import { useServerAction } from "@jwcarman/roux-web/api";
-import { notify, useConfirm } from "@jwcarman/roux-web/feedback";
-import { deactivateStudent } from "./students";
+import { notify, removal, useConfirm } from "@jwcarman/roux-web/feedback";
+import { removeRank, type Rank } from "./ranks";
 
-/** Deactivate, after asking: the student leaves the active list but keeps their history. */
-export function DeactivateStudentButton({ student }: { student: { id: string; name: string } }) {
+export function RemoveRankButton({ rank }: { rank: Rank }) {
   const confirm = useConfirm();
-  const { run, pending } = useServerAction(deactivateStudent(student.id), {
-    failure: `Could not deactivate ${student.name}`,
-    onSuccess: () => notify.success(`${student.name} was deactivated`),
+  const { run, pending } = useServerAction(removeRank, {
+    failure: `Could not remove ${rank.name}`,
+    onSuccess: () => notify.success(`${rank.name} was removed`),
   });
 
-  async function onDeactivate() {
-    const confirmed = await confirm({
-      title: `Deactivate ${student.name}?`,
-      message: "They leave the active list. Their rank history is kept.",
-      confirmLabel: "Deactivate",
-      destructive: true,
-    });
-    if (confirmed) {
-      await run();
+  async function onRemove() {
+    if (await confirm(removal(`Remove ${rank.name}?`, "It will be removed from the list."))) {
+      await run(rank.id);
     }
   }
 
   return (
-    <Button variant="outline" loading={pending} onClick={onDeactivate}>
-      Deactivate
+    <Button variant="outline" loading={pending} onClick={onRemove}>
+      Remove
     </Button>
   );
 }
 ```
 
-- `confirm(options)` opens the app's one dialog (`role="alertdialog"`) and resolves `true` when the
-  confirming button is pressed, `false` on Cancel, Escape or closing. Cancel has the focus first, so
-  Enter alone never confirms.
-- `confirmLabel` is the action's verb, as on the button that asked (`Deactivate`, not `OK` or `Yes`).
-- `ConfirmOptions` is the question. For removing something, use `removal(title, message)`, which is
-  `{ title, message, confirmLabel: "Remove", destructive: true }` (the whole button is in
-  [Queries and mutations](queries-and-mutations.md#run-a-mutation-from-a-button)):
+## A control that saves on change
 
-  ```ts
-  if (await confirm(removal(`Remove ${rank.name}?`, "It will be removed from the list."))) {
-    await run(rank.id);
+A toggle, switch, rating or row dropdown: show the change at once, end on the server's value.
+
+```ts
+export const markAttendance = (classId: string, date: string, studentId: string) =>
+  optimisticMutation(queryKeys.attendance.mark(classId, date, studentId), {
+    mutationFn: (present: boolean) => attendanceApi.mark(classId, { studentId, date, present }),
+    meta: { refreshes: [queryKeys.attendance.checkIn(classId, date)] },
+  });
+
+const [present, toggle] = useOptimisticToggle(markAttendance(classId, date, id), attendee.present, {
+  failure: `Could not mark ${attendee.firstName}`,
+});
+```
+
+- Send the wanted value (`present: boolean`), never "flip it".
+- The key is as specific as the thing changed, or two controls share a queue.
+- Not for forms with Save, creates, values the server computes, or typing.
+- Never build it from `onMutate` + `setQueryData`: it flickers.
+
+## Error pages
+
+Root route: `notFoundComponent: () => <NotFoundPage />`, `errorComponent` rendering
+`<ErrorPage onRetry={() => { reset(); void router.invalidate(); }} />`. A detail route's loader:
+
+```tsx
+loader: async ({ context, params }) => {
+  try {
+    await context.queryClient.ensureQueryData(studentQuery(params.studentId));
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) throw notFound();
+    throw error;
   }
-  ```
-- `useConfirm` throws `useConfirm outside ConfirmProvider` when no `ConfirmProvider` is above it,
-  including in a test that renders a component without one.
-
-## Show that part of a page failed
-
-```ts
-function ErrorMessage(props: ErrorMessageProps): JSX.Element;
-
-interface ErrorMessageProps {
-  title?: string;
-  children: ReactNode;
-}
+},
+notFoundComponent: () => <NotFoundPage title="Student not found" />,
 ```
 
-`ErrorMessage` (`ErrorMessageProps`: `title?`, `children`) is an error alert (`role="alert"`, announced when it appears) for a section that could
-not load or a step that could not finish, inside the page:
+The page then reads it with `useSuspenseQuery(studentQuery(studentId))`.
 
-```tsx
-import { Button, Heading, List, Spinner, Stack } from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
-import { ErrorMessage } from "@jwcarman/roux-web/feedback";
-import { ranksQuery } from "../ranks/ranks";
+## Check
 
-/** The ranks a student can be promoted to, or why they cannot be shown. */
-export function PromotionChoices() {
-  const ranks = useQuery(ranksQuery);
-  return (
-    <Stack gap="3">
-      <Heading as="h3" size="md">
-        Promote to
-      </Heading>
-      {ranks.isPending && <Spinner aria-label="Loading" />}
-      {ranks.isError && (
-        <ErrorMessage title="The ranks could not be loaded">
-          <Button size="xs" variant="outline" onClick={() => void ranks.refetch()}>
-            Try again
-          </Button>
-        </ErrorMessage>
-      )}
-      {ranks.isSuccess && (
-        <List.Root>
-          {ranks.data.map((rank) => (
-            <List.Item key={rank.id}>{rank.name}</List.Item>
-          ))}
-        </List.Root>
-      )}
-    </Stack>
-  );
-}
-```
+Vitest: render inside `ConfirmProvider` with `<Toaster />`; confirm with the dialog's verb button;
+success is `role="status"`; a failure is found by its title text, then `closest("[role=alert]")`.
+Clear toasts after each test: `act(() => toaster.remove())`.
 
-`QueryTable`, `SimpleQueryTable`, `InfiniteList` and `InfiniteSelect` already show one when their
-data fails ([Tables and paging](tables-and-paging.md)).
+## Pitfalls
 
-## Pages for a missing record and a failed page
-
-```ts
-function NotFoundPage(props: { title?: string }): JSX.Element; // title defaults to "Page not found"
-function ErrorPage(props: { onRetry: () => void }): JSX.Element;
-```
-
-- `NotFoundPage` says the address may be mistyped or what it pointed to is gone, with a link to `/`.
-- `ErrorPage` says `Something went wrong`, `This page could not be shown. Trying again often works.`,
-  and a `Try again` button that calls `onRetry` (`role="alert"`).
-
-Give them to TanStack Router: the root route's `notFoundComponent` (an unknown address) and
-`errorComponent` (a loader or a component that threw, a query that failed). `component` is the app's
-layout:
-
-```tsx
-import type { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext, Outlet, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
-import { ErrorPage, NotFoundPage } from "@jwcarman/roux-web/feedback";
-
-/** What every route's `beforeLoad` and `loader` can use. */
-export interface RouterContext {
-  queryClient: QueryClient;
-}
-
-/** Retrying clears the failure and runs the routes' loaders again. */
-function RouteError({ reset }: ErrorComponentProps) {
-  const router = useRouter();
-  return (
-    <ErrorPage
-      onRetry={() => {
-        reset();
-        void router.invalidate();
-      }}
-    />
-  );
-}
-
-export const Route = createRootRouteWithContext<RouterContext>()({
-  component: () => <Outlet />,
-  notFoundComponent: () => <NotFoundPage />,
-  errorComponent: RouteError,
-});
-```
-
-A detail route turns the server's 404 into its own not-found page, named for the record:
-
-```tsx
-import { createFileRoute, notFound } from "@tanstack/react-router";
-import { ApiError } from "@jwcarman/roux-web/api";
-import { NotFoundPage } from "@jwcarman/roux-web/feedback";
-import { studentQuery } from "../../../students/studentQuery";
-import { StudentPage } from "../../../students/StudentPage";
-
-/** A student's page. The loader fetches the student first; one that does not exist is a 404. */
-export const Route = createFileRoute("/_signedIn/students/$studentId")({
-  loader: async ({ context, params }) => {
-    try {
-      await context.queryClient.ensureQueryData(studentQuery(params.studentId));
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 404) {
-        throw notFound();
-      }
-      throw error;
-    }
-  },
-  notFoundComponent: () => <NotFoundPage title="Student not found" />,
-  component: StudentPage,
-});
-```
-
-The loader's `ensureQueryData` rejects with an `ApiError`; a 404 becomes `notFound()`, and anything
-else reaches the root's `ErrorPage`. The page then reads the record with `useSuspenseQuery`
-([Queries and mutations](queries-and-mutations.md#read-data-in-a-page)).
-
-## Don't
-
-- Don't toast a field's mistake; it goes under the field.
-- Don't toast a refusal that `useSchemaForm` or `useServerAction` already showed.
-- Don't call `toaster.create` or Chakra's toaster; use `notify`.
-- Don't build a confirmation dialog of your own, or use `window.confirm`; use `useConfirm`.
-- Don't write a "not found" or "something went wrong" page; use `NotFoundPage` and `ErrorPage`.
+- `useConfirm outside ConfirmProvider` in a test that renders without one.
+- A button's refusal with field `errors` shows only the generic detail: refuse buttons with
+  `InvariantViolationException`/`ConflictException` on the server.
+- `useServerAction`'s `failure` can't tell a 409 apart; the server's `detail` under it does.
