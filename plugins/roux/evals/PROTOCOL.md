@@ -199,3 +199,25 @@ a grown app (the dojo, a dozen features) to find one's way around.
 skill, at a lower mean cost. Sonnet + skill against Sonnet without is reported, against the
 efficiency rule as before (at least as often, at lower mean cost and time). Anything else is
 reported as not supported.
+
+## Result of Events on the dojo
+
+| Arm | Successes | Hidden tests all passed | Build passed | Mean turns | Mean time | Mean cost |
+|---|---|---|---|---|---|---|
+| Sonnet, no skill | 3 of 3 | 3 of 3 | 3 of 3 | 25 | 143 s | $0.58 |
+| Sonnet + skill | 3 of 3 | 3 of 3 | 3 of 3 | 31 | 157 s | $0.73 |
+| Haiku + skill | 0 of 3 | 3 of 3 | 0 of 3 | 49 | 176 s | $0.11 |
+
+Neither claim is supported on this case.
+
+- **A cheaper model:** Haiku + skill succeeded 0 of 3 against Sonnet without the skill's 3 of 3.
+  Every Haiku run built a working feature (all 11 hidden tests passed) and failed the build the
+  same way: it named its table `school_event` but emptied `event` in its own tests
+  (`users.reset("event")`), so every test in its `EventsControllerTest` errored. The sandbox has no
+  Docker, so no run could run its Java tests to see it.
+- **Efficiency:** both Sonnet arms succeeded every time; the skill cost more (+26%) and took longer
+  (+10%). On the dojo, a grown app whose Plans feature is a close pattern to copy, Sonnet needed no
+  guide.
+
+So the Locations result (a new app, with little to copy) does not carry over to a grown app. 3 runs
+per arm; the same caveat about the author applies.
