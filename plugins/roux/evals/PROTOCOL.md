@@ -221,3 +221,24 @@ Neither claim is supported on this case.
 
 So the Locations result (a new app, with little to copy) does not carry over to a grown app. 3 runs
 per arm; the same caveat about the author applies.
+
+## The skill rewritten for agents (written before it runs)
+
+**Question:** does the skill rewritten for agents (a recipe for a feature plus short cards, in place
+of copies of the guides; `docs/superpowers/specs/2026-11-22-agent-skill-design.md`) succeed at least
+as often as the current skill, at a lower mean cost? On the dojo the current skill cost 26% more
+than no skill (above), for guides Sonnet did not need.
+
+- **Case:** `dojo-events`, unchanged (11 hidden tests).
+- **Fixture:** the dojo at f029cf3 (`eval-fixture.sh f029cf3`), not 6fa8fdf: roux changed since
+  (`TestUsers.reset()` takes no tables), and a skill written for today's roux would not compile
+  against the older dojo.
+- **Arms:** Sonnet + current skill (`--ablation none --model sonnet`, run before any reference
+  changes) and Sonnet + rewritten skill (the same, run once the rewrite is done), 3 runs each, on
+  the same fixture. Every run is reported. The 6fa8fdf Events rows are shown beside them for
+  reference, not compared.
+- **Scoring:** unchanged: all 11 hidden tests pass, and `./mvnw verify -DskipITs` passes on the
+  run's work with nothing applied after it.
+
+**What would support the claim:** the rewritten skill succeeds at least as often as the current one,
+at a lower mean cost. Anything else is reported as not supported.
