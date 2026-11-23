@@ -62,8 +62,8 @@ jobs:
         # Fully qualified: this Maven does not resolve the "sonar:" prefix from the project's plugins.
         run: ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
 
-  # The Claude Code plugin: every public roux name is in a guide, and the skill's references are
-  # byte-for-byte copies of docs/guides (plugins/roux/scripts/sync-references.sh refreshes them).
+  # The Claude Code plugin: every public roux name is in a guide and in the skill's references, and
+  # every roux import a reference shows exists.
   plugin:
     runs-on: ubuntu-latest
     steps:
