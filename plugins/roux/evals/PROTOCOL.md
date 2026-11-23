@@ -300,3 +300,33 @@ read the skill.
 
 Secondary, reported for both arms: mean cost, turns and time; the hidden tests and the build as
 separate pass counts; which references each run read; why each build failed.
+
+## Result: agent-friendly wording on a new app, Haiku
+
+| Arm | Successes | Hidden tests all passed | Build passed | Mean turns | Mean time | Mean cost |
+|---|---|---|---|---|---|---|
+| Haiku + current skill | 21 of 30 | 29 of 30 | 22 of 30 | 53 | 236 s | $0.28 |
+| Haiku + rewritten skill | 20 of 30 | 28 of 30 | 20 of 30 | 40 | 188 s | $0.08 |
+
+**Not shown.** Successes are equal within noise (one-sided Fisher's exact: p = 0.71 that the rewrite
+is better, p = 0.50 that the current skill is). The rewritten skill cost 70% less a run, with 25%
+fewer turns and 20% less time. Every run loaded its arm's skill; the current arm only ever opened
+the copied guides, the rewritten arm only the new references (24 of 30 runs read `feature.md` alone).
+
+Why builds failed:
+
+| Cause | Current | Rewritten |
+|---|---|---|
+| Java not formatted (Spotless) | 5 | 1 |
+| Java coverage below 100% (an untested branch) | 2 | 3 |
+| Frontend coverage below 100% | 1 | 0 |
+| Permissions changeset put after `</databaseChangeLog>` in `roles.xml` (the app does not start) | 0 | 2 |
+| A stale-version test whose first edit changed nothing, so the version did not move (200, not 409) | 0 | 2 |
+| One test signing in the same address twice (`EmailAddressTakenException`), copying the recipe's `signedIn(...)` line | 0 | 2 |
+| Build passed, one hidden test failed | 1 | 0 |
+
+The rewrite fixed formatting (5 to 1) and introduced six failures that trace to the recipe: a
+`roles.xml` changeset shown without saying it goes inside `<databaseChangeLog>`, a test example
+whose sign-in line was copied twice in one test, and no example of a stale-version test (the
+guides' example sends a version that was never read). Without them it would have succeeded 26 of 30.
+That is a hypothesis for the next run, not a result of this one.
