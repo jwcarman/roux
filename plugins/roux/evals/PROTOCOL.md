@@ -76,3 +76,38 @@ The cheaper-model claim stands if, over all 8 runs of each arm (the 3 above and 
 skill succeeds at least as often as Sonnet without the skill, at a lower mean cost. The efficiency
 claim stands if, over all 8, Sonnet + skill succeeds at least as often as Sonnet without, at a lower
 mean cost and time. The follow-up's 5 runs are also reported on their own.
+
+## Result of the follow-up
+
+The follow-up's 5 runs per arm:
+
+| Arm | Successes | Mean turns | Mean time | Mean cost |
+|---|---|---|---|---|
+| Sonnet, no skill | 0 of 5 | 39 | 268 s | $0.95 |
+| Sonnet + skill | 3 of 5 | 34 | 178 s | $0.79 |
+| Haiku + skill | 3 of 5 | 58 | 268 s | $0.29 |
+
+All 8 runs of each arm (the measured run's 3 and the follow-up's 5):
+
+| Arm | Successes | Hidden tests all passed | Build passed | Mean turns | Mean time | Mean cost |
+|---|---|---|---|---|---|---|
+| Sonnet, no skill | 0 of 8 | 8 of 8 | 0 of 8 | 39 | 245 s | $0.92 |
+| Sonnet + skill | 5 of 8 | 8 of 8 | 5 of 8 | 34 | 172 s | $0.78 |
+| Haiku + skill | 6 of 8 | 7 of 8 | 6 of 8 | 57 | 267 s | $0.32 |
+| Haiku, no skill (3 runs only) | 1 of 3 | 3 of 3 | 1 of 3 | 65 | 396 s | $0.56 |
+
+Both claims stand on this case:
+
+- **Efficiency:** Sonnet + skill succeeded 5 of 8 against 0 of 8, at 15% lower mean cost and 30%
+  less time.
+- **A cheaper model:** Haiku + skill succeeded 6 of 8 against Sonnet without the skill's 0 of 8, at
+  65% lower mean cost (it took more turns, and about as long).
+
+Why builds failed. Sonnet without the skill: Spotless 5 times, Java coverage 3 times. Sonnet +
+skill: a test of the run's own failed twice, `permissions.gen.ts` stale once. Haiku + skill: a
+frontend test of the run's own failed once, `permissions.gen.ts` stale once (that run also failed
+one hidden browser test). A stale `permissions.gen.ts` is the skill's rule ("never edit it;
+PermissionsTest writes it") meeting a sandbox with no Docker, where PermissionsTest cannot run.
+
+One case, 8 runs per arm, written and scored by the skill's author: a result for this case, not yet
+for roux's skill in general.
