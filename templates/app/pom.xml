@@ -19,7 +19,7 @@
     <properties>
         <java.version>25</java.version>
         <!-- roux's version: roux-bom pins roux's modules, who and jpa-utils to it. -->
-        <roux.version>0.3.0-SNAPSHOT</roux.version>
+        <roux.version>0.4.0-SNAPSHOT</roux.version>
         <spotless.plugin.version>3.11.0</spotless.plugin.version>
         <google-java-format.version>1.35.0</google-java-format.version>
         <frontend.plugin.version>1.15.1</frontend.plugin.version>

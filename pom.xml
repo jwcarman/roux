@@ -24,7 +24,7 @@
 
     <groupId>org.jwcarman.roux</groupId>
     <artifactId>roux-parent</artifactId>
-    <version>0.3.0-SNAPSHOT</version>
+    <version>0.4.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Roux - Parent</name>
@@ -36,7 +36,7 @@
         <!-- A fixed timestamp for the entries in every jar, so rebuilding the same source gives
              byte-for-byte the same jars (https://maven.apache.org/guides/mini/guide-reproducible-builds.html).
              It is not a release date and never needs to change. -->
-        <project.build.outputTimestamp>2026-11-15T01:21:38Z</project.build.outputTimestamp>
+        <project.build.outputTimestamp>2026-11-24T20:58:39Z</project.build.outputTimestamp>
         <required.maven.version>3.8</required.maven.version>
 
         <!-- Dependency Versions -->
