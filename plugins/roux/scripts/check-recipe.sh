@@ -21,7 +21,7 @@ app="$root/target/recipe-app"
 
 cd "$root"
 echo "check-recipe: installing roux's modules and building roux-web" >&2
-./mvnw -B -q install -DskipTests -Dskip.npm -pl runtime/roux-spring-boot-starter,runtime/roux-test -am
+./mvnw -B -q install -DskipTests -Dskip.npm -pl runtime/roux-bom,runtime/roux-spring-boot-starter,runtime/roux-theme,runtime/roux-test -am
 (cd web && npm ci --ignore-scripts --no-audit --no-fund >/dev/null && npm run -s build -w @jwcarman/roux-web >/dev/null)
 
 rm -rf "$app"
