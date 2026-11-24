@@ -5,8 +5,8 @@ app already has all of it; read this when changing it.
 
 ## Rules
 
-- **Versions:** this skill describes roux **0.2.0**: `<roux.version>0.2.0</roux.version>` (the
-  `roux-bom` import) and `npm install @jwcarman/roux-web@0.2.0`. The two must match each other and
+- **Versions:** this skill describes roux **0.3.0**: `<roux.version>0.3.0</roux.version>` (the
+  `roux-bom` import) and `npm install @jwcarman/roux-web@0.3.0`. The two must match each other and
   this; if the project's differ, tell the user before anything else.
 - One stack: Java 25, Spring Boot 4.1, Maven, PostgreSQL + Liquibase, jpa-utils, who, React 19,
   Chakra UI v3, TanStack Router/Query/Form/Table, Zod 4, Vitest + MSW, Playwright.

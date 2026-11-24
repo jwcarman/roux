@@ -946,7 +946,7 @@ export function studentsExportHref(search: string | undefined, status: StudentSt
   enough), and a test passes alone and fails after another. A column that must read state (the
   select column) is memoized on that state, and a cell that holds a dialog should not depend on it.
 
-Gaps in 0.2.0 that a builder hits:
+Gaps in 0.3.0 that a builder hits:
 
 - **`InfiniteSelect` is not a form field.** It draws its own label and shows no error message. In a
   schema form, render it inside `form.AppField` and wire it by hand (`value={field.state.value ||

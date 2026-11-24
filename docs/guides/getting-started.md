@@ -56,7 +56,7 @@ Boot's BOM, so Spring Boot's managed versions stay the parent's.
 
 ```xml
 <properties>
-    <roux.version>0.2.0</roux.version>
+    <roux.version>0.3.0</roux.version>
 </properties>
 
 <dependencyManagement>
@@ -115,7 +115,7 @@ whoever holds `who.identities.manage`, which roux grants to `OWNER`), jpa-utils
 (`org.jwcarman.jpa:jpa-utils`), `spring-boot-starter-validation` and `spring-boot-starter-webmvc`.
 `roux-theme` (the owner changes the look on an Appearance page) is not in the starter: add it beside the starter, with no version, as a new app does. Leave it out for a fixed brand and set `roux.theme.*` instead ([The owner's theme](#the-owners-theme)).
 Do not add who's starter yourself, and do not declare versions for any of them, for who's other
-modules (`who-test`), or for jpa-utils: `roux-bom` pins who 0.23.0 and jpa-utils 0.2.0. The test
+modules (`who-test`), or for jpa-utils: `roux-bom` pins who 0.26.0 and jpa-utils 0.2.0. The test
 dependencies are in [Testing](testing.md#dependencies).
 
 Errors are answered as Problem Details from the first request; see [Errors](errors.md). roux's own
@@ -195,15 +195,19 @@ The full list of who's settings is in who's configuration guide
 ## Add the web side
 
 ```
-npm install @jwcarman/roux-web@0.2.0
-npm install @chakra-ui/react @emotion/react @tanstack/react-form @tanstack/react-query @tanstack/react-table date-fns react react-icons zod
+npm install @jwcarman/roux-web@0.3.0
+npm install @chakra-ui/react @emotion/cache @emotion/react @fontsource-variable/inter @fontsource-variable/lora @fontsource-variable/nunito @jwcarman/who-client @tanstack/react-form @tanstack/react-query @tanstack/react-router @tanstack/react-table culori date-fns react react-icons zod
 ```
 
 The Java and web versions must match: use the same version for `roux.version` and `@jwcarman/roux-web`
-(here `0.2.0`). The second line is the peer dependencies; the app supplies them (`react` `^19.3.1`,
-`@chakra-ui/react` `^3.38.0`, `@tanstack/react-query` `^5.107.1`, `@tanstack/react-form` `^1.33.5`,
-`@tanstack/react-table` `^8.21.3`, `date-fns` `^4.4.0`, `zod` `^4.6.7`, `@emotion/react` `^11.14.0`, `react-icons`
-`^5.7.0`). The package is ESM only.
+(here `0.3.0`). The second line is the peer dependencies; the app supplies them (`react` `^19.3.1`,
+`@chakra-ui/react` `^3.38.0`, `@emotion/react` and `@emotion/cache` `^11.14.0`,
+`@tanstack/react-query` `^5.107.1`, `@tanstack/react-form` `^1.33.5`, `@tanstack/react-router`
+`^1.170.46`, `@tanstack/react-table` `^8.21.3`, `@jwcarman/who-client` `^0.25.0`, `date-fns` `^4.4.0`,
+`zod` `^4.6.7`, `culori` `^4.0.2`, `react-icons` `^5.7.0`, and the three theme fonts
+`@fontsource-variable/inter`, `lora` and `nunito` `^5.3.0`). The browser test kit's peers (`vitest`,
+`msw`, `@testing-library/react`, `@testing-library/jest-dom`) are optional; see
+[Testing](testing.md). The package is ESM only.
 
 Import from a subpath; there is no root import:
 

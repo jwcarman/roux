@@ -847,7 +847,7 @@ The other building blocks:
 
 ## Things to know
 
-Gaps in 0.2.0 that a builder hits:
+Gaps in 0.3.0 that a builder hits:
 
 - **A nullable record field needs `inputOf` in `defaultValues`.** An optional text's input is
   `string`, so `email: student.email` (`string | null`) does not compile (`Type 'string | null' is
