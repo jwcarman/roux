@@ -59,7 +59,7 @@
     </scm>
 
     <properties>
-        <who.version>0.25.0</who.version>
+        <who.version>0.26.0</who.version>
         <jpa-utils.version>0.2.0</jpa-utils.version>
         <liquibase-sessionlock.version>1.6.9</liquibase-sessionlock.version>
 
