@@ -12,7 +12,9 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
@@ -149,7 +151,8 @@ func TestIgnoredPathsAreNotTraced(t *testing.T) {
 	}
 }
 
-func TestIncomingTraceContextIsContinued(t *testing.T) {
+func TestATrustedUpstreamsTraceIsContinued(t *testing.T) {
+	t.Setenv("TRACE_TRUST_INBOUND", "true") // behind a gateway that starts the traces
 	h, rec := harness(t)
 	otel.SetTextMapPropagator(propagationW3C())
 	req := httptest.NewRequest("GET", "/api/things/1", nil)
@@ -180,4 +183,33 @@ func TestLogRecordsCarryTraceIDs(t *testing.T) {
 		t.Fatalf("unexpected trace_id without a span: %s", lines[1])
 	}
 	_ = attribute.Key("")
+}
+
+func TestAClientsTraceIsLinkedNotJoined(t *testing.T) {
+	prev := otel.GetTextMapPropagator()
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+	t.Cleanup(func() { otel.SetTextMapPropagator(prev) })
+	h, rec := harness(t)
+	const parent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+	req := httptest.NewRequest("GET", "/api/things/1", nil)
+	req.Header.Set("traceparent", parent)
+	req.Header.Set("baggage", "tenant=acme")
+	h.ServeHTTP(httptest.NewRecorder(), req)
+	span := only(t, rec)
+	// Anyone may send these headers: the request starts its own trace, linked to the client's,
+	// and the client's baggage is not taken in.
+	if span.Parent().IsValid() || span.SpanContext().TraceID().String() == "0af7651916cd43dd8448eb211c80319c" {
+		t.Fatalf("the server span joined the client's trace: parent %v", span.Parent())
+	}
+	if links := span.Links(); len(links) != 1 || links[0].SpanContext.TraceID().String() != "0af7651916cd43dd8448eb211c80319c" {
+		t.Fatalf("links %v, want one to the client's trace", links)
+	}
+	var tenant string
+	reads := telemetry.HTTP(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tenant = baggage.FromContext(r.Context()).Member("tenant").Value()
+	}))
+	reads.ServeHTTP(httptest.NewRecorder(), req)
+	if tenant != "" {
+		t.Fatalf("the client's baggage was taken in: tenant=%q", tenant)
+	}
 }

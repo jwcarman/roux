@@ -129,7 +129,9 @@ func enabled() bool {
 // HTTP instruments a handler: one server span per request (named like
 // "GET /api/items/{id}" from the matched route, with http.route set) plus the
 // standard http.server.* metrics. Put it outermost, outside api.Recoverer.
-// Requests whose path is in ignorePaths (health probes, say) are not traced or
+// A client's trace context is linked, never joined, and its baggage is ignored: anyone may send
+// those headers. Behind a gateway that starts the traces, TRACE_TRUST_INBOUND=true continues
+// them instead. Requests whose path is in ignorePaths (health probes, say) are not traced or
 // measured.
 func HTTP(next http.Handler, ignorePaths ...string) http.Handler {
 	// otelhttp learns the route only after the mux has run (ServeMux sets
@@ -141,14 +143,24 @@ func HTTP(next http.Handler, ignorePaths ...string) http.Handler {
 			trace.SpanFromContext(r.Context()).SetAttributes(semconv.HTTPRoute(route))
 		}
 	})
-	return otelhttp.NewHandler(tagRoute, "http.server",
+	opts := []otelhttp.Option{
 		otelhttp.WithFilter(func(r *http.Request) bool { return !slices.Contains(ignorePaths, r.URL.Path) }),
 		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
 			if r.Pattern != "" { // already includes the method, e.g. "GET /api/items/{id}"
 				return r.Pattern
 			}
 			return r.Method // unmatched routes: avoid unbounded span names
-		}))
+		}),
+	}
+	if os.Getenv("TRACE_TRUST_INBOUND") != "true" {
+		// Any client may send traceparent and baggage: the request starts a trace of its own,
+		// linked to the client's (so the two can still be found together), and takes in no
+		// baggage, which would otherwise ride along on every call this server makes.
+		opts = append(opts,
+			otelhttp.WithPublicEndpointFn(func(*http.Request) bool { return true }),
+			otelhttp.WithPropagators(propagation.TraceContext{}))
+	}
+	return otelhttp.NewHandler(tagRoute, "http.server", opts...)
 }
 
 // routeOf strips the optional "METHOD " prefix from a ServeMux pattern.
