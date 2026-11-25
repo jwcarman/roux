@@ -426,3 +426,57 @@ func TestConcurrentStartsMakeOneOwner(t *testing.T) {
 		t.Fatalf("%d starts made an owner, %d owners exist", n, f.count(`select count(*) from roux_user`))
 	}
 }
+
+func TestOnlySomeoneWhoMayManageOwnersChangesOne(t *testing.T) {
+	f := setup(t)
+	lead := f.SignedIn(f.lead("Lee Lead", "lee@example.test"))
+	path := "/api/roux/users/" + f.owner.String()
+	lead.Put(path+"/role", map[string]string{"role": "COACH"}).Want(t, 403, "a lead demoting an owner")
+	lead.Post(path+"/deactivate", nil).Want(t, 403, "a lead deactivating an owner")
+	if d := detailAt(t, lead, f.owner); d["status"] != "ACTIVE" || d["role"] != "OWNER" {
+		t.Fatalf("a refused change left a trace: %v", d)
+	}
+	// Someone who is not an owner is the lead's to manage.
+	ada := f.person("Ada", "ada@example.test", "COACH")
+	lead.Post("/api/roux/users/"+ada.String()+"/deactivate", nil).Want(t, 200, "a lead deactivating a coach")
+}
+
+func TestChangingAnOwnerNeedsARecentSignIn(t *testing.T) {
+	f := setup(t)
+	second := f.person("Second Owner", "second@example.test", "")
+	owner := f.SignedIn(f.owner)
+	owner.Post("/api/roux/users/"+second.String()+"/owner", nil).Want(t, 200, "a second owner")
+	f.Clock.Advance(11 * time.Minute)
+	path := "/api/roux/users/" + second.String()
+	for name, r := range map[string]authntest.Reply{
+		"demote":     owner.Put(path+"/role", map[string]string{"role": "COACH"}),
+		"deactivate": owner.Post(path+"/deactivate", nil),
+	} {
+		if r.StatusCode != 401 || r.JSON(t)["code"] != "reauthentication-required" {
+			t.Errorf("%s an owner from a stale sign-in: %d %s", name, r.StatusCode, r.Body)
+		}
+	}
+	f.SignedIn(f.owner).Put(path+"/role", map[string]string{"role": "COACH"}).Want(t, 200, "from a fresh sign-in")
+}
+
+func TestNobodyGivesARoleThatHoldsMoreThanTheyDo(t *testing.T) {
+	f := setup(t)
+	// USER may read users, which COACH may not; a lead may read users too, so give USER one
+	// permission the lead lacks.
+	if _, err := f.Pool.Exec(context.Background(), `
+		insert into roux_role_permission (role_id, permission)
+		select id, 'items.secret' from roux_role where name = 'USER'`); err != nil {
+		t.Fatal(err)
+	}
+	lead := f.SignedIn(f.lead("Lee Lead", "lee@example.test"))
+	ada := f.person("Ada", "ada@example.test", "COACH")
+	for name, r := range map[string]authntest.Reply{
+		"invite": lead.Post("/api/roux/users/invitations", map[string]string{"name": "Bob", "email": "bob@example.test", "role": "USER"}),
+		"change": lead.Put("/api/roux/users/"+ada.String()+"/role", map[string]string{"role": "USER"}),
+	} {
+		if r.StatusCode != 400 || !strings.Contains(string(r.Body), "You cannot give a role with permissions you do not hold") {
+			t.Errorf("%s to a role holding more: %d %s", name, r.StatusCode, r.Body)
+		}
+	}
+	lead.Post("/api/roux/users/invitations", map[string]string{"name": "Bob", "email": "bob@example.test", "role": "COACH"}).Want(t, 202, "a role within the lead's own")
+}

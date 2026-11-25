@@ -132,17 +132,30 @@ func (f *fx) person(name, address, role string) uuid.UUID {
 // manager makes a person who may manage users but is not an administrator.
 func (f *fx) manager(name, address string) uuid.UUID {
 	f.T.Helper()
+	return f.withRole(name, address, "HR", users.UsersRead, users.UsersManage, users.UsersInvite, users.UsersOwners)
+}
+
+// lead is someone whose role may invite and manage people, but not owners: what an app grants a
+// team lead.
+func (f *fx) lead(name, address string) uuid.UUID {
+	f.T.Helper()
+	return f.withRole(name, address, "LEAD", users.UsersRead, users.UsersManage, users.UsersInvite)
+}
+
+// withRole makes a person holding a role of their own with the permissions.
+func (f *fx) withRole(name, address, role string, permissions ...string) uuid.UUID {
+	f.T.Helper()
 	id := f.person(name, address, "")
 	ctx := context.Background()
 	r := uuid.New()
-	if _, err := f.Pool.Exec(ctx, `insert into roux_role (id, name) values ($1, $2) on conflict do nothing`, r, "HR"); err != nil {
+	if _, err := f.Pool.Exec(ctx, `insert into roux_role (id, name) values ($1, $2) on conflict do nothing`, r, role); err != nil {
 		f.T.Fatal(err)
 	}
 	var roleID uuid.UUID
-	if err := f.Pool.QueryRow(ctx, `select id from roux_role where name = 'HR'`).Scan(&roleID); err != nil {
+	if err := f.Pool.QueryRow(ctx, `select id from roux_role where name = $1`, role).Scan(&roleID); err != nil {
 		f.T.Fatal(err)
 	}
-	for _, p := range []string{users.UsersRead, users.UsersManage, users.UsersInvite, users.UsersOwners} {
+	for _, p := range permissions {
 		if _, err := f.Pool.Exec(ctx, `insert into roux_role_permission (role_id, permission) values ($1, $2) on conflict do nothing`, roleID, p); err != nil {
 			f.T.Fatal(err)
 		}

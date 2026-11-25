@@ -22,6 +22,11 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- **Managing users no longer reaches owners.** Changing an owner's role or deactivating an owner
+  takes `users.owners` and a recent sign-in, as making an owner does; `users.manage` alone is a
+  403. Inviting someone or changing a role refuses a role holding a permission the caller does
+  not (400 on `role`), so granting `users.manage` or `users.invite` to a lesser role cannot
+  escalate.
 - **A bearer token needs a recent sign-in to make or rotate an API key,** as a browser does: the
   token's `auth_time`. A leaked access token could otherwise turn itself into a key lasting a year.
 - **Deactivating someone ends their sessions at once,** not at their next request: reactivated

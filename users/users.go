@@ -330,6 +330,9 @@ func (s Service) Invite(ctx context.Context, name, email, role string) (linkSent
 	}
 	now, actor := s.now(), actorOf(ctx)
 	err = s.inTx(ctx, func(tx pgx.Tx) error {
+		if err := mayGive(ctx, tx, role); err != nil {
+			return err
+		}
 		id, err := authn.CreateIdentity(ctx, tx, now)
 		if err != nil {
 			return err
@@ -465,6 +468,50 @@ func (s Service) giveOnly(ctx context.Context, tx pgx.Tx, id uuid.UUID, role str
 	return activity.Append(ctx, tx, s.now(), id, UserRoleChanged{From: strings.Join(names, ", "), To: role})
 }
 
+// mayManage refuses a change to an owner by anyone who may not manage owners (403), and asks a
+// caller who may for a recent sign-in, as making an owner does: users.manage alone must not
+// reach the people who run the team.
+func (s Service) mayManage(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+	roles, err := authz.RolesOf(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	if !slices.ContainsFunc(roles, func(r authz.Role) bool { return r.Name == authz.RoleOwner }) {
+		return nil
+	}
+	if p := authn.PrincipalFrom(ctx); p == nil || !p.Has(UsersOwners) {
+		return problem.Forbidden()
+	}
+	return s.Host.RequireRecentSignIn(ctx)
+}
+
+// mayGive refuses a role holding a permission the caller does not: whoever may invite or manage
+// people hands on at most what they have themselves.
+func mayGive(ctx context.Context, tx pgx.Tx, role string) error {
+	p := authn.PrincipalFrom(ctx)
+	if p == nil {
+		return nil // roux itself, such as the first owner at startup
+	}
+	rows, err := tx.Query(ctx, `
+		select rp.permission
+		  from roux_role_permission rp
+		  join roux_role r on r.id = rp.role_id
+		 where r.name = $1`, role)
+	if err != nil {
+		return err
+	}
+	permissions, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return err
+	}
+	for _, permission := range permissions {
+		if !p.Has(permission) {
+			return problem.InvalidField("role", "You cannot give a role with permissions you do not hold")
+		}
+	}
+	return nil
+}
+
 func (s Service) requireAdmin(ctx context.Context, tx pgx.Tx) error {
 	if err := authz.EnsureAdmin(ctx, tx); errors.Is(err, authz.ErrLastAdmin) {
 		return authz.LastAdminProblem()
@@ -483,7 +530,8 @@ func (s Service) exists(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 }
 
 // ChangeRole gives a user a new role, in place of every role they hold. The role must
-// be one an invitation may give.
+// be one an invitation may give, and hold nothing the caller does not; changing an owner
+// takes users.owners and a recent sign-in.
 func (s Service) ChangeRole(ctx context.Context, id uuid.UUID, role string) (Detail, error) {
 	err := s.inTx(ctx, func(tx pgx.Tx) error {
 		if err := lock(ctx, tx, changeLock); err != nil {
@@ -494,6 +542,12 @@ func (s Service) ChangeRole(ctx context.Context, id uuid.UUID, role string) (Det
 		}
 		if !s.Invitable.Contains(role) {
 			return problem.InvalidField("role", "That role cannot be given")
+		}
+		if err := s.mayManage(ctx, tx, id); err != nil {
+			return err
+		}
+		if err := mayGive(ctx, tx, role); err != nil {
+			return err
 		}
 		return s.giveOnly(ctx, tx, id, role)
 	})
@@ -535,7 +589,7 @@ func identityStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID) (string, error
 	return status, err
 }
 
-// Deactivate stops someone from signing in; their sessions end on their next request.
+// Deactivate stops someone from signing in, and ends their sessions.
 func (s Service) Deactivate(ctx context.Context, actor, id uuid.UUID) (Detail, error) {
 	err := s.inTx(ctx, func(tx pgx.Tx) error {
 		if err := lock(ctx, tx, changeLock); err != nil {
@@ -550,6 +604,9 @@ func (s Service) Deactivate(ctx context.Context, actor, id uuid.UUID) (Detail, e
 		}
 		if status != authn.StatusActive {
 			return problem.Conflict("Already deactivated")
+		}
+		if err := s.mayManage(ctx, tx, id); err != nil {
+			return err
 		}
 		if err := s.setStatus(ctx, tx, id, authn.StatusDisabled); err != nil {
 			return err
