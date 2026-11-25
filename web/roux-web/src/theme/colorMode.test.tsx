@@ -1,11 +1,30 @@
 // @vitest-environment jsdom
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccountMenu } from "../navigation";
 import { renderWithProviders } from "../testing";
 import { renderInRouter } from "../testing/router";
 import { ColorModeButton, ColorModeProvider, ColorModeSwitch } from "./colorMode";
+
+describe("ColorModeProvider", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("renders next-themes' script as an inert data block, so React has no script to warn about", () => {
+    const error = vi.spyOn(console, "error");
+    const { container } = renderWithProviders(
+      <ColorModeProvider>
+        <p>app</p>
+      </ColorModeProvider>,
+    );
+    const scripts = container.querySelectorAll("script");
+    expect(scripts.length).toBeGreaterThan(0);
+    for (const script of scripts) {
+      expect(script).toHaveAttribute("type", "application/json");
+    }
+    expect(error).not.toHaveBeenCalledWith(expect.stringContaining("Encountered a script tag"));
+  });
+});
 
 describe("ColorModeButton", () => {
   it("switches between light and dark, starting from the system's mode", async () => {

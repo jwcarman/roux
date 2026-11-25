@@ -8,8 +8,18 @@ import { cspNonce } from "./csp";
 /** Light or dark mode, following the system's until the user picks one (kept in localStorage). */
 export function ColorModeProvider({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    // next-themes adds a <style> while it switches modes, which needs the page's nonce.
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange nonce={cspNonce()}>
+    // next-themes adds a <style> while it switches modes, which needs the page's nonce. Its own
+    // before-paint <script> only runs in server-rendered HTML; in this single-page app React renders
+    // it and never runs it (index.html's inline script sets the mode before the first paint). Typed
+    // as a data block, it is what it is, inert, and React does not warn about a script it won't run.
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+      nonce={cspNonce()}
+      scriptProps={{ type: "application/json" }}
+    >
       {children}
     </ThemeProvider>
   );

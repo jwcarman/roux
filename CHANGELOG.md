@@ -69,6 +69,13 @@ All notable changes to this project are documented in this file. The format foll
   up the starter (0.4.0's). The starter now resolves roux's `go.sum` from the tag on GitHub
   (`GONOPROXY`, `GONOSUMDB`), which gives the hash the checksum database records.
 
+### Fixed
+
+- **No "Encountered a script tag" error in the browser console.** next-themes' before-paint script
+  (inside roux-web's `ColorModeProvider`) is now an inert data block: in a single-page app React
+  renders it and never runs it, and warned about that on every load. `index.html`'s own inline
+  script still sets light or dark mode before the first paint.
+
 ### Documentation
 
 - The skill and guides, from a test run of an agent building two features on 0.4.0:
