@@ -554,6 +554,10 @@ func (s Service) Deactivate(ctx context.Context, actor, id uuid.UUID) (Detail, e
 		if err := s.setStatus(ctx, tx, id, authn.StatusDisabled); err != nil {
 			return err
 		}
+		// Ended now, not at their next request: reactivated before then, they would come back.
+		if err := authn.EndSessions(ctx, tx, id, s.now()); err != nil {
+			return err
+		}
 		if err := s.requireAdmin(ctx, tx); err != nil {
 			return err
 		}

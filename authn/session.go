@@ -53,7 +53,7 @@ func (h *Host) authenticate(r *http.Request) (*Session, error) {
 		return nil, nil
 	}
 	hash, now := hashToken(c.Value), h.now()
-	sess, err := h.store.authenticate(r.Context(), hash, now, h.sessionTimeout)
+	sess, err := h.store.authenticate(r.Context(), hash, now, h.sessionTimeout, h.sessionLifetime)
 	if err != nil || sess != nil {
 		return sess, err
 	}

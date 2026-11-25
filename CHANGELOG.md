@@ -12,6 +12,16 @@ All notable changes to this project are documented in this file. The format foll
   route behind the CSRF check, a sign-in and the permission, so no route is mounted half
   guarded; an empty permission panics at startup. `kit.HandleSignedIn` is for anyone signed in,
   `kit.HandlePublic` for anybody. `Mux.Handle` with `Host.Guard` still works.
+- **Sessions have a lifetime.** `authn.Config.SessionLifetime` (default 12 hours) ends a session
+  however busy it is, so a stolen cookie kept warm still dies. `authn.EndSessions` ends an
+  identity's sessions inside a transaction.
+
+### Changed
+
+- **Deactivating someone ends their sessions at once,** not at their next request: reactivated
+  before then, they used to come back signed in.
+- **Dead sessions are cleared.** A sign-in deletes sessions that ended, idled out or outlived
+  their lifetime more than 30 days ago.
 
 ## [0.3.0] - 2026-11-24
 

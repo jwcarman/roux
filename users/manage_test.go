@@ -202,6 +202,18 @@ func TestDeactivatingAndReactivating(t *testing.T) {
 	owner.Post("/api/roux/users/"+uuid.NewString()+"/deactivate", nil).Want(t, 404, "unknown")
 }
 
+func TestDeactivatingEndsEverySessionThereAndThen(t *testing.T) {
+	f := setup(t)
+	ada := f.person("Ada", "ada@example.test", "USER")
+	owner := f.SignedIn(f.owner)
+	adaBrowser := f.SignedIn(ada)
+	path := "/api/roux/users/" + ada.String()
+	owner.Post(path+"/deactivate", nil).Want(t, 200, "deactivate")
+	// Reactivated before her session saw a request: it must not come back.
+	owner.Post(path+"/reactivate", nil).Want(t, 200, "reactivate")
+	adaBrowser.Get("/api/roux/users/me").Want(t, 401, "a session from before the deactivation")
+}
+
 func TestSigningSomeoneOutEverywhere(t *testing.T) {
 	f := setup(t)
 	ada := f.person("Ada", "ada@example.test", "USER")

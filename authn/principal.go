@@ -130,9 +130,7 @@ func (h *Host) RequireRecentSignIn(ctx context.Context) error {
 
 // EndAllSessions ends every session the identity has, on every device.
 func (h *Host) EndAllSessions(ctx context.Context, identityID uuid.UUID) error {
-	_, err := h.store.pool.Exec(ctx,
-		`update roux_session set ended_at = $2 where identity_id = $1 and ended_at is null`, identityID, h.now())
-	return err
+	return EndSessions(ctx, h.store.pool, identityID, h.now())
 }
 
 // OnSignedIn registers a function to run after each sign-in, with the identity and

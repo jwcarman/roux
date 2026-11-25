@@ -97,6 +97,12 @@ func (s store) start(ctx context.Context, identityID, credentialID uuid.UUID, me
 	if userAgent != "" {
 		ua = &userAgent
 	}
+	// Sessions dead (ended, idled out or past their lifetime) for a month go as another starts:
+	// nothing reads them after that, and "has signed in" is kept on the user (first_signed_in_at).
+	if _, err := s.pool.Exec(ctx,
+		`delete from roux_session where coalesce(ended_at, last_seen_at) < $1`, now.Add(-deadSessionsKept)); err != nil {
+		return err
+	}
 	_, err = s.pool.Exec(ctx,
 		`insert into roux_session (id, identity_id, credential_id, sign_in_method, signed_in_at, last_seen_at, user_agent, token_hash)
 		 values ($1, $2, $3, $4, $5, $5, $6, $7)`,
@@ -106,10 +112,10 @@ func (s store) start(ctx context.Context, identityID, credentialID uuid.UUID, me
 
 // authenticate finds the live session for a cookie's hash and marks it used, in
 // one statement. It is live only if it has not ended, has not been idle longer
-// than idle, its identity is active, and its credential is still linked to that
+// than idle, is younger than lifetime, its identity is active, and its credential is still linked to that
 // identity: so deactivating an identity or revoking a credential takes effect on
 // the very next request.
-func (s store) authenticate(ctx context.Context, tokenHash string, now time.Time, idle time.Duration) (*Session, error) {
+func (s store) authenticate(ctx context.Context, tokenHash string, now time.Time, idle, lifetime time.Duration) (*Session, error) {
 	var sess Session
 	err := s.pool.QueryRow(ctx, `
 		update roux_session s
@@ -117,16 +123,28 @@ func (s store) authenticate(ctx context.Context, tokenHash string, now time.Time
 		 where s.token_hash = $1
 		   and s.ended_at is null
 		   and s.last_seen_at > $3
+		   and s.signed_in_at > $5
 		   and exists (select 1 from roux_identity i where i.id = s.identity_id and i.status = $4)
 		   and exists (select 1 from roux_credential_identity ci
 		                where ci.credential_id = s.credential_id and ci.identity_id = s.identity_id)
 		returning s.id, s.identity_id, s.credential_id, s.sign_in_method, s.signed_in_at`,
-		tokenHash, now, now.Add(-idle), StatusActive,
+		tokenHash, now, now.Add(-idle), StatusActive, now.Add(-lifetime),
 	).Scan(&sess.ID, &sess.IdentityID, &sess.CredentialID, &sess.Method, &sess.SignedInAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	return &sess, err
+}
+
+// deadSessionsKept is how long a dead session stays before a sign-in clears it.
+const deadSessionsKept = 30 * 24 * time.Hour
+
+// EndSessions ends every session the identity has, through db, so it can be part of a larger
+// change: deactivating someone ends their sessions in the same transaction.
+func EndSessions(ctx context.Context, db DBTX, identityID uuid.UUID, at time.Time) error {
+	_, err := db.Exec(ctx,
+		`update roux_session set ended_at = $2 where identity_id = $1 and ended_at is null`, identityID, at)
+	return err
 }
 
 func (s store) end(ctx context.Context, tokenHash string, now time.Time) error {

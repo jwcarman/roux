@@ -48,6 +48,9 @@ type Config struct {
 	// SessionTimeout is how long a session may sit unused before it ends
 	// (who's server session timeout); default 30 minutes.
 	SessionTimeout time.Duration
+	// SessionLifetime is the longest a session lasts, however busy: past it the person signs in
+	// again, so a stolen cookie kept warm still dies. Default 12 hours.
+	SessionLifetime time.Duration
 	// RecentSignIn is how long a sign-in stays recent enough for sensitive
 	// actions (who.security.recent-sign-in); default 10 minutes. /api/roux/auth/me reports
 	// when it ends.
@@ -92,17 +95,18 @@ type Method interface {
 // Host is what a sign-in method gets to build on: CSRF-guarded routes under the
 // base path, the database, the clock, and sessions.
 type Host struct {
-	kit            *api.Kit
-	basePath       string
-	secureCookies  bool
-	store          store
-	clock          func() time.Time
-	sessionTimeout time.Duration
-	recentSignIn   time.Duration
-	permissions    PermissionsFunc
-	counters       []Counter
-	authenticators []headerAuthenticator
-	onSignedIn     []func(ctx context.Context, identityID uuid.UUID, at time.Time) error
+	kit             *api.Kit
+	basePath        string
+	secureCookies   bool
+	store           store
+	clock           func() time.Time
+	sessionTimeout  time.Duration
+	sessionLifetime time.Duration
+	recentSignIn    time.Duration
+	permissions     PermissionsFunc
+	counters        []Counter
+	authenticators  []headerAuthenticator
+	onSignedIn      []func(ctx context.Context, identityID uuid.UUID, at time.Time) error
 }
 
 // Handle registers "METHOD /path" (relative to the base path) behind who's CSRF check.
@@ -136,20 +140,24 @@ func (h *Host) AddCounter(c Counter) { h.counters = append(h.counters, c) }
 func Register(mux *api.Mux, cfg Config, methods ...Method) (*Host, error) {
 	base := BasePath
 	h := &Host{
-		kit:            mux.Kit(base, render),
-		basePath:       base,
-		secureCookies:  cfg.SecureCookies,
-		store:          store{pool: cfg.Pool},
-		clock:          cfg.Clock,
-		sessionTimeout: cfg.SessionTimeout,
-		recentSignIn:   cfg.RecentSignIn,
-		permissions:    cfg.Permissions,
+		kit:             mux.Kit(base, render),
+		basePath:        base,
+		secureCookies:   cfg.SecureCookies,
+		store:           store{pool: cfg.Pool},
+		clock:           cfg.Clock,
+		sessionTimeout:  cfg.SessionTimeout,
+		sessionLifetime: cfg.SessionLifetime,
+		recentSignIn:    cfg.RecentSignIn,
+		permissions:     cfg.Permissions,
 	}
 	if h.clock == nil {
 		h.clock = time.Now
 	}
 	if h.sessionTimeout <= 0 {
 		h.sessionTimeout = 30 * time.Minute
+	}
+	if h.sessionLifetime <= 0 {
+		h.sessionLifetime = 12 * time.Hour
 	}
 	if h.recentSignIn <= 0 {
 		h.recentSignIn = 10 * time.Minute
