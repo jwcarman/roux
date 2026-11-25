@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/favicon.svg" alt="roux: a skillet of roux, stirred" width="128">
+</p>
+
 # roux
 
 roux is said "roo". It is the base a Go + React business application is built on: sign-in,

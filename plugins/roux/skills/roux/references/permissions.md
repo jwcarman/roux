@@ -22,14 +22,14 @@ permission is `feature.md` steps 1, 2 and 6; this card covers the rest.
   `theme.manage` (`theme.ThemeManage`), `users.read`, `users.invite`, `users.manage`, `users.owners`
   (`users.UsersRead`...), and `roux.admin` (`authz.Admin`). `app.RouxPermissions()` lists them. The
   app grants `OWNER` its own.
-- A feature's permissions: constants in its package (`RanksRead = "ranks.read"`) and
+- A feature's permissions: constants in its package (`LabelsRead = "labels.read"`) and
   `var Permissions = []string{...}`. `permissions()` in `cmd/server/modules.go` is
-  `append(app.RouxPermissions(), ranks.Permissions...)`, one more `...` per feature.
+  `append(app.RouxPermissions(), labels.Permissions...)`, one more `...` per feature.
 - The app's roles: `cmd/server/migrations/` (the `app-roles` migration, after `roux-users`). The
   template makes `USER` there. Tables: `roux_role` (`id`, `name`), `roux_role_permission`
   (`role_id`, `permission`), `roux_identity_role` (`identity_id`, `role_id`).
 - `cmd/server/permissions_test.go`: `rouxtest.PermissionsFile` (writes `permissions.gen.ts`: a
-  constant per permission, `ranks.read` is `RANKS_READ`, and `PERMISSIONS`; fails when the file was
+  constant per permission, `labels.read` is `LABELS_READ`, and `PERMISSIONS`; fails when the file was
   stale) and `rouxtest.CheckGrants` (fails naming each permission `OWNER` lacks, and each grant
   nobody declared; needs the database).
 - `INVITABLE_ROLES` (comma separated, default `USER`; `OWNER` is refused): the roles an invitation
@@ -46,22 +46,22 @@ permission is `feature.md` steps 1, 2 and 6; this card covers the rest.
 
 ## Steps: a new role
 
-1. A new migration in `cmd/server/migrations/` (`002_coach.sql`):
+1. A new migration in `cmd/server/migrations/` (`002_lead.sql`):
 
    ```sql
-   insert into roux_role (id, name) values (gen_random_uuid(), 'COACH') on conflict (name) do nothing;
+   insert into roux_role (id, name) values (gen_random_uuid(), 'LEAD') on conflict (name) do nothing;
    insert into roux_role_permission (role_id, permission)
-   select r.id, 'ranks.read' from roux_role r where r.name = 'COACH'
+   select r.id, 'labels.read' from roux_role r where r.name = 'LEAD'
    on conflict do nothing;
    ```
 
-   A feature migration that grants to `COACH` must run after it: `After: []string{"roux-users",
+   A feature migration that grants to `LEAD` must run after it: `After: []string{"roux-users",
    "app-roles"}` already does, since `app-roles` is every file in that folder.
 2. If invitations may give it: add it to `INVITABLE_ROLES` (the deploy's environment, `compose.yaml`
    or the run command).
 3. Its label in `frontend/src/users/users.ts` (`ROLE_LABELS`).
 
-Rename a role: a migration `update roux_role set name = 'COACH' where name = 'INSTRUCTOR';`
+Rename a role: a migration `update roux_role set name = 'LEAD' where name = 'ORGANIZER';`
 (holders keep it). Take a permission away: a migration deleting the grant.
 
 ## Example: keep the last administrator

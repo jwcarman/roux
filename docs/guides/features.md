@@ -11,23 +11,23 @@ The browser side is [API client](api-client.md), [Queries and mutations](queries
 
 ## The files
 
-For a feature `ranks` (the school's belts) in the app `roux-app`:
+For a feature `labels` (the tags an item can carry) in the app `roux-app`:
 
 | File | What it is |
 | --- | --- |
-| `internal/ranks/migrations/001_rank.sql` | The table, and the grants of the feature's permissions |
-| `internal/ranks/ranks.go` | The permissions, the module, its migrations |
-| `internal/ranks/input.go` | The body a write sends, and its rules |
-| `internal/ranks/service.go` | What the API answers, and the operations: the SQL and the refusals |
-| `internal/ranks/handlers.go` | The endpoints under `/api/ranks`, each behind a permission |
-| `internal/ranks/ranks_test.go` | The endpoints over a real database, one test per refusal ([Testing](testing.md)) |
+| `internal/labels/migrations/001_label.sql` | The table, and the grants of the feature's permissions |
+| `internal/labels/labels.go` | The permissions, the module, its migrations |
+| `internal/labels/input.go` | The body a write sends, and its rules |
+| `internal/labels/service.go` | What the API answers, and the operations: the SQL and the refusals |
+| `internal/labels/handlers.go` | The endpoints under `/api/labels`, each behind a permission |
+| `internal/labels/labels_test.go` | The endpoints over a real database, one test per refusal ([Testing](testing.md)) |
 | `cmd/server/modules.go` | One more module in the list, and its permissions in `permissions()` |
 
 ## The table
 
 ```sql
--- The school's ranks. Names are unique ignoring case.
-create table rank (
+-- The team's labels. Names are unique ignoring case.
+create table label (
     id          uuid        primary key default gen_random_uuid(),
     name        text        not null check (char_length(name) between 1 and 40),
     colour      text        not null,
@@ -38,22 +38,22 @@ create table rank (
     modified_by uuid        not null references roux_identity (id)
 );
 
-create unique index rank_name_key on rank (lower(name));
+create unique index label_name_key on label (lower(name));
 
--- Every member may see the ranks; only an owner may change them.
+-- Every member may see the labels; only an owner may change them.
 insert into roux_role_permission (role_id, permission)
-select r.id, 'ranks.read' from roux_role r where r.name in ('USER', 'OWNER')
+select r.id, 'labels.read' from roux_role r where r.name in ('USER', 'OWNER')
 on conflict do nothing;
 
 insert into roux_role_permission (role_id, permission)
-select r.id, 'ranks.manage' from roux_role r where r.name = 'OWNER'
+select r.id, 'labels.manage' from roux_role r where r.name = 'OWNER'
 on conflict do nothing;
 ```
 
 - **A migration is a `.sql` file in the feature's `migrations/` folder**, run in name order
-  (`001_rank.sql`, then `002_...`), each in its own transaction, once. roux records each file it
+  (`001_label.sql`, then `002_...`), each in its own transaction, once. roux records each file it
   ran with a checksum (in `schema_history`), and **an edited file that has run stops startup**, so
-  never edit one that has run anywhere. A later change is a new file (`002_rank_order.sql` with `alter table rank add column ...`).
+  never edit one that has run anywhere. A later change is a new file (`002_label_order.sql` with `alter table label add column ...`).
 - **`id uuid primary key default gen_random_uuid()`.** The database makes the id.
 - **`version bigint not null default 0`**, raised by every update, so an edit made from an old
   copy is refused ([Errors](errors.md#refuse-a-stale-save)).
@@ -74,9 +74,9 @@ on conflict do nothing;
 ## The module
 
 ```go
-// Package ranks is the school's ranks: the belts a student can hold. Everyone may see them; only
+// Package labels is the team's labels: the tags an item can carry. Everyone may see them; only
 // an owner may change them.
-package ranks
+package labels
 
 import (
 	"context"
@@ -87,28 +87,28 @@ import (
 	"github.com/jwcarman/roux/pgdb"
 )
 
-// The ranks' permissions (migrations/001_rank.sql grants them).
+// The labels' permissions (migrations/001_label.sql grants them).
 const (
-	RanksRead   = "ranks.read"
-	RanksManage = "ranks.manage"
+	LabelsRead   = "labels.read"
+	LabelsManage = "labels.manage"
 )
 
-// Permissions is every permission ranks checks, for the app's list of them.
-var Permissions = []string{RanksRead, RanksManage}
+// Permissions is every permission labels checks, for the app's list of them.
+var Permissions = []string{LabelsRead, LabelsManage}
 
 //go:embed migrations/*.sql
 var migrations embed.FS
 
-// Module is the ranks feature: its table and its endpoints.
+// Module is the labels feature: its table and its endpoints.
 type Module struct {
 	// Clock is the time changes are stamped with; time.Now when nil.
 	Clock func() time.Time
 }
 
-func (Module) Name() string { return "ranks" }
+func (Module) Name() string { return "labels" }
 
 func (Module) Migrations() []pgdb.Migration {
-	return []pgdb.Migration{{Name: "ranks", FS: migrations, Dir: "migrations", After: []string{"roux-users", "app-roles"}}}
+	return []pgdb.Migration{{Name: "labels", FS: migrations, Dir: "migrations", After: []string{"roux-users", "app-roles"}}}
 }
 
 func (m Module) Mount(_ context.Context, k *app.Kit) error {
@@ -135,23 +135,23 @@ func (m Module) Mount(_ context.Context, k *app.Kit) error {
 Then, in `cmd/server/modules.go`, the module joins the list and its permissions join the app's:
 
 ```go
-mods = append(mods, email, members, ranks.Module{})
+mods = append(mods, email, members, labels.Module{})
 ```
 
 ```go
 func permissions() []string {
-	return append(app.RouxPermissions(), ranks.Permissions...)
+	return append(app.RouxPermissions(), labels.Permissions...)
 }
 ```
 
-The next `go test ./cmd/server` rewrites `frontend/src/permissions.gen.ts` with `RANKS_READ` and
-`RANKS_MANAGE` and fails once, so the change is committed; it also fails if `OWNER` lacks a
+The next `go test ./cmd/server` rewrites `frontend/src/permissions.gen.ts` with `LABELS_READ` and
+`LABELS_MANAGE` and fails once, so the change is committed; it also fails if `OWNER` lacks a
 permission or a migration grants one nobody declares.
 
 ## The input
 
 ```go
-package ranks
+package labels
 
 import (
 	"slices"
@@ -161,11 +161,11 @@ import (
 	"github.com/jwcarman/roux/problem"
 )
 
-// MaxName is the longest name, in characters (migrations/001_rank.sql checks it too).
+// MaxName is the longest name, in characters (migrations/001_label.sql checks it too).
 const MaxName = 40
 
-// Colours are the belts a rank may be.
-var Colours = []string{"white", "yellow", "orange", "green", "blue", "brown", "black"}
+// Colours are the palettes a label may be shown in (Chakra UI's names).
+var Colours = []string{"gray", "red", "orange", "yellow", "green", "teal", "blue", "purple", "pink"}
 
 // body is a write as it arrives; pointers tell "missing" from empty.
 type body struct {
@@ -229,7 +229,7 @@ func deref(s *string) string {
 ## The service
 
 ```go
-package ranks
+package labels
 
 import (
 	"context"
@@ -245,17 +245,17 @@ import (
 )
 
 // NameTaken is what a clash of names says, under the name field.
-const NameTaken = "Another rank has this name"
+const NameTaken = "Another label has this name"
 
-// Rank is a rank as the API answers it.
-type Rank struct {
+// Label is a label as the API answers it.
+type Label struct {
 	ID      uuid.UUID `json:"id"`
 	Name    string    `json:"name"`
 	Colour  string    `json:"colour"`
 	Version int64     `json:"version"`
 }
 
-// Service is the ranks' operations.
+// Service is the labels' operations.
 type Service struct {
 	Pool  *pgxpool.Pool
 	Clock func() time.Time
@@ -263,54 +263,54 @@ type Service struct {
 
 const columns = `id, name, colour, version`
 
-// List is every rank, by name.
-func (s Service) List(ctx context.Context) ([]Rank, error) {
-	rows, err := s.Pool.Query(ctx, `select `+columns+` from rank order by lower(name), id`)
+// List is every label, by name.
+func (s Service) List(ctx context.Context) ([]Label, error) {
+	rows, err := s.Pool.Query(ctx, `select `+columns+` from label order by lower(name), id`)
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByPos[Rank])
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[Label])
 }
 
-// Get is one rank.
-func (s Service) Get(ctx context.Context, id uuid.UUID) (Rank, error) {
-	rows, err := s.Pool.Query(ctx, `select `+columns+` from rank where id = $1`, id)
+// Get is one label.
+func (s Service) Get(ctx context.Context, id uuid.UUID) (Label, error) {
+	rows, err := s.Pool.Query(ctx, `select `+columns+` from label where id = $1`, id)
 	if err != nil {
-		return Rank{}, err
+		return Label{}, err
 	}
-	r, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Rank])
+	r, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Label])
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Rank{}, notFound()
+		return Label{}, notFound()
 	}
 	return r, err
 }
 
-// Create adds a rank.
-func (s Service) Create(ctx context.Context, caller *authn.Principal, in Input) (Rank, error) {
-	var out Rank
+// Create adds a label.
+func (s Service) Create(ctx context.Context, caller *authn.Principal, in Input) (Label, error) {
+	var out Label
 	err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
 		if err := uniqueName(ctx, tx, in.Name, uuid.Nil); err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx, `
-			insert into rank (name, colour, created_at, created_by, modified_at, modified_by)
+			insert into label (name, colour, created_at, created_by, modified_at, modified_by)
 			values ($1, $2, $3, $4, $3, $4) returning `+columns,
 			in.Name, in.Colour, s.Clock(), caller.IdentityID)
 		if err != nil {
 			return err
 		}
-		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Rank])
+		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Label])
 		return err
 	})
 	return out, err
 }
 
-// Update changes a rank, from the version the caller last saw.
-func (s Service) Update(ctx context.Context, caller *authn.Principal, id uuid.UUID, version int64, in Input) (Rank, error) {
-	var out Rank
+// Update changes a label, from the version the caller last saw.
+func (s Service) Update(ctx context.Context, caller *authn.Principal, id uuid.UUID, version int64, in Input) (Label, error) {
+	var out Label
 	err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
 		var current int64
-		err := tx.QueryRow(ctx, `select version from rank where id = $1 for update`, id).Scan(&current)
+		err := tx.QueryRow(ctx, `select version from label where id = $1 for update`, id).Scan(&current)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return notFound()
 		}
@@ -325,21 +325,21 @@ func (s Service) Update(ctx context.Context, caller *authn.Principal, id uuid.UU
 			return err
 		}
 		rows, err := tx.Query(ctx, `
-			update rank set name = $2, colour = $3, version = version + 1, modified_at = $4, modified_by = $5
+			update label set name = $2, colour = $3, version = version + 1, modified_at = $4, modified_by = $5
 			 where id = $1 returning `+columns,
 			id, in.Name, in.Colour, s.Clock(), caller.IdentityID)
 		if err != nil {
 			return err
 		}
-		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Rank])
+		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Label])
 		return err
 	})
 	return out, err
 }
 
-// Delete removes a rank.
+// Delete removes a label.
 func (s Service) Delete(ctx context.Context, id uuid.UUID) error {
-	tag, err := s.Pool.Exec(ctx, `delete from rank where id = $1`, id)
+	tag, err := s.Pool.Exec(ctx, `delete from label where id = $1`, id)
 	if err != nil {
 		return err
 	}
@@ -349,12 +349,12 @@ func (s Service) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func notFound() error { return problem.NotFound("This rank no longer exists") }
+func notFound() error { return problem.NotFound("This label no longer exists") }
 
-// uniqueName refuses a name another rank has, ignoring case, under the name field.
+// uniqueName refuses a name another label has, ignoring case, under the name field.
 func uniqueName(ctx context.Context, tx pgx.Tx, name string, self uuid.UUID) error {
 	var taken bool
-	if err := tx.QueryRow(ctx, `select exists (select 1 from rank where lower(name) = lower($1) and id <> $2)`,
+	if err := tx.QueryRow(ctx, `select exists (select 1 from label where lower(name) = lower($1) and id <> $2)`,
 		name, self).Scan(&taken); err != nil {
 		return err
 	}
@@ -365,7 +365,7 @@ func uniqueName(ctx context.Context, tx pgx.Tx, name string, self uuid.UUID) err
 }
 ```
 
-- **What the API answers is a struct with JSON tags** (`Rank`), never a row type shared with
+- **What the API answers is a struct with JSON tags** (`Label`), never a row type shared with
   another feature. It carries `version`, so the browser can send it back with an edit.
 - **SQL text is a constant; values are always arguments** (`$1`, `$2`). Never build SQL from what
   a request sent.
@@ -380,13 +380,13 @@ func uniqueName(ctx context.Context, tx pgx.Tx, name string, self uuid.UUID) err
 - **Time comes from the service's clock**, today from the organization's zone
   ([Dates and time](dates-and-time.md)). A change worth a history is recorded with
   `activity.Append` in the same transaction ([The activity log](activity-log.md)).
-- `pgx.RowToStructByPos[Rank]` reads the columns in order into the struct's fields; the `columns`
+- `pgx.RowToStructByPos[Label]` reads the columns in order into the struct's fields; the `columns`
   constant keeps every query's list in that order.
 
 ## The handlers
 
 ```go
-package ranks
+package labels
 
 import (
 	"net/http"
@@ -398,26 +398,26 @@ import (
 	"github.com/jwcarman/roux/authn"
 )
 
-// BasePath is where the ranks' endpoints live.
-const BasePath = "/api/ranks"
+// BasePath is where the labels' endpoints live.
+const BasePath = "/api/labels"
 
-// Register serves the ranks' endpoints. Each is a kit route: the CSRF token, a sign-in and the
+// Register serves the labels' endpoints. Each is a kit route: the CSRF token, a sign-in and the
 // permission are checked before the handler runs.
 //
-//	GET    /api/ranks       every rank, by name               ranks.read
-//	POST   /api/ranks       add a rank                        ranks.manage
-//	GET    /api/ranks/{id}  one rank                          ranks.read
-//	PUT    /api/ranks/{id}  change it, from its version (409) ranks.manage
-//	DELETE /api/ranks/{id}  delete it                         ranks.manage
+//	GET    /api/labels       every label, by name               labels.read
+//	POST   /api/labels       add a label                        labels.manage
+//	GET    /api/labels/{id}  one label                          labels.read
+//	PUT    /api/labels/{id}  change it, from its version (409) labels.manage
+//	DELETE /api/labels/{id}  delete it                         labels.manage
 func Register(k *app.Kit, svc Service) {
-	k.Handle("GET "+BasePath, RanksRead, func(w http.ResponseWriter, r *http.Request) error {
+	k.Handle("GET "+BasePath, LabelsRead, func(w http.ResponseWriter, r *http.Request) error {
 		out, err := svc.List(r.Context())
 		if err != nil {
 			return err
 		}
 		return api.JSON(w, http.StatusOK, out)
 	})
-	k.Handle("POST "+BasePath, RanksManage, func(w http.ResponseWriter, r *http.Request) error {
+	k.Handle("POST "+BasePath, LabelsManage, func(w http.ResponseWriter, r *http.Request) error {
 		in, _, err := decode(r, false)
 		if err != nil {
 			return err
@@ -428,8 +428,8 @@ func Register(k *app.Kit, svc Service) {
 		}
 		return api.JSON(w, http.StatusCreated, out)
 	})
-	k.Handle("GET "+BasePath+"/{id}", RanksRead, func(w http.ResponseWriter, r *http.Request) error {
-		id, err := rankID(r)
+	k.Handle("GET "+BasePath+"/{id}", LabelsRead, func(w http.ResponseWriter, r *http.Request) error {
+		id, err := labelID(r)
 		if err != nil {
 			return err
 		}
@@ -439,8 +439,8 @@ func Register(k *app.Kit, svc Service) {
 		}
 		return api.JSON(w, http.StatusOK, out)
 	})
-	k.Handle("PUT "+BasePath+"/{id}", RanksManage, func(w http.ResponseWriter, r *http.Request) error {
-		id, err := rankID(r)
+	k.Handle("PUT "+BasePath+"/{id}", LabelsManage, func(w http.ResponseWriter, r *http.Request) error {
+		id, err := labelID(r)
 		if err != nil {
 			return err
 		}
@@ -454,8 +454,8 @@ func Register(k *app.Kit, svc Service) {
 		}
 		return api.JSON(w, http.StatusOK, out)
 	})
-	k.Handle("DELETE "+BasePath+"/{id}", RanksManage, func(w http.ResponseWriter, r *http.Request) error {
-		id, err := rankID(r)
+	k.Handle("DELETE "+BasePath+"/{id}", LabelsManage, func(w http.ResponseWriter, r *http.Request) error {
+		id, err := labelID(r)
 		if err != nil {
 			return err
 		}
@@ -485,8 +485,8 @@ func decode(r *http.Request, edit bool) (Input, int64, error) {
 	return in, version, nil
 }
 
-// rankID is the {id} in the path; one that is not a UUID names no rank.
-func rankID(r *http.Request) (uuid.UUID, error) {
+// labelID is the {id} in the path; one that is not a UUID names no label.
+func labelID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		return uuid.Nil, notFound()
@@ -515,7 +515,7 @@ func rankID(r *http.Request) (uuid.UUID, error) {
 ## The test
 
 ```go
-package ranks_test
+package labels_test
 
 import (
 	"testing"
@@ -525,67 +525,67 @@ import (
 	"github.com/jwcarman/roux/authn/authntest"
 	"github.com/jwcarman/roux/rouxtest"
 
-	"roux-app/internal/ranks"
+	"roux-app/internal/labels"
 )
 
-// setup is the ranks API over a fresh schema, with Olive (OWNER) and Ada (USER) signed in.
+// setup is the labels API over a fresh schema, with Olive (OWNER) and Ada (USER) signed in.
 func setup(t *testing.T) (owner, user *authntest.Browser) {
 	t.Helper()
-	a := rouxtest.New(t, "ranks")
-	a.Role("USER") // the app's own role, before ranks grants to it
-	a.Migrate(ranks.Module{}.Migrations()...)
-	ranks.Register(a.Kit(), ranks.Service{Pool: a.Pool, Clock: a.Clock.Now})
+	a := rouxtest.New(t, "labels")
+	a.Role("USER") // the app's own role, before labels grants to it
+	a.Migrate(labels.Module{}.Migrations()...)
+	labels.Register(a.Kit(), labels.Service{Pool: a.Pool, Clock: a.Clock.Now})
 	a.Serve()
 	return a.SignedIn(a.Person("Olive Owner", "OWNER")), a.SignedIn(a.Person("Ada Lovelace", "USER"))
 }
 
-func TestAnOwnerAddsARankThatEveryoneSees(t *testing.T) {
+func TestAnOwnerAddsALabelThatEveryoneSees(t *testing.T) {
 	owner, user := setup(t)
-	added := owner.Post("/api/ranks", map[string]any{"name": " Yellow belt ", "colour": "yellow"}).
+	added := owner.Post("/api/labels", map[string]any{"name": " Urgent ", "colour": "yellow"}).
 		Want(t, 201, "add").JSON(t)
-	if added["name"] != "Yellow belt" || added["version"] != float64(0) {
+	if added["name"] != "Urgent" || added["version"] != float64(0) {
 		t.Fatalf("added %v", added)
 	}
-	var list []ranks.Rank
-	user.Get("/api/ranks").Want(t, 200, "list").Decode(t, &list)
-	if len(list) != 1 || list[0].Name != "Yellow belt" {
+	var list []labels.Label
+	user.Get("/api/labels").Want(t, 200, "list").Decode(t, &list)
+	if len(list) != 1 || list[0].Name != "Urgent" {
 		t.Fatalf("list %v", list)
 	}
 }
 
-func TestOnlyAnOwnerChangesRanks(t *testing.T) {
+func TestOnlyAnOwnerChangesLabels(t *testing.T) {
 	_, user := setup(t)
-	user.Post("/api/ranks", map[string]any{"name": "Yellow", "colour": "yellow"}).Want(t, 403, "a USER")
+	user.Post("/api/labels", map[string]any{"name": "Waiting", "colour": "yellow"}).Want(t, 403, "a USER")
 }
 
-func TestARankNeedsANameAndAColourItKnows(t *testing.T) {
+func TestALabelNeedsANameAndAColourItKnows(t *testing.T) {
 	owner, _ := setup(t)
-	got := owner.Post("/api/ranks", map[string]any{"name": " ", "colour": "mauve"}).Want(t, 400, "bad").JSON(t)
+	got := owner.Post("/api/labels", map[string]any{"name": " ", "colour": "mauve"}).Want(t, 400, "bad").JSON(t)
 	errs, _ := got["errors"].([]any)
 	if len(errs) != 2 {
 		t.Fatalf("errors %v", got)
 	}
 }
 
-func TestTwoRanksMayNotShareANameIgnoringCase(t *testing.T) {
+func TestTwoLabelsMayNotShareANameIgnoringCase(t *testing.T) {
 	owner, _ := setup(t)
-	owner.Post("/api/ranks", map[string]any{"name": "Yellow", "colour": "yellow"}).Want(t, 201, "first")
-	got := owner.Post("/api/ranks", map[string]any{"name": "YELLOW", "colour": "green"}).Want(t, 400, "second").JSON(t)
-	if errs := got["errors"].([]any); errs[0].(map[string]any)["message"] != ranks.NameTaken {
+	owner.Post("/api/labels", map[string]any{"name": "Waiting", "colour": "yellow"}).Want(t, 201, "first")
+	got := owner.Post("/api/labels", map[string]any{"name": "WAITING", "colour": "green"}).Want(t, 400, "second").JSON(t)
+	if errs := got["errors"].([]any); errs[0].(map[string]any)["message"] != labels.NameTaken {
 		t.Fatalf("got %v", got)
 	}
 }
 
 func TestAnEditFromAnOldVersionIsRefused(t *testing.T) {
 	owner, _ := setup(t)
-	id := owner.Post("/api/ranks", map[string]any{"name": "Yellow", "colour": "yellow"}).Want(t, 201, "add").JSON(t)["id"]
-	path := "/api/ranks/" + id.(string)
-	owner.Put(path, map[string]any{"name": "Gold", "colour": "yellow", "version": 0}).Want(t, 200, "edit")
-	owner.Put(path, map[string]any{"name": "Amber", "colour": "yellow", "version": 0}).Want(t, 409, "stale")
-	owner.Put(path, map[string]any{"name": "Amber", "colour": "yellow"}).Want(t, 400, "no version")
+	id := owner.Post("/api/labels", map[string]any{"name": "Waiting", "colour": "yellow"}).Want(t, 201, "add").JSON(t)["id"]
+	path := "/api/labels/" + id.(string)
+	owner.Put(path, map[string]any{"name": "Blocked", "colour": "yellow", "version": 0}).Want(t, 200, "edit")
+	owner.Put(path, map[string]any{"name": "On hold", "colour": "yellow", "version": 0}).Want(t, 409, "stale")
+	owner.Put(path, map[string]any{"name": "On hold", "colour": "yellow"}).Want(t, 400, "no version")
 	owner.Delete(path).Want(t, 204, "delete")
 	owner.Get(path).Want(t, 404, "gone")
-	owner.Get("/api/ranks/"+uuid.NewString()).Want(t, 404, "never was")
+	owner.Get("/api/labels/"+uuid.NewString()).Want(t, 404, "never was")
 }
 ```
 

@@ -11,6 +11,8 @@ All notable changes to this project are documented in this file. The format foll
 - **The template's front end has Prettier and ESLint** (`npm run format`, `format:check`, `lint`),
   with roux-web's settings, in `frontend/lint-tools/`; CI checks both. The skill's `check.sh` runs
   them, writing Prettier's fixes as it does gofmt's.
+  Roux The Day has the same. ESLint now refuses a second import from one module
+  (`no-duplicate-imports`), in roux-web too.
 - **A container image for every app.** The template has a `Dockerfile` (the front end built, then
   embedded in a static server on distroless `nonroot`: no shell, not root, about 46 MB), a
   `.dockerignore` and `make image`; a test keeps the build stages on pinned releases and the server
@@ -109,6 +111,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Fixed
 
+- The Dockerfiles install the front end with `npm ci --ignore-scripts`: no package's install script
+  runs in the image build.
+- `app.Run`'s shutdown keeps the context's values (`context.WithoutCancel`) instead of starting from
+  `context.Background()`.
 - A JWT test minted its tokens' `iat` from the real clock and `auth_time` from the test's clock,
   so it failed once the real date passed the test's.
 - **A huge `pageIndex` is an empty page,** not a 500: the offset stops at Postgres's limit
@@ -130,6 +136,9 @@ All notable changes to this project are documented in this file. The format foll
 - **A docs site**, built with MkDocs Material and published to GitHub Pages
   (<https://jwcarman.github.io/roux/>), with `llms.txt` and `llms-full.txt` for coding agents and
   a page on the Agent Skill.
+- **The recipe and the features guide build `labels`** (a name and a colour, for tagging a team
+  planner's items) instead of the dojo's ranks; the recipe check now lints the recipe's front end.
+- The docs' home page and the README show roux's mark.
 - **The Agent Skill is rewritten for the Go server.** Its recipe builds a feature end to end (the
   migration, module, input, service, handlers and Go test, then the browser's module, dialog, page,
   route and tests), every block copied from code CI builds into the template and checks.

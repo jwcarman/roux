@@ -90,10 +90,6 @@ if [ -f frontend/package.json ]; then
     step "npm run format"
     (cd frontend && npm run -s format) >"$log" 2>&1 || fail "npm run format" "Prettier could not parse a file below"
   fi
-  if has lint; then
-    step "npm run lint"
-    (cd frontend && npm run -s lint) >"$log" 2>&1 || fail "npm run lint" "fix each finding below (never with an eslint-disable comment)"
-  fi
   if has coverage; then
     step "npm run coverage"
     (cd frontend && npm run -s coverage) >"$log" 2>&1 \
@@ -104,6 +100,11 @@ if [ -f frontend/package.json ]; then
   fi
   step "npm run build"
   (cd frontend && npm run -s build) >"$log" 2>&1 || fail "frontend build" "a type error or a missing import: fix each one below"
+  # After the build: it writes routeTree.gen.ts, which type-aware lint reads for a new route.
+  if has lint; then
+    step "npm run lint"
+    (cd frontend && npm run -s lint) >"$log" 2>&1 || fail "npm run lint" "fix each finding below (never with an eslint-disable comment)"
+  fi
 else
   skipped+=("the frontend (no frontend/package.json)")
 fi

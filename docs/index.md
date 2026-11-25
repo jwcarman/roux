@@ -6,7 +6,7 @@ hide:
 
 <div class="jw-hero" markdown>
 
-# roux
+# ![](assets/favicon.svg){ .roux-hero__mark } roux
 
 <p class="jw-hero__tagline">The base a Go + React application is built on.</p>
 
@@ -26,7 +26,7 @@ and a folder of pages, and uses roux by importing from it.
 
 ```go
 func Register(k *app.Kit, svc Service) {
-	k.Handle("GET /api/ranks", RanksRead, func(w http.ResponseWriter, r *http.Request) error {
+	k.Handle("GET /api/labels", LabelsRead, func(w http.ResponseWriter, r *http.Request) error {
 		out, err := svc.List(r.Context())
 		if err != nil {
 			return err
@@ -36,7 +36,7 @@ func Register(k *app.Kit, svc Service) {
 }
 ```
 
-The route is behind the CSRF check, a sign-in and the `ranks.read` permission before the handler
+The route is behind the CSRF check, a sign-in and the `labels.read` permission before the handler
 runs; anything the handler refuses is answered as a Problem Detail the browser's forms show under
 the right field.
 

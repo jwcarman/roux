@@ -1,0 +1,17 @@
+/*
+ * roux's signature element: the skillet mark, set beside the landing-page title.
+ * Colors come from the shared jwcarman theme (jwcarman.css); this file only
+ * places the mark.
+ */
+
+/* The header logo: Material sizes it to 1.2rem, which loses the stir in the pan. */
+.md-header__button.md-logo img {
+  height: 1.6rem;
+}
+
+/* The skillet inside the hero h1, sized to the title text. */
+.md-typeset .jw-hero h1 .roux-hero__mark {
+  height: 1.05em;
+  margin-right: 0.18em;
+  vertical-align: -0.14em;
+}

@@ -27,8 +27,8 @@ it.** Each reference is rules, exact names, steps, an example, the check and the
 - **The nearest feature:** in a grown app, find the existing feature most like the task and copy its
   shape (package, files, imports, tests). Go is packaged by feature (`internal/<feature>/`), the
   frontend foldered by feature (`frontend/src/<feature>/`); route files under `src/routes/` stay
-  thin. A file holding one component is PascalCase (`RanksPage.tsx`); a module of several things is
-  camelCase (`ranks.ts`); a test is named after its file.
+  thin. A file holding one component is PascalCase (`LabelsPage.tsx`); a module of several things is
+  camelCase (`labels.ts`); a test is named after its file.
 - **What is shared:** `cmd/server/modules.go` (the modules and `permissions()`),
   `cmd/server/migrations/` (the app's roles), `src/queryKeys.ts`, `main.tsx`, `src/shell/nav.ts`,
   `src/testing/`, the app's `CLAUDE.md`. One Go module per app.

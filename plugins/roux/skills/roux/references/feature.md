@@ -1,8 +1,8 @@
 # Add a feature: the recipe
 
 A new resource end to end: table, module, input, service, handlers, permissions, tests, then the
-browser's module, form, page and route. The example is `ranks` (a name and a belt colour) in an app
-whose Go module is `roux-app`; replace `rank`/`Rank`/`ranks` with the feature's names throughout,
+browser's module, form, page and route. The example is `labels` (a name and a colour) in an app
+whose Go module is `roux-app`; replace `label`/`Label`/`labels` with the feature's names throughout,
 and `roux-app` with the module line of the app's `go.mod`.
 
 ## First: find the nearest feature
@@ -17,7 +17,7 @@ the recipe as written (`frontend/src/users/` shows the frontend shape).
 - A feature is one Go package, `internal/<feature>/`, with its SQL in `migrations/` beside it. No
   ORM, no code generator: the SQL is constant text in the package, values are always `$1`
   arguments (SQL built from what a request sent is an injection).
-- What the API answers is a struct with JSON tags (`Rank`) carrying `version`; an edit sends the
+- What the API answers is a struct with JSON tags (`Label`) carrying `version`; an edit sends the
   `version` it was made from, which is how a stale save becomes a `409`.
 - Refusals are `*problem.Problem` values returned as the error (`problem.NotFound`,
   `problem.InvalidField`, `problem.Validation`, `problem.StaleVersion`, `problem.Conflict`,
@@ -43,12 +43,12 @@ the recipe as written (`frontend/src/users/` shows the frontend shape).
 
 ## Steps
 
-### 1. The table: `internal/ranks/migrations/001_rank.sql`
+### 1. The table: `internal/labels/migrations/001_label.sql`
 
-<!-- file: internal/ranks/migrations/001_rank.sql -->
+<!-- file: internal/labels/migrations/001_label.sql -->
 ```sql
--- The school's ranks. Names are unique ignoring case.
-create table rank (
+-- The team's labels. Names are unique ignoring case.
+create table label (
     id          uuid        primary key default gen_random_uuid(),
     name        text        not null check (char_length(name) between 1 and 40),
     colour      text        not null,
@@ -59,33 +59,33 @@ create table rank (
     modified_by uuid        not null references roux_identity (id)
 );
 
-create unique index rank_name_key on rank (lower(name));
+create unique index label_name_key on label (lower(name));
 
--- Every member may see the ranks; only an owner may change them.
+-- Every member may see the labels; only an owner may change them.
 insert into roux_role_permission (role_id, permission)
-select r.id, 'ranks.read' from roux_role r where r.name in ('USER', 'OWNER')
+select r.id, 'labels.read' from roux_role r where r.name in ('USER', 'OWNER')
 on conflict do nothing;
 
 insert into roux_role_permission (role_id, permission)
-select r.id, 'ranks.manage' from roux_role r where r.name = 'OWNER'
+select r.id, 'labels.manage' from roux_role r where r.name = 'OWNER'
 on conflict do nothing;
 ```
 
 - Files run in name order, each once, in its own transaction. A later change is a new file
-  (`002_rank_order.sql`).
+  (`002_label_order.sql`).
 - The `check` repeats the Go limit (`MaxName`); the unique index on `lower(name)` guards the race
   the service's own check cannot see (roux answers it `409`).
 - The grants are here, in the feature's own migration, by role **name**, never id (ids differ
   between databases). Grant to `OWNER` every permission; to `USER` (the app's role) what members
   may do.
 
-### 2. The module: `internal/ranks/ranks.go`
+### 2. The module: `internal/labels/labels.go`
 
-<!-- file: internal/ranks/ranks.go -->
+<!-- file: internal/labels/labels.go -->
 ```go
-// Package ranks is the school's ranks: the belts a student can hold. Everyone may see them; only
+// Package labels is the team's labels: the tags an item can carry. Everyone may see them; only
 // an owner may change them.
-package ranks
+package labels
 
 import (
 	"context"
@@ -96,28 +96,28 @@ import (
 	"github.com/jwcarman/roux/pgdb"
 )
 
-// The ranks' permissions (migrations/001_rank.sql grants them).
+// The labels' permissions (migrations/001_label.sql grants them).
 const (
-	RanksRead   = "ranks.read"
-	RanksManage = "ranks.manage"
+	LabelsRead   = "labels.read"
+	LabelsManage = "labels.manage"
 )
 
-// Permissions is every permission ranks checks, for the app's list of them.
-var Permissions = []string{RanksRead, RanksManage}
+// Permissions is every permission labels checks, for the app's list of them.
+var Permissions = []string{LabelsRead, LabelsManage}
 
 //go:embed migrations/*.sql
 var migrations embed.FS
 
-// Module is the ranks feature: its table and its endpoints.
+// Module is the labels feature: its table and its endpoints.
 type Module struct {
 	// Clock is the time changes are stamped with; time.Now when nil.
 	Clock func() time.Time
 }
 
-func (Module) Name() string { return "ranks" }
+func (Module) Name() string { return "labels" }
 
 func (Module) Migrations() []pgdb.Migration {
-	return []pgdb.Migration{{Name: "ranks", FS: migrations, Dir: "migrations", After: []string{"roux-users", "app-roles"}}}
+	return []pgdb.Migration{{Name: "labels", FS: migrations, Dir: "migrations", After: []string{"roux-users", "app-roles"}}}
 }
 
 func (m Module) Mount(_ context.Context, k *app.Kit) error {
@@ -136,11 +136,11 @@ func (m Module) Mount(_ context.Context, k *app.Kit) error {
   module in `modules.go` (step 6): before the users module mounts, it is UTC and `en-US`, not the
   `ORG_*` settings.
 
-### 3. The input: `internal/ranks/input.go`
+### 3. The input: `internal/labels/input.go`
 
-<!-- file: internal/ranks/input.go -->
+<!-- file: internal/labels/input.go -->
 ```go
-package ranks
+package labels
 
 import (
 	"slices"
@@ -150,11 +150,11 @@ import (
 	"github.com/jwcarman/roux/problem"
 )
 
-// MaxName is the longest name, in characters (migrations/001_rank.sql checks it too).
+// MaxName is the longest name, in characters (migrations/001_label.sql checks it too).
 const MaxName = 40
 
-// Colours are the belts a rank may be.
-var Colours = []string{"white", "yellow", "orange", "green", "blue", "brown", "black"}
+// Colours are the palettes a label may be shown in (Chakra UI's names).
+var Colours = []string{"gray", "red", "orange", "yellow", "green", "teal", "blue", "purple", "pink"}
 
 // body is a write as it arrives; pointers tell "missing" from empty.
 type body struct {
@@ -210,11 +210,11 @@ func deref(s *string) string {
   the feature's own is a constant, so a test can name it.
 - Trim before checking; count characters with `utf8.RuneCountInString`, never `len` (bytes).
 
-### 4. The service: `internal/ranks/service.go`
+### 4. The service: `internal/labels/service.go`
 
-<!-- file: internal/ranks/service.go -->
+<!-- file: internal/labels/service.go -->
 ```go
-package ranks
+package labels
 
 import (
 	"context"
@@ -230,17 +230,17 @@ import (
 )
 
 // NameTaken is what a clash of names says, under the name field.
-const NameTaken = "Another rank has this name"
+const NameTaken = "Another label has this name"
 
-// Rank is a rank as the API answers it.
-type Rank struct {
+// Label is a label as the API answers it.
+type Label struct {
 	ID      uuid.UUID `json:"id"`
 	Name    string    `json:"name"`
 	Colour  string    `json:"colour"`
 	Version int64     `json:"version"`
 }
 
-// Service is the ranks' operations.
+// Service is the labels' operations.
 type Service struct {
 	Pool  *pgxpool.Pool
 	Clock func() time.Time
@@ -248,54 +248,54 @@ type Service struct {
 
 const columns = `id, name, colour, version`
 
-// List is every rank, by name.
-func (s Service) List(ctx context.Context) ([]Rank, error) {
-	rows, err := s.Pool.Query(ctx, `select `+columns+` from rank order by lower(name), id`)
+// List is every label, by name.
+func (s Service) List(ctx context.Context) ([]Label, error) {
+	rows, err := s.Pool.Query(ctx, `select `+columns+` from label order by lower(name), id`)
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByPos[Rank])
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[Label])
 }
 
-// Get is one rank.
-func (s Service) Get(ctx context.Context, id uuid.UUID) (Rank, error) {
-	rows, err := s.Pool.Query(ctx, `select `+columns+` from rank where id = $1`, id)
+// Get is one label.
+func (s Service) Get(ctx context.Context, id uuid.UUID) (Label, error) {
+	rows, err := s.Pool.Query(ctx, `select `+columns+` from label where id = $1`, id)
 	if err != nil {
-		return Rank{}, err
+		return Label{}, err
 	}
-	r, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Rank])
+	r, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Label])
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Rank{}, notFound()
+		return Label{}, notFound()
 	}
 	return r, err
 }
 
-// Create adds a rank.
-func (s Service) Create(ctx context.Context, caller *authn.Principal, in Input) (Rank, error) {
-	var out Rank
+// Create adds a label.
+func (s Service) Create(ctx context.Context, caller *authn.Principal, in Input) (Label, error) {
+	var out Label
 	err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
 		if err := uniqueName(ctx, tx, in.Name, uuid.Nil); err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx, `
-			insert into rank (name, colour, created_at, created_by, modified_at, modified_by)
+			insert into label (name, colour, created_at, created_by, modified_at, modified_by)
 			values ($1, $2, $3, $4, $3, $4) returning `+columns,
 			in.Name, in.Colour, s.Clock(), caller.IdentityID)
 		if err != nil {
 			return err
 		}
-		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Rank])
+		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Label])
 		return err
 	})
 	return out, err
 }
 
-// Update changes a rank, from the version the caller last saw.
-func (s Service) Update(ctx context.Context, caller *authn.Principal, id uuid.UUID, version int64, in Input) (Rank, error) {
-	var out Rank
+// Update changes a label, from the version the caller last saw.
+func (s Service) Update(ctx context.Context, caller *authn.Principal, id uuid.UUID, version int64, in Input) (Label, error) {
+	var out Label
 	err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
 		var current int64
-		err := tx.QueryRow(ctx, `select version from rank where id = $1 for update`, id).Scan(&current)
+		err := tx.QueryRow(ctx, `select version from label where id = $1 for update`, id).Scan(&current)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return notFound()
 		}
@@ -310,21 +310,21 @@ func (s Service) Update(ctx context.Context, caller *authn.Principal, id uuid.UU
 			return err
 		}
 		rows, err := tx.Query(ctx, `
-			update rank set name = $2, colour = $3, version = version + 1, modified_at = $4, modified_by = $5
+			update label set name = $2, colour = $3, version = version + 1, modified_at = $4, modified_by = $5
 			 where id = $1 returning `+columns,
 			id, in.Name, in.Colour, s.Clock(), caller.IdentityID)
 		if err != nil {
 			return err
 		}
-		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Rank])
+		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Label])
 		return err
 	})
 	return out, err
 }
 
-// Delete removes a rank.
+// Delete removes a label.
 func (s Service) Delete(ctx context.Context, id uuid.UUID) error {
-	tag, err := s.Pool.Exec(ctx, `delete from rank where id = $1`, id)
+	tag, err := s.Pool.Exec(ctx, `delete from label where id = $1`, id)
 	if err != nil {
 		return err
 	}
@@ -334,12 +334,12 @@ func (s Service) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func notFound() error { return problem.NotFound("This rank no longer exists") }
+func notFound() error { return problem.NotFound("This label no longer exists") }
 
-// uniqueName refuses a name another rank has, ignoring case, under the name field.
+// uniqueName refuses a name another label has, ignoring case, under the name field.
 func uniqueName(ctx context.Context, tx pgx.Tx, name string, self uuid.UUID) error {
 	var taken bool
-	if err := tx.QueryRow(ctx, `select exists (select 1 from rank where lower(name) = lower($1) and id <> $2)`,
+	if err := tx.QueryRow(ctx, `select exists (select 1 from label where lower(name) = lower($1) and id <> $2)`,
 		name, self).Scan(&taken); err != nil {
 		return err
 	}
@@ -353,16 +353,16 @@ func uniqueName(ctx context.Context, tx pgx.Tx, name string, self uuid.UUID) err
 - A write is one `pgx.BeginFunc` (commits on nil, rolls back otherwise); `for update` holds the row
   while the edit is checked.
 - The version is compared **first**, before anything changes, and the update raises it.
-- `pgx.RowToStructByPos[Rank]` reads columns in order into the struct's fields: keep `columns` and
+- `pgx.RowToStructByPos[Label]` reads columns in order into the struct's fields: keep `columns` and
   the struct in the same order.
 - A missing row is `problem.NotFound(...)`; a clash on what the person typed is
   `problem.InvalidField(field, message)`. Anything else returned is a `500` that logs the cause.
 
-### 5. The handlers: `internal/ranks/handlers.go`
+### 5. The handlers: `internal/labels/handlers.go`
 
-<!-- file: internal/ranks/handlers.go -->
+<!-- file: internal/labels/handlers.go -->
 ```go
-package ranks
+package labels
 
 import (
 	"net/http"
@@ -374,26 +374,26 @@ import (
 	"github.com/jwcarman/roux/authn"
 )
 
-// BasePath is where the ranks' endpoints live.
-const BasePath = "/api/ranks"
+// BasePath is where the labels' endpoints live.
+const BasePath = "/api/labels"
 
-// Register serves the ranks' endpoints. Each is a kit route: the CSRF token, a sign-in and the
+// Register serves the labels' endpoints. Each is a kit route: the CSRF token, a sign-in and the
 // permission are checked before the handler runs.
 //
-//	GET    /api/ranks       every rank, by name               ranks.read
-//	POST   /api/ranks       add a rank                        ranks.manage
-//	GET    /api/ranks/{id}  one rank                          ranks.read
-//	PUT    /api/ranks/{id}  change it, from its version (409) ranks.manage
-//	DELETE /api/ranks/{id}  delete it                         ranks.manage
+//	GET    /api/labels       every label, by name               labels.read
+//	POST   /api/labels       add a label                        labels.manage
+//	GET    /api/labels/{id}  one label                          labels.read
+//	PUT    /api/labels/{id}  change it, from its version (409) labels.manage
+//	DELETE /api/labels/{id}  delete it                         labels.manage
 func Register(k *app.Kit, svc Service) {
-	k.Handle("GET "+BasePath, RanksRead, func(w http.ResponseWriter, r *http.Request) error {
+	k.Handle("GET "+BasePath, LabelsRead, func(w http.ResponseWriter, r *http.Request) error {
 		out, err := svc.List(r.Context())
 		if err != nil {
 			return err
 		}
 		return api.JSON(w, http.StatusOK, out)
 	})
-	k.Handle("POST "+BasePath, RanksManage, func(w http.ResponseWriter, r *http.Request) error {
+	k.Handle("POST "+BasePath, LabelsManage, func(w http.ResponseWriter, r *http.Request) error {
 		in, _, err := decode(r, false)
 		if err != nil {
 			return err
@@ -404,8 +404,8 @@ func Register(k *app.Kit, svc Service) {
 		}
 		return api.JSON(w, http.StatusCreated, out)
 	})
-	k.Handle("GET "+BasePath+"/{id}", RanksRead, func(w http.ResponseWriter, r *http.Request) error {
-		id, err := rankID(r)
+	k.Handle("GET "+BasePath+"/{id}", LabelsRead, func(w http.ResponseWriter, r *http.Request) error {
+		id, err := labelID(r)
 		if err != nil {
 			return err
 		}
@@ -415,8 +415,8 @@ func Register(k *app.Kit, svc Service) {
 		}
 		return api.JSON(w, http.StatusOK, out)
 	})
-	k.Handle("PUT "+BasePath+"/{id}", RanksManage, func(w http.ResponseWriter, r *http.Request) error {
-		id, err := rankID(r)
+	k.Handle("PUT "+BasePath+"/{id}", LabelsManage, func(w http.ResponseWriter, r *http.Request) error {
+		id, err := labelID(r)
 		if err != nil {
 			return err
 		}
@@ -430,8 +430,8 @@ func Register(k *app.Kit, svc Service) {
 		}
 		return api.JSON(w, http.StatusOK, out)
 	})
-	k.Handle("DELETE "+BasePath+"/{id}", RanksManage, func(w http.ResponseWriter, r *http.Request) error {
-		id, err := rankID(r)
+	k.Handle("DELETE "+BasePath+"/{id}", LabelsManage, func(w http.ResponseWriter, r *http.Request) error {
+		id, err := labelID(r)
 		if err != nil {
 			return err
 		}
@@ -461,8 +461,8 @@ func decode(r *http.Request, edit bool) (Input, int64, error) {
 	return in, version, nil
 }
 
-// rankID is the {id} in the path; one that is not a UUID names no rank.
-func rankID(r *http.Request) (uuid.UUID, error) {
+// labelID is the {id} in the path; one that is not a UUID names no label.
+func labelID(r *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
 		return uuid.Nil, notFound()
@@ -485,7 +485,7 @@ The import, beside the file's other imports:
 
 <!-- fragment: modules-import -->
 ```go
-"roux-app/internal/ranks"
+"roux-app/internal/labels"
 ```
 
 The module, at the end of the line that adds `email` and `members` (after them, so
@@ -493,26 +493,26 @@ The module, at the end of the line that adds `email` and `members` (after them, 
 
 <!-- fragment: modules-append -->
 ```go
-mods = append(mods, email, members, ranks.Module{})
+mods = append(mods, email, members, labels.Module{})
 ```
 
 Its permissions, in `permissions()`:
 
 <!-- fragment: permissions -->
 ```go
-return append(app.RouxPermissions(), ranks.Permissions...)
+return append(app.RouxPermissions(), labels.Permissions...)
 ```
 
 Then run `go test ./cmd/server` **twice**: the first run rewrites
-`frontend/src/permissions.gen.ts` (adding `RANKS_READ` and `RANKS_MANAGE`) and fails so the change
+`frontend/src/permissions.gen.ts` (adding `LABELS_READ` and `LABELS_MANAGE`) and fails so the change
 is noticed; the second passes. The check script (below) does this for you. Its other test fails,
 naming it, if `OWNER` lacks a permission or a migration grants one nobody declared.
 
-### 7. The Go test: `internal/ranks/ranks_test.go`
+### 7. The Go test: `internal/labels/labels_test.go`
 
-<!-- file: internal/ranks/ranks_test.go -->
+<!-- file: internal/labels/labels_test.go -->
 ```go
-package ranks_test
+package labels_test
 
 import (
 	"testing"
@@ -522,71 +522,71 @@ import (
 	"github.com/jwcarman/roux/authn/authntest"
 	"github.com/jwcarman/roux/rouxtest"
 
-	"roux-app/internal/ranks"
+	"roux-app/internal/labels"
 )
 
-// setup is the ranks API over a fresh schema, with Olive (OWNER) and Ada (USER) signed in.
+// setup is the labels API over a fresh schema, with Olive (OWNER) and Ada (USER) signed in.
 func setup(t *testing.T) (owner, user *authntest.Browser) {
 	t.Helper()
-	a := rouxtest.New(t, "ranks")
-	a.Role("USER") // the app's own role, before ranks grants to it
-	a.Migrate(ranks.Module{}.Migrations()...)
-	ranks.Register(a.Kit(), ranks.Service{Pool: a.Pool, Clock: a.Clock.Now})
+	a := rouxtest.New(t, "labels")
+	a.Role("USER") // the app's own role, before labels grants to it
+	a.Migrate(labels.Module{}.Migrations()...)
+	labels.Register(a.Kit(), labels.Service{Pool: a.Pool, Clock: a.Clock.Now})
 	a.Serve()
 	return a.SignedIn(a.Person("Olive Owner", "OWNER")), a.SignedIn(a.Person("Ada Lovelace", "USER"))
 }
 
-func TestAnOwnerAddsARankThatEveryoneSees(t *testing.T) {
+func TestAnOwnerAddsALabelThatEveryoneSees(t *testing.T) {
 	owner, user := setup(t)
-	added := owner.Post("/api/ranks", map[string]any{"name": " Yellow belt ", "colour": "yellow"}).
+	added := owner.Post("/api/labels", map[string]any{"name": " Urgent ", "colour": "yellow"}).
 		Want(t, 201, "add").JSON(t)
-	if added["name"] != "Yellow belt" || added["version"] != float64(0) {
+	if added["name"] != "Urgent" || added["version"] != float64(0) {
 		t.Fatalf("added %v", added)
 	}
-	var list []ranks.Rank
-	user.Get("/api/ranks").Want(t, 200, "list").Decode(t, &list)
-	if len(list) != 1 || list[0].Name != "Yellow belt" {
+	var list []labels.Label
+	user.Get("/api/labels").Want(t, 200, "list").Decode(t, &list)
+	if len(list) != 1 || list[0].Name != "Urgent" {
 		t.Fatalf("list %v", list)
 	}
 }
 
-func TestOnlyAnOwnerChangesRanks(t *testing.T) {
+func TestOnlyAnOwnerChangesLabels(t *testing.T) {
 	_, user := setup(t)
-	user.Post("/api/ranks", map[string]any{"name": "Yellow", "colour": "yellow"}).Want(t, 403, "a USER")
+	user.Post("/api/labels", map[string]any{"name": "Waiting", "colour": "yellow"}).Want(t, 403, "a USER")
 }
 
-func TestARankNeedsANameAndAColourItKnows(t *testing.T) {
+func TestALabelNeedsANameAndAColourItKnows(t *testing.T) {
 	owner, _ := setup(t)
-	got := owner.Post("/api/ranks", map[string]any{"name": " ", "colour": "mauve"}).Want(t, 400, "bad").JSON(t)
+	got := owner.Post("/api/labels", map[string]any{"name": " ", "colour": "mauve"}).Want(t, 400, "bad").JSON(t)
 	errs, _ := got["errors"].([]any)
 	if len(errs) != 2 {
 		t.Fatalf("errors %v", got)
 	}
 }
 
-func TestTwoRanksMayNotShareANameIgnoringCase(t *testing.T) {
+func TestTwoLabelsMayNotShareANameIgnoringCase(t *testing.T) {
 	owner, _ := setup(t)
-	owner.Post("/api/ranks", map[string]any{"name": "Yellow", "colour": "yellow"}).Want(t, 201, "first")
-	got := owner.Post("/api/ranks", map[string]any{"name": "YELLOW", "colour": "green"}).Want(t, 400, "second").JSON(t)
-	if errs := got["errors"].([]any); errs[0].(map[string]any)["message"] != ranks.NameTaken {
+	owner.Post("/api/labels", map[string]any{"name": "Waiting", "colour": "yellow"}).Want(t, 201, "first")
+	got := owner.Post("/api/labels", map[string]any{"name": "WAITING", "colour": "green"}).Want(t, 400, "second").JSON(t)
+	if errs := got["errors"].([]any); errs[0].(map[string]any)["message"] != labels.NameTaken {
 		t.Fatalf("got %v", got)
 	}
 }
 
 func TestAnEditFromAnOldVersionIsRefused(t *testing.T) {
 	owner, _ := setup(t)
-	id := owner.Post("/api/ranks", map[string]any{"name": "Yellow", "colour": "yellow"}).Want(t, 201, "add").JSON(t)["id"]
-	path := "/api/ranks/" + id.(string)
-	owner.Put(path, map[string]any{"name": "Gold", "colour": "yellow", "version": 0}).Want(t, 200, "edit")
-	owner.Put(path, map[string]any{"name": "Amber", "colour": "yellow", "version": 0}).Want(t, 409, "stale")
-	owner.Put(path, map[string]any{"name": "Amber", "colour": "yellow"}).Want(t, 400, "no version")
+	id := owner.Post("/api/labels", map[string]any{"name": "Waiting", "colour": "yellow"}).Want(t, 201, "add").JSON(t)["id"]
+	path := "/api/labels/" + id.(string)
+	owner.Put(path, map[string]any{"name": "Blocked", "colour": "yellow", "version": 0}).Want(t, 200, "edit")
+	owner.Put(path, map[string]any{"name": "On hold", "colour": "yellow", "version": 0}).Want(t, 409, "stale")
+	owner.Put(path, map[string]any{"name": "On hold", "colour": "yellow"}).Want(t, 400, "no version")
 	owner.Delete(path).Want(t, 204, "delete")
 	owner.Get(path).Want(t, 404, "gone")
-	owner.Get("/api/ranks/"+uuid.NewString()).Want(t, 404, "never was")
+	owner.Get("/api/labels/"+uuid.NewString()).Want(t, 404, "never was")
 }
 ```
 
-- `rouxtest.New(t, "ranks")` is a fresh schema with roux's tables. `a.Role("USER")` creates the
+- `rouxtest.New(t, "labels")` is a fresh schema with roux's tables. `a.Role("USER")` creates the
   app's role before the feature's migration grants to it (`OWNER` exists already).
 - `a.Person(name, role)` makes a member of the team and returns their id; `a.SignedIn(id)` is a browser
   signed in as them, with the CSRF token. `Want(t, status, what)` fails with the body when the
@@ -601,16 +601,16 @@ One more entry in `queryKeys`:
 
 <!-- fragment: query-keys -->
 ```ts
-ranks: {
-  all: ["ranks"] as const,
-  lists: () => [...queryKeys.ranks.all, "list"] as const,
-  detail: (id: string) => [...queryKeys.ranks.all, "detail", id] as const,
+labels: {
+  all: ["labels"] as const,
+  lists: () => [...queryKeys.labels.all, "list"] as const,
+  detail: (id: string) => [...queryKeys.labels.all, "detail", id] as const,
 },
 ```
 
-### 11. The resource module: `frontend/src/ranks/ranks.ts`
+### 11. The resource module: `frontend/src/labels/labels.ts`
 
-<!-- file: frontend/src/ranks/ranks.ts -->
+<!-- file: frontend/src/labels/labels.ts -->
 ```ts
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
@@ -618,50 +618,50 @@ import { oneOf, text } from "@jwcarman/roux-web/form";
 import { z } from "zod";
 import { queryKeys } from "../queryKeys";
 
-export const BELT_COLOURS = ["white", "yellow", "orange", "green", "blue", "brown", "black"] as const;
-export type BeltColour = (typeof BELT_COLOURS)[number];
+export const LABEL_COLOURS = ["gray", "red", "orange", "yellow", "green", "teal", "blue", "purple", "pink"] as const;
+export type LabelColour = (typeof LABEL_COLOURS)[number];
 
-export interface Rank {
+export interface Label {
   id: string;
   name: string;
-  colour: BeltColour;
+  colour: LabelColour;
   version: number;
 }
 
 /** The server's validate, in the browser: the same rules and words, without the version. */
-export const rankRequestSchema = z.object({
+export const labelRequestSchema = z.object({
   name: text().max(40),
-  colour: oneOf(BELT_COLOURS),
+  colour: oneOf(LABEL_COLOURS),
 });
-export type RankRequest = z.output<typeof rankRequestSchema>;
+export type LabelRequest = z.output<typeof labelRequestSchema>;
 
-export const ranksApi = {
-  list: (signal?: AbortSignal) => getJson<Rank[]>("ranks", { signal }),
-  create: (request: RankRequest) => sendJson<Rank>("POST", "ranks", request),
-  update: (id: string, request: RankRequest & { version: number }) =>
-    sendJson<Rank>("PUT", path`ranks/${id}`, request),
+export const labelsApi = {
+  list: (signal?: AbortSignal) => getJson<Label[]>("labels", { signal }),
+  create: (request: LabelRequest) => sendJson<Label>("POST", "labels", request),
+  update: (id: string, request: LabelRequest & { version: number }) =>
+    sendJson<Label>("PUT", path`labels/${id}`, request),
 };
 
-export const ranksQuery = queryOptions({
-  queryKey: queryKeys.ranks.lists(),
-  queryFn: ({ signal }) => ranksApi.list(signal),
+export const labelsQuery = queryOptions({
+  queryKey: queryKeys.labels.lists(),
+  queryFn: ({ signal }) => labelsApi.list(signal),
 });
 
-export const createRank = mutationOptions({
-  mutationFn: (request: RankRequest) => ranksApi.create(request),
-  meta: { refreshes: [queryKeys.ranks.lists()] },
+export const createLabel = mutationOptions({
+  mutationFn: (request: LabelRequest) => labelsApi.create(request),
+  meta: { refreshes: [queryKeys.labels.lists()] },
 });
 
-export const updateRank = (id: string, version: number) =>
+export const updateLabel = (id: string, version: number) =>
   mutationOptions({
-    mutationFn: (request: RankRequest) => ranksApi.update(id, { ...request, version }),
-    meta: { refreshes: [queryKeys.ranks.detail(id), queryKeys.ranks.lists()] },
+    mutationFn: (request: LabelRequest) => labelsApi.update(id, { ...request, version }),
+    meta: { refreshes: [queryKeys.labels.detail(id), queryKeys.labels.lists()] },
   });
 ```
 
 - Only what a page uses: every line must run in some test (the 100% gate). A remove button adds
-  `remove` to `ranksApi` and a `removeRank` mutation, with its tests.
-- Paths are relative to `/api/` (`"ranks"`, ``path`ranks/${id}` ``). `path` encodes the values.
+  `remove` to `labelsApi` and a `removeLabel` mutation, with its tests.
+- Paths are relative to `/api/` (`"labels"`, ``path`labels/${id}` ``). `path` encodes the values.
 - Helpers mirror `validate` (step 3): `text()` ↔ trimmed and `problem.MustNotBeBlank`,
   `.max(n)` ↔ `problem.MustBeBetween(1, n)`, `oneOf(values)` ↔ `problem.MustBeOneOf(values...)`
   (the same values, spelled the same), `date()` ↔ a required date, `id()` ↔ a required UUID,
@@ -671,28 +671,28 @@ export const updateRank = (id: string, version: number) =>
 - `update` sends the request and `version`, nothing else: `api.Decode` refuses a member the server
   does not take (`id`, say) with a `400`.
 
-### 8. The form dialog: `frontend/src/ranks/RankFormDialog.tsx`
+### 8. The form dialog: `frontend/src/labels/LabelFormDialog.tsx`
 
-<!-- file: frontend/src/ranks/RankFormDialog.tsx -->
+<!-- file: frontend/src/labels/LabelFormDialog.tsx -->
 ```tsx
 import type { ReactElement } from "react";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { FormDialog, useSchemaForm } from "@jwcarman/roux-web/form";
-import { BELT_COLOURS, createRank, rankRequestSchema, updateRank, type Rank } from "./ranks";
+import { LABEL_COLOURS, createLabel, labelRequestSchema, updateLabel, type Label } from "./labels";
 
-export function RankFormDialog({ rank, trigger }: { rank?: Rank; trigger: ReactElement }) {
+export function LabelFormDialog({ label, trigger }: { label?: Label; trigger: ReactElement }) {
   const form = useSchemaForm({
-    schema: rankRequestSchema,
-    defaultValues: rank ? { name: rank.name, colour: rank.colour } : { name: "", colour: "" },
-    mutation: rank ? updateRank(rank.id, rank.version) : createRank,
+    schema: labelRequestSchema,
+    defaultValues: label ? { name: label.name, colour: label.colour } : { name: "", colour: "" },
+    mutation: label ? updateLabel(label.id, label.version) : createLabel,
     onSuccess: (saved) => notify.success(`${saved.name} was saved`),
   });
 
   return (
-    <FormDialog form={form} title={rank ? `Edit ${rank.name}` : "New rank"} trigger={trigger}>
+    <FormDialog form={form} title={label ? `Edit ${label.name}` : "New label"} trigger={trigger}>
       <form.AppField name="name">{(f) => <f.InputField label="Name" />}</form.AppField>
       <form.AppField name="colour">
-        {(f) => <f.SelectField label="Colour" options={BELT_COLOURS} placeholder="Choose a colour" />}
+        {(f) => <f.SelectField label="Colour" options={LABEL_COLOURS} placeholder="Choose a colour" />}
       </form.AppField>
     </FormDialog>
   );
@@ -707,46 +707,46 @@ export function RankFormDialog({ rank, trigger }: { rank?: Rank; trigger: ReactE
   on success.
 - A date field is `<f.InputField label="Starts on" type="date" />`. Other fields: `forms.md`.
 
-### 9. The page: `frontend/src/ranks/RanksPage.tsx`
+### 9. The page: `frontend/src/labels/LabelsPage.tsx`
 
 A short list (never more than a few hundred rows) is fetched whole with `SimpleQueryTable`:
 
-<!-- file: frontend/src/ranks/RanksPage.tsx -->
+<!-- file: frontend/src/labels/LabelsPage.tsx -->
 ```tsx
 import { Button, Stack, VisuallyHidden } from "@chakra-ui/react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { PageHeader } from "@jwcarman/roux-web/navigation";
 import { SimpleQueryTable } from "@jwcarman/roux-web/table";
-import { RankFormDialog } from "./RankFormDialog";
-import { ranksQuery, type Rank } from "./ranks";
+import { LabelFormDialog } from "./LabelFormDialog";
+import { labelsQuery, type Label } from "./labels";
 
-const column = createColumnHelper<Rank>();
+const column = createColumnHelper<Label>();
 
 /** Module scope: columns built per render remount a row's open dialog. */
-const COLUMNS: ColumnDef<Rank, unknown>[] = [
+const COLUMNS: ColumnDef<Label, unknown>[] = [
   column.accessor("name", { header: "Name" }),
   column.accessor("colour", { header: "Colour" }),
   column.display({
     id: "actions",
     header: () => <VisuallyHidden>Actions</VisuallyHidden>,
-    cell: ({ row }) => <RankFormDialog rank={row.original} trigger={<Button variant="outline">Edit</Button>} />,
+    cell: ({ row }) => <LabelFormDialog label={row.original} trigger={<Button variant="outline">Edit</Button>} />,
   }),
 ];
 
-export function RanksPage() {
+export function LabelsPage() {
   return (
     <Stack gap="6">
-      <PageHeader title="Ranks">
-        <RankFormDialog trigger={<Button>New rank</Button>} />
+      <PageHeader title="Labels">
+        <LabelFormDialog trigger={<Button>New label</Button>} />
       </PageHeader>
       <SimpleQueryTable
-        aria-label="Ranks"
-        query={ranksQuery}
+        aria-label="Labels"
+        query={labelsQuery}
         columns={COLUMNS}
         initialSort={{ id: "name", desc: false }}
-        getRowId={(rank) => rank.id}
-        emptyText="No ranks yet."
-        errorText="Could not load the ranks."
+        getRowId={(label) => label.id}
+        emptyText="No labels yet."
+        errorText="Could not load the labels."
       />
     </Stack>
   );
@@ -759,18 +759,18 @@ export function RanksPage() {
 
 ### 10. The route and the nav entry
 
-`frontend/src/routes/_signedIn/ranks.tsx` (thin: guard and component):
+`frontend/src/routes/_signedIn/labels.tsx` (thin: guard and component):
 
-<!-- file: frontend/src/routes/_signedIn/ranks.tsx -->
+<!-- file: frontend/src/routes/_signedIn/labels.tsx -->
 ```tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { requirePermission } from "@jwcarman/roux-web/session";
-import { RANKS_READ } from "../../permissions.gen";
-import { RanksPage } from "../../ranks/RanksPage";
+import { LABELS_READ } from "../../permissions.gen";
+import { LabelsPage } from "../../labels/LabelsPage";
 
-export const Route = createFileRoute("/_signedIn/ranks")({
-  beforeLoad: ({ context }) => requirePermission(context.me, RANKS_READ),
-  component: RanksPage,
+export const Route = createFileRoute("/_signedIn/labels")({
+  beforeLoad: ({ context }) => requirePermission(context.me, LABELS_READ),
+  component: LabelsPage,
 });
 ```
 
@@ -782,26 +782,26 @@ one the route checks):
 
 <!-- fragment: nav -->
 ```ts
-import { LuMedal } from "react-icons/lu"; // beside nav.ts's other icon imports
+import { LuHouse, LuPalette, LuTag, LuUsers } from "react-icons/lu"; // LuTag added to nav.ts's one icon import
 
-{ label: "Ranks", to: "/ranks", icon: LuMedal, permission: "ranks.read", description: "The belts a student can hold." },
+{ label: "Labels", to: "/labels", icon: LuTag, permission: "labels.read", description: "The tags an item can carry." },
 ```
 
 ### 13. The Vitest tests: beside the code
 
-<!-- file: frontend/src/ranks/RankFormDialog.test.tsx -->
+<!-- file: frontend/src/labels/LabelFormDialog.test.tsx -->
 ```tsx
 // @vitest-environment jsdom
 import { Button } from "@chakra-ui/react";
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Toaster, toaster } from "@jwcarman/roux-web/feedback";
 import { invalidFields, renderWithProviders, server } from "@jwcarman/roux-web/testing";
-import { RankFormDialog } from "./RankFormDialog";
+import { LabelFormDialog } from "./LabelFormDialog";
 
-describe("RankFormDialog", () => {
+describe("LabelFormDialog", () => {
   beforeEach(() => {
     document.cookie = "XSRF-TOKEN=token";
   });
@@ -810,65 +810,65 @@ describe("RankFormDialog", () => {
   });
 
   it("puts the server's field error under the field", async () => {
-    server.use(http.post("/api/ranks", () => invalidFields({ name: "Another rank has this name" })));
-    renderWithProviders(<RankFormDialog trigger={<Button>Open</Button>} />);
+    server.use(http.post("/api/labels", () => invalidFields({ name: "Another label has this name" })));
+    renderWithProviders(<LabelFormDialog trigger={<Button>Open</Button>} />);
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Open" }));
-    await user.type(screen.getByLabelText(/^Name/), "White");
-    await user.selectOptions(screen.getByLabelText(/^Colour/), "white");
+    await user.type(screen.getByLabelText(/^Name/), "Errand");
+    await user.selectOptions(screen.getByLabelText(/^Colour/), "gray");
     await user.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Another rank has this name")).toBeInTheDocument();
+    expect(await screen.findByText("Another label has this name")).toBeInTheDocument();
   });
 
-  it("edits a rank at the version it read", async () => {
+  it("edits a label at the version it read", async () => {
     let sent: unknown;
     server.use(
-      http.put("/api/ranks/r1", async ({ request }) => {
+      http.put("/api/labels/l1", async ({ request }) => {
         sent = await request.json();
-        return HttpResponse.json({ id: "r1", name: "Snow", colour: "white", version: 4 });
+        return HttpResponse.json({ id: "l1", name: "Chore", colour: "gray", version: 4 });
       }),
     );
-    const rank = { id: "r1", name: "White", colour: "white" as const, version: 3 };
+    const label = { id: "l1", name: "Errand", colour: "gray" as const, version: 3 };
     renderWithProviders(
       <>
-        <RankFormDialog rank={rank} trigger={<Button>Edit</Button>} />
+        <LabelFormDialog label={label} trigger={<Button>Edit</Button>} />
         <Toaster />
       </>,
     );
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Edit" }));
     await user.clear(screen.getByLabelText(/^Name/));
-    await user.type(screen.getByLabelText(/^Name/), "Snow");
+    await user.type(screen.getByLabelText(/^Name/), "Chore");
     await user.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Snow was saved")).toBeInTheDocument();
-    expect(sent).toEqual({ name: "Snow", colour: "white", version: 3 });
+    expect(await screen.findByText("Chore was saved")).toBeInTheDocument();
+    expect(sent).toEqual({ name: "Chore", colour: "gray", version: 3 });
   });
 });
 ```
 
-The page and its guard, through the router (`routes/_signedIn/-ranks.test.tsx`; the `-` keeps it
+The page and its guard, through the router (`routes/_signedIn/-labels.test.tsx`; the `-` keeps it
 out of the route tree):
 
-<!-- file: frontend/src/routes/_signedIn/-ranks.test.tsx -->
+<!-- file: frontend/src/routes/_signedIn/-labels.test.tsx -->
 ```tsx
 // @vitest-environment jsdom
 import { screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "@jwcarman/roux-web/testing";
-import { RANKS_READ } from "../../permissions.gen";
+import { LABELS_READ } from "../../permissions.gen";
 import { renderRoute } from "../../testing/route";
 
-describe("/ranks", () => {
-  it("lists the ranks", async () => {
-    server.use(http.get("/api/ranks", () => HttpResponse.json([{ id: "r1", name: "White", colour: "white", version: 0 }])));
-    renderRoute("/ranks", { permissions: [RANKS_READ] });
-    const table = await screen.findByRole("table", { name: "Ranks" });
-    expect(await within(table).findByText("White")).toBeInTheDocument();
+describe("/labels", () => {
+  it("lists the labels", async () => {
+    server.use(http.get("/api/labels", () => HttpResponse.json([{ id: "l1", name: "Errand", colour: "gray", version: 0 }])));
+    renderRoute("/labels", { permissions: [LABELS_READ] });
+    const table = await screen.findByRole("table", { name: "Labels" });
+    expect(await within(table).findByText("Errand")).toBeInTheDocument();
   });
 
   it("sends someone without the permission home", async () => {
-    const { router } = renderRoute("/ranks", { permissions: [] });
+    const { router } = renderRoute("/labels", { permissions: [] });
     await screen.findByRole("heading", { name: /^Welcome/ });
     expect(router.state.location.pathname).toBe("/");
   });
@@ -880,8 +880,8 @@ describe("/ranks", () => {
   `invalidFields`, `notFound`, `stale`, `serverError` build the server's problems.
 - The fake server is strict: a request no handler answers fails the test. A page that starts
   calling a new endpoint breaks every test that renders it:
-  `grep -rlE "RanksPage|/ranks|/api/ranks" frontend/src --include=*.test.tsx` and add handlers.
-- A route test starts its file name with `-` (`routes/_signedIn/-ranks.test.tsx`) and uses
+  `grep -rlE "LabelsPage|/labels|/api/labels" frontend/src --include=*.test.tsx` and add handlers.
+- A route test starts its file name with `-` (`routes/_signedIn/-labels.test.tsx`) and uses
   `renderRoute` from `src/testing/route.tsx`.
 - Frontend coverage is 100% (`npm run coverage` enforces it): every line of the module, page, dialog
   and route must run in some test. Test create and edit in the dialog, the page's rows and empty
@@ -889,16 +889,16 @@ describe("/ranks", () => {
 
 ## A long list (paged by the server)
 
-Instead of `List` and the whole-list page: a view (`create view rank_list as ...`), a
+Instead of `List` and the whole-list page: a view (`create view label_list as ...`), a
 `page.New(page.ListConfig[Sort, Row]{...})` list in the service, `api.PageRequest` in the handler
 answering a page, `pageQuery(...)` in the module, and `QueryTable` with its state in the URL
 (`tableSearchOf`). All of it: `lists.md`.
 
 ## Add a field to an existing feature
 
-1. A **new** migration file: `alter table rank add column ...` (a `not null` column on a table with
+1. A **new** migration file: `alter table label add column ...` (a `not null` column on a table with
    rows needs a `default`).
-2. Go: the `body` member, `Input` field and its rule in `validate`; the `Rank` field, `columns`, and
+2. Go: the `body` member, `Input` field and its rule in `validate`; the `Label` field, `columns`, and
    every `insert`/`update` (same order as the struct).
 3. The browser: the interface, the schema rule, and both `defaultValues` in the dialog; the dialog's
    `form.AppField`.
@@ -927,7 +927,7 @@ before `a.Migrate`.
 - `rouxtest.New` without `a.Role("USER")` before `a.Migrate(...)`: the same silent missing grant
   in tests.
 - A migration edited after it ran: startup stops on the checksum. Add a new file.
-- `permissions.gen.ts` stale: the frontend's route imports `RANKS_READ` and fails to compile. Run
+- `permissions.gen.ts` stale: the frontend's route imports `LABELS_READ` and fails to compile. Run
   `go test ./cmd/server` (twice) or the check script; never edit the file.
 - The module listed before `members` while reading `k.Organization()` at mount: it gets UTC, not
   `ORG_TIME_ZONE`, and "today" is wrong in other zones.

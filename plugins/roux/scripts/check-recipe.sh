@@ -76,7 +76,9 @@ for kind, target, indent, body in blocks:
     elif target == "nav":
         imports, entry = [part for part in body.split("\n\n") if part.strip()]
         nav = app / "frontend/src/shell/nav.ts"
-        nav.write_text(imports.split("//")[0].rstrip() + "\n" + nav.read_text())
+        # The icon joins nav.ts's one react-icons/lu import (one import per module).
+        nav.write_text(re.sub(r'^import \{[^}]*\} from "react-icons/lu";$', imports.split("//")[0].rstrip(),
+                              nav.read_text(), count=1, flags=re.M))
         insert_before(nav, "]);", "  " + entry.strip() + "\n")
     else:
         sys.exit(f"check-recipe: unknown fragment {target}")
@@ -97,5 +99,6 @@ else
 fi
 make test
 (cd frontend && npm ci --ignore-scripts --no-audit --no-fund >/dev/null \
-  && npm run coverage && npm run build)
+  && npm ci --ignore-scripts --no-audit --no-fund --prefix lint-tools >/dev/null \
+  && npm run coverage && npm run build && npm run lint)
 echo "check-recipe: ok, the recipe's feature builds and passes its checks" >&2

@@ -1,6 +1,6 @@
 # Roles and permissions
 
-A roux app checks **permissions**, never roles: `k.Handle("GET /api/ranks", ranks.RanksRead, ...)`
+A roux app checks **permissions**, never roles: `k.Handle("GET /api/labels", labels.LabelsRead, ...)`
 on an endpoint, a `permission` on a navigation item. A **role** is a named set of permissions that
 people hold. Permissions are constants in Go; roles and what they grant are **data**, changed by
 migrations like any schema.
@@ -28,25 +28,25 @@ migrations like any schema.
 Constants in the package that checks them, and a list of them:
 
 ```go
-// The ranks' permissions (migrations/001_rank.sql grants them).
+// The labels' permissions (migrations/001_label.sql grants them).
 const (
-	RanksRead   = "ranks.read"
-	RanksManage = "ranks.manage"
+	LabelsRead   = "labels.read"
+	LabelsManage = "labels.manage"
 )
 
-// Permissions is every permission ranks checks, for the app's list of them.
-var Permissions = []string{RanksRead, RanksManage}
+// Permissions is every permission labels checks, for the app's list of them.
+var Permissions = []string{LabelsRead, LabelsManage}
 ```
 
-A permission is lowercase words joined by dots: the feature, then what it allows (`ranks.read`,
-`items.delete.any`). Reading and changing are usually two (`ranks.read`, `ranks.manage`); "only
+A permission is lowercase words joined by dots: the feature, then what it allows (`labels.read`,
+`items.delete.any`). Reading and changing are usually two (`labels.read`, `labels.manage`); "only
 the owner" is a permission granted to `OWNER` alone.
 
 `cmd/server/modules.go` lists every permission the app checks, roux's first:
 
 ```go
 func permissions() []string {
-	return append(app.RouxPermissions(), ranks.Permissions...)
+	return append(app.RouxPermissions(), labels.Permissions...)
 }
 ```
 
@@ -87,12 +87,12 @@ Each feature then grants its own permissions in its own migration, after `app-ro
 insert into roux_role_permission (role_id, permission)
 select r.id, p.permission
   from roux_role r
- cross join (values ('ranks.read')) as p(permission)
+ cross join (values ('labels.read')) as p(permission)
  where r.name in ('USER', 'OWNER')
 on conflict do nothing;
 
 insert into roux_role_permission (role_id, permission)
-select r.id, 'ranks.manage' from roux_role r where r.name = 'OWNER'
+select r.id, 'labels.manage' from roux_role r where r.name = 'OWNER'
 on conflict do nothing;
 ```
 
@@ -102,7 +102,7 @@ Never change a migration that has run; add a new one.
   granting it to `OWNER` (and to any other role that should hold it).
 - **Adding a role** is a migration in `cmd/server/migrations/` (and, if people may be invited to
   it, an entry in `INVITABLE_ROLES`).
-- **Renaming a role** is a migration: `update roux_role set name = 'COACH' where name = 'INSTRUCTOR';`.
+- **Renaming a role** is a migration: `update roux_role set name = 'LEAD' where name = 'ORGANIZER';`.
   Holders keep it: assignments refer to the role's id.
 - **Taking a permission away** is a migration deleting the grant from `roux_role_permission`.
 
@@ -142,7 +142,7 @@ func TestEveryGrantIsADeclaredPermissionAndOwnerHoldsThemAll(t *testing.T) {
 ```
 
 - `rouxtest.PermissionsFile` writes `permissions.gen.ts` (a constant per permission, named from it:
-  `ranks.read` is `RANKS_READ`; and `PERMISSIONS`, the array `defineNav` takes) and fails when the
+  `labels.read` is `LABELS_READ`; and `PERMISSIONS`, the array `defineNav` takes) and fails when the
   committed file was stale. After adding a permission, run `go test ./cmd/server`: the first run
   rewrites the file and fails, the second passes; commit the file. Never edit it by hand.
 - `rouxtest.CheckGrants` fails, naming each one, when `OWNER` lacks a permission, or any role
