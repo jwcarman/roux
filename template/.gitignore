@@ -21,3 +21,6 @@ test-results/
 reports/
 coverage/
 .stryker-tmp/
+
+# air: the server make dev builds
+/tmp/

@@ -28,12 +28,15 @@ Either way, features use roux by importing from it; no plumbing is written in th
    ```
 
    That starts PostgreSQL (`localhost:5432`, user, password and database `app`) and Mailpit, which
-   catches every email the app sends and shows it at <http://localhost:8025>; builds the front end
-   whenever anything under `frontend/` is newer than the last build; and runs the server at <http://localhost:8080> with development settings: a
+   catches every email the app sends and shows it at <http://localhost:8025>; then runs the server
+   under [air](https://github.com/air-verse/air) and Vite together, with development settings: a
    development `CODE_SECRET`, the compose database, and `owner@example.com` as the first owner.
-   Each gives way to the environment: `OWNER_EMAIL=you@example.com make dev` makes you the owner
-   instead. While working on pages, run `npm run dev` in `frontend/` as well: Vite serves the pages
-   at <http://localhost:5173>, reloading as you edit, and passes `/api` to the server.
+   Open <http://localhost:5173>, the one address for everything: Vite serves the pages and passes
+   `/api` to the server, and sign-in links, passkeys and cookies all name that address. Edit a page
+   and it reloads; edit Go (or a migration or an email template) and air rebuilds and restarts the
+   server, printing the compiler's error when the build fails. Each setting gives way to the
+   environment: `OWNER_EMAIL=you@example.com make dev` makes you the owner instead. One Ctrl-C stops
+   both; if either stops on its own, the other is stopped and `make dev` fails.
 3. **Sign in as the owner.** On the sign-in page, ask for a link for the owner's address and open
    it from Mailpit. roux made that address the `OWNER` on the first start.
 4. **Add a first page.** Ask your agent for it: roux's Claude Code plugin (the `roux` skill) says
@@ -52,7 +55,7 @@ live in `frontend/lint-tools/`, with an install of their own, which `npm run lin
 app's compiler. `make build` makes the release binary, one file with the front end inside, and
 `make image` the container image. `make up` runs that image as a deployment does, beside Postgres
 and Mailpit (`docker compose --profile app`), at <http://localhost:8080>; `make down` stops it. Stop
-`make dev` first: both serve on port 8080.
+`make dev` first: its server uses port 8080 too.
 
 ## Requirements
 

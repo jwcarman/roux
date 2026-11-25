@@ -8,6 +8,15 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- **`make dev` is a live loop at <http://localhost:5173>.** It runs the server under
+  [air](https://github.com/air-verse/air) (a Go tool in the app's `go.mod`, configured by
+  `.air.toml`; rebuilt and restarted when Go, a migration or an email template changes) and Vite
+  together (`scripts/dev.sh`), and sets `PUBLIC_URL` to the Vite address, so sign-in links, passkeys
+  and cookies work through its proxy. One Ctrl-C stops both; if either exits, the other is stopped
+  and `make dev` fails. Before, `make dev` served a built front end at `:8080` and Go changes needed
+  a restart, with `npm run dev` run beside it for pages. Vite now fails rather than take another
+  port when 5173 is busy. `make up` is unchanged, the app as deployed at `:8080`.
+
 - **`make dev` and `make e2e` rebuild the front end whenever it is out of date** (anything under
   `frontend/` newer than the last build; `npm ci` again when the lock changed), not only when there
   is no build: before, a page changed or merged after the first build was never served.

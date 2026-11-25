@@ -21,7 +21,7 @@ cd team-planner
 make dev
 ```
 
-and sign in at <http://localhost:8080> as `owner@example.com` (the link is in Mailpit,
+and open <http://localhost:5173>, signing in as `owner@example.com` (the link is in Mailpit,
 <http://localhost:8025>).
 
 [Getting started](https://jwcarman.github.io/roux/guides/getting-started/) goes on from there.

@@ -74,7 +74,7 @@ it.** Each reference is rules, exact names, steps, an example, the check and the
 | Users, invitations, referring to people, a table per user, roux's users endpoints | `references/users.md` (~1,200 tokens) |
 | Toasts, confirmations, a button that runs a mutation, a control that saves on change, error pages | `references/feedback.md` (~1,300 tokens) |
 | `rouxtest`, browsers and the clock in Go tests, MSW answers, route tests, Playwright | `references/tests.md` (~1,600 tokens) |
-| A new app, modules, environment settings, `main.tsx`, the session and guards, navigation, theme, sign-in, CSP | `references/app-setup.md` (~2,200 tokens) |
+| A new app, modules, environment settings, `main.tsx`, the session and guards, navigation, theme, sign-in, CSP | `references/app-setup.md` (~2,800 tokens) |
 | Money | `references/money.md` (~1,000 tokens) |
 | Today, the organization's zone, dates and times in columns, formatting | `references/dates.md` (~1,200 tokens) |
 | A record's history | `references/activity-log.md` (~1,200 tokens) |

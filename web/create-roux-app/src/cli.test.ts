@@ -43,7 +43,7 @@ describe("main", () => {
       "  cd acme-gym",
       "  make dev",
       "",
-      "Then sign in at http://localhost:8080 as owner@example.com: the link is in Mailpit, http://localhost:8025.",
+      "Then open http://localhost:5173 and sign in as owner@example.com: the link is in Mailpit, http://localhost:8025.",
       "",
       "Building with Claude Code? Open it in acme-gym and install roux's skill: /plugin install roux@roux",
     ]);

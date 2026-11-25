@@ -2,8 +2,10 @@ import { defineConfig } from "vitest/config";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 
-// The Go server serves the built app (embedded with `make build`); in development Vite serves it and
-// passes the API, roux's own endpoints under /api/roux among it, through to the server on :8080.
+// The Go server serves the built app (embedded with `make build`); in development (`make dev`) Vite
+// serves it at http://localhost:5173, the one address people use, and passes the API, roux's own
+// endpoints under /api/roux among it, through to the server on :8080. It leaves Host and Origin as the
+// browser sent them, which passkeys need: the server is started with PUBLIC_URL set to this address.
 const backend = "http://localhost:8080";
 
 export default defineConfig({
@@ -22,6 +24,9 @@ export default defineConfig({
   // (roux serves the shell), matching its Content-Security-Policy header.
   html: { cspNonce: "__CSP_NONCE__" },
   server: {
+    // Not the next free port: the address in `make dev`'s output and in PUBLIC_URL is this one.
+    port: 5173,
+    strictPort: true,
     proxy: {
       "/api": backend,
       "/api/roux/auth": backend,

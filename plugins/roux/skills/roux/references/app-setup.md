@@ -24,16 +24,19 @@ app already has all of it; read this when changing it.
 
 1. `npm create @jwcarman/roux-app team-planner` (Node 20+): the directory, the Go module and the npm
    name.
-2. `make dev`: PostgreSQL and Mailpit (<http://localhost:8025>), the front end rebuilt when it is out of date, and the
-   server at <http://localhost:8080> with development settings (owner `owner@example.com`; each
-   setting gives way to the environment). For pages, `npm run dev` in `frontend/` too (Vite on
-   5173, `/api` passed to the server).
+2. `make dev`: PostgreSQL and Mailpit (<http://localhost:8025>), then the server under air (rebuilt and
+   restarted when Go, a migration or an email template changes; a failed build prints the error) and
+   Vite together, with development settings (owner `owner@example.com`; each setting gives way to the
+   environment). Open <http://localhost:5173>, the only address in development: Vite serves the pages
+   (reloading as you edit) and passes `/api` to the server, which has `PUBLIC_URL` set to it, so
+   sign-in links, passkeys and cookies work there. Do not run `npm run dev` yourself. One Ctrl-C
+   stops both; if either exits, the other is stopped and `make dev` fails.
 3. Sign in as the owner with the link from Mailpit.
 4. Add features with `feature.md`.
 
 `make check` runs gofmt, `go vet`, golangci-lint and the Go tests; `make e2e` the Playwright suite; `make build` the one-file binary
 with the front end inside; `make image` the container image; `make up` that image beside Postgres and Mailpit at
-<http://localhost:8080> (`make down` stops it; not while `make dev` runs). `npm run lint`/`format` install
+<http://localhost:8080>, the app as deployed (`make down` stops it; not while `make dev` runs: both use port 8080). `npm run lint`/`format` install
 `frontend/lint-tools` when it is missing.
 
 ## Names: the server

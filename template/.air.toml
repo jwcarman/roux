@@ -1,0 +1,24 @@
+# air rebuilds and restarts the server in `make dev` (scripts/dev.sh) whenever a Go file or a file the
+# server reads at startup (emails, migrations) changes. The front end is Vite's: its files, the
+# tests, and everything the server never reads are not watched.
+
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/server ./cmd/server"
+entrypoint = ["./tmp/server"]
+include_ext = ["go", "mod", "sql", "html", "txt"]
+exclude_dir = [".claude", ".git", "bin", "coverage", "deploy", "e2e", "frontend", "node_modules", "tmp"]
+exclude_regex = ["_test\\.go$"]
+# Saving several files at once is one rebuild.
+delay = 200
+# A build that fails leaves no stale server running: the error is printed and the next save retries.
+stop_on_error = true
+
+[log]
+main_only = true
+
+[misc]
+clean_on_exit = true
+startup_banner = ""

@@ -27,7 +27,7 @@ export function main(argv: readonly string[], io: Io): number {
     `  cd ${directory}`,
     "  make dev",
     "",
-    "Then sign in at http://localhost:8080 as owner@example.com: the link is in Mailpit, http://localhost:8025.",
+    "Then open http://localhost:5173 and sign in as owner@example.com: the link is in Mailpit, http://localhost:8025.",
     "",
     `Building with Claude Code? Open it in ${directory} and install roux's skill: /plugin install roux@roux`,
   ].forEach((line) => io.out(line));
