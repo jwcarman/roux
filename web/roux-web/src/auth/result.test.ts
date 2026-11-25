@@ -16,7 +16,13 @@ describe("unwrap", () => {
     try {
       unwrap(result);
     } catch (e) {
-      expect(e).toMatchObject({ reason: "nope", status: 409, detail: "taken" });
+      expect(e).toMatchObject({
+        name: "AuthError",
+        message: "who answered 409: nope",
+        reason: "nope",
+        status: 409,
+        detail: "taken",
+      });
     }
   });
 

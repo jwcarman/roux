@@ -51,8 +51,8 @@ export function json<T>(): (response: Response) => Promise<T> {
 }
 
 /** Reads nothing from a success. */
-export function nothing(): Promise<void> {
-  return Promise.resolve();
+export async function nothing(): Promise<void> {
+  // a success with no body to read
 }
 
 /** A 401 on a call that needs a recent sign-in, told apart by who's `Roux-Error` code. */
@@ -112,17 +112,9 @@ async function errorCode(response: Response): Promise<string | null> {
   return null;
 }
 
-/** The default `decodeError`: a JSON body, or undefined. */
-async function readJson(response: Response): Promise<unknown> {
-  const text = await response.text();
-  if (text === "") {
-    return undefined;
-  }
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return undefined;
-  }
+/** The default `decodeError`: a JSON body, or undefined (no body, or one that is not JSON). */
+function readJson(response: Response): Promise<unknown> {
+  return response.json().catch(() => undefined);
 }
 
 function normalize(baseUrl: string): string {
@@ -226,7 +218,7 @@ export class AuthHttp<D> {
       method,
       credentials: this.credentials,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: JSON.stringify(body), // undefined for no body
     });
   }
 }

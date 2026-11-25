@@ -131,6 +131,19 @@ describe("me.passkeys.register", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  it("answers signed-out when the session ends before who has the passkey", async () => {
+    server.use(
+      http.post(at("/api/roux/auth/me/passkeys/options"), () => HttpResponse.json(CREATION_OPTIONS)),
+      http.post(at("/api/roux/auth/me/passkeys"), () => refused(401, "not-signed-in")),
+    );
+    create.mockResolvedValue(created);
+
+    await expect(createAuthClient().me.passkeys.register("Laptop")).resolves.toMatchObject({
+      ok: false,
+      reason: "signed-out",
+    });
+  });
+
   it("answers rejected when who refuses the passkey", async () => {
     server.use(
       http.post(at("/api/roux/auth/me/passkeys/options"), () => HttpResponse.json(CREATION_OPTIONS)),

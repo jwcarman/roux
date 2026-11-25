@@ -156,7 +156,7 @@ export function emailAddresses<D>(http: AuthHttp<D>): EmailAddresses<D> {
       http.call({
         method: "POST",
         path: "/me/email-addresses",
-        body: replaces === undefined ? { address } : { address, replaces },
+        body: { address, replaces }, // JSON leaves replaces out when it is undefined
         read: nothing,
         reason: (status, code) =>
           signInRequired(status, code) ??

@@ -218,6 +218,17 @@ describe("InfiniteSelect", () => {
     return { ...shown, listbox: screen.getByRole("listbox") };
   }
 
+  it("says it is loading while the first page is on its way", async () => {
+    const first = deferred();
+    const { user } = show({ queryFn: () => first.promise });
+    await user.click(input());
+
+    expect(await screen.findByRole("status", { name: "Loading" })).toBeInTheDocument();
+    expect(screen.queryByText("No items found")).toBeNull();
+    act(() => first.settle(endpoint({ pageIndex: 0, pageSize: 20 }) as never));
+    await screen.findByRole("option", { name: /Person 001/ });
+  });
+
   it("is not invalid unless told", () => {
     show();
     expect(input()).not.toHaveAttribute("aria-invalid");

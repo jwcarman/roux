@@ -1,8 +1,4 @@
-import { afterEach } from "vitest";
 export { server } from "../testing/server";
-
-// The CSRF cookie a test set goes with the test.
-afterEach(clearCsrfCookie);
 
 /** An absolute URL on the page's origin, as the client sends it. */
 export function at(path: string): string {

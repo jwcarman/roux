@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { delay, http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { checkAllAnswered, server, settle } from "./server";
+import { checkAllAnswered, listen, server, settle, stop } from "./server";
 
 describe("the fake network", () => {
   it("names a request no handler answered", async () => {
@@ -11,6 +11,14 @@ describe("the fake network", () => {
 
     expect(() => checkAllAnswered()).toThrow("No handler answered: GET /api/nowhere, POST /api/elsewhere");
     expect(() => checkAllAnswered()).not.toThrow();
+  });
+
+  it("forgets its listeners when stopped, so listening again counts a request once", async () => {
+    stop();
+    listen();
+    await fetch("http://localhost/api/nowhere").catch(() => undefined);
+
+    expect(() => checkAllAnswered()).toThrow(/^No handler answered: GET \/api\/nowhere$/);
   });
 
   it("settle waits until a request in flight has its answer", async () => {

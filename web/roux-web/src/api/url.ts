@@ -47,9 +47,9 @@ export function resolveUrl(target: string, params?: QueryParams): string {
 
 /** `path` without the slashes it ends with: "/api//" is "/api". */
 export function withoutTrailingSlashes(path: string): string {
-  let end = path.length;
-  while (end > 0 && path[end - 1] === "/") {
-    end--;
+  let trimmed = path;
+  while (trimmed.endsWith("/")) {
+    trimmed = trimmed.slice(0, -1);
   }
-  return path.slice(0, end);
+  return trimmed;
 }
