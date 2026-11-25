@@ -52,3 +52,23 @@ func TestMembersAreNamedInOrderWithWhetherTheyAreActive(t *testing.T) {
 		t.Fatalf("got %+v, want %+v", got, want)
 	}
 }
+
+func TestActiveMembersAreEveryoneWhoMayBeAssignedNow(t *testing.T) {
+	f := setup(t)
+	ctx := context.Background()
+	grace := f.person("Grace Hopper", "grace@example.test", "")
+	lin := f.person("lin Chen", "lin@example.test", "")
+	ada := f.person("Ada Lovelace", "ada@example.test", "")
+	if _, err := f.Pool.Exec(ctx, `update roux_identity set status = 'DEACTIVATED' where id = $1`, grace); err != nil {
+		t.Fatal(err)
+	}
+	got, err := users.ActiveMembers(ctx, f.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// setup's owner, Olive, is a member too.
+	want := []users.Member{{ID: ada, Name: "Ada Lovelace", Active: true}, {ID: lin, Name: "lin Chen", Active: true}, {ID: f.owner, Name: "Olive Owner", Active: true}}
+	if len(got) != 3 || got[0] != want[0] || got[1] != want[1] || got[2] != want[2] {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+}

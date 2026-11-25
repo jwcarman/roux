@@ -40,8 +40,8 @@ Either way, features use roux by importing from it; no plumbing is written in th
 3. **Sign in as the owner.** On the sign-in page, ask for a link for the owner's address and open
    it from Mailpit. roux made that address the `OWNER` on the first start.
 4. **Add a first page.** Ask your agent for it: roux's Claude Code plugin (the `roux` skill) says
-   where each piece goes, and the app's `.claude/settings.json` names it, so in Claude Code trust
-   the folder and run `/plugin install roux@roux` once. By hand, a feature is a Go package in
+   where each piece goes, and the app's `.claude/settings.json` names it, so Claude Code offers to
+   install it when you trust the folder: accept. By hand, a feature is a Go package in
    `internal/<feature>/` listed in `cmd/server/modules.go` ([A feature's server side](features.md)),
    and a page is a feature folder in `frontend/src/<feature>/`, a route file in
    `frontend/src/routes/_signedIn/`, and an entry in `frontend/src/shell/nav.ts`

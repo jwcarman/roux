@@ -17,7 +17,11 @@ frontend with a 100% Vitest coverage gate. Its check script and the recipe rely 
 roux's names are its own (`k.Handle`, `problem.InvalidField`, `page.New`, `sendJson`,
 `meta.refreshes`, `useSchemaForm`, `QueryTable`): guesses from general Go or React knowledge are
 wrong in the details. **Read the reference for the task before writing code, and take names from
-it.** Each reference is rules, exact names, steps, an example, the check and the pitfalls.
+it.** Each reference is rules, exact names, steps, an example, the check and the pitfalls. The
+references name every export (a script checks it), so there is no need to read
+roux's source or `node_modules` to confirm one: write the code, and the build and the check script
+name anything wrong. The TypeScript language server may not start (TypeScript 7 has no
+`tsserver`): search the code, and `npm run build` is the type check.
 
 ## First, look at the project
 
@@ -55,7 +59,7 @@ it.** Each reference is rules, exact names, steps, an example, the check and the
 - Buttons that change data use `useServerAction`; consequences ask first with `useConfirm`; outcomes
   are told with `notify`.
 - Long lists are paged by the server (`page.New`) and shown with `QueryTable`, state in the URL (so
-  a link or reload keeps the page).
+  a link or reload keeps the page). A list that grows as the app is used is long, even while short.
 - Import roux-web only from its subpaths (`@jwcarman/roux-web/api`, `/form`, `/table`...): it has
   no root export.
 - Time from the module's clock, today from the organization's zone, so tests set the time and
@@ -71,7 +75,7 @@ it.** Each reference is rules, exact names, steps, an example, the check and the
 | Rule helpers and the server's matching checks, a two-field rule (`after()`), every field type, a form on a page, 409s on a form, a custom field, a form that doesn't save | `references/forms.md` (~1,800 tokens) |
 | A list paged by the server (`page.New`), search and filter chips, URL state, a growing list, a picker, row selection, ordered rows, a column only some see | `references/lists.md` (~3,400 tokens) |
 | Permissions, roles, `permissions.gen.ts`, invitable roles, the last administrator | `references/permissions.md` (~1,200 tokens) |
-| Users, invitations, referring to people, a table per user, roux's users endpoints | `references/users.md` (~1,200 tokens) |
+| Users, invitations, referring to people, a table per user, roux's users endpoints | `references/users.md` (~1,500 tokens) |
 | Toasts, confirmations, a button that runs a mutation, a control that saves on change, error pages | `references/feedback.md` (~1,300 tokens) |
 | `rouxtest`, browsers and the clock in Go tests, MSW answers, route tests, Playwright | `references/tests.md` (~1,600 tokens) |
 | A new app, modules, environment settings, `main.tsx`, the session and guards, navigation, theme, sign-in, CSP | `references/app-setup.md` (~2,800 tokens) |

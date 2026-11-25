@@ -57,3 +57,18 @@ func Members(ctx context.Context, db page.Querier, ids []uuid.UUID) ([]Member, e
 	}
 	return pgx.CollectRows(rows, pgx.RowToStructByName[Member])
 }
+
+// ActiveMembers is every active member of the team, by name (ignoring case) then id: the people a
+// feature may assign or invite now (an assignee picker's options). Store a chosen id only after
+// MustBeActive, in the transaction that stores it: someone may leave in between.
+func ActiveMembers(ctx context.Context, db page.Querier) ([]Member, error) {
+	rows, err := db.Query(ctx, `
+		select u.id, u.display_name, true as active
+		  from roux_user u join roux_identity i on i.id = u.id
+		 where i.status = 'ACTIVE'
+		 order by lower(u.display_name), u.id`)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByName[Member])
+}

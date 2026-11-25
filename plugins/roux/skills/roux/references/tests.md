@@ -133,3 +133,13 @@ for one file). The skill's check script does not run it.
   `/api/roux/auth/me` first, and that request needs a handler too.
 - Toasts left from one test show in the next: `act(() => toaster.remove())` after each.
 - A component test without `// @vitest-environment jsdom` runs in Node and fails on the DOM.
+- A closed Chakra dialog stays in the page in jsdom (no exit animation), `data-state="closed"`:
+  `await waitFor(() => expect(screen.getByRole("dialog", { hidden: true })).toHaveAttribute("data-state", "closed"))`,
+  never `not.toBeInTheDocument()`.
+- A Chakra checkbox's state is its root's: `box.closest("label")` has `data-state="checked"` or
+  `"unchecked"`; the hidden input stays as clicked. A refused `useOptimisticToggle` is put back after
+  the failure toast: find the toast, then `waitFor` the root's `data-state`.
+- `validateSearch` returns every key (`undefined` when bad): a key left out lets the raw URL value
+  through. Test a typed bad URL.
+- Go tests only of the happy path: also test `404` for an unknown id and a non-UUID path id on each
+  `GET`/`PUT`/`DELETE`, and that a deleted row is gone. The 100% gate covers TypeScript, not Go.

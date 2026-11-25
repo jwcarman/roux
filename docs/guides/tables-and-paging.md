@@ -8,6 +8,11 @@ table over such an endpoint (`QueryTable`), with search inputs and filter chips 
 (`InfiniteList`), a picker over a long list (`InfiniteSelect`), and the helpers that keep a table's
 state in the URL. Queries and keys follow [Queries and mutations](queries-and-mutations.md).
 
+A list that grows as the app is used (tasks, entries, payments, events, anything with a date) is
+paged this way, even while it is short: done and past rows pile up. A list that something small
+and fixed bounds (the roles, the colours, a team's labels) is one request, shown with
+`SimpleQueryTable` ([A short list](#a-short-list)).
+
 ## The wire
 
 A paged endpoint reads these query parameters, all optional (`contracts/page-params.json`):
@@ -491,7 +496,9 @@ How it fits together:
   shaped like a UUID, so the route never needs its own `typeof` check. A date that is URL state (a
   page for one day, a report's start) is `dateSearchOf(raw)`: a real `YYYY-MM-DD` (`2026-02-30` is
   not one) or absent; the page falls back to the organization's `today()` ([Dates and time](dates-and-time.md)). A typed URL past the
-  last page moves to the last page.
+  last page moves to the last page. `validateSearch` returns every key, `undefined` for a bad
+  value: the router lays its result over the raw URL parameters, so a key it leaves out passes the
+  raw value through.
 - **The previous page stays on screen** while the next one loads (TanStack's `keepPreviousData`).
 - Without `params`, the table keeps its own page and sort, starting from `initialSort` and
   `initialPageSize` (`DEFAULT_PAGE_SIZE`, 25, unless given).

@@ -24,6 +24,9 @@ them. An app adds what its own people are, never a second user table.
 
 - `users.MustBeActive(ctx, tx, field, ids)`: a `400` on `field`, "Must be active members of the team"
   (`users.MustBeActiveMembers`), unless every id is an active member.
+- `users.ActiveMembers(ctx, db)`: every active member as `users.Member`, by name: a picker's
+  options (an assignee). Serve them from the feature's own endpoint under its read permission
+  (`GET /api/tasks/assignees`), never by querying `roux_user_directory` yourself.
 - `users.Members(ctx, db, ids)`: each as `users.Member` (`ID`, `Name`, `Active`), by name, leaving
   out ids that are no member; for showing people a record keeps, including those who left.
 - `users.Service`: `Invite(ctx, name, email, role) (linkSent bool, err error)`, `Rename`,

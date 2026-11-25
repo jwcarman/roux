@@ -58,6 +58,20 @@ To show them, `users.Members(ctx, db, ids)` answers each as a `users.Member` (`i
 since left can still name them and mark them inactive. A feature's table refers to them with
 `references roux_user (id)`.
 
+The people a form may choose from now (an assignee picker's options) are `users.ActiveMembers(ctx,
+db)`: every active member, by name. A feature serves them from an endpoint of its own, under its own
+read permission, so everyone who can fill in the form can see the choices:
+
+```go
+k.Handle("GET "+BasePath+"/assignees", TasksRead, func(w http.ResponseWriter, r *http.Request) error {
+	members, err := users.ActiveMembers(r.Context(), svc.Pool)
+	if err != nil {
+		return err
+	}
+	return api.JSON(w, http.StatusOK, members)
+})
+```
+
 ## The endpoints
 
 All under `/api/roux/users` (`users.BasePath`), each behind one of the users' permissions

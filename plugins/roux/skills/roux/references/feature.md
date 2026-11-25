@@ -577,9 +577,19 @@ func TestAnEditFromAnOldVersionIsRefused(t *testing.T) {
 	owner.Put(path, map[string]any{"name": "Blocked", "colour": "yellow", "version": 0}).Want(t, 200, "edit")
 	owner.Put(path, map[string]any{"name": "On hold", "colour": "yellow", "version": 0}).Want(t, 409, "stale")
 	owner.Put(path, map[string]any{"name": "On hold", "colour": "yellow"}).Want(t, 400, "no version")
+}
+
+// Every route with an {id}: an id that names nothing, or is no UUID, is 404; a deleted label is gone.
+func TestALabelThatIsNotThereIsNotFound(t *testing.T) {
+	owner, _ := setup(t)
+	id := owner.Post("/api/labels", map[string]any{"name": "Waiting", "colour": "yellow"}).Want(t, 201, "add").JSON(t)["id"]
+	path := "/api/labels/" + id.(string)
 	owner.Delete(path).Want(t, 204, "delete")
-	owner.Get(path).Want(t, 404, "gone")
-	owner.Get("/api/labels/"+uuid.NewString()).Want(t, 404, "never was")
+	for _, p := range []string{path, "/api/labels/" + uuid.NewString(), "/api/labels/not-a-uuid"} {
+		owner.Get(p).Want(t, 404, "get "+p)
+		owner.Put(p, map[string]any{"name": "Blocked", "colour": "yellow", "version": 0}).Want(t, 404, "edit "+p)
+		owner.Delete(p).Want(t, 404, "delete "+p)
+	}
 }
 ```
 
@@ -589,7 +599,9 @@ func TestAnEditFromAnOldVersionIsRefused(t *testing.T) {
   signed in as them, with the CSRF token. `Want(t, status, what)` fails with the body when the
   status differs; `.JSON(t)` and `.Decode(t, &v)` read the answer.
 - One test per behaviour: a success, the permission (`403`), the field rules (`400`), the
-  uniqueness, the stale edit (`409`), the missing version, delete and `404`.
+  uniqueness, the stale edit (`409`), the missing version, and `404` on every route with an `{id}`
+  (unknown, not a UUID, deleted). The frontend's 100% gate forces its failure paths; nothing forces
+  the Go ones, so write each.
 - The tests need PostgreSQL: `TEST_DATABASE_URL` if set, else a container per run (Docker).
 
 ### 8. Query keys: `frontend/src/queryKeys.ts`
@@ -886,7 +898,9 @@ describe("/labels", () => {
 
 ## A long list (paged by the server)
 
-Instead of `List` and the whole-list page: a view (`create view label_list as ...`), a
+A list is short when something small and fixed bounds it (the roles, the colours, a team's labels); a list that grows as the app is used (tasks, entries, payments, events, anything with a date) is long, even if it starts short. Done or past rows count: they pile up.
+
+For a long list, instead of `List` and the whole-list page: a view (`create view label_list as ...`), a
 `page.New(page.ListConfig[Sort, Row]{...})` list in the service, `api.PageRequest` in the handler
 answering a page, `pageQuery(...)` in the module, and `QueryTable` with its state in the URL
 (`tableSearchOf`). All of it: `lists.md`.

@@ -7,8 +7,8 @@ roux gives them, instead of guessing.
 
 ## Install
 
-An app made from roux's template already names the plugin in `.claude/settings.json`: in Claude
-Code, trust the folder and run `/plugin install roux@roux` once. Elsewhere, add roux's repository
+An app made from roux's template already names the plugin in `.claude/settings.json`: Claude Code
+offers to install it when you trust the folder; accept. Elsewhere, add roux's repository
 as a plugin marketplace and install it:
 
 ```text

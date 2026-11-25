@@ -29,7 +29,7 @@ export function main(argv: readonly string[], io: Io): number {
     "",
     "Then open http://localhost:5173 and sign in as owner@example.com: the link is in Mailpit, http://localhost:8025.",
     "",
-    `Building with Claude Code? Open it in ${directory} and install roux's skill: /plugin install roux@roux`,
+    `Building with Claude Code? Open it in ${directory} and trust the folder: it installs roux's skill when you accept.`,
   ].forEach((line) => io.out(line));
   return 0;
 }

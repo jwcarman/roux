@@ -110,6 +110,10 @@ func TestTwoLabelsMayNotShareANameIgnoringCase(t *testing.T) {
 - **Every route's permission**: a person without it gets `403`, and one signed out `401`.
 - **Every field the input checks**, and every refusal the service makes: `400` with the field and
   its message, `404`, `409` for a stale version.
+- **Every path that ends in a refusal, not only the happy ones**: a `GET`, `PUT` and `DELETE` of an
+  id that names nothing is `404`, and so is a path id that is not a UUID; a delete is gone afterwards
+  (its `GET` is `404`). The frontend's 100% gate forces these in TypeScript; nothing forces them in
+  Go, so the feature's tests list them.
 - **What the list returns** for each filter, sort and search, and what the service stored.
 - A test of a feature's own words names its constant (`labels.NameTaken`), and of roux's words
   roux's (`problem.MustNotBeBlank`), so a change of wording is made in one place.
@@ -432,6 +436,31 @@ describe("/items", () => {
 
 Assert what is on screen, where the router ended up (`router.state.location.search`), and the query
 string the endpoint received.
+
+### What jsdom does differently
+
+- **A closed dialog stays in the page.** jsdom runs no exit animation, so a Chakra dialog that closes
+  keeps its content mounted with `data-state="closed"`; `not.toBeInTheDocument()` never passes.
+  Assert that it closed, and what closing did (or did not) send:
+
+  ```tsx
+  await user.click(screen.getByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(screen.getByRole("dialog", { hidden: true })).toHaveAttribute("data-state", "closed"));
+  ```
+
+- **A checkbox's state is its root's.** Clicking a Chakra checkbox leaves the hidden input's own
+  `checked` as clicked; what the person sees is the root's `data-state`. A refused optimistic toggle
+  (`useOptimisticToggle`) is put back once the save has settled, after the failure toast:
+
+  ```tsx
+  await user.click(box);
+  expect(await screen.findByText("Could not mark Mow the lawn")).toBeInTheDocument();
+  await waitFor(() => expect(box.closest("label")).toHaveAttribute("data-state", "unchecked"));
+  ```
+
+- **A route's `validateSearch` returns every key**, `undefined` for a bad value: the router lays its
+  result over the raw URL parameters, so a key left out lets the raw value through. A test of a typed
+  URL (`?start=nonsense`) proves the page still renders.
 
 ## Playwright
 

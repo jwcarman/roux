@@ -1,7 +1,7 @@
 # Lists: paged by the server, and the other kinds
 
 A short list is `SimpleQueryTable` (`feature.md` step 11). A long one is paged by the server and
-shown with `QueryTable`, its state in the URL.
+shown with `QueryTable`, its state in the URL. A list is short when something small and fixed bounds it (the roles, the colours, a team's labels); a list that grows as the app is used (tasks, entries, payments, events, anything with a date) is long, even if it starts short. Done or past rows count: they pile up.
 
 ## Rules
 
@@ -23,7 +23,9 @@ shown with `QueryTable`, its state in the URL.
 - Refuse an unknown filter value (`400` on that parameter); never ignore it.
 - The list's key and fetch live in the module as `pageQuery(...)`; the page passes it as `query`.
 - Read URL state only through `tableSearchOf`, `enumSearchOf`, `idSearchOf`, `dateSearchOf`: they
-  drop a hand-edited bad value instead of failing the page.
+  drop a hand-edited bad value instead of failing the page. `validateSearch` returns every key,
+  `undefined` when bad: the router lays it over the raw URL, so a key left out lets the bad value
+  through.
 - Define columns at module scope (or `useMemo`): rebuilt columns remount a row's open dialog.
 
 ## Steps: a paged list

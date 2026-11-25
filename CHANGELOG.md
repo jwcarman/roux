@@ -16,6 +16,9 @@ All notable changes to this project are documented in this file. The format foll
   organization's week holding a day. `Calendar.WithWeekStart` sets it in Go. roux-web refuses a
   context without `weekStart`: roux-web and the server go up together.
 
+- **`users.ActiveMembers(ctx, db)`**: every active member, by name, for a picker's options (an
+  assignee); a feature serves them from its own endpoint instead of querying `roux_user_directory`.
+
 ### Changed
 
 - **`make dev` is a live loop at <http://localhost:5173>.** It runs the server under
@@ -44,6 +47,23 @@ All notable changes to this project are documented in this file. The format foll
   asked for a tag seconds after it was made, the proxy cached "not found" for half an hour and held
   up the starter (0.4.0's). The starter now resolves roux's `go.sum` from the tag on GitHub
   (`GONOPROXY`, `GONOSUMDB`), which gives the hash the checksum database records.
+
+### Documentation
+
+- The skill and guides, from a test run of an agent building two features on 0.4.0:
+  - When a list is long: one that grows as the app is used (tasks, entries, anything with a date) is
+    paged by the server even while it is short.
+  - The recipe's Go test has a not-found test of its own: an unknown id, a non-UUID id and a deleted
+    row are `404` on every route with an `{id}`. The frontend's coverage gate forces failure paths;
+    nothing forced the Go ones.
+  - A route's `validateSearch` returns every key (`undefined` when bad): the router lays it over the
+    raw URL, so a key left out let the bad value through. The dates card points to `dateSearchOf`.
+  - jsdom: a closed Chakra dialog stays in the page (`data-state="closed"`), a checkbox's state is its
+    root's, and a refused optimistic toggle is put back after the failure toast.
+  - The references name every export, so an agent need not read roux's source to confirm one; the
+    TypeScript language server may not start with TypeScript 7, and `npm run build` is the type check.
+  - A new app's Claude Code settings install roux's skill when the folder is trusted; the starter
+    and the guides no longer say to run `/plugin install`.
 
 ## [0.4.0] - 2026-11-25
 
