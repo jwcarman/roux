@@ -1,20 +1,16 @@
-import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import js from "@eslint/js";
+import react from "@eslint-react/eslint-plugin";
+import prettier from "eslint-config-prettier";
+import jsxA11y from "eslint-plugin-jsx-a11y-x";
+import reactHooks from "eslint-plugin-react-hooks";
+import tseslint from "typescript-eslint";
 
-// ESLint config for web/roux-web and web/create-roux-app, run from each (see README.md). Plugins and
-// the parser resolve from this directory's node_modules, because the packages have no ESLint of their
+// ESLint config for web/roux-web and web/create-roux-app, run from each (see README.md). The imports
+// resolve from this directory's node_modules, beside this file: the packages have no ESLint of their
 // own (it needs TypeScript 6).
-const here = dirname(fileURLToPath(import.meta.url));
-const require = createRequire(join(here, "package.json"));
-const js = require("@eslint/js");
-const tseslint = require("typescript-eslint");
-const reactHooks = require("eslint-plugin-react-hooks");
-const react = require("eslint-plugin-react");
-const jsxA11y = require("eslint-plugin-jsx-a11y");
-const prettier = require("eslint-config-prettier");
 
-// The defect rules noir judges builders by (noir's ts-tools/eslint.config.mjs), as errors.
+// The defect rules, as errors: noir's list (its ts-tools/eslint.config.mjs), on ESLint 10's plugins.
+// A duplicated JSX attribute needs no rule: TypeScript refuses one (TS17001).
 const defects = [
   "no-async-promise-executor",
   "no-compare-neg-zero",
@@ -33,13 +29,13 @@ const defects = [
   "no-unsafe-negation",
   "no-unsafe-optional-chaining",
   "use-isnan",
-  "react/jsx-key",
-  "react/jsx-no-duplicate-props",
-  "react/jsx-no-script-url",
-  "react/jsx-no-target-blank",
-  "react/no-danger",
-  "react/no-danger-with-children",
-  "react/no-direct-mutation-state",
+  "@eslint-react/no-missing-key",
+  "@eslint-react/no-duplicate-key",
+  "@eslint-react/dom-no-script-url",
+  "@eslint-react/dom-no-unsafe-target-blank",
+  "@eslint-react/dom-no-dangerously-set-innerhtml",
+  "@eslint-react/dom-no-dangerously-set-innerhtml-with-children",
+  "@eslint-react/no-direct-mutation-state",
   "jsx-a11y/alt-text",
   "jsx-a11y/aria-props",
   "jsx-a11y/aria-proptypes",
@@ -70,11 +66,11 @@ export default tseslint.config(
   },
   {
     files: ["**/*.{ts,tsx,mts,cts}"],
-    plugins: { react, "jsx-a11y": jsxA11y },
+    plugins: { "@eslint-react": react, "jsx-a11y": jsxA11y },
     languageOptions: {
       parserOptions: { project: ["tsconfig.test.json"], tsconfigRootDir: process.cwd() },
     },
-    settings: { react: { version: "19.0" } },
+    settings: { "react-x": { version: "19.0" } },
     rules: {
       ...Object.fromEntries(defects.map((rule) => [rule, "error"])),
       "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { attributes: false } }],
