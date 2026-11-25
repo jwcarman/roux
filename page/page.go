@@ -63,7 +63,8 @@ type Request struct {
 
 // Resolve applies jpa-utils' rules: a missing/negative index becomes 0; a
 // missing size becomes the default and any size is clamped to [1, MaxSize]; a
-// blank sortBy falls back to DefaultSort; an unknown sortBy is an error.
+// blank sortBy falls back to DefaultSort; an unknown sortBy is an error, and so is a direction
+// other than ASC, DESC or none (ASC).
 func (c Config) Resolve(index, size *int, sortBy string, dir Direction) (Request, error) {
 	defSize, maxSize := c.DefaultSize, c.MaxSize
 	if defSize <= 0 {
@@ -73,8 +74,12 @@ func (c Config) Resolve(index, size *int, sortBy string, dir Direction) (Request
 		maxSize = DefaultMaxSize
 	}
 	req := Request{Direction: dir}
-	if req.Direction == "" {
+	switch dir {
+	case "":
 		req.Direction = Asc
+	case Asc, Desc:
+	default:
+		return Request{}, fmt.Errorf("page: unknown sort direction %q (want %s or %s)", dir, Asc, Desc)
 	}
 	if index != nil {
 		req.Index = max(0, *index)

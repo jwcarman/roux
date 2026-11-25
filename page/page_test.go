@@ -49,6 +49,17 @@ func TestResolveRefusesASortItDoesNotAllow(t *testing.T) {
 	}
 }
 
+// The direction is written into ORDER BY by whoever runs the query, so Resolve accepts only the
+// two there are: a caller that skips api.PageRequest cannot smuggle SQL through it.
+func TestResolveRefusesADirectionItDoesNotKnow(t *testing.T) {
+	cfg := page.Config{SortFields: []string{"NAME"}}
+	for _, dir := range []page.Direction{"SIDEWAYS", "asc", "ASC; drop table x"} {
+		if _, err := cfg.Resolve(nil, nil, "NAME", dir); err == nil {
+			t.Errorf("%q was accepted", dir)
+		}
+	}
+}
+
 func TestTiebreakerFollowsDirection(t *testing.T) {
 	req, _ := page.Config{SortFields: []string{"NAME"}}.Resolve(nil, nil, "NAME", page.Desc)
 	s := req.Sorts()
