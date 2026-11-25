@@ -22,24 +22,24 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 FROM="$ROOT/templates/app"
 LOCKS=false
-while [ $# -gt 0 ]; do
+while [[ $# -gt 0 ]]; do
   case "$1" in
     --from) FROM="$(cd "$2" && pwd)"; shift 2 ;;
     --locks) LOCKS=true; shift ;;
     *) break ;;
   esac
 done
-[ $# -eq 2 ] || { echo "usage: $0 [--from DIR] [--locks] VERSION OUT" >&2; exit 2; }
+[[ $# -eq 2 ]] || { echo "usage: $0 [--from DIR] [--locks] VERSION OUT" >&2; exit 2; }
 VERSION="$1"
 OUT="$2"
 
-if [ -e "$OUT" ] && [ -n "$(ls -A "$OUT")" ]; then
+if [[ -e "$OUT" ]] && [[ -n "$(ls -A "$OUT")" ]]; then
   echo "error: $OUT is not empty" >&2
   exit 1
 fi
 
 current="$(sed -n 's:.*<roux.version>\(.*\)</roux.version>.*:\1:p' "$FROM/pom.xml")"
-if [[ "$VERSION" == *-SNAPSHOT ]] && [ "$current" != "$VERSION" ]; then
+if [[ "$VERSION" == *-SNAPSHOT ]] && [[ "$current" != "$VERSION" ]]; then
   echo "error: the template's roux.version is $current, but roux is $VERSION: set it in $FROM/pom.xml" >&2
   exit 1
 fi
@@ -99,11 +99,11 @@ for name in web/roux-web roux-parent roux-repository; do
 done
 for dir in node_modules target dist test-results; do
   found="$(find "$OUT" -name "$dir" -not -path "$OUT/.git/*" | sed "s:^$OUT/:  :")"
-  if [ -n "$found" ]; then
+  if [[ -n "$found" ]]; then
     echo "error: the copy ships $dir:" >&2
     echo "$found" >&2
     status=1
   fi
 done
-[ $status -eq 0 ] && echo "exported roux $VERSION's app template to $OUT"
+[[ $status -eq 0 ]] && echo "exported roux $VERSION's app template to $OUT"
 exit $status

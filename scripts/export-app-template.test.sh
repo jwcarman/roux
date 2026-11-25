@@ -31,7 +31,8 @@ source_copy() {
 
 # Runs the export; prints its output; returns its exit status.
 export_from() {
-  "$EXPORT" --from "$1" "$2" "$3" 2>&1
+  local from="$1" version="$2" out="$3"
+  "$EXPORT" --from "$from" "$version" "$out" 2>&1
 }
 
 # 1. The copy: the release version, no trace of roux's repository, a wrapper of its own.
@@ -44,13 +45,13 @@ fi
 grep -q '<roux.version>9.8.7</roux.version>' "$out/pom.xml" && pass "roux.version is the release" || fail "roux.version is the release"
 grep -q '"@jwcarman/roux-web": "9.8.7"' "$out/frontend/package.json" && pass "roux-web comes from npm at the release" || fail "roux-web comes from npm at the release"
 grep -q 'roux-repository' "$out/pom.xml" && fail "the roux-repository profile is gone" || pass "the roux-repository profile is gone"
-[ -x "$out/mvnw" ] && [ -f "$out/mvnw.cmd" ] && [ -f "$out/.mvn/wrapper/maven-wrapper.properties" ] \
+[[ -x "$out/mvnw" ]] && [[ -f "$out/mvnw.cmd" ]] && [[ -f "$out/.mvn/wrapper/maven-wrapper.properties" ]] \
   && pass "the Maven wrapper is added" || fail "the Maven wrapper is added"
 python3 -c "import json,sys; s=json.load(open(sys.argv[1]))['extraKnownMarketplaces']['roux']['source']; sys.exit(0 if s=={'source':'github','repo':'jwcarman/roux','ref':'9.8.7'} else 1)" "$out/.claude/settings.json" \
   && pass "roux's plugin marketplace is pinned to the release" || fail "roux's plugin marketplace is pinned to the release"
 grep -q '"roux@roux": true' "$out/.claude/settings.json" && pass "roux's plugin is enabled" || fail "roux's plugin is enabled"
-[ -e "$out/.factorypath" ] && fail "untracked files stay behind" || pass "untracked files stay behind"
-[ -f "$out/README.md" ] && [ -f "$out/frontend/src/App.tsx" ] && pass "tracked files are copied" || fail "tracked files are copied"
+[[ -e "$out/.factorypath" ]] && fail "untracked files stay behind" || pass "untracked files stay behind"
+[[ -f "$out/README.md" ]] && [[ -f "$out/frontend/src/App.tsx" ]] && pass "tracked files are copied" || fail "tracked files are copied"
 
 # 2. A SNAPSHOT export checks the template follows roux's version.
 export_from "$ROOT/templates/app" "$ROUX_VERSION" "$WORK/out-snapshot" >"$WORK/snapshot.log" \
@@ -98,7 +99,7 @@ mkdir -p "$WORK/full" && echo x >"$WORK/full/old.txt"
 export_from "$ROOT/templates/app" 9.8.7 "$WORK/full" >"$WORK/full.log" \
   && fail "an export into a directory with files in it is refused" || pass "an export into a directory with files in it is refused"
 
-if [ "$failures" -gt 0 ]; then
+if [[ "$failures" -gt 0 ]]; then
   echo "$failures failed"
   exit 1
 fi
