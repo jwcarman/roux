@@ -282,6 +282,10 @@ func TestRecentSignInFollowsTheTokensAuthTime(t *testing.T) {
 		r.Header.Get("WWW-Authenticate") != `Bearer error="insufficient_user_authentication", error_description="A more recent sign-in is required", max_age=600` {
 		t.Fatalf("stale: %d %v %s", r.StatusCode, r.Header.Get("WWW-Authenticate"), r.Body)
 	}
+	// A sign-in after the token was issued is not believed: as if it had none, 403.
+	if r := sensitive(mint(now.Add(24 * time.Hour).Unix())); r.StatusCode != 403 {
+		t.Fatalf("auth_time a day after iat: %d %s", r.StatusCode, r.Body)
+	}
 	// None: 403, since signing in again would bring another token without it.
 	if r := sensitive(mint(nil)); r.StatusCode != 403 {
 		t.Fatalf("no auth_time: %d %s", r.StatusCode, r.Body)

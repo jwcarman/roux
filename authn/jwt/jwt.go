@@ -203,10 +203,19 @@ func (m *Method) authenticate(r *http.Request, value string) (*authn.Principal, 
 	}
 	p := &authn.Principal{IdentityID: identity, CredentialID: cred, Permissions: perms, Method: authn.MethodJWT}
 	if claims.AuthTime != nil {
-		p.SignedInAt = time.Unix(int64(*claims.AuthTime), 0).UTC()
+		// A sign-in cannot follow the token it brought: one later than the token's issue time
+		// (beyond clock skew) is not believed, so the token counts as having none.
+		at := time.Unix(int64(*claims.AuthTime), 0).UTC()
+		if !at.After(id.IssuedAt.Add(authTimeSkew)) {
+			p.SignedInAt = at
+		}
 	}
 	return p, nil
 }
+
+// authTimeSkew is how far past the token's issue time its auth_time may be: two clocks a little
+// apart.
+const authTimeSkew = time.Minute
 
 func audienceMatches(got, want []string) bool {
 	for _, a := range got {

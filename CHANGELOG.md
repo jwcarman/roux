@@ -50,7 +50,8 @@ All notable changes to this project are documented in this file. The format foll
   not (400 on `role`), so granting `users.manage` or `users.invite` to a lesser role cannot
   escalate.
 - **A bearer token needs a recent sign-in to make or rotate an API key,** as a browser does: the
-  token's `auth_time`. A leaked access token could otherwise turn itself into a key lasting a year.
+  token's `auth_time`. A leaked access token could otherwise turn itself into a key lasting a year. An
+  `auth_time` later than the token's issue time (beyond a minute's skew) is not believed.
 - **Deactivating someone ends their sessions at once,** not at their next request: reactivated
   before then, they used to come back signed in.
 - **Dead sessions are cleared.** A sign-in deletes sessions that ended, idled out or outlived
