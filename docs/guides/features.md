@@ -128,8 +128,7 @@ func (m Module) Mount(_ context.Context, k *app.Kit) error {
   run first. A name nobody declared is ignored.
 - **`Mount`** builds the service from the kit (`k.Pool`, `k.Organization` for the time zone) and
   registers the endpoints. A module with work to do after every module is mounted also has
-  `Start(ctx, k) error` (checking a list's SQL, say: see
-  [Tables and paging](tables-and-paging.md#the-server)).
+  `Start(ctx, k) error` (making a first record, say).
 - **The clock is a field**, `time.Now` when nil, so a test sets the time.
 
 Then, in `cmd/server/modules.go`, the module joins the list and its permissions join the app's:

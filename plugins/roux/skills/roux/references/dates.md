@@ -31,6 +31,8 @@ module's `organization.Calendar`.
 Columns and wire: a date is a `date` column, a `time.Time` at midnight UTC, answered `"2026-11-17"`
 (`d.Format(time.DateOnly)`); a time of day is a `time` column, `pgtype.Time`, answered `"18:30"`, a
 wall-clock time in the organization's zone; a moment is `timestamptz` and `time.Time`, an ISO string.
+A paged list's row reads strings its view formats: `to_char(day, 'YYYY-MM-DD')`,
+`to_char(at_time, 'HH24:MI')` (`lists.md`).
 
 Browser, `@jwcarman/roux-web/organization`: `loadOrganization()` and `startDayWatch(queryClient)` in
 `main.tsx` (`app-setup.md`); `today()` (`"2026-11-20"`), `useToday()` in a component;
