@@ -105,13 +105,8 @@ describe("EmailSignIn", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
-  it("says so when the server refuses the send (a failed human check)", async () => {
-    server.use(
-      http.post(
-        "/api/roux/auth/email/send",
-        () => new HttpResponse(null, { status: 403, headers: { "Roux-Error": "human-check-failed" } }),
-      ),
-    );
+  it("says so when the server refuses the send", async () => {
+    server.use(http.post("/api/roux/auth/email/send", () => new HttpResponse(null, { status: 403 })));
     renderWithProviders(<EmailSignIn />);
     await userEvent.type(screen.getByRole("textbox", { name: "Email" }), "ada@example.org");
 

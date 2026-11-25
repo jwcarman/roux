@@ -121,18 +121,13 @@ describe("the reasons a call names", () => {
     }
   });
 
-  it("a failed human check is a 403 naming human-check-failed, and nothing else", async () => {
+  it("a refused sign-in is a 401, and anything else is unexpected", async () => {
     setCsrfCookie("t");
     const signIn = () => createAuthClient().email.signIn({ email: "a@example.test", code: "123456" });
-    server.use(http.post(at("/api/roux/auth/email/sign-in"), () => refused(403, "human-check-failed")));
-    await expect(signIn()).resolves.toMatchObject({ ok: false, reason: "human-check-failed" });
-    for (const [status, code] of [
-      [403, "something-else"],
-      [400, "human-check-failed"],
-    ] as const) {
-      server.use(http.post(at("/api/roux/auth/email/sign-in"), () => refused(status, code)));
-      await expect(signIn()).rejects.toMatchObject({ reason: "unexpected" });
-    }
+    server.use(http.post(at("/api/roux/auth/email/sign-in"), () => refused(401, "rejected")));
+    await expect(signIn()).resolves.toMatchObject({ ok: false, reason: "rejected" });
+    server.use(http.post(at("/api/roux/auth/email/sign-in"), () => refused(403, "something-else")));
+    await expect(signIn()).rejects.toMatchObject({ reason: "unexpected" });
   });
 });
 

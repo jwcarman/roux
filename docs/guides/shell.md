@@ -155,11 +155,10 @@ const sessions = unwrap(await auth.me.sessions.list());
   - `oidc` (`Oidc`): `authorizeUrl(id)`, `pending()` (a `PendingSignUp`), `signUp()`, `link()`.
 - The reasons: `SignInRequired` (`signed-out`, `reauthentication-required`, `sign-in-required`),
   `BrowserSessionRequired`, `InvalidRequest`, `LastCredential` (the last way to sign in stays),
-  `EmailSignInFailure` (`rejected`, `HumanCheckFailed`), `ConfirmAddressFailure`,
+  `EmailSignInFailure` (`rejected`), `ConfirmAddressFailure`,
   `ApiKeyCallerRefused` (`ApiKeyCannotManageKeys` or a browser session required). A browser
   prompt the person dismissed is a `PromptFailure`: `Cancelled`, or `AlreadyRegistered` for a
-  passkey this device holds already. `HumanCheckOptions` passes a bot check's token, when the server
-  asks for one.
+  passkey this device holds already.
 
 ## The session and route guards
 

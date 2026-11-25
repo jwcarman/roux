@@ -14,17 +14,8 @@ export interface SignedIn {
   identityId: string;
 }
 
-/** The human check's refusal: show its widget again and retry with a fresh token. */
-export type HumanCheckFailed = "human-check-failed";
-
-/** Options for a call the application's human check guards. */
-export interface HumanCheckOptions {
-  /** The token from the human check's widget, such as Cloudflare Turnstile's; each works once. */
-  humanCheck?: string;
-}
-
-/** The reasons signing in by email can fail. */
-export type EmailSignInFailure = "rejected" | HumanCheckFailed;
+/** The reason signing in by email can fail: the link or code was wrong, used or expired. */
+export type EmailSignInFailure = "rejected";
 
 /** The reasons confirming a new address can fail. */
 export type ConfirmAddressFailure = SignInRequired | BrowserSessionRequired | "rejected" | "conflict";
@@ -32,20 +23,19 @@ export type ConfirmAddressFailure = SignInRequired | BrowserSessionRequired | "r
 /** Signing in by email link or code. Your own addresses are under `client.me.emailAddresses`. */
 export interface Email<D> {
   /**
-   * Emails a sign-in link and code. who answers the same whether or not the address is known, so
-   * the answer tells an attacker nothing. Fails only when the application's human check refuses.
+   * Emails a sign-in link and code. The server answers the same whether or not the address is
+   * known, so the answer tells an attacker nothing; anything but that answer throws.
    */
-  send(email: string, options?: HumanCheckOptions): Promise<AuthResult<void, HumanCheckFailed, D>>;
+  send(email: string): Promise<AuthResult<void, never, D>>;
   /** Signs in with a link's token, or with the address and the emailed code. */
   signIn(
     credentials: { token: string } | { email: string; code: string },
-    options?: HumanCheckOptions,
   ): Promise<AuthResult<SignedIn, EmailSignInFailure, D>>;
   /**
    * Signs in with the link's token in this page's URL (`#token=...`), first taking it out of the
    * address bar and history; answers null when the URL has none.
    */
-  signInFromLocation(options?: HumanCheckOptions): Promise<AuthResult<SignedIn, EmailSignInFailure, D> | null>;
+  signInFromLocation(): Promise<AuthResult<SignedIn, EmailSignInFailure, D> | null>;
 }
 
 /** One of your email addresses. */
@@ -101,40 +91,28 @@ function takeFromFragment(key: string): string | null {
   return token;
 }
 
-/** The header carrying a human check's token, only when there is one. */
-function humanCheckHeader(options?: HumanCheckOptions): Record<string, string> | undefined {
-  return options?.humanCheck === undefined ? undefined : { "Who-Human-Check": options.humanCheck };
-}
-
-function humanCheckFailed(status: number, code: string | null): HumanCheckFailed | undefined {
-  return status === 403 && code === "human-check-failed" ? code : undefined;
-}
-
 export function email<D>(http: AuthHttp<D>): Email<D> {
-  const signIn = (credentials: { token: string } | { email: string; code: string }, options?: HumanCheckOptions) =>
+  const signIn = (credentials: { token: string } | { email: string; code: string }) =>
     http.call({
       method: "POST",
       path: "/email/sign-in",
       body: credentials,
-      headers: humanCheckHeader(options),
       read: json<SignedIn>(),
-      reason: (status, code): EmailSignInFailure | undefined =>
-        status === 401 ? "rejected" : humanCheckFailed(status, code),
+      reason: (status): EmailSignInFailure | undefined => (status === 401 ? "rejected" : undefined),
     });
   return {
-    send: (address, options) =>
-      http.call({
+    send: (address) =>
+      http.call<void, never>({
         method: "POST",
         path: "/email/send",
         body: { email: address },
-        headers: humanCheckHeader(options),
         read: nothing,
-        reason: humanCheckFailed,
+        reason: () => undefined,
       }),
     signIn,
-    signInFromLocation: async (options) => {
+    signInFromLocation: async () => {
       const token = takeFromFragment("token");
-      return token === null ? null : signIn({ token }, options);
+      return token === null ? null : signIn({ token });
     },
   };
 }

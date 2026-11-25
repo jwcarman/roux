@@ -7,8 +7,6 @@ export type {
   EmailAddress,
   EmailAddresses,
   EmailSignInFailure,
-  HumanCheckFailed,
-  HumanCheckOptions,
   SignedIn,
 } from "./email";
 export type { AuthClientOptions } from "./http";

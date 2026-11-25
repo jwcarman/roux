@@ -7,7 +7,7 @@ export type AuthResult<T, R extends string, D> =
   { ok: true; value: T } | { ok: false; reason: R; status: number; detail: D };
 
 /**
- * The browser's passkey prompt ended without a passkey, so nothing reached who: there is no status
+ * The browser's passkey prompt ended without a passkey, so nothing reached the server: there is no status
  * (0) and no detail.
  */
 export interface PromptFailure<R extends string> {

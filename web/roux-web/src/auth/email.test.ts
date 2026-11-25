@@ -29,28 +29,10 @@ describe("email.send", () => {
     expect(body).toEqual({ email: "alice@example.com" });
   });
 
-  it("sends a human check token only when given one", async () => {
-    const seen: (string | null)[] = [];
-    server.use(
-      http.post(at("/api/roux/auth/email/send"), ({ request }) => {
-        seen.push(request.headers.get("Who-Human-Check"));
-        return new HttpResponse(null, { status: 202 });
-      }),
-    );
+  it("throws on any refusal: the server answers every address the same", async () => {
+    server.use(http.post(at("/api/roux/auth/email/send"), () => refused(403, "something")));
 
-    await createAuthClient().email.send("alice@example.com", { humanCheck: "tok" });
-    await createAuthClient().email.send("alice@example.com");
-
-    expect(seen).toEqual(["tok", null]);
-  });
-
-  it("answers human-check-failed when the check refuses", async () => {
-    server.use(http.post(at("/api/roux/auth/email/send"), () => refused(403, "human-check-failed")));
-
-    await expect(createAuthClient().email.send("alice@example.com")).resolves.toMatchObject({
-      ok: false,
-      reason: "human-check-failed",
-    });
+    await expect(createAuthClient().email.send("alice@example.com")).rejects.toMatchObject({ reason: "unexpected" });
   });
 });
 
@@ -73,21 +55,6 @@ describe("email.signIn", () => {
       expect(body).toEqual(credentials);
     },
   );
-
-  it("sends a human check token and answers human-check-failed", async () => {
-    let check: string | null = null;
-    server.use(
-      http.post(at("/api/roux/auth/email/sign-in"), ({ request }) => {
-        check = request.headers.get("Who-Human-Check");
-        return refused(403, "human-check-failed");
-      }),
-    );
-
-    await expect(
-      createAuthClient().email.signIn({ email: "alice@example.com", code: "123456" }, { humanCheck: "tok" }),
-    ).resolves.toMatchObject({ ok: false, reason: "human-check-failed" });
-    expect(check).toBe("tok");
-  });
 
   it("throws on another 403", async () => {
     server.use(http.post(at("/api/roux/auth/email/sign-in"), () => refused(403)));

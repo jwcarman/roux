@@ -53,7 +53,7 @@ type Env struct {
 // must hand the same clock to who and to the sign-in methods it builds.
 func NewClock() *Clock { return &Clock{t: time.Date(2026, 11, 24, 12, 0, 0, 0, time.UTC)} }
 
-// New migrates who, rbac and the given migrations into a fresh schema named schema.
+// New migrates sign-in's and permissions' tables and the given migrations into a fresh schema named schema.
 // Register routes on e.Mux, then call e.Serve().
 func New(t *testing.T, schema string, migrations ...pgdb.Migration) *Env {
 	t.Helper()

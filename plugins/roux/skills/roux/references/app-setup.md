@@ -144,8 +144,8 @@ createRoot(document.getElementById("root")!).render(
   `AuthError`. Use it only for a page the components don't cover.
 - Its types: `Me`, `CredentialCounts`, `Session`, `Passkey`, `EmailAddress`, `ConfirmedAddress`,
   `LinkedAccount`, `PendingSignUp`, `ApiKey`, `ApiKeyRequest`, `NewApiKey` (its secret shows once),
-  `SignedIn`, `HumanCheckOptions`. Its reasons: `SignInRequired`, `BrowserSessionRequired`,
-  `InvalidRequest`, `LastCredential`, `EmailSignInFailure`, `HumanCheckFailed`,
+  `SignedIn`. Its reasons: `SignInRequired`, `BrowserSessionRequired`,
+  `InvalidRequest`, `LastCredential`, `EmailSignInFailure`,
   `ConfirmAddressFailure`, `ApiKeyCallerRefused`, `ApiKeyCannotManageKeys`; a dismissed browser
   prompt is a `PromptFailure` (`Cancelled`, `AlreadyRegistered`).
 - Sign-in (`/signin`): `SignInFrame` (`SignInFrameProps`), `SignInCard` (`SignInCardProps`: `appName`,

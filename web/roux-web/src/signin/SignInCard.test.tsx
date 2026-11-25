@@ -230,14 +230,12 @@ describe("SignInCard", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("says so when the server refuses to send it again (a failed human check)", async () => {
+  it("says so when the server refuses to send it again", async () => {
     options(true, true);
     let sends = 0;
     server.use(
       http.post("/api/roux/auth/email/send", () =>
-        sends++ === 0
-          ? new HttpResponse(null, { status: 202 })
-          : new HttpResponse(null, { status: 403, headers: { "Roux-Error": "human-check-failed" } }),
+        sends++ === 0 ? new HttpResponse(null, { status: 202 }) : new HttpResponse(null, { status: 403 }),
       ),
     );
     card();

@@ -33,8 +33,6 @@ export interface Call<T, R extends string> {
   path: string;
   body?: unknown;
   accept?: string;
-  /** Extra request headers for this one call. */
-  headers?: Record<string, string>;
   /** Reads a success's value. */
   read: (response: Response) => Promise<T>;
   /** The call's reason for a failed status and `Roux-Error` code, or undefined if unexpected. */
@@ -161,7 +159,7 @@ export class AuthHttp<D> {
 
   /** Makes the call, answering its result; throws for anything the call does not expect. */
   async call<T, R extends string>(call: Call<T, R>): Promise<AuthResult<T, R, D>> {
-    const response = await this.send(call.method, call.path, call.body, call.accept, call.headers);
+    const response = await this.send(call.method, call.path, call.body, call.accept);
     const where = `${call.method} ${call.path}`;
     if (response.ok) {
       try {
@@ -185,24 +183,18 @@ export class AuthHttp<D> {
     return { ok: false, reason, status: response.status, detail: await this.decodeError(response) };
   }
 
-  /** Asks who for a fresh CSRF cookie; `/me` sets one whether or not anyone is signed in. */
+  /** Asks the server for a fresh CSRF cookie; `/me` sets one whether or not anyone is signed in. */
   async refreshCsrf(): Promise<void> {
     await this.fetch(this.url("/me"), { credentials: this.credentials });
   }
 
-  private async send(
-    method: string,
-    path: string,
-    body: unknown,
-    accept: string | undefined,
-    extra: Record<string, string> = {},
-  ): Promise<Response> {
+  private async send(method: string, path: string, body: unknown, accept: string | undefined): Promise<Response> {
     const unsafe = method !== "GET";
-    // the cookie exists only after a response from who
+    // the cookie exists only after a response from the server
     if (unsafe && csrfToken() === undefined) {
       await this.refreshCsrf();
     }
-    const headers: Record<string, string> = { ...extra };
+    const headers: Record<string, string> = {};
     if (accept !== undefined) {
       headers.Accept = accept;
     }

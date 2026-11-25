@@ -9,15 +9,15 @@ import { auth } from "./auth";
 /** The address to email a sign-in link to, in roux's words. */
 const linkRequestSchema = z.object({ email: email() });
 
-/** What a visitor is told when who could not email the link. */
+/** What a visitor is told when the server could not email the link. */
 export const SEND_FAILED = "Could not send the link. Try again.";
 
-/** Asks who to email a sign-in link and code to `address`: "sent" when it did, else "failed". */
+/** Asks the server to email a sign-in link and code to `address`: "sent" when it did, else "failed". */
 export async function sendLink(address: string): Promise<"sent" | "failed"> {
   try {
-    return (await auth.email.send(address)).ok ? "sent" : "failed";
+    await auth.email.send(address); // anything but the answer every address gets throws
+    return "sent";
   } catch {
-    // who answers a server error by throwing.
     return "failed";
   }
 }
@@ -112,7 +112,7 @@ export function CodeForm({ email }: Readonly<{ email: string }>) {
         setError(NOT_ACCEPTED);
       }
     } catch {
-      // who answers a server error by throwing.
+      // A server error throws.
       setError(NOT_ACCEPTED);
     }
   }
