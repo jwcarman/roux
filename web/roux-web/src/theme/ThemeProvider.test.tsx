@@ -4,6 +4,7 @@ import { act, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_THEME, type ShellTheme } from "./theme";
 import { ThemeProvider, useShellTheme, type ShellThemeState } from "./ThemeProvider";
+import { inHead } from "../testing/head";
 
 const fonts = vi.hoisted(() => ({ loaded: [] as string[] }));
 vi.mock("@fontsource-variable/inter", () => {
@@ -81,8 +82,9 @@ describe("ThemeProvider", () => {
   });
 
   it("starts from the theme the server wrote into the page", () => {
-    document.head.innerHTML =
-      '<script type="application/json" id="app-theme">{"appName":"From page","palette":"teal","brandColor":"#3b82f6","shape":"medium","headingFont":"standard","bodyFont":"standard"}</script>';
+    inHead(
+      '<script type="application/json" id="app-theme">{"appName":"From page","palette":"teal","brandColor":"#3b82f6","shape":"medium","headingFont":"standard","bodyFont":"standard"}</script>',
+    );
     let current: ShellThemeState | undefined;
     function Probe() {
       current = useShellTheme();
@@ -97,11 +99,11 @@ describe("ThemeProvider", () => {
 
     expect(current?.saved).toMatchObject({ appName: "From page", palette: "teal" });
     expect(document.title).toBe("From page");
-    document.head.innerHTML = "";
   });
 
   it("styles with Emotion under the page's nonce", () => {
-    document.head.innerHTML = '<meta property="csp-nonce" nonce="abc123">';
+    inHead('<meta property="csp-nonce" nonce="abc123">');
+    const before = new Set(document.querySelectorAll("style"));
     function Styled() {
       return <Box bg="red.500">styled</Box>;
     }
@@ -112,10 +114,12 @@ describe("ThemeProvider", () => {
       </ThemeProvider>,
     );
 
-    const styles = Array.from(document.querySelectorAll("style[data-emotion]"));
+    // Only this render's styles: earlier tests' stay in the shared document.
+    const styles = Array.from(document.querySelectorAll<HTMLStyleElement>("style[data-emotion]")).filter(
+      (style) => !before.has(style),
+    );
     expect(styles.length).toBeGreaterThan(0);
     expect(styles.every((style) => style.getAttribute("nonce") === "abc123")).toBe(true);
-    document.head.innerHTML = "";
   });
 
   it("refuses to be used outside the provider", () => {

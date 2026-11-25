@@ -23,6 +23,12 @@ export function listen(): void {
   server.listen({ onUnhandledFrame: "error" });
 }
 
+/** Stops the fake network and forgets its listeners: test files share the server, and each file listens anew. */
+export function stop(): void {
+  server.events.removeAllListeners();
+  server.close();
+}
+
 /**
  * Throws if the test sent a request no handler answered. The app usually catches the failed request
  * (TanStack Query does), so without this check the test could pass on the wrong screen.

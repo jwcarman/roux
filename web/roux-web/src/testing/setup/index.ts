@@ -10,7 +10,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
 import { setOrganization, testOrganization } from "../../organization/organization";
-import { checkAllAnswered, listen, server, settle } from "../server";
+import { checkAllAnswered, listen, server, settle, stop } from "../server";
 
 beforeAll(listen);
 
@@ -21,10 +21,35 @@ afterEach(async () => {
   await settle();
   cleanup();
   server.resetHandlers();
+  forgetTheBrowser();
   checkAllAnswered();
 });
 
-afterAll(() => server.close());
+/** Test files share one document: what a test left in the browser (cookies, storage) goes with it. */
+function forgetTheBrowser(): void {
+  if (typeof document === "undefined") {
+    return;
+  }
+  for (const cookie of document.cookie.split(";")) {
+    const name = cookie.split("=")[0].trim();
+    if (name !== "") {
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+    }
+  }
+  localStorage.clear();
+  sessionStorage.clear();
+}
+
+afterAll(() => {
+  stop();
+  // Test files share one document: a file's styles go with it, so the next file's are its own. Each
+  // ThemeProvider has an Emotion cache of its own, which writes its styles again.
+  if (typeof document !== "undefined") {
+    for (const style of document.querySelectorAll("style[data-emotion]")) {
+      style.remove();
+    }
+  }
+});
 
 // What Chakra's components reach for that jsdom does not provide.
 if (typeof window !== "undefined") {

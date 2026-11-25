@@ -2,24 +2,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FONT_FAMILY, FONTS, loadFont } from "./fonts";
 
-const fonts = vi.hoisted(() => ({ loaded: [] as string[] }));
-vi.mock("@fontsource-variable/inter", () => {
-  fonts.loaded.push("inter");
-  return {};
-});
-vi.mock("@fontsource-variable/nunito", () => {
-  fonts.loaded.push("nunito");
-  return {};
-});
-vi.mock("@fontsource-variable/lora", () => {
-  fonts.loaded.push("lora");
-  return {};
-});
+const fonts = { loaded: [] as string[] };
+
+/** A stand-in for a font's stylesheet that records being loaded. */
+function stylesheet(name: string) {
+  return () => {
+    fonts.loaded.push(name);
+    return {};
+  };
+}
 
 describe("fonts", () => {
+  // Registered again for every test: resetModules keeps a mock's module, so a font loaded once would
+  // never be counted again.
   beforeEach(() => {
     fonts.loaded.length = 0;
     vi.resetModules();
+    vi.doMock("@fontsource-variable/inter", stylesheet("inter"));
+    vi.doMock("@fontsource-variable/nunito", stylesheet("nunito"));
+    vi.doMock("@fontsource-variable/lora", stylesheet("lora"));
   });
 
   it("offers four letterings, each with a font family", () => {

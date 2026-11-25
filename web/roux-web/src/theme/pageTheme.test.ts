@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { readPageTheme } from "./pageTheme";
 import { DEFAULT_THEME, type ShellTheme } from "./theme";
+import { inHead } from "../testing/head";
 
 function pageWith(json: string | null): Document {
   const doc = document.implementation.createHTMLDocument("page");
@@ -32,11 +33,9 @@ describe("readPageTheme", () => {
   });
 
   it("reads the document by default", () => {
-    document.head.innerHTML = `<script type="application/json" id="app-theme">${JSON.stringify(SAVED)}</script>`;
+    inHead(`<script type="application/json" id="app-theme">${JSON.stringify(SAVED)}</script>`);
 
     expect(readPageTheme()).toEqual(SAVED);
-
-    document.head.innerHTML = "";
   });
 
   it("is Chakra's stock look when the page carries no theme", () => {

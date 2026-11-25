@@ -22,6 +22,8 @@ vi.mock("culori", async (importOriginal) => {
   };
 });
 
+// Test files share modules: drop a brandPalette another file loaded with the real library.
+vi.resetModules();
 const { brandPalette } = await import("./brandPalette");
 
 describe("brandPalette at a tie", () => {

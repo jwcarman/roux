@@ -13,6 +13,7 @@ import {
   today,
   type OrganizationContext,
 } from "./organization";
+import { inHead } from "../testing/head";
 
 const DOJO: OrganizationContext = {
   timeZone: "America/New_York",
@@ -52,9 +53,8 @@ describe("readPageOrganization", () => {
   });
 
   it("reads the document by default", () => {
-    document.head.innerHTML = `<script type="application/json" id="app-context">${JSON.stringify(DOJO)}</script>`;
+    inHead(`<script type="application/json" id="app-context">${JSON.stringify(DOJO)}</script>`);
     expect(readPageOrganization()).toEqual(DOJO);
-    document.head.innerHTML = "";
   });
 
   it("refuses a context that is not JSON or not an object", () => {

@@ -29,6 +29,10 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.{ts,tsx}"],
     setupFiles: ["src/testing/setup/index.ts"],
+    // Files share one environment: building a fresh jsdom and importing Chakra again for each of
+    // seventy-odd files was most of the run. A test leaves the shared document as it found it (see
+    // testing/head.ts); the setup file resets what tests change between files.
+    isolate: false,
     // A Chakra page test clicking through a form takes about a second here and can pass five on a
     // shared CI runner under coverage; a hung test still fails, just later.
     testTimeout: 15_000,

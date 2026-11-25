@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { Button, ButtonGroup, ChakraProvider, defaultSystem } from "@chakra-ui/react";
+import createCache from "@emotion/cache";
+import { CacheProvider } from "@emotion/react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -8,10 +10,17 @@ import { FilterChips } from "./FilterChips";
 
 /**
  * The chips under Chakra's own theme alone: these tests check the chip recipe, and the app theme's global
- * colours (which jsdom cannot compute) would stay in the document for every later test.
+ * colours (which jsdom cannot compute) would stay in the document for every later test. The file has an Emotion
+ * cache of its own, since the setup takes every file's styles out of the shared document when it ends.
  */
+const cache = createCache({ key: "chips" });
+
 function renderStyled(ui: ReactElement) {
-  return render(<ChakraProvider value={defaultSystem}>{ui}</ChakraProvider>);
+  return render(
+    <CacheProvider value={cache}>
+      <ChakraProvider value={defaultSystem}>{ui}</ChakraProvider>
+    </CacheProvider>,
+  );
 }
 
 const ROLES = [
