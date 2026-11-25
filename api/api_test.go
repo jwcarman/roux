@@ -254,3 +254,15 @@ func TestValidationIsRouxs400WithSortedFieldErrors(t *testing.T) {
 		t.Fatal("message helpers")
 	}
 }
+
+func TestASentinelsWrappingStaysOnTheServer(t *testing.T) {
+	m := api.NewMux()
+	m.Handle("GET /api/x", func(http.ResponseWriter, *http.Request) error {
+		return fmt.Errorf("item 42 in secret_items: %w", apperr.ErrNotFound)
+	})
+	rec := httptest.NewRecorder()
+	m.ServeHTTP(rec, httptest.NewRequest("GET", "/api/x", nil))
+	if body := rec.Body.String(); rec.Code != 404 || strings.Contains(body, "secret_items") || !strings.Contains(body, `"detail":"Not found"`) {
+		t.Fatalf("%d %s", rec.Code, body)
+	}
+}

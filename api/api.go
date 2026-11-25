@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -123,12 +124,35 @@ func decode(r *http.Request, v any, strict bool) error {
 		dec.DisallowUnknownFields()
 	}
 	if err := dec.Decode(v); err != nil {
-		return problem.BadRequest("Request body is not valid JSON: " + err.Error())
+		return decodeProblem(err)
 	}
 	if _, err := dec.Token(); err != io.EOF {
 		return problem.BadRequest("Request body must contain a single JSON object.")
 	}
 	return nil
+}
+
+// decodeProblem says what is wrong with a body in the client's terms: Go's own message names
+// the handler's struct and field types, which are the server's business.
+func decodeProblem(err error) *problem.Problem {
+	var (
+		tooBig    *http.MaxBytesError
+		wrongType *json.UnmarshalTypeError
+	)
+	switch {
+	case errors.As(err, &tooBig):
+		return problem.New(http.StatusRequestEntityTooLarge, "Request body is too large.")
+	case errors.As(err, &wrongType) && wrongType.Field == "":
+		return problem.BadRequest("Request body is not valid JSON: it must be an object.")
+	case errors.As(err, &wrongType):
+		return problem.BadRequest("Request body is not valid JSON: " + wrongType.Field + " has the wrong type.")
+	}
+	if quoted, ok := strings.CutPrefix(err.Error(), "json: unknown field "); ok {
+		if member, uerr := strconv.Unquote(quoted); uerr == nil {
+			return problem.BadRequest("Request body has a member this endpoint does not take: " + member + ".")
+		}
+	}
+	return problem.BadRequest("Request body is not valid JSON.")
 }
 
 // Recoverer converts panics into 500 problem responses.
@@ -162,13 +186,15 @@ type Mux struct {
 func NewMux() *Mux {
 	m := &Mux{sm: http.NewServeMux()}
 	m.roux = m.Kit(strings.TrimSuffix(RouxPrefix, "/"), problem.Write)
-	for target, status := range map[error]int{
-		apperr.ErrNotFound:     http.StatusNotFound,
-		apperr.ErrConflict:     http.StatusConflict,
-		apperr.ErrUnauthorized: http.StatusUnauthorized,
-		apperr.ErrForbidden:    http.StatusForbidden,
+	// The answer is the sentinel's alone: what the domain wrapped it with ("item 42: ...") is
+	// context for the log, not for the client.
+	for target, p := range map[error]func() *problem.Problem{
+		apperr.ErrNotFound:     func() *problem.Problem { return problem.NotFound("Not found") },
+		apperr.ErrConflict:     func() *problem.Problem { return problem.Conflict("Conflict") },
+		apperr.ErrUnauthorized: problem.Unauthorized,
+		apperr.ErrForbidden:    problem.Forbidden,
 	} {
-		m.MapError(target, func(err error) *problem.Problem { return problem.New(status, err.Error()) })
+		m.MapError(target, func(error) *problem.Problem { return p() })
 	}
 	return m
 }

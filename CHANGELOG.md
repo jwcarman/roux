@@ -34,6 +34,15 @@ All notable changes to this project are documented in this file. The format foll
 - **Dead sessions are cleared.** A sign-in deletes sessions that ended, idled out or outlived
   their lifetime more than 30 days ago.
 
+### Fixed
+
+- **A huge `pageIndex` is an empty page,** not a 500: the offset stops at Postgres's limit
+  instead of overflowing negative.
+- **Error answers name no Go types.** A body that does not decode says what is wrong in the
+  client's terms ("item has the wrong type", "a member this endpoint does not take: x", 413 for
+  over 1 MiB), and an `apperr` sentinel answers with its own words only, not the context it was
+  wrapped with.
+
 ## [0.3.0] - 2026-11-24
 
 Upgrading from 0.2.0: read **Breaking changes** first. Each entry says what a roux app changes.

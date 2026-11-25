@@ -8,6 +8,7 @@ package page
 
 import (
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -114,8 +115,17 @@ func contains(s []string, v string) bool {
 	return false
 }
 
-// Offset is the number of rows to skip.
-func (r Request) Offset() int { return r.Index * r.Size }
+// MaxOffset is the most rows a page may skip: Postgres's bigint, so no index, however large,
+// overflows into a negative offset (which Postgres refuses, failing the request).
+const MaxOffset = math.MaxInt64
+
+// Offset is the number of rows to skip, at most MaxOffset: past it there are no rows anyway.
+func (r Request) Offset() int {
+	if r.Size > 0 && r.Index > MaxOffset/r.Size {
+		return MaxOffset
+	}
+	return r.Index * r.Size
+}
 
 // Sorts returns the ordering to apply: the requested field (if any) followed
 // by the tiebreaker in the same direction, unless it is already the sort field.

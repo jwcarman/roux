@@ -29,7 +29,7 @@ func TestDecodeIsStrict(t *testing.T) {
 		t.Fatalf("%+v %v", o, p)
 	}
 	for body, detail := range map[string]string{
-		`{"item":"tea","extra":1}`: "not valid JSON",
+		`{"item":"tea","extra":1}`: "does not take: extra",
 		`{"item":`:                 "not valid JSON",
 		`{"item":"tea"} {}`:        "single JSON object",
 	} {
@@ -42,5 +42,23 @@ func TestDecodeIsStrict(t *testing.T) {
 func TestDecodeLenientIgnoresWhatItDoesNotKnow(t *testing.T) {
 	if o, p := decodeWith(api.DecodeLenient, `{"item":"tea","extra":1}`); p != nil || o.Item != "tea" {
 		t.Fatalf("%+v %v", o, p)
+	}
+}
+
+func TestADecodeErrorNamesNoGoType(t *testing.T) {
+	for body, detail := range map[string]string{
+		`{"item":42}`:    "Request body is not valid JSON: item has the wrong type.",
+		`{"item":`:       "Request body is not valid JSON.",
+		`{"other":1}`:    "Request body has a member this endpoint does not take: other.",
+		`["item","tea"]`: "Request body is not valid JSON: it must be an object.",
+	} {
+		_, p := decodeWith(api.Decode, body)
+		if p == nil || p.Detail != detail {
+			t.Errorf("%s: %+v, want %q", body, p, detail)
+		}
+	}
+	big := `{"item":"` + strings.Repeat("x", 1<<20) + `"}`
+	if _, p := decodeWith(api.Decode, big); p == nil || p.Status != 413 || p.Detail != "Request body is too large." {
+		t.Errorf("a body over 1 MiB: %+v", p)
 	}
 }

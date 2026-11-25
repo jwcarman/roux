@@ -1,6 +1,7 @@
 package page_test
 
 import (
+	"math"
 	"slices"
 	"testing"
 
@@ -82,5 +83,18 @@ func TestOf(t *testing.T) {
 	p = page.Of[int](nil, req, 0).Pagination
 	if p.TotalPageCount != 0 || p.HasNext {
 		t.Fatalf("empty: %+v", p)
+	}
+}
+
+func TestAnIndexTooBigToSkipStillGivesAnOffsetPostgresTakes(t *testing.T) {
+	huge := math.MaxInt
+	for _, size := range []int{1, 20, 100} {
+		r, err := page.Config{}.Resolve(&huge, &size, "", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if off := r.Offset(); off < 0 || off > page.MaxOffset {
+			t.Errorf("size %d: offset %d, want within [0, %d]", size, off, page.MaxOffset)
+		}
 	}
 }
