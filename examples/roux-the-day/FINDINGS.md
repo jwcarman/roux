@@ -68,7 +68,7 @@ it, and where in the app it shows. What more than one app would need is extracte
    docs say why columns may not quote.
 2. **Civil dates and times**, with the organization's "today" and week.
 3. ~~**A rouxtest package**~~ (done: `rouxtest`): a team with people and roles, for an app's own tests.
-4. **Active members by id**, in users, for any feature that assigns people.
+4. ~~**Active members by id**~~ (done: `users.MustBeActive`, `users.Members`), in users, for any feature that assigns people.
 5. **A checkbox group field** in roux-web's form kit.
 6. **The app's permissions generated**, as roux's own are.
 7. **A lint gate in the template**, and so in every app.

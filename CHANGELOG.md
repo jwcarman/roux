@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **Active members by id, for a feature that refers to people.** `users.MustBeActive(ctx, db,
+  field, ids)` refuses ids that are not active members (400 on the field, "Must be active members
+  of the team"); `users.Members(ctx, db, ids)` names them, by name, with whether each is still
+  active.
 - **`rouxtest`, for an application's own tests.** `rouxtest.New(t, schema, migrations...)` is
   the app's features over a fresh schema with roux's tables; `Role(name, permissions...)`,
   `Person(name, role)`, `Deactivate`, `At(moment)`, `Migrate` and `Kit()` (to mount the app's

@@ -12,6 +12,7 @@ import (
 	"github.com/jwcarman/roux/authn"
 	"github.com/jwcarman/roux/page"
 	"github.com/jwcarman/roux/problem"
+	"github.com/jwcarman/roux/users"
 )
 
 // Service is the items' operations.
@@ -71,19 +72,12 @@ func (s Service) List(ctx context.Context, req page.Request, f Filter) (page.Pag
 	return list.Page(ctx, s.Pool, req, f.Search, filters...)
 }
 
-// Person is someone an item is assigned to.
-type Person struct {
-	ID     uuid.UUID `json:"id"`
-	Name   string    `json:"name"`
-	Active bool      `json:"active"` // false: deactivated since; they must be replaced to save the item
-}
-
 // Detail is an item as its dialog shows it.
 type Detail struct {
 	Row
-	Notes     string    `json:"notes"`
-	Assignees []Person  `json:"assignees"`
-	CreatedBy uuid.UUID `json:"createdBy"`
+	Notes     string         `json:"notes"`
+	Assignees []users.Member `json:"assignees"` // a deactivated one must be replaced to save the item
+	CreatedBy uuid.UUID      `json:"createdBy"`
 	// CanDelete is whether the caller may delete it: its author, or an owner.
 	CanDelete bool `json:"canDelete"`
 }
@@ -114,17 +108,15 @@ func get(ctx context.Context, db page.Querier, caller *authn.Principal, id uuid.
 	if err != nil {
 		return Detail{}, err
 	}
-	people, err := db.Query(ctx, `
-		select u.id, u.display_name, i.status = 'ACTIVE'
-		  from item_assignee a
-		  join roux_user u on u.id = a.user_id
-		  join roux_identity i on i.id = u.id
-		 where a.item_id = $1
-		 order by lower(u.display_name), u.id`, id)
+	ids, err := db.Query(ctx, `select user_id from item_assignee where item_id = $1`, id)
 	if err != nil {
 		return Detail{}, err
 	}
-	if d.Assignees, err = pgx.CollectRows(people, pgx.RowToStructByPos[Person]); err != nil {
+	assignees, err := pgx.CollectRows(ids, pgx.RowTo[uuid.UUID])
+	if err != nil {
+		return Detail{}, err
+	}
+	if d.Assignees, err = users.Members(ctx, db, assignees); err != nil {
 		return Detail{}, err
 	}
 	d.CanDelete = mayDelete(caller, d.CreatedBy)
@@ -147,7 +139,7 @@ func mayDelete(caller *authn.Principal, author uuid.UUID) bool {
 func (s Service) Create(ctx context.Context, caller *authn.Principal, in Input) (Detail, error) {
 	var out Detail
 	err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
-		if err := mustBeActive(ctx, tx, in.Assignees); err != nil {
+		if err := users.MustBeActive(ctx, tx, "assigneeIds", in.Assignees); err != nil {
 			return err
 		}
 		now := s.Clock()
@@ -183,7 +175,7 @@ func (s Service) Update(ctx context.Context, caller *authn.Principal, id uuid.UU
 		if current != version {
 			return problem.StaleVersion()
 		}
-		if err := mustBeActive(ctx, tx, in.Assignees); err != nil {
+		if err := users.MustBeActive(ctx, tx, "assigneeIds", in.Assignees); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
@@ -222,20 +214,6 @@ func (s Service) Delete(ctx context.Context, caller *authn.Principal, id uuid.UU
 		_, err = tx.Exec(ctx, `delete from item where id = $1`, id)
 		return err
 	})
-}
-
-// mustBeActive refuses assignees who are not active members of the team.
-func mustBeActive(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) error {
-	var n int
-	if err := tx.QueryRow(ctx, `
-		select count(*) from roux_user u join roux_identity i on i.id = u.id
-		 where u.id = any($1) and i.status = 'ACTIVE'`, ids).Scan(&n); err != nil {
-		return err
-	}
-	if n != len(ids) {
-		return problem.InvalidField("assigneeIds", "Must be active members of the team")
-	}
-	return nil
 }
 
 func assign(ctx context.Context, tx pgx.Tx, id uuid.UUID, people []uuid.UUID) error {
