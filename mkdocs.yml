@@ -99,6 +99,7 @@ plugins:
         Operating:
           - guides/email.md: the emails roux sends and how they are delivered
           - guides/testing.md: Go tests with rouxtest, Vitest with MSW, Playwright
+          - guides/upgrading.md: moving an app to a new roux release, its packages and its template files
         Optional:
           - agent-skill.md: installing roux's Agent Skill in Claude Code and other agents
 
@@ -125,6 +126,7 @@ nav:
       - The Shell: guides/shell.md
       - Email: guides/email.md
       - Testing: guides/testing.md
+      - Upgrading: guides/upgrading.md
   - Agent Skill: agent-skill.md
   - Reference:
       - Go API (pkg.go.dev): https://pkg.go.dev/github.com/jwcarman/roux

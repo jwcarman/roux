@@ -6,6 +6,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Documentation
+
+- **Upgrading**: a guide and a skill card for moving an app to a new roux release, one release at
+  a time. Each release lists both halves: roux's packages, and the template files that became the
+  app's own and never change on their own. 0.4.0 to 0.5.0 is the first.
+- **The README has a quick start**: create the app, `make dev`, sign in, then build with an agent.
+
 ## [0.5.0] - 2026-11-25
 
 ### Breaking changes

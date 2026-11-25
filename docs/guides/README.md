@@ -16,3 +16,4 @@
 - [The shell: theme, sign-in and navigation](shell.md)
 - [Email](email.md)
 - [Testing](testing.md)
+- [Upgrading](upgrading.md)

@@ -31,6 +31,26 @@ come first.
 
 Documentation: <https://jwcarman.github.io/roux/>.
 
+## Quick start
+
+With Docker running, Go 1.27 and Node 20 or later:
+
+```bash
+npm create @jwcarman/roux-app my-app
+cd my-app
+make dev
+```
+
+Open <http://localhost:5173> and sign in as `owner@example.com`: ask for a link, and open it from
+Mailpit at <http://localhost:8025>, which catches the app's email. You have sign-in, the first
+owner, a sidebar frame, Users, Settings and Appearance. Edit a page and it reloads; edit Go and the
+server rebuilds and restarts.
+
+Then build with an agent: open Claude Code in `my-app` and trust the folder, which installs roux's
+skill. Ask for a feature ("Add tasks: a title, a due date, an assignee"). Each change passes
+`make check` and the front end's gates before it is done. To build by hand, start at
+[Getting started](https://jwcarman.github.io/roux/guides/getting-started/).
+
 ## Packages
 
 Go, the module `github.com/jwcarman/roux` (this repository's root). An app imports what it uses:

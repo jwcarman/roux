@@ -1,0 +1,62 @@
+# Upgrading
+
+An app has two parts from roux, and they upgrade differently.
+
+- **roux's packages**, `github.com/jwcarman/roux` and `@jwcarman/roux-web`: raise the versions and
+  fix what no longer compiles. A breaking change fails loudly (a compile error, a type error, a
+  test), and the [changelog](https://github.com/jwcarman/roux/blob/main/CHANGELOG.md) says what to
+  do for each.
+- **The files the template gave the app** (the Makefile, `scripts/dev.sh`, `vite.config.ts`...):
+  they became the app's own when it was made, and an upgrade never changes them. Each release below
+  lists the ones it changed, to bring over by hand.
+
+Upgrade one release at a time, oldest first: each section assumes the one before it.
+
+## How
+
+1. **The packages**, in the app's directory:
+
+   ```bash
+   go get github.com/jwcarman/roux@v0.5.0 && go mod tidy
+   (cd frontend && npm install @jwcarman/roux-web@0.5.0)
+   ```
+
+2. **The release's template**, to copy from: a fresh app at that version, under the app's own name,
+   outside the app:
+
+   ```bash
+   mkdir -p /tmp/roux-0.5.0 && cd /tmp/roux-0.5.0
+   npm create @jwcarman/roux-app@0.5.0 team-planner -- --name "Team Planner"
+   ```
+
+   Its files carry the app's name where the template does (the Makefile's `bin/team-planner`), so
+   a file the app never edited is copied whole; one it changed is merged.
+
+3. **The steps for the release**, below.
+
+4. **The gates**: `make check`, and in `frontend/` `npm run lint`, `npm run coverage` and
+   `npm run build` (which type-checks). Then `make dev`, and sign in.
+
+## 0.4.0 to 0.5.0
+
+**The packages.**
+
+- `historyQuery` is `activityQuery` (`@jwcarman/roux-web/activity`), with the same arguments:
+  rename the import and the calls. The type check names each one.
+- A user's history (`GET /api/roux/users/{id}/activities`) shows only roux's `user.*` kinds. An
+  app whose own kinds are named `user.*` renames them (a new `Type()`; old rows keep the old code).
+- The organization's context has a `weekStart`. A test fixture that builds the context by hand
+  adds `weekStart: 0` (`testOrganization()` has it).
+
+**The template's files.** `make dev` became the live loop (the server under air, Vite at
+<http://localhost:5173>), and the lint is pinned:
+
+| File | What to do |
+| --- | --- |
+| `.air.toml`, `scripts/dev.sh` | Copy (new files). |
+| `go.mod` | `go get -tool github.com/air-verse/air@v1.67.4` (air is a `go tool`), then `go mod tidy`. |
+| `Makefile` | Merge: `dev` runs `scripts/dev.sh` after its `frontend/node_modules` prerequisite; `lint` builds the pinned golangci-lint (`GOLANGCI_LINT_VERSION`, the `$(GOLANGCI_LINT)` rule); the new `frontend/node_modules/.package-lock.json` and `frontend/dist/index.html` rules. |
+| `e2e/run.sh` | The front-end line is `make --no-print-directory frontend/dist/index.html`. |
+| `frontend/vite.config.ts` | Copy, or merge the `serverShell()` plugin and `server.port: 5173` with `strictPort`. |
+| `frontend/index.html` | The theme script is `<script nonce="__CSP_NONCE__">`. |
+| `.gitignore`, `.dockerignore` | Add `/tmp/` and `tmp` (air's build). |
