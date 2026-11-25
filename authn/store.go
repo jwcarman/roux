@@ -3,6 +3,7 @@ package authn
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -85,7 +86,7 @@ type Session struct {
 
 type store struct{ pool *pgxpool.Pool }
 
-func (s store) start(ctx context.Context, identityID, credentialID uuid.UUID, method, userAgent, tokenHash string, now time.Time) error {
+func (s store) start(ctx context.Context, identityID, credentialID uuid.UUID, method, userAgent, tokenHash string, now time.Time, keep time.Duration) error {
 	id, err := uuid.NewV7()
 	if err != nil {
 		return err
@@ -97,12 +98,7 @@ func (s store) start(ctx context.Context, identityID, credentialID uuid.UUID, me
 	if userAgent != "" {
 		ua = &userAgent
 	}
-	// Sessions dead (ended, idled out or past their lifetime) for a month go as another starts:
-	// nothing reads them after that, and "has signed in" is kept on the user (first_signed_in_at).
-	if _, err := s.pool.Exec(ctx,
-		`delete from roux_session where coalesce(ended_at, last_seen_at) < $1`, now.Add(-deadSessionsKept)); err != nil {
-		return err
-	}
+	s.purge(ctx, now.Add(-keep))
 	_, err = s.pool.Exec(ctx,
 		`insert into roux_session (id, identity_id, credential_id, sign_in_method, signed_in_at, last_seen_at, user_agent, token_hash)
 		 values ($1, $2, $3, $4, $5, $5, $6, $7)`,
@@ -136,8 +132,21 @@ func (s store) authenticate(ctx context.Context, tokenHash string, now time.Time
 	return &sess, err
 }
 
-// deadSessionsKept is how long a dead session stays before a sign-in clears it.
+// deadSessionsKept is how long a dead session stays before a sign-in clears it, at least: never
+// less than the idle timeout, so a session quiet that long is still live when it is looked at.
 const deadSessionsKept = 30 * 24 * time.Hour
+
+// purge deletes the sessions that ended, or were last seen, before cutoff: nothing reads them
+// after that, and "has signed in" is kept on the user (first_signed_in_at). Written as two
+// conditions so each uses its index. A failure is logged: it must not fail the sign-in.
+func (s store) purge(ctx context.Context, cutoff time.Time) {
+	if _, err := s.pool.Exec(ctx, `
+		delete from roux_session
+		 where ended_at < $1
+		    or (ended_at is null and last_seen_at < $1)`, cutoff); err != nil {
+		slog.WarnContext(ctx, "could not clear old sessions", "err", err)
+	}
+}
 
 // EndSessions ends every session the identity has, through db, so it can be part of a larger
 // change: deactivating someone ends their sessions in the same transaction.

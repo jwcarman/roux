@@ -59,3 +59,16 @@ func TestSigningInClearsSessionsDeadForAMonth(t *testing.T) {
 		t.Fatalf("%d sessions, want 2: the month-dead two cleared, the recent two kept", got)
 	}
 }
+
+func TestALongIdleTimeoutKeepsItsSessionsThroughAPurge(t *testing.T) {
+	env := authntest.NewWithConfig(t, "authn_purge_long", authntest.NewClock(), func(c *authn.Config) {
+		c.SessionTimeout = 45 * 24 * time.Hour
+		c.SessionLifetime = 90 * 24 * time.Hour
+	}, nil)
+	env.Serve()
+	id := env.Identity()
+	quiet := env.SignedIn(id)
+	env.Clock.Advance(31 * 24 * time.Hour) // a month quiet, still within its 45 days
+	env.SignedIn(id)                       // a sign-in purges
+	quiet.Get("/api/roux/auth/me").Want(t, 200, "a live session the purge took for dead")
+}
