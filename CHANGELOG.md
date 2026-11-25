@@ -8,6 +8,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **Light and dark mode in roux-web.** `ColorModeProvider`, `ColorModeButton` and
+  `ColorModeSwitch` (for the account menu) are in `@jwcarman/roux-web/theme`; `next-themes` is a
+  peer dependency, which a template-made app already has. The template's `shell/colorMode.tsx` is
+  gone.
+- **`signedInAs(permissions)` in `@jwcarman/roux-web/testing`:** the server's answers to the
+  session's two requests for `TEST_USER` holding the permissions, or for nobody (`null`). The
+  template's `renderRoute` uses it.
 - **`@jwcarman/roux-web/users`: the users API client.** roux's server shapes (`User`,
   `UserDetail`, with `email` and `role` nullable as the server sends them), its rules
   (`invitationSchema`, `renameSchema`), `usersApi`, the queries (`userQuery`, `usersPage`,

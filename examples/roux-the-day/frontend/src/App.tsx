@@ -9,7 +9,7 @@ import { useEffect } from "react";
 import { ConfirmProvider, Toaster } from "@jwcarman/roux-web/feedback";
 import { ThemeProvider } from "@jwcarman/roux-web/theme";
 import { routeTree } from "./routeTree.gen";
-import { ColorModeProvider } from "./shell/colorMode";
+import { ColorModeProvider } from "@jwcarman/roux-web/theme";
 import {
   SessionProvider,
   useSession,

@@ -3,9 +3,12 @@ import {
   createMemoryHistory,
 } from "@tanstack/react-router";
 import { render } from "@testing-library/react";
-import { http, HttpResponse } from "msw";
 import { App, createAppRouter } from "../App";
-import { server, testQueryClient } from "@jwcarman/roux-web/testing";
+import {
+  server,
+  signedInAs,
+  testQueryClient,
+} from "@jwcarman/roux-web/testing";
 
 /**
  * Opens `path` in the whole app, as TanStack's file-based routing guide tests routes: a router
@@ -21,24 +24,7 @@ export function renderRoute(
     browserHistory = false,
   }: { permissions: string[] | null; browserHistory?: boolean },
 ) {
-  server.use(
-    http.get("/api/roux/auth/me", () =>
-      permissions === null
-        ? new HttpResponse(null, { status: 401 })
-        : HttpResponse.json({ identityId: "id-1", permissions }),
-    ),
-    // The signed-in user's name, which the session loads for anyone signed in (roux's /api/users/me).
-    http.get("/api/roux/users/me", () =>
-      permissions === null
-        ? new HttpResponse(null, { status: 401 })
-        : HttpResponse.json({
-            id: "id-1",
-            displayName: "Test User",
-            email: "test@example.org",
-            version: 0,
-          }),
-    ),
-  );
+  server.use(...signedInAs(permissions));
   const client = testQueryClient();
   if (browserHistory) {
     window.history.replaceState({}, "", path);

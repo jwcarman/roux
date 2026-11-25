@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 describe("@jwcarman/roux-web/testing", () => {
   it("the testing entry exports the kit", async () => {
     expect(Object.keys(await import("./index")).sort()).toEqual([
+      "TEST_USER",
       "checkAllAnswered",
       "invalidFields",
       "invariantViolation",
@@ -16,6 +17,7 @@ describe("@jwcarman/roux-web/testing", () => {
       "server",
       "serverError",
       "settle",
+      "signedInAs",
       "stale",
       "testQueryClient",
     ]);
