@@ -107,17 +107,38 @@ type Filter struct {
 	Status string
 }
 
-// ListConfig is how the list pages and sorts: by name (the default), email, role or
-// when they joined, with the id as the tiebreaker.
-var ListConfig = page.Config{
-	SortFields:  []string{"NAME", "EMAIL", "ROLE", "JOINED"},
-	DefaultSort: "NAME",
-}
+// sortBy is the user list's sort names: logical names, each mapped to what it orders by.
+type sortBy string
 
-// sortColumns maps the allowlisted sort fields to SQL; nothing else reaches ORDER BY.
-var sortColumns = map[string]string{
-	"NAME": "lower(display_name)", "EMAIL": "lower(email)", "ROLE": "role", "JOINED": "joined_at", "ID": "id",
-}
+const (
+	byName   sortBy = "NAME"
+	byEmail  sortBy = "EMAIL"
+	byRole   sortBy = "ROLE"
+	byJoined sortBy = "JOINED"
+)
+
+// userList pages the directory: by name (the default), email, role or when they joined, and a
+// search over name and email.
+var userList = page.New(page.ListConfig[sortBy, Row]{
+	From:    "roux_user_directory",
+	Columns: entryColumns,
+	Sorts: map[sortBy][]page.Term{
+		byName:   {page.By("lower(display_name)")},
+		byEmail:  {page.By("lower(email)")},
+		byRole:   {page.By("role")},
+		byJoined: {page.By("joined_at")},
+	},
+	DefaultSort: byName,
+	Search:      []page.Field{page.Contains("display_name"), page.Contains("email")},
+	Scan: func(r pgx.CollectableRow) (Row, error) {
+		e, err := scanEntry(r)
+		return e.row(), err
+	},
+})
+
+// ListConfig is how the user list pages and sorts (NAME, the default, EMAIL, ROLE or JOINED),
+// for api.PageRequest in an endpoint of the app's own over Service.List.
+var ListConfig = userList.Config()
 
 // Service is the users.
 type Service struct {
@@ -222,23 +243,6 @@ func (s Service) Detail(ctx context.Context, id uuid.UUID) (Detail, error) {
 	return e.detail(), err
 }
 
-// escapeLike makes a word match literally inside a LIKE pattern.
-func escapeLike(word string) string {
-	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(word)
-}
-
-const maxSearchWords = 10
-
-func searchWords(search string) []string {
-	var words []string
-	for _, w := range strings.Fields(strings.ToLower(search)) {
-		if !slices.Contains(words, w) && len(words) < maxSearchWords {
-			words = append(words, w)
-		}
-	}
-	return words
-}
-
 // List is a page of users.
 func (s Service) List(ctx context.Context, req page.Request, f Filter) (page.Page[Row], error) {
 	status := f.Status
@@ -252,48 +256,12 @@ func (s Service) List(ctx context.Context, req page.Request, f Filter) (page.Pag
 			return page.Page[Row]{}, problem.InvalidField("role", "No such role")
 		}
 	}
-
-	args := []any{status}
-	where := []string{"status = $1"}
-	for _, w := range searchWords(f.Search) {
-		args = append(args, "%"+escapeLike(w)+"%")
-		n := len(args)
-		where = append(where, fmt.Sprintf(`(lower(display_name) like $%d escape '\' or lower(coalesce(email, '')) like $%d escape '\')`, n, n))
-	}
-	if f.Role != "" {
-		args = append(args, f.Role)
-		where = append(where, fmt.Sprintf("role = $%d", len(args)))
-	}
-	clause := strings.Join(where, " and ")
-
-	var total int64
-	if err := s.Pool.QueryRow(ctx, `select count(*) from roux_user_directory where `+clause, args...).Scan(&total); err != nil {
-		return page.Page[Row]{}, err
-	}
-	var order []string
-	for _, so := range req.Sorts() {
-		col, ok := sortColumns[so.Field]
-		if !ok {
-			return page.Page[Row]{}, fmt.Errorf("users: no column for sort field %q", so.Field)
-		}
-		order = append(order, col+" "+string(so.Direction))
-	}
-	args = append(args, req.Size, req.Offset())
-	rows, err := s.Pool.Query(ctx, fmt.Sprintf(`select %s from roux_user_directory where %s order by %s limit $%d offset $%d`,
-		entryColumns, clause, strings.Join(order, ", "), len(args)-1, len(args)), args...)
-	if err != nil {
-		return page.Page[Row]{}, err
-	}
-	entries, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (entry, error) { return scanEntry(r) })
-	if err != nil {
-		return page.Page[Row]{}, err
-	}
-	data := make([]Row, len(entries))
-	for i, e := range entries {
-		data[i] = e.row()
-	}
-	return page.Of(data, req, total), nil
+	return userList.Page(ctx, s.Pool, req, f.Search,
+		page.Where("status = ?", status), page.WhereIf(f.Role != "", "role = ?", f.Role))
 }
+
+// CheckList checks the user list's SQL against the database; the users module runs it at startup.
+func CheckList(ctx context.Context, db page.Querier) error { return userList.Check(ctx, db) }
 
 // Names is activity.Names over the users' display names.
 func (s Service) Names(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error) {

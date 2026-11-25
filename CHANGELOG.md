@@ -144,6 +144,9 @@ All notable changes to this project are documented in this file. The format foll
 - **Comments and messages name roux, not its Java ancestors:** no more `who`, Spring or
   `roux.money.currency` (the money error now says to set `ORG_CURRENCY`); sign-in's errors say
   "the server answered". `feature.md`'s steps are numbered in reading order.
+- **The users list is a `page.New` list:** its sorts are logical names mapped to their SQL, its
+  search is `page.Contains` on name and email, and the users module checks its queries against
+  the database at startup (`users.CheckList`).
 - **Breaking: roux-web's human check is gone** (`HumanCheckOptions`, `HumanCheckFailed`, the
   `Who-Human-Check` header): no server ever read it. `auth.email.send` takes only the address.
 - **Sign-in refusals are logged at Info:** an unknown address, a wrong or used code, a deactivated

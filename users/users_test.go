@@ -169,7 +169,7 @@ func TestTheDirectory(t *testing.T) {
 	if got := errorsOf(t, b.Get("/api/roux/users?status=bogus")); got["status"] != "Must be one of ACTIVE, DEACTIVATED" {
 		t.Fatalf("status: %v", got)
 	}
-	if got := errorsOf(t, b.Get("/api/roux/users?sortBy=PASSWORD")); got["sortBy"] != "Must be one of NAME, EMAIL, ROLE, JOINED" {
+	if got := errorsOf(t, b.Get("/api/roux/users?sortBy=PASSWORD")); got["sortBy"] != "Must be one of EMAIL, JOINED, NAME, ROLE" {
 		t.Fatalf("sortBy: %v", got)
 	}
 	if got := errorsOf(t, b.Get("/api/roux/users?pageIndex=abc")); got["pageIndex"] != "Invalid value" {

@@ -101,7 +101,9 @@ What they refuse ([Errors](errors.md)):
 
 `users.Service` is the service behind them, for an app's own endpoint or job: `Invite`, `Rename`,
 `ChangeRole`, `Deactivate`, `Reactivate`, `MakeOwner`, `SignOutEverywhere`, `List`, `Detail`,
-`Me` and `Names`.
+`Me` and `Names`. `users.ListConfig` is its list's sorts (`NAME`, the default, `EMAIL`, `ROLE`,
+`JOINED`) and page sizes, for `api.PageRequest`; `users.CheckList` runs the list's queries against
+the database, as the users module does at startup.
 
 ## One role per user
 
