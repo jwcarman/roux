@@ -850,9 +850,11 @@ Gaps that a builder hits:
   without roux's methods: `text().refine(check).optional()` still refuses a blank value, while
   `text().optional().refine(check)` accepts it as `null`. The field's `required` and `maxLength` do
   survive a `.refine`.
-- **A `.transform` or `.pipe` hides the rules.** On a field or on the whole object schema, it leaves
-  the fields with no required indicator and no `maxLength`. Keep transforms out of form schemas, or
-  `.register(fieldRules, { required: true })` the result, or pass `required` to the field.
+- **A field's schema must be one of roux's rules.** A field of a schema form whose schema is plain
+  Zod (`z.string()`), or a rule behind a `.transform` or `.pipe`, throws when it renders, naming the
+  field: it could show neither its required indicator nor its `maxLength`. Build it with a helper,
+  keep transforms out of form schemas, or end your own rule with `.register(fieldRules, {
+  required })`. A checkbox's `z.boolean()` is the exception.
 - **`useServerAction`'s `failure` cannot tell a 409 apart.** It is a string or a function of the
   variables, not of the error, so every refusal of a button gets the same title; the server's
   `detail` under it says what happened.

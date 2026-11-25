@@ -127,6 +127,10 @@ All notable changes to this project are documented in this file. The format foll
   `/items`, outside the API, where the page answered HTML and the call failed as bad JSON. A path
   starting with `/` now throws, naming the path to write (`"items"`); roux's own endpoints are
   `"roux/..."`, and `ORGANIZATION_PATH` is `"roux/organization"`.
+- **A form field's schema must be one of roux's rules.** A field whose schema was plain Zod
+  (`z.string()`), or a rule behind `.transform`, showed no required indicator and no `maxLength`,
+  without a sign; it now throws when it renders, naming the field and the fix. A checkbox's
+  `z.boolean()` is the exception.
 - **Sign-in refusals are logged at Info:** an unknown address, a wrong or used code, a deactivated
   person. They were at Debug, so a sign-in that silently did nothing left no trace at the default
   level.

@@ -127,6 +127,8 @@ request body (trimmed, `""` as `null`); a server field error under its field; `s
 
 - `email: contact.email` where it may be `null` doesn't compile: use `inputOf`.
 - A schema key with no field refuses every submit.
+- A field whose schema is plain Zod (`z.string()`), or a rule behind `.transform`/`.pipe`, throws
+  when it renders, naming the field; only a checkbox's `z.boolean()` may be plain.
 - `url()` rejects `http://localhost:8080`, `email()` rejects `ann@localhost`: write that field's Zod
   and register it where those are valid.
 - `integer()`'s `Must be a whole number` exists only in the browser.
