@@ -37,17 +37,11 @@ export function Settings() {
   return (
     <Stack gap="8" maxW="xl">
       <PageHeader title="Settings" />
-      <Section
-        title="Profile"
-        description={`How you appear to others in ${appName}.`}
-      >
+      <Section title="Profile" description={`How you appear to others in ${appName}.`}>
         <ProfileForm />
       </Section>
       <Separator />
-      <Section
-        title="Passkeys"
-        description="Sign in with your fingerprint, face or device PIN."
-      >
+      <Section title="Passkeys" description="Sign in with your fingerprint, face or device PIN.">
         {/* who's own: the list, Remove, and Add a passkey; a session that ended is refreshed. */}
         <PasskeySettings onSignedOut={refresh} />
       </Section>

@@ -3,12 +3,7 @@ import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { PageHeader } from "@jwcarman/roux-web/navigation";
 import type { TableSearch } from "@jwcarman/roux-web/paging";
-import {
-  DEFAULT_PAGE_SIZE,
-  DebouncedSearchInput,
-  FilterChips,
-  QueryTable,
-} from "@jwcarman/roux-web/table";
+import { DEFAULT_PAGE_SIZE, DebouncedSearchInput, FilterChips, QueryTable } from "@jwcarman/roux-web/table";
 import { type User } from "@jwcarman/roux-web/users";
 import { useMe } from "../routes/_signedIn";
 import { USERS_INVITE } from "../permissions.gen";
@@ -56,10 +51,7 @@ const COLUMNS: ColumnDef<User, unknown>[] = [
     header: "Name",
     cell: (info) => (
       <Link asChild>
-        <RouterLink
-          to="/users/$userId"
-          params={{ userId: info.row.original.id }}
-        >
+        <RouterLink to="/users/$userId" params={{ userId: info.row.original.id }}>
           {info.getValue()}
         </RouterLink>
       </Link>
@@ -91,9 +83,7 @@ export function Users() {
 
   return (
     <Stack gap="6">
-      <PageHeader title="Users">
-        {me.permissions.includes(USERS_INVITE) && <InviteForm />}
-      </PageHeader>
+      <PageHeader title="Users">{me.permissions.includes(USERS_INVITE) && <InviteForm />}</PageHeader>
       <DebouncedSearchInput
         label="Search users"
         placeholder="Search users"

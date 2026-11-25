@@ -264,8 +264,9 @@ func TestRecentSignInFollowsTheTokensAuthTime(t *testing.T) {
 	e := setup(t)
 	e.link("user-1")
 	now := e.Clock.Now()
+	// iat from the test's clock too: the provider's own is the real time, which drifts away from it.
 	mint := func(authTime any) string {
-		return e.prov.Mint(claims("user-1", map[string]any{"auth_time": authTime}))
+		return e.prov.Mint(claims("user-1", map[string]any{"auth_time": authTime, "iat": now.Unix(), "exp": now.Add(time.Hour).Unix()}))
 	}
 	sensitive := func(token string) authntest.Reply { return e.call("POST", "/api/sensitive", token) }
 

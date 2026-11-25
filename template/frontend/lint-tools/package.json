@@ -1,0 +1,22 @@
+{
+  "name": "app-lint-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pinned ESLint and Prettier for the front end; TypeScript 6 here because typescript-eslint does not support TypeScript 7 (the app's compiler) yet",
+  "devDependencies": {
+    "@eslint-react/eslint-plugin": "5.30.6",
+    "@eslint/js": "10.0.1",
+    "eslint": "10.15.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-jsx-a11y-x": "0.2.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "prettier": "3.10.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.74.0"
+  },
+  "overrides": {
+    "eslint-plugin-jsx-a11y-x": {
+      "minimatch": "11.0.1"
+    }
+  }
+}

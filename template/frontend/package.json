@@ -8,7 +8,10 @@
     "build": "vite build && tsc -b",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
-    "mutate": "stryker run"
+    "mutate": "stryker run",
+    "format": "lint-tools/node_modules/.bin/prettier --write .",
+    "format:check": "lint-tools/node_modules/.bin/prettier --check .",
+    "lint": "lint-tools/node_modules/.bin/eslint -c lint-tools/eslint.config.mjs ."
   },
   "dependencies": {
     "@chakra-ui/react": "^3.38.0",

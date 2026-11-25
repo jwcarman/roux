@@ -33,13 +33,7 @@ export function Layout() {
   }
 
   return (
-    <AppShell
-      nav={nav}
-      permissions={me.permissions}
-      appName={appName}
-      logo={<Logo />}
-      account={accountArea}
-    >
+    <AppShell nav={nav} permissions={me.permissions} appName={appName} logo={<Logo />} account={accountArea}>
       <Outlet />
     </AppShell>
   );
@@ -56,11 +50,7 @@ function Account({ compact, close }: AccountLayout) {
 
   // Signing out ends the session, and the guards then send the caller to sign in.
   return (
-    <AccountMenu
-      name={profile?.displayName}
-      email={profile?.email}
-      compact={compact}
-    >
+    <AccountMenu name={profile?.displayName} email={profile?.email} compact={compact}>
       <AccountMenuLink to="/settings" icon={LuSettings} onNavigate={close}>
         Settings
       </AccountMenuLink>

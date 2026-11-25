@@ -8,7 +8,7 @@
 #      since the run that rewrites the file fails.
 #   3. go vet, then golangci-lint when it is installed.
 #   4. The Go tests, when a database is reachable: TEST_DATABASE_URL, or Docker for a container.
-#   5. The frontend: npm ci when node_modules is missing, its lint and format checks if it has them,
+#   5. The frontend: npm ci when node_modules is missing, Prettier (writing) and ESLint if it has them,
 #      its tests with the 100% coverage gate, and its type-checked build.
 #
 # It stops at the first failure with what to do, and ends by naming every step it skipped: a
@@ -80,12 +80,20 @@ if [ -f frontend/package.json ]; then
     step "npm ci"
     (cd frontend && npm ci --no-audit --no-fund) >"$log" 2>&1 || fail "npm ci" "the frontend's dependencies do not install"
   fi
-  for script in format:check lint; do
-    if has "$script"; then
-      step "npm run $script"
-      (cd frontend && npm run -s "$script") >"$log" 2>&1 || fail "npm run $script" "fix each finding below"
-    fi
-  done
+  # The template keeps ESLint and Prettier in frontend/lint-tools, with installs of their own.
+  if [ -f frontend/lint-tools/package.json ] && [ ! -d frontend/lint-tools/node_modules ]; then
+    step "npm ci (lint-tools)"
+    (cd frontend/lint-tools && npm ci --no-audit --no-fund) >"$log" 2>&1 || fail "npm ci" "the lint tools do not install"
+  fi
+  # Formatting is fixed, as gofmt is above, not only reported.
+  if has format; then
+    step "npm run format"
+    (cd frontend && npm run -s format) >"$log" 2>&1 || fail "npm run format" "Prettier could not parse a file below"
+  fi
+  if has lint; then
+    step "npm run lint"
+    (cd frontend && npm run -s lint) >"$log" 2>&1 || fail "npm run lint" "fix each finding below (never with an eslint-disable comment)"
+  fi
   if has coverage; then
     step "npm run coverage"
     (cd frontend && npm run -s coverage) >"$log" 2>&1 \

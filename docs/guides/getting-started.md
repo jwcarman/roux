@@ -55,7 +55,10 @@ Either way, features use roux by importing from it; no plumbing is written in th
    ([The shell](shell.md)).
 
 `make check` runs the Go checks (gofmt, `go vet`, golangci-lint, the tests); in `frontend/`,
-`npm run coverage`, `npm run build` and `npm run mutate` run the browser's. `make build` makes the
+`npm run format` (Prettier), `npm run lint` (ESLint, type-aware), `npm run coverage` (Vitest, 100%
+of lines and branches), `npm run build` and `npm run mutate` run the browser's. ESLint and Prettier
+live in `frontend/lint-tools/`, with an install of their own (`npm ci` there once): typescript-eslint
+does not yet support TypeScript 7, the app's compiler. `make build` makes the
 release binary, one file with the front end inside, and `make image` the container image.
 
 ## Requirements

@@ -1,0 +1,8 @@
+dist
+coverage
+reports
+.stryker-tmp
+lint-tools/node_modules
+# Written by tools, checked by their own tests: never reformat them.
+src/routeTree.gen.ts
+src/permissions.gen.ts

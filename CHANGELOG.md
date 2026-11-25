@@ -8,6 +8,9 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **The template's front end has Prettier and ESLint** (`npm run format`, `format:check`, `lint`),
+  with roux-web's settings, in `frontend/lint-tools/`; CI checks both. The skill's `check.sh` runs
+  them, writing Prettier's fixes as it does gofmt's.
 - **A container image for every app.** The template has a `Dockerfile` (the front end built, then
   embedded in a static server on distroless `nonroot`: no shell, not root, about 46 MB), a
   `.dockerignore` and `make image`; a test keeps the build stages on pinned releases and the server
@@ -106,6 +109,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Fixed
 
+- A JWT test minted its tokens' `iat` from the real clock and `auth_time` from the test's clock,
+  so it failed once the real date passed the test's.
 - **A huge `pageIndex` is an empty page,** not a 500: the offset stops at Postgres's limit
   instead of overflowing negative.
 - **Error answers name no Go types.** A body that does not decode says what is wrong in the

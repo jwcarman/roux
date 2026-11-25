@@ -1,39 +1,41 @@
 # roux
 
-roux is said "roo". It is the base a Spring Boot application is built on: curated libraries, and
-the plumbing every such application needs, written once with contracts that keep it honest.
+roux is said "roo". It is the base a Go + React business application is built on: sign-in,
+roles and permissions, the team, errors a person can read, paged lists, forms, money, dates and the
+activity log, written once with contracts that keep both sides honest.
 
-## Modules
+Documentation: <https://jwcarman.github.io/roux/>.
 
-Java, published to Maven Central under `org.jwcarman.roux`:
+## Packages
 
-- `runtime/roux-problems`: answers every error a Spring MVC API raises as an
-  [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) Problem Detail. Settings live under
-  `roux.problems` (`enabled`, `api-path-prefix`).
-- `runtime/roux-validation`: `@Phone`, `@NotInFuture` and roux's readable validation messages
-  (every bundle of that name on the class path is merged by Hibernate Validator).
-- `runtime/roux-spa`: serves a single-page app's shell for any page URL (`roux.spa.excluded-paths`).
-- `runtime/roux-jpa`: `Versions.require`, the stale-version check for JPA entities.
-- `runtime/roux-autoconfigure`: the Spring Boot auto-configuration for every module above. Each
-  feature switches on when its jar is on the class path.
-- `runtime/roux-spring-boot-starter`: the one dependency an application adds (no code of its own).
-- `runtime/roux-bom`: aligns the versions of the modules above.
-- `runtime/roux-contract-tests`: tests that hold the Java and web sides to the same contracts. Never published.
+Go, the module `github.com/jwcarman/roux` (this repository's root). An app imports what it uses:
+
+- `app`: `app.Main`, the kit a module mounts on, and the stock modules read from the environment.
+- `problem`, `api`: RFC 9457 Problem Details, JSON decoding and answers, the router's guards.
+- `page`: paged, sorted and searched lists over a view.
+- `authn` (with `emaillink`, `passkey`, `apikey`, `oidc`, `jwt`), `authz`, `users`: sign-in, roles
+  and permissions, the team.
+- `activity`, `money`, `organization`: a record's history, amounts, the organization's zone and day.
+- `pgdb`, `spa`, `theme`, `health`, `telemetry`: migrations, the page shell and its CSP, the owner's
+  theme, probes, OpenTelemetry.
+- `rouxtest`, `pgtest`, `authn/authntest`: an app's tests over PostgreSQL, with signed-in browsers.
+
+`contracts/` holds what the Go and web sides must agree on (messages, problem shapes), and tests on
+both sides read it.
 
 Web, published to npm:
 
 - `@jwcarman/roux-web` (`web/roux-web`): the React side, with one subpath per concern (`problem`,
-  `api`, `paging`, `table`, `feedback`, `form`, `signin`, `session` and more).
+  `api`, `paging`, `table`, `feedback`, `form`, `auth`, `signin`, `session`, `users` and more).
 - `@jwcarman/create-roux-app` (`web/create-roux-app`): `npm create @jwcarman/roux-app acme-gym`
-  starts a new app from the reference app below, at the same release.
+  starts a new app from the template below, at the same release.
 
 Apps, never published as they are:
 
-- `templates/app`: the reference app every new app starts from (sign-in, the first owner, the
-  sidebar frame, Users, Settings and Appearance), built and tested in roux's build against the
-  modules beside it. `scripts/export-app-template.sh` turns it into an app of its own.
-- `examples/dojo`: a martial-arts school built on roux, where roux's pieces are proven before they
-  are extracted.
+- `template/`: the app every new app starts from (sign-in, the first owner, the sidebar frame,
+  Users, Settings and Appearance), built and tested in roux's build against the packages beside it.
+- `examples/roux-the-day/`: a team planner built on roux in rounds, where roux's pieces are proven
+  before they are extracted (`FINDINGS.md` records what it was missing).
 
 ## Using roux
 
@@ -48,41 +50,40 @@ roux's Agent Skill (`plugins/roux`) is the same knowledge written for an agent.
 ## Building
 
 ```
-./mvnw verify          # tests, with 100% line and branch coverage
-./mvnw -Ppit verify    # mutation testing; any surviving mutant fails the build
+make check             # gofmt, go vet, golangci-lint, and the tests (TEST_DATABASE_URL, or Docker)
 ```
 
-Mutation testing is incremental: PIT and Stryker keep each mutant's result in `.mutation-history/`
-(git-ignored) and re-test only what changed. Delete that folder for a full run. In CI the
-`Mutation` workflow caches it between runs, and runs in full twice a month.
+The database tests use `TEST_DATABASE_URL` when it is set, else a PostgreSQL container per package
+(testcontainers-go).
 
-For the web packages, run in `web/` with `-w @jwcarman/roux-web` or `-w @jwcarman/create-roux-app` (after
-`npm ci` there and in `web/lint-tools`): `npm run format:check`, `lint`, `typecheck`, `coverage`, `build`, and
-`npm run mutate` for mutation testing. `web/create-roux-app/pack-test.sh` makes an app with the packed starter.
+For the web packages, run in `web/` with `-w @jwcarman/roux-web` or `-w @jwcarman/create-roux-app`
+(after `npm ci` there and in `web/lint-tools`): `npm run format:check`, `lint`, `typecheck`,
+`coverage`, `build`, and `npm run mutate` for mutation testing. Mutation testing is incremental:
+Stryker keeps each mutant's result in `.mutation-history/` (git-ignored) and re-tests only what
+changed. In CI the `Mutation` workflow caches it between runs.
 
-Native (GraalVM) builds and tests never run on GitHub. They run on a Linux build host over ssh:
-`NATIVE_HOST=<ssh host> NATIVE_JAVA_HOME=<GraalVM home on the host> scripts/native-remote.sh` sends the
-committed HEAD as a git bundle and runs the template's `-PnativeTest` and `-Pnative-e2e` there.
+The template is checked the same way: `make check` in `template/`, and `npm run format:check`,
+`lint`, `coverage` and `build` in `template/frontend/`. The docs site builds with
+`mkdocs build --strict` (`docs/requirements.txt`). The Agent Skill's checks:
+`node plugins/roux/scripts/check-guides.mjs` (every public name documented, every Go name written
+exists) and `bash plugins/roux/scripts/check-recipe.sh` (the recipe, built into a copy of the
+template).
 
-Java 25 and Spring Boot 4.1. Licensed under the [Apache License 2.0](LICENSE).
+Go 1.27, PostgreSQL 17, React 19. Licensed under the [Apache License 2.0](LICENSE).
 
 ## Releasing
 
-Creating a GitHub Release triggers `.github/workflows/release.yml`; the release tag is the version. It publishes
-`@jwcarman/roux-web` to npm first, then the Java modules to Maven Central only if npm succeeded, and
-`@jwcarman/create-roux-app` (with the app template at that version) after roux-web. If a job fails, use "Re-run
-failed jobs" rather than re-running everything: npm will not accept the same version twice.
+Creating a GitHub Release triggers `.github/workflows/release.yml`; the release tag is the version.
+It publishes `@jwcarman/roux-web` to npm, then `@jwcarman/create-roux-app` with the app template at
+that version. If a job fails, use "Re-run failed jobs" rather than re-running everything: npm will
+not accept the same version twice.
 
-After a release, the next SNAPSHOT is set in every pom with `versions:set`, and `templates/app/pom.xml`'s
-`roux.version` with it: CI fails while the template's `roux.version` is not roux's version.
+The workflow is still 0.3.0's: it also deploys the Java modules, and the starter bundles the Java
+template. Both change before 0.4.0, the first Go release, which also needs a tag the Go module
+proxy accepts (`v0.4.0`).
 
-npm publishing uses [trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC), so there is no npm token
-secret. On npmjs.com, each package (`@jwcarman/roux-web`, `@jwcarman/create-roux-app`) → Settings → Trusted
-publishing names GitHub user `jwcarman`, repository `roux` and workflow `release.yml`; renaming the workflow file
-breaks publishing until that entry is updated. Provenance
+npm publishing uses [trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC), so there
+is no npm token secret. On npmjs.com, each package (`@jwcarman/roux-web`, `@jwcarman/create-roux-app`)
+→ Settings → Trusted publishing names GitHub user `jwcarman`, repository `roux` and workflow
+`release.yml`; renaming the workflow file breaks publishing until that entry is updated. Provenance
 is generated automatically.
-
-A maintainer needs these repository secrets:
-
-- `CENTRAL_TOKEN_USERNAME` and `CENTRAL_TOKEN_PASSWORD`: the Sonatype Central Portal user token.
-- `GPG_SIGNING_KEY` and `GPG_SIGNING_KEY_PASSWORD`: the armored private key that signs the Java artifacts, and its passphrase.

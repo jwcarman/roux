@@ -5,13 +5,8 @@
     "configFile": "vite.config.ts"
   },
   "coverageAnalysis": "perTest",
-  "plugins": [
-    "@stryker-mutator/vitest-runner",
-    "./stryker-route-paths.mjs"
-  ],
-  "ignorers": [
-    "route-path"
-  ],
+  "plugins": ["@stryker-mutator/vitest-runner", "./stryker-route-paths.mjs"],
+  "ignorers": ["route-path"],
   "mutate": [
     "src/**/*.{ts,tsx}",
     "!src/**/*.test.*",
@@ -19,11 +14,7 @@
     "!src/routeTree.gen.ts",
     "!src/permissions.gen.ts"
   ],
-  "reporters": [
-    "clear-text",
-    "progress",
-    "html"
-  ],
+  "reporters": ["clear-text", "progress", "html"],
   "thresholds": {
     "break": 100
   },

@@ -19,10 +19,7 @@ interface ProfileEditorProps {
   refreshProfile: () => Promise<void>;
 }
 
-function ProfileEditor({
-  profile,
-  refreshProfile,
-}: Readonly<ProfileEditorProps>) {
+function ProfileEditor({ profile, refreshProfile }: Readonly<ProfileEditorProps>) {
   const form = useSchemaForm({
     schema: renameSchema,
     defaultValues: { displayName: profile.displayName },
@@ -41,9 +38,7 @@ function ProfileEditor({
     <form.AppForm>
       <form.Form>
         <Stack gap="4">
-          <form.AppField name="displayName">
-            {(f) => <f.InputField label="Display name" />}
-          </form.AppField>
+          <form.AppField name="displayName">{(f) => <f.InputField label="Display name" />}</form.AppField>
           <Stack gap="1.5">
             <Text textStyle="sm" fontWeight="medium">
               Email

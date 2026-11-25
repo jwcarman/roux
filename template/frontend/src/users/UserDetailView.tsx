@@ -1,21 +1,10 @@
-import {
-  Badge,
-  Button,
-  DataList,
-  Flex,
-  Heading,
-  Stack,
-} from "@chakra-ui/react";
+import { Badge, Button, DataList, Flex, Heading, Stack } from "@chakra-ui/react";
 import { LuUserCheck, LuUserX } from "react-icons/lu";
 import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, useConfirm } from "@jwcarman/roux-web/feedback";
 import type { UserDetail } from "@jwcarman/roux-web/users";
 import { ActivityList } from "@jwcarman/roux-web/activity";
-import {
-  changeUserStatus,
-  userActivitiesPage,
-  type UserStatusAction,
-} from "@jwcarman/roux-web/users";
+import { changeUserStatus, userActivitiesPage, type UserStatusAction } from "@jwcarman/roux-web/users";
 import { roleLabel } from "./users";
 import { formatDateTime } from "@jwcarman/roux-web/dates";
 
@@ -34,22 +23,14 @@ interface StatusChange {
 }
 
 /** A user: who they are, Deactivate or Reactivate for a manager, and their history. */
-export function UserDetailView({
-  user,
-  canManage,
-  isSelf,
-}: Readonly<UserDetailViewProps>) {
+export function UserDetailView({ user, canManage, isSelf }: Readonly<UserDetailViewProps>) {
   const confirm = useConfirm();
   const active = user.status === "ACTIVE";
-  const { run, pending: busy } = useServerAction<UserDetail, StatusChange>(
-    changeUserStatus(user.id),
-    {
-      failure: ({ action }) => `Could not ${action} ${user.displayName}`,
-      onSuccess: (_, { done }) => notify.success(done),
-    },
-  );
-  const change = (action: StatusChange["action"], done: string) =>
-    run({ action, done });
+  const { run, pending: busy } = useServerAction<UserDetail, StatusChange>(changeUserStatus(user.id), {
+    failure: ({ action }) => `Could not ${action} ${user.displayName}`,
+    onSuccess: (_, { done }) => notify.success(done),
+  });
+  const change = (action: StatusChange["action"], done: string) => run({ action, done });
 
   async function onDeactivate() {
     const confirmed = await confirm({
@@ -68,12 +49,7 @@ export function UserDetailView({
       <Flex justify="space-between" align="center" gap="3" wrap="wrap">
         <Heading as="h2">{user.displayName}</Heading>
         {canManage && !isSelf && active && (
-          <Button
-            variant="outline"
-            colorPalette="red"
-            loading={busy}
-            onClick={onDeactivate}
-          >
+          <Button variant="outline" colorPalette="red" loading={busy} onClick={onDeactivate}>
             <LuUserX aria-hidden />
             Deactivate
           </Button>
@@ -82,9 +58,7 @@ export function UserDetailView({
           <Button
             variant="outline"
             loading={busy}
-            onClick={() =>
-              change("reactivate", `${user.displayName} was reactivated`)
-            }
+            onClick={() => change("reactivate", `${user.displayName} was reactivated`)}
           >
             <LuUserCheck aria-hidden />
             Reactivate
@@ -103,17 +77,13 @@ export function UserDetailView({
         <DataList.Item>
           <DataList.ItemLabel>Status</DataList.ItemLabel>
           <DataList.ItemValue>
-            <Badge colorPalette={active ? undefined : "red"}>
-              {active ? "Active" : "Deactivated"}
-            </Badge>
+            <Badge colorPalette={active ? undefined : "red"}>{active ? "Active" : "Deactivated"}</Badge>
           </DataList.ItemValue>
         </DataList.Item>
         <DataList.Item>
           <DataList.ItemLabel>Joined</DataList.ItemLabel>
           <DataList.ItemValue>
-            <time dateTime={user.joinedAt}>
-              {formatDateTime(user.joinedAt)}
-            </time>
+            <time dateTime={user.joinedAt}>{formatDateTime(user.joinedAt)}</time>
           </DataList.ItemValue>
         </DataList.Item>
       </DataList.Root>

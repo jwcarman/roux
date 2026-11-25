@@ -3,11 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { LuUserPlus } from "react-icons/lu";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { FormDialog, useSchemaForm } from "@jwcarman/roux-web/form";
-import {
-  invitableRolesQuery,
-  invitationSchema,
-  inviteUser,
-} from "@jwcarman/roux-web/users";
+import { invitableRolesQuery, invitationSchema, inviteUser } from "@jwcarman/roux-web/users";
 import { ROLE_LABELS } from "./users";
 
 /** The button; it passes on what a dialog trigger gives it. */
@@ -54,22 +50,11 @@ function InviteDialog({ roles }: Readonly<{ roles: string[] }>) {
   });
 
   return (
-    <FormDialog
-      form={form}
-      title="Invite a user"
-      trigger={<InviteButton />}
-      submitLabel="Send invitation"
-    >
-      <form.AppField name="name">
-        {(f) => <f.InputField label="Name" />}
-      </form.AppField>
-      <form.AppField name="email">
-        {(f) => <f.InputField label="Email" type="email" />}
-      </form.AppField>
+    <FormDialog form={form} title="Invite a user" trigger={<InviteButton />} submitLabel="Send invitation">
+      <form.AppField name="name">{(f) => <f.InputField label="Name" />}</form.AppField>
+      <form.AppField name="email">{(f) => <f.InputField label="Email" type="email" />}</form.AppField>
       <form.AppField name="role">
-        {(f) => (
-          <f.SelectField label="Role" options={roles} labels={ROLE_LABELS} />
-        )}
+        {(f) => <f.SelectField label="Role" options={roles} labels={ROLE_LABELS} />}
       </form.AppField>
     </FormDialog>
   );
