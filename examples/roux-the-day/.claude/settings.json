@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "roux": {
+      "source": {
+        "source": "github",
+        "repo": "jwcarman/roux"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "roux@roux": true
+  }
+}

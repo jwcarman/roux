@@ -1,0 +1,201 @@
+// @vitest-environment jsdom
+import { act, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { UserDetail } from "../api";
+import { ConfirmProvider, Toaster, toaster } from "@jwcarman/roux-web/feedback";
+import { queryKeys } from "../queryKeys";
+import {
+  invariantViolation,
+  pageOf,
+  paletteOf,
+  renderWithProviders,
+  server,
+  serverError,
+} from "@jwcarman/roux-web/testing";
+import { UserDetailView } from "./UserDetailView";
+
+const GRACE: UserDetail = {
+  id: "g1",
+  displayName: "Grace Hopper",
+  email: "grace@example.org",
+  role: "USER",
+  status: "ACTIVE",
+  joinedAt: "2026-11-01T09:00:00Z",
+};
+
+/** An empty history, and `response` to a status change; returns the status changes asked for. */
+function answer(response: () => Response) {
+  const changes: string[] = [];
+  server.use(
+    http.get("/api/roux/users/:id/activities", () =>
+      HttpResponse.json(pageOf([], {})),
+    ),
+    http.post("/api/roux/users/:id/:action", ({ params }) => {
+      changes.push(String(params.action));
+      return response();
+    }),
+  );
+  return changes;
+}
+
+function show(user: UserDetail, canManage: boolean, isSelf = false) {
+  const view = renderWithProviders(
+    <ConfirmProvider>
+      <UserDetailView user={user} canManage={canManage} isSelf={isSelf} />
+      <Toaster />
+    </ConfirmProvider>,
+  );
+  const invalidate = vi.spyOn(view.client, "invalidateQueries");
+  return { invalidate, user: userEvent.setup() };
+}
+
+describe("UserDetailView", () => {
+  beforeEach(() => {
+    document.cookie = "XSRF-TOKEN=token";
+  });
+
+  afterEach(() => {
+    act(() => toaster.remove());
+  });
+
+  it("shows when the user joined in the organization's zone", () => {
+    answer(() => HttpResponse.json(GRACE));
+    // 03:00 UTC on Nov 21 is still the evening of Nov 20 in New York, the test organization's zone.
+    show({ ...GRACE, joinedAt: "2026-11-21T03:00:00Z" }, false);
+    expect(screen.getByText("Nov 20, 2026, 10:00 PM")).toBeInTheDocument();
+  });
+
+  it("shows an owner's role by name", () => {
+    answer(() => HttpResponse.json(GRACE));
+    show({ ...GRACE, role: "OWNER" }, false);
+    expect(screen.getByText("Owner")).toBeInTheDocument();
+  });
+
+  it("shows the user", () => {
+    answer(() => HttpResponse.json(GRACE));
+    show(GRACE, false);
+    expect(
+      screen.getByRole("heading", { name: "Grace Hopper" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("grace@example.org")).toBeInTheDocument();
+    expect(screen.getByText("User")).toBeInTheDocument();
+    expect(screen.getByText("Active")).toBeInTheDocument();
+  });
+
+  it("offers Deactivate only to someone who manages users, and not on their own page", () => {
+    answer(() => HttpResponse.json(GRACE));
+    show(GRACE, false);
+    expect(screen.queryByRole("button", { name: "Deactivate" })).toBeNull();
+  });
+
+  it("asks before deactivating, then toasts and refreshes the user, the lists and the history", async () => {
+    answer(() => HttpResponse.json({ ...GRACE, status: "DEACTIVATED" }));
+    const { invalidate, user } = show(GRACE, true);
+
+    await user.click(screen.getByRole("button", { name: "Deactivate" }));
+    const dialog = await screen.findByRole("alertdialog", {
+      name: "Deactivate Grace Hopper?",
+    });
+    expect(dialog).toHaveTextContent("They won't be able to sign in.");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Deactivate" }),
+    );
+
+    expect(
+      await screen.findByText("Grace Hopper was deactivated"),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: queryKeys.users.detail("g1"),
+      });
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: queryKeys.users.lists(),
+      });
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: queryKeys.users.activities("g1"),
+      });
+    });
+  });
+
+  it("deactivates nothing when the question is cancelled", async () => {
+    const changes = answer(() => HttpResponse.json(GRACE));
+    const { user } = show(GRACE, true);
+    await user.click(screen.getByRole("button", { name: "Deactivate" }));
+    await user.click(await screen.findByRole("button", { name: "Cancel" }));
+    expect(changes).toEqual([]);
+  });
+
+  it("reactivates a deactivated user without asking", async () => {
+    answer(() => HttpResponse.json({ ...GRACE, status: "ACTIVE" }));
+    const { user } = show({ ...GRACE, status: "DEACTIVATED" }, true);
+    expect(screen.getByText("Deactivated")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reactivate" }));
+    expect(
+      await screen.findByText("Grace Hopper was reactivated"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the server's reason when it refuses", async () => {
+    answer(() =>
+      invariantViolation("The team needs at least one active owner"),
+    );
+    const { user } = show(GRACE, true);
+    await user.click(screen.getByRole("button", { name: "Deactivate" }));
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Deactivate" }),
+    );
+    expect(
+      await screen.findByText("The team needs at least one active owner"),
+    ).toBeInTheDocument();
+  });
+
+  it("asks in red, since deactivating is hard to undo", async () => {
+    answer(() => HttpResponse.json(GRACE));
+    const { user } = show(GRACE, true);
+    await user.click(screen.getByRole("button", { name: "Deactivate" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(
+      paletteOf(within(dialog).getByRole("button", { name: "Deactivate" })),
+    ).toBe("red");
+  });
+
+  it("says what could not be done when the server fails", async () => {
+    answer(() => serverError());
+    const { user } = show(GRACE, true);
+    await user.click(screen.getByRole("button", { name: "Deactivate" }));
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Deactivate" }),
+    );
+    expect(
+      await screen.findByText("Could not deactivate Grace Hopper"),
+    ).toBeInTheDocument();
+  });
+
+  it("offers Reactivate only for a deactivated user, and only to someone who manages users", () => {
+    answer(() => HttpResponse.json(GRACE));
+    show(GRACE, true);
+    expect(screen.queryByRole("button", { name: "Reactivate" })).toBeNull();
+  });
+
+  it("does not offer Reactivate to someone who does not manage users", () => {
+    answer(() => HttpResponse.json(GRACE));
+    show({ ...GRACE, status: "DEACTIVATED" }, false);
+    expect(screen.queryByRole("button", { name: "Reactivate" })).toBeNull();
+  });
+
+  it("marks a deactivated user's status in red, and an active one's not", () => {
+    answer(() => HttpResponse.json(GRACE));
+    show({ ...GRACE, status: "DEACTIVATED" }, false);
+    expect(paletteOf(screen.getByText("Deactivated"))).toBe("red");
+  });
+
+  it("does not mark an active user's status in red", () => {
+    answer(() => HttpResponse.json(GRACE));
+    show(GRACE, false);
+    expect(paletteOf(screen.getByText("Active"))).not.toBe("red");
+  });
+});
