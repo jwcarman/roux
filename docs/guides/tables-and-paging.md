@@ -99,7 +99,10 @@ writes the SQL particular to it: the view, and each filter.
 Give each list a view shaped for it: one row per record, with every column the list shows, sorts
 by or searches, and an `id`. Joined and computed values (a person's name, the first of several
 assignees, a count) are columns of the view, so sorting and searching by them is no different
-from any other column:
+from any other column. A column the row answers in another form than the database keeps it is
+the view's work too: a date as `2026-11-24` is `to_char(day, 'YYYY-MM-DD')`, a time of day as
+`10:30` is `to_char(at_time, 'HH24:MI')`, beside the `date` and `time` columns the filters and
+sorts use:
 
 ```sql
 -- The items list reads this: the item, and its assignees' names, the first of them to sort by.
@@ -107,7 +110,9 @@ create view item_list as
 select i.id, i.title, i.notes, i.day, i.at_time, i.done, i.version,
        coalesce(a.ids, '{}')   as assignee_ids,
        coalesce(a.names, '{}') as assignee_names,
-       a.names[1]              as first_assignee_name
+       a.names[1]              as first_assignee_name,
+       to_char(i.day, 'YYYY-MM-DD')  as day_text,
+       to_char(i.at_time, 'HH24:MI') as at_text
   from item i
   left join lateral (
         select array_agg(u.id order by lower(u.display_name), u.id)           as ids,
@@ -134,8 +139,7 @@ const (
 
 // list is the items list: item_list, by day unless asked otherwise.
 var list = page.New(page.ListConfig[Sort, Row]{
-	From:    "item_list",
-	Columns: "id, title, day, at_time, done, assignee_names, version",
+	From: "item_list",
 	Sorts: map[Sort][]page.Term{
 		ByDay:      {page.By("day"), page.By("at_time").NullsFirst()},
 		ByTitle:    {page.By("lower(title)")},
@@ -144,37 +148,28 @@ var list = page.New(page.ListConfig[Sort, Row]{
 	DefaultSort:     ByDay,
 	DefaultPageSize: 25,
 	Search:          []page.Field{page.Contains("title"), page.Contains("notes")},
-	Scan:            scanRow,
 })
 
-// Row is an item as the list shows it.
+// Row is an item as the list shows it: each db tag names a column of the view.
 type Row struct {
-	ID            uuid.UUID `json:"id"`
-	Title         string    `json:"title"`
-	Day           string    `json:"day"` // 2026-11-24
-	At            *string   `json:"at"`  // 10:30, or null for all day
-	Done          bool      `json:"done"`
-	AssigneeNames []string  `json:"assigneeNames"`
-	Version       int64     `json:"version"`
-}
-
-func scanRow(row pgx.CollectableRow) (Row, error) {
-	var r Row
-	var day time.Time
-	var at pgtype.Time
-	if err := row.Scan(&r.ID, &r.Title, &day, &at, &r.Done, &r.AssigneeNames, &r.Version); err != nil {
-		return r, err
-	}
-	r.Day, r.At = day.Format(time.DateOnly), clock(at) // clock: "15:04", or nil for all day
-	return r, nil
+	ID            uuid.UUID `json:"id" db:"id"`
+	Title         string    `json:"title" db:"title"`
+	Day           string    `json:"day" db:"day_text"` // 2026-11-24
+	At            *string   `json:"at" db:"at_text"`   // 10:30, or null for all day
+	Done          bool      `json:"done" db:"done"`
+	AssigneeNames []string  `json:"assigneeNames" db:"assignee_names"`
+	Version       int64     `json:"version" db:"version"`
 }
 ```
+
+- **The row is the select list.** Each field's `db` tag names its column, and pgx fills the row by
+  name, so there is no scan code to keep in step. `db:"-"` leaves a field out; an embedded struct
+  contributes its own tagged fields. A field without a tag, or a tag that is not a plain column
+  name, makes `page.New` panic, naming the field and the tag to write.
 
 - **The sort type is a string type** whose constants are the `sortBy` values; each maps to the
   terms it orders by. The request's direction applies to every term; `NullsFirst()` puts rows with
   no value first (they come last otherwise, ascending): here an all-day item leads its day.
-- **`From`, `Columns`, each term and each search field must be constants** in the code: their type
-  is unexported, so a string built at run time does not compile. Values never go in them.
 - **`DefaultPageSize: 25`** matches the browser's `DEFAULT_PAGE_SIZE` (without it, 20); the
   maximum is `page.DefaultMaxSize` (100) unless `MaxPageSize` says otherwise.
 - `page.New` returns a `*page.Paginator`; its `Page` takes a `page.Querier` (the pool, or a
@@ -186,14 +181,23 @@ func scanRow(row pgx.CollectableRow) (Row, error) {
   `page.Prefix(col)` at its start (it can use an index on `lower(col) text_pattern_ops`), and
   `page.Exact(col)` the whole value, ignoring case. A search matches when every word of the term is
   in some field; a blank term matches everything, and one over 200 characters is a `400`.
-- **`page.New` panics on a mistake in the declaration** (a default sort that is not a sort, a
-  column list that is empty), so it stops the program when the package loads.
-- **Check it at startup.** A module's `Start` runs `list.Check(ctx, k.Pool)`, which runs the list's
-  queries for every sort, both ways and with a search, matching nothing: a misspelled column stops
-  the app there, not on a request. It also refuses a `Scan` that reads a different number of values
-  than `Columns` lists. Two columns of one type read in the wrong order it cannot see; the list's
-  Go test, reading a real row, does.
-- **SQL is written as string literals.** `From`, `Columns`, `page.By`, the search fields and
+- **`page.New` panics on a mistake in the declaration** (a default sort that is not a sort, an
+  untagged row field), so it stops the program when the package loads.
+- **Its test checks it.** The list's Go test runs `list.Check(ctx, pool)`, which runs the list's
+  queries for every sort, both ways and with a search, matching nothing, so a misspelled view,
+  column, sort or search field fails the build. A test in another package reaches the list
+  through an `export_test.go` (`package items`, `var List = list`), Go's way of showing a test
+  what the package keeps unexported:
+
+  ```go
+  func TestTheListMatchesTheDatabase(t *testing.T) {
+  	f := setup(t)
+  	if err := items.List.Check(context.Background(), f.Pool); err != nil {
+  		t.Fatal(err)
+  	}
+  }
+  ```
+- **SQL is written as string literals.** `From`, `page.By`, the search fields and
   `page.Where` take only literals: a string variable or an `fmt.Sprintf` result does not compile
   (`cannot use ... as page.sqlText value`), so a value can never be pasted into SQL. Values go in as
   `page.Where`'s arguments; a choice between two fragments is two literals.

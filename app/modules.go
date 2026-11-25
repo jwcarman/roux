@@ -426,9 +426,6 @@ func (u *Users) Mount(_ context.Context, k *Kit) error {
 // Start makes the first owner, when there is none. With no one active who can manage the team
 // and no OWNER_EMAIL, it refuses: nobody could ever sign in to change that.
 func (u *Users) Start(ctx context.Context, k *Kit) error {
-	if err := users.CheckList(ctx, k.Pool); err != nil {
-		return err
-	}
 	owner, name := os.Getenv("OWNER_EMAIL"), os.Getenv("OWNER_NAME")
 	switch {
 	case owner != "" && name == "", owner == "" && name != "":

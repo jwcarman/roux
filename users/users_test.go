@@ -106,6 +106,13 @@ func TestOnlyAUserHasAPageOfTheirOwn(t *testing.T) {
 	f.Browser().Get("/api/roux/users/me").Want(t, 401, "anonymous")
 }
 
+func TestTheUserListMatchesTheDatabase(t *testing.T) {
+	f := setup(t)
+	if err := users.UserList.Check(context.Background(), f.Pool); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestTheDirectory(t *testing.T) {
 	f := setup(t)
 	ctx := context.Background()

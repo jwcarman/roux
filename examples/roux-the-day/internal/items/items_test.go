@@ -298,15 +298,9 @@ func TestOnlyTheAuthorOrAnOwnerMayDelete(t *testing.T) {
 	}
 }
 
-func TestTheModuleChecksItsListAtStart(t *testing.T) {
+func TestTheListMatchesTheDatabase(t *testing.T) {
 	f := setup(t)
-	if err := items.CheckList(context.Background(), f.Pool); err != nil {
+	if err := items.List.Check(context.Background(), f.Pool); err != nil {
 		t.Fatal(err)
-	}
-	if _, err := f.Pool.Exec(context.Background(), `drop view item_list; create view item_list as select id from item`); err != nil {
-		t.Fatal(err)
-	}
-	if err := items.CheckList(context.Background(), f.Pool); err == nil {
-		t.Fatal("a view without the list's columns passed")
 	}
 }

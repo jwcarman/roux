@@ -11,9 +11,15 @@ shown with `QueryTable`, its state in the URL.
   `sortBy`); a column the server can't sort has `enableSorting: false`, or clicking it asks for a
   sort the server refuses.
 - Give each list a view with one row per record and every column it shows, sorts by or searches:
-  joined and computed values sort and search like any column.
-- SQL fragments in `page.New` and `page.Where` are constants; values are always arguments (`?`).
-  The fragment types are unexported, so a string built at run time does not compile.
+  joined and computed values sort and search like any column. The view also gives each column in
+  the form the row answers: `to_char(day, 'YYYY-MM-DD')` for a date, `to_char(at_time, 'HH24:MI')`
+  for a time of day.
+- The row struct is the select list: a `db` tag on every field names its column (`db:"-"` leaves
+  one out). No scan function.
+- The list's Go test runs `list.Check`, through an `export_test.go` (`var List = list`).
+- SQL fragments in `page.New` and `page.Where` are string literals; values are always arguments
+  (`?`). A variable or `fmt.Sprintf` result does not compile: `cannot use ... as page.sqlText
+  value`. Write the SQL out; a choice between two fragments is two literals.
 - Refuse an unknown filter value (`400` on that parameter); never ignore it.
 - The list's key and fetch live in the module as `pageQuery(...)`; the page passes it as `query`.
 - Read URL state only through `tableSearchOf`, `enumSearchOf`, `idSearchOf`, `dateSearchOf`: they
@@ -28,7 +34,8 @@ shown with `QueryTable`, its state in the URL.
 create view item_list as
 select i.id, i.title, i.notes, i.day, i.at_time, i.done, i.version,
        coalesce(a.names, '{}') as assignee_names,
-       a.names[1]              as first_assignee_name
+       a.names[1]              as first_assignee_name,
+       to_char(i.day, 'YYYY-MM-DD') as day_text
   from item i
   left join lateral (
         select array_agg(u.display_name order by lower(u.display_name), u.id) as names
@@ -49,8 +56,7 @@ const (
 )
 
 var list = page.New(page.ListConfig[Sort, Row]{
-	From:    "item_list",
-	Columns: "id, title, day, done, assignee_names, version",
+	From: "item_list",
 	Sorts: map[Sort][]page.Term{
 		ByDay:      {page.By("day"), page.By("at_time").NullsFirst()},
 		ByTitle:    {page.By("lower(title)")},
@@ -59,27 +65,16 @@ var list = page.New(page.ListConfig[Sort, Row]{
 	DefaultSort:     ByDay,
 	DefaultPageSize: 25,
 	Search:          []page.Field{page.Contains("title"), page.Contains("notes")},
-	Scan:            scanRow,
 })
 
-// Row is an item as the list shows it.
+// Row is an item as the list shows it: each db tag is a column of the view.
 type Row struct {
-	ID            uuid.UUID `json:"id"`
-	Title         string    `json:"title"`
-	Day           string    `json:"day"` // 2026-11-24
-	Done          bool      `json:"done"`
-	AssigneeNames []string  `json:"assigneeNames"`
-	Version       int64     `json:"version"`
-}
-
-func scanRow(row pgx.CollectableRow) (Row, error) {
-	var r Row
-	var day time.Time
-	if err := row.Scan(&r.ID, &r.Title, &day, &r.Done, &r.AssigneeNames, &r.Version); err != nil {
-		return r, err
-	}
-	r.Day = day.Format(time.DateOnly)
-	return r, nil
+	ID            uuid.UUID `json:"id" db:"id"`
+	Title         string    `json:"title" db:"title"`
+	Day           string    `json:"day" db:"day_text"` // 2026-11-24
+	Done          bool      `json:"done" db:"done"`
+	AssigneeNames []string  `json:"assigneeNames" db:"assignee_names"`
+	Version       int64     `json:"version" db:"version"`
 }
 
 // List is a page of items. f.Done is a *bool: nil when the request asks for neither.
@@ -125,10 +120,27 @@ func filterOf(r *http.Request) (Filter, error) {
 }
 ```
 
-The module's `Start(ctx, k) error` runs `list.Check(ctx, k.Pool)`: every sort, both ways, with a
-search, so a misspelled column stops startup instead of a request; and a `Scan` that reads a
-different number of values than `Columns` lists. Two columns of one type read in the wrong order
-it cannot see: the list's Go test reads a row and checks each field.
+The list's test checks it against the database (every sort, both ways, with a search), so a
+misspelled view, column, sort or search field fails the build. `export_test.go`, beside the
+package:
+
+```go
+package items
+
+// List is the items list, for its test.
+var List = list
+```
+
+and in `items_test.go`:
+
+```go
+func TestTheListMatchesTheDatabase(t *testing.T) {
+	f := setup(t)
+	if err := items.List.Check(context.Background(), f.Pool); err != nil {
+		t.Fatal(err)
+	}
+}
+```
 
 Wire: `pageIndex` (0-based), `pageSize` (≤ 100), `sortBy`, `sortDirection` (`ASC`/`DESC`); answer
 `{ data, pagination: { pageIndex, pageSize, totalElementCount, totalPageCount, hasNext, hasPrevious } }`.
@@ -172,8 +184,8 @@ export const Route = createFileRoute("/_signedIn/items/")({
 
 ## Names
 
-- Go, `page`: `page.New`, `page.ListConfig[S, T]` (`From`, `Columns`, `Sorts`, `DefaultSort`,
-  `DefaultPageSize`, `MaxPageSize`, `Search`, `Scan`), `page.Term`, `page.By(...)` and
+- Go, `page`: `page.New`, `page.ListConfig[S, T]` (`From`, `Sorts`, `DefaultSort`,
+  `DefaultPageSize`, `MaxPageSize`, `Search`; `T` a struct with a `db` tag per field), `page.Term`, `page.By(...)` and
   `.NullsFirst()`, `page.Field`: `page.Contains`, `page.Prefix`, `page.Exact`; `page.Filter`:
   `page.Where(fragment, args...)`, `page.WhereIf(cond, fragment, args...)` (a slice is one
   argument: `assignee_ids && ?`); `list.Page(ctx, db, req, search, filters...)`,
@@ -229,7 +241,7 @@ search, filter and sort each return the right rows. Route test (`renderRoute`) f
 - `page.New` without `DefaultPageSize: 25`: the server's default differs from the browser's
   `DEFAULT_PAGE_SIZE`.
 - A `?` count in `page.Where` that differs from the arguments: it panics the first time it runs.
-- `cannot use ... as page.sqlText value`: `From`, `Columns`, `page.By`, the search fields and
+- `cannot use ... as page.sqlText value`: `From`, `page.By`, the search fields and
   `page.Where` take string literals only, never a variable or `fmt.Sprintf`. Write the SQL out; a
   value goes in as an argument, a choice between two fragments is two literals.
 - A view changed with `create or replace` that drops or retypes a column: refused; `drop view` and

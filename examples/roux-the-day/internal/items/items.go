@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/jwcarman/roux/app"
 	"github.com/jwcarman/roux/page"
@@ -30,7 +28,7 @@ var Permissions = []string{ItemsRead, ItemsWrite, ItemsDeleteAny}
 //go:embed migrations/*.sql
 var migrations embed.FS
 
-// Module is the items feature: its tables, its endpoints, and a check of its list at start.
+// Module is the items feature: its tables and its endpoints.
 type Module struct {
 	// Clock is the time "today" comes from; time.Now when nil.
 	Clock func() time.Time
@@ -55,12 +53,6 @@ func (m Module) Mount(_ context.Context, k *app.Kit) error {
 	return nil
 }
 
-// Start checks the list's view against the database: a misspelled column stops the app here.
-func (Module) Start(ctx context.Context, k *app.Kit) error { return CheckList(ctx, k.Pool) }
-
-// CheckList runs the items list's queries against db, matching nothing.
-func CheckList(ctx context.Context, db page.Querier) error { return list.Check(ctx, db) }
-
 // Sort is how the list may be sorted: the sortBy values a client sends.
 type Sort string
 
@@ -70,10 +62,10 @@ const (
 	ByAssignee Sort = "ASSIGNEE"
 )
 
-// list is the items list: item_list (migrations/001_items.sql), by day unless asked otherwise.
+// list is the items list: item_list (migrations/003_list_wire_form.sql), by day unless asked
+// otherwise. Its test runs list.Check.
 var list = page.New(page.ListConfig[Sort, Row]{
-	From:    "item_list",
-	Columns: "id, title, day, at_time, done, assignee_names, version",
+	From: "item_list",
 	Sorts: map[Sort][]page.Term{
 		ByDay:      {page.By("day"), page.By("at_time").NullsFirst()},
 		ByTitle:    {page.By("lower(title)")},
@@ -81,36 +73,15 @@ var list = page.New(page.ListConfig[Sort, Row]{
 	},
 	DefaultSort: ByDay,
 	Search:      []page.Field{page.Contains("title"), page.Contains("notes")},
-	Scan:        scanRow,
 })
 
 // Row is an item as the list shows it.
 type Row struct {
-	ID            uuid.UUID `json:"id"`
-	Title         string    `json:"title"`
-	Day           string    `json:"day"` // 2026-11-24
-	At            *string   `json:"at"`  // 10:30, or null for all day
-	Done          bool      `json:"done"`
-	AssigneeNames []string  `json:"assigneeNames"`
-	Version       int64     `json:"version"`
-}
-
-func scanRow(row pgx.CollectableRow) (Row, error) {
-	var r Row
-	var day time.Time
-	var at pgtype.Time
-	if err := row.Scan(&r.ID, &r.Title, &day, &at, &r.Done, &r.AssigneeNames, &r.Version); err != nil {
-		return r, err
-	}
-	r.Day, r.At = day.Format(time.DateOnly), clock(at)
-	return r, nil
-}
-
-// clock is a time of day as "15:04", or nil for none.
-func clock(t pgtype.Time) *string {
-	if !t.Valid {
-		return nil
-	}
-	s := time.UnixMicro(t.Microseconds).UTC().Format("15:04")
-	return &s
+	ID            uuid.UUID `json:"id" db:"id"`
+	Title         string    `json:"title" db:"title"`
+	Day           string    `json:"day" db:"day_text"` // 2026-11-24
+	At            *string   `json:"at" db:"at_text"`   // 10:30, or null for all day
+	Done          bool      `json:"done" db:"done"`
+	AssigneeNames []string  `json:"assigneeNames" db:"assignee_names"`
+	Version       int64     `json:"version" db:"version"`
 }

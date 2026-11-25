@@ -144,11 +144,15 @@ All notable changes to this project are documented in this file. The format foll
 - **Comments and messages name roux, not its Java ancestors:** no more `who`, Spring or
   `roux.money.currency` (the money error now says to set `ORG_CURRENCY`); sign-in's errors say
   "the server answered". `feature.md`'s steps are numbered in reading order.
-- **`list.Check` checks `Scan`:** a `Scan` that reads a different number of values than `Columns`
-  lists stops startup, naming both.
-- **The users list is a `page.New` list:** its sorts are logical names mapped to their SQL, its
-  search is `page.Contains` on name and email, and the users module checks its queries against
-  the database at startup (`users.CheckList`).
+- **Breaking: a list's row struct is its select list.** `page.ListConfig` loses `Columns` and
+  `Scan`: each field of the row names its column with a `db` tag, and pgx fills the row by name, so
+  there is no scan code to keep in step. A field without a tag, or a tag that is not a plain column
+  name, makes `page.New` panic, naming the field and the tag to write. A value in another form
+  than the database keeps it (a date as `2026-11-24`) is the view's work (`to_char`).
+- **Breaking: `list.Check` belongs in the list's test,** not in a module's `Start`; the test reaches
+  the list through an `export_test.go`. Roux The Day's items module has no `Start` any more.
+- **The users list is a `page.New` list:** its sorts are logical names mapped to their SQL, and its
+  search is `page.Contains` on name and email.
 - **Breaking: roux-web's human check is gone** (`HumanCheckOptions`, `HumanCheckFailed`, the
   `Who-Human-Check` header): no server ever read it. `auth.email.send` takes only the address.
 - **Sign-in refusals are logged at Info:** an unknown address, a wrong or used code, a deactivated

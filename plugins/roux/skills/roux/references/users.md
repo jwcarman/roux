@@ -47,8 +47,6 @@ them. An app adds what its own people are, never a second user table.
   (`users.UserRoleChanged`).
 - `users.ListConfig`: the user list's sorts and page sizes, for `api.PageRequest` in an app's own
   endpoint over `users.Service.List`.
-- `users.CheckList`: runs the user list's queries against the database; the users module does at
-  startup, so an app need not.
 
 ## Example: a table that shares the user's id
 

@@ -3,13 +3,14 @@ package page
 import (
 	"cmp"
 	"context"
-	"errors"
 	"fmt"
+	"reflect"
+	"regexp"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // Term is one expression a sort orders by.
@@ -31,14 +32,14 @@ type Querier interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-// ListConfig declares a list. S is its sort type (a string type whose constants are the sortBy
-// values clients send, like a Java sort enum) and T its row.
+// ListConfig declares a list. S is its sort type, a string type whose constants are the sortBy
+// values clients send. T is its row: a struct whose db tags name the columns read, which pgx fills
+// by name (`db:"title"`; `db:"-"` leaves a field out).
 type ListConfig[S ~string, T any] struct {
-	// From is the table or view, ideally a view shaped for the list; it must have an id column,
-	// the tiebreaker that keeps rows from moving between pages.
+	// From is the table or view, ideally a view shaped for the list: each column in the form the
+	// row answers it. It must have an id column, the tiebreaker that keeps rows from moving
+	// between pages.
 	From sqlText
-	// Columns is the select list, in the order Scan reads them.
-	Columns sqlText
 	// Sorts maps each sortBy value to what it orders by; the request's direction applies to every
 	// term, then to id.
 	Sorts       map[S][]Term
@@ -47,25 +48,27 @@ type ListConfig[S ~string, T any] struct {
 	DefaultPageSize, MaxPageSize int
 	// Search is the fields a search term is matched against; none means search is ignored.
 	Search []Field
-	// Scan reads one row of Columns.
-	Scan func(pgx.CollectableRow) (T, error)
 }
 
-// Paginator lists a table or view a page at a time, the way jpa-utils' Paginator does in Java:
-// declared once per list (its view, columns, sorts and search fields), checked when it is built
-// and against the database when the app starts, then asked for a page per request. The app writes
-// the SQL that is particular to it (the view, each filter); the paginator writes the rest (the
-// count, the search, ORDER BY with a tiebreaker, LIMIT and OFFSET). Build it once (a package
-// variable) with New.
+// Paginator lists a table or view a page at a time: declared once per list (its view, row, sorts
+// and search fields), then asked for a page per request. The app writes the SQL that is
+// particular to it (the view, each filter); the paginator writes the rest (the select list from
+// the row's tags, the count, the search, ORDER BY with a tiebreaker, LIMIT and OFFSET). Build it
+// once, as a package variable, with New; its test runs Check.
 type Paginator[S ~string, T any] struct {
-	cfg  ListConfig[S, T]
-	page Config
+	cfg     ListConfig[S, T]
+	columns string
+	page    Config
 }
 
 // New checks cfg and returns its paginator. It panics on a mistake, so a bad declaration stops the
-// program when the package loads rather than on a request (as jpa-utils fails when it is built).
+// program when the package loads, like regexp.MustCompile.
 func New[S ~string, T any](cfg ListConfig[S, T]) *Paginator[S, T] {
 	if err := cfg.problem(); err != "" {
+		panic("page.New: " + err)
+	}
+	columns, err := columnsOf(reflect.TypeFor[T]())
+	if err != "" {
 		panic("page.New: " + err)
 	}
 	names := make([]string, 0, len(cfg.Sorts))
@@ -73,7 +76,7 @@ func New[S ~string, T any](cfg ListConfig[S, T]) *Paginator[S, T] {
 		names = append(names, string(s))
 	}
 	slices.Sort(names)
-	return &Paginator[S, T]{cfg: cfg, page: Config{
+	return &Paginator[S, T]{cfg: cfg, columns: strings.Join(columns, ", "), page: Config{
 		DefaultSize: cfg.DefaultPageSize,
 		MaxSize:     cfg.MaxPageSize,
 		SortFields:  names,
@@ -84,10 +87,8 @@ func New[S ~string, T any](cfg ListConfig[S, T]) *Paginator[S, T] {
 
 func (c ListConfig[S, T]) problem() string {
 	switch {
-	case c.From == "", c.Columns == "":
-		return "From and Columns are required"
-	case c.Scan == nil:
-		return "Scan is required"
+	case c.From == "":
+		return "From is required"
 	case len(c.Sorts) == 0:
 		return "at least one sort is required"
 	case c.DefaultSort == "":
@@ -97,7 +98,7 @@ func (c ListConfig[S, T]) problem() string {
 	case c.DefaultPageSize > cmp.Or(c.MaxPageSize, DefaultMaxSize):
 		return "DefaultPageSize is above MaxPageSize"
 	}
-	texts := []sqlText{c.From, c.Columns}
+	texts := []sqlText{c.From}
 	for s, terms := range c.Sorts {
 		if len(terms) == 0 {
 			return fmt.Sprintf("sort %q has no terms", s)
@@ -147,7 +148,7 @@ func (p *Paginator[S, T]) Page(ctx context.Context, db Querier, req Request, sea
 	if err != nil {
 		return Page[T]{}, err
 	}
-	data, err := pgx.CollectRows(rows, p.cfg.Scan)
+	data, err := pgx.CollectRows(rows, pgx.RowToStructByName[T])
 	if err != nil {
 		return Page[T]{}, err
 	}
@@ -157,7 +158,7 @@ func (p *Paginator[S, T]) Page(ctx context.Context, db Querier, req Request, sea
 // selectSQL is the page query; it appends LIMIT's and OFFSET's arguments to q.
 func (p *Paginator[S, T]) selectSQL(q *query, terms []Term, dir Direction, limit, offset int) string {
 	where := q.where()
-	return "select " + string(p.cfg.Columns) + " from " + string(p.cfg.From) +
+	return "select " + p.columns + " from " + string(p.cfg.From) +
 		" where " + where + " order by " + orderBy(terms, dir) +
 		" limit " + q.arg(limit) + " offset " + q.arg(offset)
 }
@@ -180,14 +181,9 @@ func orderBy(terms []Term, dir Direction) string {
 }
 
 // Check runs the list's queries against db, matching nothing, for every sort in both directions
-// and with a search: a misspelled column fails here, when the app starts, not on a request. It
-// also hands Scan a row of Columns' shape, holding no values, and fails if Scan reads a different
-// number of values than Columns lists. It cannot tell two columns of one type read in the wrong
-// order; the list's own test can.
+// and with a search, so a misspelled view, column, sort or search field fails. Call it from the
+// list's test, against the test database.
 func (p *Paginator[S, T]) Check(ctx context.Context, db Querier) error {
-	if err := p.checkScan(ctx, db); err != nil {
-		return err
-	}
 	for _, name := range p.page.SortFields {
 		for _, dir := range []Direction{Asc, Desc} {
 			q := query{conds: []string{"false"}}
@@ -205,43 +201,55 @@ func (p *Paginator[S, T]) Check(ctx context.Context, db Querier) error {
 	return nil
 }
 
-// checkScan runs Scan over a row of Columns' shape. Only a count mismatch fails: Scan's other
-// errors come from the empty values, not from a mistake.
-func (p *Paginator[S, T]) checkScan(ctx context.Context, db Querier) error {
-	rows, err := db.Query(ctx, "select "+string(p.cfg.Columns)+" from "+string(p.cfg.From)+" where false")
-	if err != nil {
-		return fmt.Errorf("page: %s: %w", p.cfg.From, err)
+// column is a plain column name: a db tag becomes SQL, so it may be nothing else.
+var column = regexp.MustCompile(`^[a-z_][a-z0-9_]*$`)
+
+// columnsOf is the columns a row struct's db tags name, in field order; an embedded struct
+// without a tag contributes its own (as pgx reads it). It answers a problem, or "".
+func columnsOf(t reflect.Type) ([]string, string) {
+	if t.Kind() != reflect.Struct {
+		return nil, fmt.Sprintf("the row %s is not a struct: declare one with a db tag per column", t)
 	}
-	fields := rows.FieldDescriptions()
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("page: %s: %w", p.cfg.From, err)
+	var columns []string
+	for f := range t.Fields() {
+		tag, tagged := f.Tag.Lookup("db")
+		switch {
+		case tag == "-":
+			continue
+		case f.Anonymous && !tagged && f.Type.Kind() == reflect.Struct:
+			inner, problem := columnsOf(f.Type)
+			if problem != "" {
+				return nil, problem
+			}
+			columns = append(columns, inner...)
+		case !f.IsExported():
+			continue
+		case !tagged:
+			return nil, fmt.Sprintf("%s.%s has no db tag: name its column, such as `db:\"%s\"`, or leave it out with `db:\"-\"`",
+				t.Name(), f.Name, snake(f.Name))
+		case !column.MatchString(tag):
+			return nil, fmt.Sprintf("%s.%s's db tag %q is not a column name: give the column a name in the view", t.Name(), f.Name, tag)
+		default:
+			columns = append(columns, tag)
+		}
 	}
-	_, err = p.cfg.Scan(shapeRow{fields: fields})
-	var mismatch *scanCountError
-	if errors.As(err, &mismatch) {
-		return fmt.Errorf("page: %s's Columns lists %d (%s) but Scan reads %d: read every column, in order",
-			p.cfg.From, len(fields), p.cfg.Columns, mismatch.read)
+	if len(columns) == 0 {
+		return nil, fmt.Sprintf("the row %s has no db tags: tag each field with its column", t)
 	}
-	return nil
+	return columns, ""
 }
 
-// shapeRow is a row with Columns' fields and no values, for checkScan.
-type shapeRow struct{ fields []pgconn.FieldDescription }
-
-type scanCountError struct{ read int }
-
-func (e *scanCountError) Error() string { return fmt.Sprintf("scan of %d values", e.read) }
-
-func (r shapeRow) FieldDescriptions() []pgconn.FieldDescription { return r.fields }
-
-func (r shapeRow) Scan(dest ...any) error {
-	if len(dest) != len(r.fields) {
-		return &scanCountError{read: len(dest)}
+// snake is a field name as a column name: DisplayName is display_name, UserID is user_id.
+func snake(name string) string {
+	r := []rune(name)
+	var b strings.Builder
+	for i, c := range r {
+		lowerBefore := i > 0 && unicode.IsLower(r[i-1])
+		lowerAfter := i > 0 && i+1 < len(r) && unicode.IsUpper(r[i-1]) && unicode.IsLower(r[i+1])
+		if unicode.IsUpper(c) && (lowerBefore || lowerAfter) {
+			b.WriteByte('_')
+		}
+		b.WriteRune(unicode.ToLower(c))
 	}
-	return nil
+	return b.String()
 }
-
-func (r shapeRow) Values() ([]any, error) { return make([]any, len(r.fields)), nil }
-
-func (r shapeRow) RawValues() [][]byte { return make([][]byte, len(r.fields)) }

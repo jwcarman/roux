@@ -83,11 +83,11 @@ func (s Service) List(ctx context.Context, req page.Request, f Filter) (page.Pag
 // Detail is an item as its dialog shows it.
 type Detail struct {
 	Row
-	Notes     string         `json:"notes"`
-	Assignees []users.Member `json:"assignees"` // a deactivated one must be replaced to save the item
-	CreatedBy uuid.UUID      `json:"createdBy"`
+	Notes     string         `json:"notes" db:"notes"`
+	Assignees []users.Member `json:"assignees" db:"-"` // a deactivated one must be replaced to save the item
+	CreatedBy uuid.UUID      `json:"createdBy" db:"created_by"`
 	// CanDelete is whether the caller may delete it: its author, or an owner.
-	CanDelete bool `json:"canDelete"`
+	CanDelete bool `json:"canDelete" db:"-"`
 }
 
 func notFound() error { return problem.NotFound("") }
@@ -99,17 +99,12 @@ func (s Service) Get(ctx context.Context, caller *authn.Principal, id uuid.UUID)
 
 func get(ctx context.Context, db page.Querier, caller *authn.Principal, id uuid.UUID) (Detail, error) {
 	rows, err := db.Query(ctx, `
-		select id, title, day, at_time, done, assignee_names, version, notes, created_by
+		select id, title, day_text, at_text, done, assignee_names, version, notes, created_by
 		  from item_list where id = $1`, id)
 	if err != nil {
 		return Detail{}, err
 	}
-	d, err := pgx.CollectExactlyOneRow(rows, func(row pgx.CollectableRow) (Detail, error) {
-		var d Detail
-		r, err := scanRow(extra{row, []any{&d.Notes, &d.CreatedBy}})
-		d.Row = r
-		return d, err
-	})
+	d, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[Detail])
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Detail{}, notFound()
 	}
@@ -130,14 +125,6 @@ func get(ctx context.Context, db page.Querier, caller *authn.Principal, id uuid.
 	d.CanDelete = mayDelete(caller, d.CreatedBy)
 	return d, nil
 }
-
-// extra lets scanRow read a row that has more columns after the list's: they go to more.
-type extra struct {
-	pgx.CollectableRow
-	more []any
-}
-
-func (e extra) Scan(dest ...any) error { return e.CollectableRow.Scan(append(dest, e.more...)...) }
 
 func mayDelete(caller *authn.Principal, author uuid.UUID) bool {
 	return caller.IdentityID == author || caller.Has(ItemsDeleteAny)

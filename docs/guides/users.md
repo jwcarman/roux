@@ -102,8 +102,7 @@ What they refuse ([Errors](errors.md)):
 `users.Service` is the service behind them, for an app's own endpoint or job: `Invite`, `Rename`,
 `ChangeRole`, `Deactivate`, `Reactivate`, `MakeOwner`, `SignOutEverywhere`, `List`, `Detail`,
 `Me` and `Names`. `users.ListConfig` is its list's sorts (`NAME`, the default, `EMAIL`, `ROLE`,
-`JOINED`) and page sizes, for `api.PageRequest`; `users.CheckList` runs the list's queries against
-the database, as the users module does at startup.
+`JOINED`) and page sizes, for `api.PageRequest`.
 
 ## One role per user
 
@@ -147,8 +146,7 @@ select d.id, d.display_name, d.email, d.status, p.team
 
 ```go
 var list = page.New(page.ListConfig[Sort, Row]{
-	From:    "profile_list",
-	Columns: "id, display_name, email, team",
+	From: "profile_list",
 	Sorts: map[Sort][]page.Term{
 		ByName:  {page.By("lower(display_name)")},
 		ByEmail: {page.By("lower(email)")},
@@ -156,8 +154,14 @@ var list = page.New(page.ListConfig[Sort, Row]{
 	},
 	DefaultSort: ByName,
 	Search:      []page.Field{page.Contains("display_name"), page.Contains("email")},
-	Scan:        scanRow,
 })
+
+type Row struct {
+	ID          uuid.UUID `json:"id" db:"id"`
+	DisplayName string    `json:"displayName" db:"display_name"`
+	Email       *string   `json:"email" db:"email"`
+	Team        string    `json:"team" db:"team"`
+}
 ```
 
 with `page.Where("status = ?", users.StatusActive)` as a filter (`users.StatusDeactivated` for

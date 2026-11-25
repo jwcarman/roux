@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/jwcarman/roux/page"
@@ -23,25 +22,26 @@ const (
 	byDay  thingSort = "DAY"
 )
 
-type thing struct{ Name string }
-
-func scanThing(row pgx.CollectableRow) (thing, error) {
-	var t thing
-	return t, row.Scan(&t.Name)
+type thing struct {
+	Name string `db:"name"`
 }
 
 func things() page.ListConfig[thingSort, thing] {
 	return page.ListConfig[thingSort, thing]{
-		From:    "thing",
-		Columns: "name",
+		From: "thing",
 		Sorts: map[thingSort][]page.Term{
 			byName: {page.By("lower(name)")},
 			byDay:  {page.By("day"), page.By("at_time").NullsFirst()},
 		},
 		DefaultSort: byName,
 		Search:      []page.Field{page.Contains("name"), page.Prefix("code"), page.Exact("kind")},
-		Scan:        scanThing,
 	}
+}
+
+// listOf is things() for another row type.
+func listOf[T any]() page.ListConfig[thingSort, T] {
+	c := things()
+	return page.ListConfig[thingSort, T]{From: c.From, Sorts: c.Sorts, DefaultSort: c.DefaultSort, Search: c.Search}
 }
 
 // The rows: ids fix the tiebreak (Ada Smith before ada smith by id).
@@ -63,7 +63,7 @@ func setup(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
-func request(t *testing.T, p *page.Paginator[thingSort, thing], sortBy string, dir page.Direction) page.Request {
+func request[T any](t *testing.T, p *page.Paginator[thingSort, T], sortBy string, dir page.Direction) page.Request {
 	t.Helper()
 	req, err := p.Config().Resolve(nil, nil, sortBy, dir)
 	if err != nil {
@@ -219,10 +219,7 @@ func TestNewPanicsOnABadConfig(t *testing.T) {
 		"no default":             func(c *page.ListConfig[thingSort, thing]) { c.DefaultSort = "" },
 		"a sort with no terms":   func(c *page.ListConfig[thingSort, thing]) { c.Sorts[byDay] = nil },
 		"default size above max": func(c *page.ListConfig[thingSort, thing]) { c.DefaultPageSize, c.MaxPageSize = 50, 10 },
-		"no scan":                func(c *page.ListConfig[thingSort, thing]) { c.Scan = nil },
 		"no from":                func(c *page.ListConfig[thingSort, thing]) { c.From = "" },
-		"no columns":             func(c *page.ListConfig[thingSort, thing]) { c.Columns = "" },
-		"a comment in columns":   func(c *page.ListConfig[thingSort, thing]) { c.Columns = "name -- x" },
 		"a quote in a term":      func(c *page.ListConfig[thingSort, thing]) { c.Sorts[byName] = []page.Term{page.By("name || 'x'")} },
 		"a semicolon in from":    func(c *page.ListConfig[thingSort, thing]) { c.From = "thing; drop table thing" },
 		"a quote in a field":     func(c *page.ListConfig[thingSort, thing]) { c.Search = []page.Field{page.Contains("'x'")} },
@@ -243,14 +240,20 @@ func TestConfigListsSortsInOrder(t *testing.T) {
 	}
 }
 
+type misspelt struct {
+	Name string `db:"nmae"`
+}
+
 func TestCheckFindsAMisspelledColumn(t *testing.T) {
 	pool := setup(t)
 	ctx := context.Background()
 	if err := page.New(things()).Check(ctx, pool); err != nil {
 		t.Fatalf("the good one: %v", err)
 	}
+	if err := page.New(listOf[misspelt]()).Check(ctx, pool); err == nil {
+		t.Error("a column: no error")
+	}
 	for name, change := range map[string]func(*page.ListConfig[thingSort, thing]){
-		"a column":     func(c *page.ListConfig[thingSort, thing]) { c.Columns = "nmae" },
 		"a sort term":  func(c *page.ListConfig[thingSort, thing]) { c.Sorts[byDay] = []page.Term{page.By("dya")} },
 		"a search one": func(c *page.ListConfig[thingSort, thing]) { c.Search = []page.Field{page.Contains("cdoe")} },
 	} {
@@ -264,33 +267,62 @@ func TestCheckFindsAMisspelledColumn(t *testing.T) {
 	}
 }
 
-func TestCheckFindsAScanThatReadsTooFewOrTooManyColumns(t *testing.T) {
+type named struct {
+	Name string `db:"name"`
+}
+
+type wider struct {
+	named
+	Code  string `db:"code"`
+	Score int    `db:"-"`
+}
+
+func TestTheRowsTagsAreItsColumnsEmbeddedOnesIncluded(t *testing.T) {
 	pool := setup(t)
-	cfg := things()
-	cfg.Columns = "name, code"
-	err := page.New(cfg).Check(context.Background(), pool)
-	want := "page: thing's Columns lists 2 (name, code) but Scan reads 1: read every column, in order"
-	if err == nil || err.Error() != want {
-		t.Errorf("got %v, want %q", err, want)
+	p := page.New(listOf[wider]())
+	got, err := p.Page(context.Background(), pool, request(t, p, "NAME", "ASC"), "grace")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Data) != 1 || got.Data[0].Name != "Grace Hopper" || got.Data[0].Code != "gh-1" || got.Data[0].Score != 0 {
+		t.Errorf("%+v", got.Data)
 	}
 }
 
-func TestCheckIgnoresScansOtherErrorsOnTheEmptyRow(t *testing.T) {
-	pool := setup(t)
-	cfg := things()
-	cfg.Scan = func(row pgx.CollectableRow) (thing, error) {
-		var name string
-		if err := row.Scan(&name); err != nil {
-			return thing{}, err
+type untagged struct{ DisplayName string }
+
+type idOnly struct{ UserID string }
+
+type expression struct {
+	Name string `db:"lower(name)"`
+}
+
+type nothingTagged struct {
+	Name string `db:"-"`
+}
+
+func TestNewNamesTheRowFieldToFix(t *testing.T) {
+	for _, c := range []struct {
+		new  func()
+		want string
+	}{
+		{func() { page.New(listOf[untagged]()) }, "page.New: untagged.DisplayName has no db tag: name its column, such as `db:\"display_name\"`, or leave it out with `db:\"-\"`"},
+		{func() { page.New(listOf[idOnly]()) }, "page.New: idOnly.UserID has no db tag: name its column, such as `db:\"user_id\"`, or leave it out with `db:\"-\"`"},
+		{func() { page.New(listOf[expression]()) }, `page.New: expression.Name's db tag "lower(name)" is not a column name: give the column a name in the view`},
+		{func() { page.New(listOf[nothingTagged]()) }, "page.New: the row page_test.nothingTagged has no db tags: tag each field with its column"},
+		{func() { page.New(listOf[string]()) }, "page.New: the row string is not a struct: declare one with a db tag per column"},
+	} {
+		if got := panicOf(c.new); got != c.want {
+			t.Errorf("got %v\nwant %s", got, c.want)
 		}
-		if name == "" {
-			return thing{}, errors.New("a name is required")
-		}
-		return thing{}, nil
 	}
-	if err := page.New(cfg).Check(context.Background(), pool); err != nil {
-		t.Error(err)
-	}
+}
+
+// panicOf is what f panics with, or nil.
+func panicOf(f func()) (got any) {
+	defer func() { got = recover() }()
+	f()
+	return nil
 }
 
 func TestAListWithoutSearchFieldsIgnoresTheTerm(t *testing.T) {

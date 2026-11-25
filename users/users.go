@@ -79,11 +79,11 @@ type Me struct {
 
 // Row is one user in the list.
 type Row struct {
-	ID          uuid.UUID `json:"id"`
-	DisplayName string    `json:"displayName"`
-	Email       *string   `json:"email"`
-	Role        *string   `json:"role"`
-	Status      string    `json:"status"`
+	ID          uuid.UUID `json:"id" db:"id"`
+	DisplayName string    `json:"displayName" db:"display_name"`
+	Email       *string   `json:"email" db:"email"`
+	Role        *string   `json:"role" db:"role"`
+	Status      string    `json:"status" db:"status"`
 }
 
 // Detail is one user, for their page.
@@ -120,8 +120,7 @@ const (
 // userList pages the directory: by name (the default), email, role or when they joined, and a
 // search over name and email.
 var userList = page.New(page.ListConfig[sortBy, Row]{
-	From:    "roux_user_directory",
-	Columns: entryColumns,
+	From: "roux_user_directory",
 	Sorts: map[sortBy][]page.Term{
 		byName:   {page.By("lower(display_name)")},
 		byEmail:  {page.By("lower(email)")},
@@ -130,10 +129,6 @@ var userList = page.New(page.ListConfig[sortBy, Row]{
 	},
 	DefaultSort: byName,
 	Search:      []page.Field{page.Contains("display_name"), page.Contains("email")},
-	Scan: func(r pgx.CollectableRow) (Row, error) {
-		e, err := scanEntry(r)
-		return e.row(), err
-	},
 })
 
 // ListConfig is how the user list pages and sorts (NAME, the default, EMAIL, ROLE or JOINED),
@@ -184,9 +179,6 @@ func scanEntry(row pgx.Row) (entry, error) {
 
 func (e entry) me() Me {
 	return Me{ID: e.id, DisplayName: e.displayName, Email: e.email, Version: e.version}
-}
-func (e entry) row() Row {
-	return Row{ID: e.id, DisplayName: e.displayName, Email: e.email, Role: e.role, Status: e.status}
 }
 func (e entry) detail() Detail {
 	return Detail{ID: e.id, DisplayName: e.displayName, Email: e.email, Role: e.role, Status: e.status,
@@ -259,9 +251,6 @@ func (s Service) List(ctx context.Context, req page.Request, f Filter) (page.Pag
 	return userList.Page(ctx, s.Pool, req, f.Search,
 		page.Where("status = ?", status), page.WhereIf(f.Role != "", "role = ?", f.Role))
 }
-
-// CheckList checks the user list's SQL against the database; the users module runs it at startup.
-func CheckList(ctx context.Context, db page.Querier) error { return userList.Check(ctx, db) }
 
 // Names is activity.Names over the users' display names.
 func (s Service) Names(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error) {
