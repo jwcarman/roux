@@ -29,6 +29,9 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.{ts,tsx}"],
     setupFiles: ["src/testing/setup/index.ts"],
+    // A Chakra page test clicking through a form takes about a second here and can pass five on a
+    // shared CI runner under coverage; a hung test still fails, just later.
+    testTimeout: 15_000,
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],
