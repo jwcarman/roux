@@ -17,7 +17,7 @@ interface Archived {
 
 const archive = mutationOptions({
   mutationFn: (customer: { id: string; name: string }) =>
-    sendJson<Archived>("POST", `/api/customers/${customer.id}/archive`),
+    sendJson<Archived>("POST", `customers/${customer.id}/archive`),
   meta: { refreshes: [["customers"]] },
 });
 

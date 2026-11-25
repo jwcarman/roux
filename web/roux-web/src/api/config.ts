@@ -1,9 +1,9 @@
 /**
- * Where the API client sends paths without a leading slash, where it finds the CSRF token, and which
+ * Where the API client sends paths, where it finds the CSRF token, and which
  * paths' 401s mean the session is lost.
  */
 export interface ApiSettings {
-  /** Where a path without a leading slash goes: `"customers"` becomes `/api/customers`. */
+  /** Where every path goes: `"customers"` becomes `/api/customers`. */
   baseUrl: string;
   /** What the client calls, before its first write, to get the CSRF cookie. */
   csrfBootstrapPath: string;

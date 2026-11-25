@@ -498,7 +498,8 @@ func labelID(r *http.Request) (uuid.UUID, error) {
 - **Every route is `k.Handle(pattern, permission, fn)`**: the CSRF token, a sign-in and the
   permission are checked before `fn` runs, so a signed-out caller gets `401` and one without the
   permission `403`. A route for anyone signed in is `k.HandleSignedIn`, and one for anybody (signed
-  out too) `k.HandlePublic`; an empty permission panics at startup. Never mount an app route with
+  out too) `k.HandlePublic`; an empty permission panics at startup, and one no role holds (a
+  misspelling) stops it, naming the route. Never mount an app route with
   `k.Mux.Handle`: it would be open, and startup warns that it is.
 - **The pattern is Go's** (`net/http`): a method, a space, a path, `{id}` read with
   `r.PathValue("id")`.

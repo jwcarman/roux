@@ -110,6 +110,8 @@ createRoot(document.getElementById("root")!).render(
   `configureApi({ baseUrl, sessionPathPrefix })` (`ApiSettings`, read back with `apiSettings()`).
 - Lower-level calls: `get`/`send` (raw `Response`), `getJson`/`sendJson` with `RequestOptions`
   (`params`: `QueryParams`, `signal`).
+- Every path is relative to the API: `"items"` is `/api/items`, roux's own `"roux/..."`. A path
+  starting with `/` throws, naming the path to write.
 
 ## Names: the shell
 

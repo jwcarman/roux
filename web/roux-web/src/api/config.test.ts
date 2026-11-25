@@ -51,23 +51,24 @@ describe("api settings", () => {
   });
 
   it("bootstraps CSRF from the configured path", async () => {
-    configureApi({ csrfBootstrapPath: "/auth/me" });
+    configureApi({ baseUrl: "/rest", csrfBootstrapPath: "/auth/me" });
     const paths = record();
 
-    await send("POST", "/rest/x");
+    await send("POST", "x");
 
     expect(paths).toEqual(["/auth/me", "/rest/x"]);
   });
 
   it("reports a lost session under the configured prefix only", async () => {
-    configureApi({ sessionPathPrefix: "/rest/" });
+    configureApi({ baseUrl: "/rest", sessionPathPrefix: "/rest/" });
     record(401);
     const lost = vi.fn<() => void>();
     const unsubscribe = onSessionLost(lost);
 
-    await send("POST", "/rest/x");
+    await send("POST", "x");
     expect(lost).toHaveBeenCalledOnce();
-    await send("POST", "/api/x");
+    configureApi({ baseUrl: "/api" });
+    await send("POST", "x");
     expect(lost).toHaveBeenCalledOnce();
     unsubscribe();
   });
@@ -75,9 +76,9 @@ describe("api settings", () => {
   it("reads settings at call time", async () => {
     const paths = record();
 
-    await send("POST", "/api/x");
+    await send("POST", "x");
     configureApi({ csrfBootstrapPath: "/auth/me" });
-    await send("POST", "/api/x");
+    await send("POST", "x");
 
     expect(paths).toEqual(["/api/roux/auth/me", "/api/x", "/auth/me", "/api/x"]);
   });

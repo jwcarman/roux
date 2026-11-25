@@ -28,7 +28,7 @@ describe("api", () => {
   it("reports a 401 from the API as a lost session, then rejects", async () => {
     respond(401);
 
-    const error = await getJson("/api/passkeys").catch((e: unknown) => e);
+    const error = await getJson("passkeys").catch((e: unknown) => e);
 
     expect(lost).toHaveBeenCalledOnce();
     expect(error).toBeInstanceOf(ApiError);
@@ -45,7 +45,7 @@ describe("api", () => {
       ),
     );
 
-    const error = await getJson("/api/members/x").catch((e: unknown) => e);
+    const error = await getJson("members/x").catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).problem.detail).toBe("No such member");
@@ -54,7 +54,7 @@ describe("api", () => {
   it("reports a 401 from an API write as a lost session", async () => {
     respond(401);
 
-    const response = await send("POST", "/api/members/invitations", { email: "a@b.c" });
+    const response = await send("POST", "members/invitations", { email: "a@b.c" });
 
     expect(response.status).toBe(401);
     expect(lost).toHaveBeenCalledOnce();
@@ -63,7 +63,7 @@ describe("api", () => {
   it("does not report a 401 from sign-in itself: a signed-out /api/roux/auth/me is how the session is checked", async () => {
     respond(401);
 
-    await send("POST", "/api/roux/auth/me");
+    await send("POST", "roux/auth/me");
 
     expect(lost).not.toHaveBeenCalled();
   });
@@ -71,7 +71,7 @@ describe("api", () => {
   it("does not report other failures", async () => {
     respond(403);
 
-    const error = await getJson("/api/passkeys").catch((e: unknown) => e);
+    const error = await getJson("passkeys").catch((e: unknown) => e);
 
     expect(lost).not.toHaveBeenCalled();
     expect(isSessionLost(error)).toBe(false);
@@ -86,7 +86,7 @@ describe("api", () => {
       }),
     );
 
-    await send("DELETE", "/api/thing");
+    await send("DELETE", "thing");
 
     expect(token).toBe("a+b");
   });
@@ -94,14 +94,14 @@ describe("api", () => {
   it("answers the body of a successful read", async () => {
     server.use(http.get("/api/things", () => HttpResponse.json([{ id: "1" }])));
 
-    await expect(getJson("/api/things")).resolves.toEqual([{ id: "1" }]);
+    await expect(getJson("things")).resolves.toEqual([{ id: "1" }]);
   });
 
   it("stops calling a listener once it unsubscribes", async () => {
     respond(401);
     unsubscribe();
 
-    await getJson("/api/passkeys").catch(() => undefined);
+    await getJson("passkeys").catch(() => undefined);
 
     expect(lost).not.toHaveBeenCalled();
   });
@@ -116,7 +116,7 @@ describe("api", () => {
     );
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
-    await getJson("/api/things");
+    await getJson("things");
 
     expect(accept).toBe("application/json");
     expect(fetchSpy).toHaveBeenCalledWith("/api/things", expect.objectContaining({ credentials: "same-origin" }));
@@ -132,7 +132,7 @@ describe("api", () => {
       }),
     );
 
-    await send("PUT", "/api/thing", { name: "Ada" });
+    await send("PUT", "thing", { name: "Ada" });
 
     expect(request?.headers.get("Accept")).toBe("application/json");
     expect(request?.headers.get("Content-Type")).toBe("application/json");
@@ -149,7 +149,7 @@ describe("api", () => {
       }),
     );
 
-    await send("POST", "/api/thing");
+    await send("POST", "thing");
 
     expect(request?.headers.get("Content-Type")).toBeNull();
     await expect(request?.text()).resolves.toBe("");
@@ -283,7 +283,7 @@ describe("api without a CSRF cookie", () => {
     );
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
-    await send("POST", "/api/thing");
+    await send("POST", "thing");
 
     expect(fetchSpy).toHaveBeenCalledWith("/api/roux/auth/me", { credentials: "same-origin" });
     expect(token).toBeNull();

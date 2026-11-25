@@ -34,7 +34,7 @@ export const itemsApi = {
 
 Rules the module follows:
 
-- Paths have no leading slash (`"items"`), so they go under `baseUrl` (`/api`).
+- Paths have no leading slash (`"items"`): they go under `baseUrl` (`/api`), and one with a slash throws.
 - Every path with a value in it uses the `path` tagged template, which URL-encodes each value.
 - Reads take an optional `signal` and pass it on, so TanStack Query can cancel them
   (`queryFn: ({ signal }) => itemsApi.get(id, signal)`).
@@ -119,12 +119,12 @@ export async function exportReady(id: string): Promise<boolean> {
 To turn a failed `Response` into a problem yourself, use `problemOf` from `/problem` (see
 [Errors](errors.md)).
 
-## Call a path outside the API
+## Paths are relative to the API
 
-A path that starts with `/` is used as it is, not put under `baseUrl`:
-`getJson("/api/roux/organization")`. Use it for roux's own endpoints (all under `/api/roux`) that
-no roux-web client covers. Keep the app's own endpoints under `/api` and call them without the
-slash.
+Every path goes under `baseUrl`: `getJson("items")` calls `/api/items`, and roux's own endpoints
+are `roux/...` (`getJson("roux/organization")`), where no roux-web client covers them. A path
+that starts with `/` throws, naming the path to write: `/items` would leave the API and reach the
+page, which answers HTML.
 
 ## Handle a refused call
 
@@ -198,7 +198,7 @@ from `/api/roux/auth/me`, which sets the cookie on any answer. The names are fix
 
 ```ts
 interface ApiSettings {
-  baseUrl: string; // default "/api": where a path without a leading slash goes
+  baseUrl: string; // default "/api": where every path goes
   csrfBootstrapPath: string; // default "/api/roux/auth/me": called before the first write to get the CSRF cookie
   sessionPathPrefix: string; // default "/api/": the paths whose 401 means the session is lost
 }

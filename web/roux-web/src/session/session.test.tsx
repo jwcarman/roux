@@ -16,7 +16,7 @@ function Probe() {
       <p>me: {me === undefined ? "loading" : me === null ? "signed out" : me.identityId}</p>
       <p>profile: {profile === undefined ? "loading" : profile === null ? "none" : profile.displayName}</p>
       <button onClick={() => void signOut()}>Sign out</button>
-      <button onClick={() => void getJson("/api/anything").catch(() => undefined)}>Call the API</button>
+      <button onClick={() => void getJson("anything").catch(() => undefined)}>Call the API</button>
     </>
   );
 }
@@ -140,7 +140,7 @@ describe("SessionProvider and the query cache", () => {
       http.get("/api/anything", () => new HttpResponse(null, { status: 401 })),
     );
 
-    await getJson("/api/anything").catch(() => undefined);
+    await getJson("anything").catch(() => undefined);
 
     expect(asked).toBe(0);
   });

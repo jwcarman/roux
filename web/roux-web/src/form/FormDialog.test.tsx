@@ -129,14 +129,14 @@ interface Person {
 }
 
 const createPerson = mutationOptions({
-  mutationFn: (request: z.output<typeof nameSchema>) => sendJson<Person>("POST", "/api/people", request),
+  mutationFn: (request: z.output<typeof nameSchema>) => sendJson<Person>("POST", "people", request),
   meta: { refreshes: [["people"]] },
 });
 
 function updatePerson(person: Person) {
   return mutationOptions({
     mutationFn: (request: z.output<typeof nameSchema>) =>
-      sendJson<Person>("PUT", `/api/people/${person.id}`, { ...request, version: person.version }),
+      sendJson<Person>("PUT", `people/${person.id}`, { ...request, version: person.version }),
     meta: { refreshes: [["people", person.id]] },
   });
 }

@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -403,4 +404,30 @@ func TestTheUsersModuleRefusesWhatItCannotUse(t *testing.T) {
 func TestAModuleWithMigrationsNeedsADatabase(t *testing.T) {
 	err := app.Assemble(context.Background(), kit(), emailLink(t))
 	wantError(t, err, "DATABASE_URL is required", "email-link")
+}
+
+// routeModule mounts one route needing permission.
+type routeModule struct{ permission string }
+
+func (routeModule) Name() string { return "notes" }
+func (m routeModule) Mount(_ context.Context, k *app.Kit) error {
+	k.Handle("GET /api/notes", m.permission, func(http.ResponseWriter, *http.Request) error { return nil })
+	return nil
+}
+
+func TestARoutesPermissionMustBeOneSomeRoleHolds(t *testing.T) {
+	t.Setenv("OWNER_EMAIL", "owner@example.test")
+	t.Setenv("OWNER_NAME", "Olive Owner")
+	e := emailLink(t)
+	k := kit()
+	k.Pool = pgtest.Pool(t, "app_route_permissions")
+	err := app.Assemble(context.Background(), k, e, app.UsersFromEnv(e), routeModule{"users.raed"})
+	wantError(t, err, `GET /api/notes needs "users.raed"`, "grant it to OWNER")
+
+	e = emailLink(t)
+	k = kit()
+	k.Pool = pgtest.Pool(t, "app_route_permissions")
+	if err := app.Assemble(context.Background(), k, e, app.UsersFromEnv(e), routeModule{"users.read"}); err != nil {
+		t.Fatalf("a permission OWNER holds: %v", err)
+	}
 }

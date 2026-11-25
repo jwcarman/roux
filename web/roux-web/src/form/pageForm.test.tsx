@@ -25,7 +25,7 @@ interface AppSettings {
 function updateSettings(settings: AppSettings, settleMs?: number) {
   return mutationOptions({
     mutationFn: (request: z.output<typeof appSchema>) =>
-      sendJson<AppSettings>("PUT", `/api/settings/${settings.id}`, { ...request, version: settings.version }),
+      sendJson<AppSettings>("PUT", `settings/${settings.id}`, { ...request, version: settings.version }),
     meta: { refreshes: [["settings"]] },
     // Settling late lets the refreshed record render before the save is answered.
     ...(settleMs === undefined ? {} : { onSettled: () => new Promise((resolve) => setTimeout(resolve, settleMs)) }),
@@ -142,7 +142,7 @@ function StateForm({ settings, reload }: { settings: AppSettings; reload: () => 
     defaultValues: { appName: settings.name },
     mutation: {
       mutationFn: (request: z.output<typeof appSchema>) =>
-        sendJson<AppSettings>("PUT", "/api/settings/1", { ...request, version: settings.version }),
+        sendJson<AppSettings>("PUT", "settings/1", { ...request, version: settings.version }),
       onSettled: reload,
     },
   });

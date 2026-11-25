@@ -110,7 +110,7 @@ describe("the root route", () => {
     );
 
     // Any API call answering 401 says the session is gone.
-    await getJson("/api/anything").catch(() => undefined);
+    await getJson("anything").catch(() => undefined);
 
     await waitFor(() => expect(router.state.location.pathname).toBe("/signin"));
   });

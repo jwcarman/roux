@@ -120,6 +120,13 @@ All notable changes to this project are documented in this file. The format foll
 - **Breaking: `permissions()` is `slices.Concat(app.RouxPermissions(), labels.Permissions, ...)`.**
   The guides showed `append(..., labels.Permissions...)` with "one more `...` per feature", which
   does not compile for a second feature: Go takes one spread per `append`.
+- **A route's permission must be one some role holds.** `kit.Handle("GET /api/items",
+  "items.raed", ...)` used to mount a route that answered `403` to everyone; startup now stops,
+  naming the route and the permission.
+- **Breaking: an API path is always relative to the API.** `getJson("/items")` used to call
+  `/items`, outside the API, where the page answered HTML and the call failed as bad JSON. A path
+  starting with `/` now throws, naming the path to write (`"items"`); roux's own endpoints are
+  `"roux/..."`, and `ORGANIZATION_PATH` is `"roux/organization"`.
 - **Sign-in refusals are logged at Info:** an unknown address, a wrong or used code, a deactivated
   person. They were at Debug, so a sign-in that silently did nothing left no trace at the default
   level.

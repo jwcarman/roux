@@ -1,5 +1,6 @@
 import { parseIsoDate } from "../dates/dates";
 import { getJson } from "../api/client";
+import { resolveUrl } from "../api/url";
 
 /**
  * What the server says about the organization (`roux.organization.*`, `roux.money.currency`): where
@@ -22,7 +23,7 @@ export interface OrganizationContext {
 }
 
 /** Where the server answers the context. */
-export const ORGANIZATION_PATH = "/api/roux/organization";
+export const ORGANIZATION_PATH = "roux/organization";
 
 /** What `index.html` holds in `#app-context` until a server fills it in: Vite's dev server serves it so. */
 export const CONTEXT_PLACEHOLDER = "__APP_CONTEXT__";
@@ -102,7 +103,7 @@ export function readPageOrganization(doc: Document = document): OrganizationCont
 
 /** Asks the server for the context now. */
 export async function fetchOrganization(): Promise<OrganizationContext> {
-  return checked(await getJson<unknown>(ORGANIZATION_PATH), `GET ${ORGANIZATION_PATH}'s context`);
+  return checked(await getJson<unknown>(ORGANIZATION_PATH), `GET ${resolveUrl(ORGANIZATION_PATH)}'s context`);
 }
 
 /**

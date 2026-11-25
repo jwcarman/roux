@@ -87,7 +87,8 @@ Prefer roux's own endpoints (`users.md`) for these changes: they apply this alre
 
 `go test ./cmd/server` (twice after a permission change: the first run rewrites
 `permissions.gen.ts` and fails). With a database, the grants test fails naming each constant
-`OWNER` lacks, or each grant nobody declares (a typo in a migration).
+`OWNER` lacks, or each grant nobody declares (a typo in a migration). And the app refuses to start
+when a `k.Handle` route needs a permission no role holds (a typo in the route), naming it.
 
 ## Pitfalls
 

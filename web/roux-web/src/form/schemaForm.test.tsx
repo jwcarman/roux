@@ -31,7 +31,7 @@ const EMPTY = { name: "", email: "", company: "" };
 
 function createCustomer(version = 0) {
   return mutationOptions({
-    mutationFn: (request: CustomerRequest) => sendJson<Saved>("POST", `/api/customers?version=${version}`, request),
+    mutationFn: (request: CustomerRequest) => sendJson<Saved>("POST", `customers?version=${version}`, request),
     meta: { refreshes: [["customers"]] },
   });
 }
@@ -548,7 +548,7 @@ describe("useSchemaForm", () => {
     server.use(http.post("/api/addresses", () => invalidFields({ "address.street": "Must not be blank" })));
     const addressSchema = z.object({ address: z.object({ street: text().optional() }) });
     const saveAddress = mutationOptions({
-      mutationFn: (request: z.output<typeof addressSchema>) => sendJson<void>("POST", "/api/addresses", request),
+      mutationFn: (request: z.output<typeof addressSchema>) => sendJson<void>("POST", "addresses", request),
     });
     function Address() {
       const form = useSchemaForm({

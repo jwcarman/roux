@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/jwcarman/roux/api"
@@ -81,18 +82,53 @@ type Kit struct {
 	Organization func() organization.Context
 
 	modules []Module
+	routes  []guardedRoute // what Handle mounted, checked against the grants once every module has
 }
+
+// guardedRoute is a route Kit.Handle mounted and the permission it needs.
+type guardedRoute struct{ pattern, permission string }
 
 // Handle registers one of the application's routes for callers holding permission: an unsafe
 // request must carry the CSRF token (403), and every request must come from someone signed in
 // (401) who holds the permission (403). It is Mux.Handle and Host.Guard in one call,
 // so a route cannot be mounted half guarded. An empty permission panics at startup: a route
-// for anyone signed in is HandleSignedIn, and one for anybody is HandlePublic.
+// for anyone signed in is HandleSignedIn, and one for anybody is HandlePublic. Assemble refuses
+// a permission no role holds once the migrations have run: a misspelling would answer 403 to
+// everyone.
 func (k *Kit) Handle(pattern, permission string, fn api.HandlerFunc) {
 	if permission == "" {
 		panic(fmt.Sprintf("app: route %q names no permission: use HandleSignedIn or HandlePublic", pattern))
 	}
+	k.routes = append(k.routes, guardedRoute{pattern, permission})
 	k.Mux.HandleGuarded(pattern, k.Host.Guard(permission, fn))
+}
+
+// checkRoutes refuses a route whose permission no role holds. OWNER holds every permission the
+// app declares (rouxtest.CheckGrants), so such a permission is misspelled or never granted.
+func (k *Kit) checkRoutes(ctx context.Context) error {
+	if k.Pool == nil || len(k.routes) == 0 {
+		return nil
+	}
+	rows, err := k.Pool.Query(ctx, `select distinct permission from roux_role_permission`)
+	if err != nil {
+		return err
+	}
+	held, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return err
+	}
+	var bad []string
+	for _, r := range k.routes {
+		if !slices.Contains(held, r.permission) {
+			bad = append(bad, fmt.Sprintf("%s needs %q", r.pattern, r.permission))
+		}
+	}
+	if len(bad) > 0 {
+		return fmt.Errorf("app: no role holds the permission of %s: check the spelling against the "+
+			"feature's permission constants, and grant it to OWNER in the migration that adds it",
+			strings.Join(bad, "; "))
+	}
+	return nil
 }
 
 // HandleSignedIn registers a route for anyone signed in, whatever they may do (their own
@@ -142,6 +178,9 @@ func Assemble(ctx context.Context, k *Kit, modules ...Module) error {
 	k.Host = host
 
 	if err := mountAll(ctx, k, mods); err != nil {
+		return err
+	}
+	if err := k.checkRoutes(ctx); err != nil {
 		return err
 	}
 	// Mux.Handle mounts a route as it is; one an app meant to guard is open to anybody.

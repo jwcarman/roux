@@ -58,7 +58,7 @@ function createSession() {
 
   async function refreshProfile() {
     try {
-      update({ profile: await getJson<Profile>("/api/roux/users/me") });
+      update({ profile: await getJson<Profile>("roux/users/me") });
     } catch {
       update({ profile: null });
     }

@@ -472,8 +472,8 @@ func labelID(r *http.Request) (uuid.UUID, error) {
 ```
 
 - `k.Handle` checks the CSRF token, a sign-in and the permission before `fn` runs: `401` signed
-  out, `403` without it. `k.HandleSignedIn` is for any signed-in caller, `k.HandlePublic` for
-  anybody.
+  out, `403` without it. A permission no role holds stops startup, naming the route.
+  `k.HandleSignedIn` is for any signed-in caller, `k.HandlePublic` for anybody.
 - The pattern is Go's `net/http` one: method, space, path; `r.PathValue("id")` reads `{id}`.
 - `api.Decode` refuses a body that is not one JSON object, or has a member the struct lacks
   (`400`); `api.JSON(w, status, v)` answers. Create `201`, edit `200`, delete `204`.

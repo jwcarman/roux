@@ -26,8 +26,11 @@ describe("resolveUrl", () => {
     expect(resolveUrl("customers")).toBe("/v3/customers");
   });
 
-  it("uses a path with a leading slash as it is", () => {
-    expect(resolveUrl("/api/roux/auth/me")).toBe("/api/roux/auth/me");
+  it("refuses a path with a leading slash, naming the path to write", () => {
+    expect(() => resolveUrl("/api/roux/auth/me")).toThrow(
+      'API path "/api/roux/auth/me" starts with a slash: paths are relative to the API (/api), so write "roux/auth/me"',
+    );
+    expect(() => resolveUrl("//items")).toThrow('so write "items"');
   });
 
   it("builds the query string, leaving out null and undefined and repeating array keys", () => {

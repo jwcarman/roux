@@ -99,7 +99,7 @@ describe("the shared contracts", () => {
     const lost = vi.fn<() => void>();
     const unsubscribe = onSessionLost(lost);
 
-    await send("POST", `${session.sessionPathPrefix}x`);
+    await send("POST", "x"); // under the client's default base, /api, which is the contract's prefix
 
     expect(token).toBe("t0ken");
     expect(lost).toHaveBeenCalledOnce();

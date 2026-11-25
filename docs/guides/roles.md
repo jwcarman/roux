@@ -147,6 +147,8 @@ func TestEveryGrantIsADeclaredPermissionAndOwnerHoldsThemAll(t *testing.T) {
   rewrites the file and fails, the second passes; commit the file. Never edit it by hand.
 - `rouxtest.CheckGrants` fails, naming each one, when `OWNER` lacks a permission, or any role
   grants one nobody declares (a typo in a migration). It needs the database.
+- A route mounted with `k.Handle` that needs a permission no role holds stops startup, naming the
+  route and the permission: a misspelling there would otherwise answer `403` to everyone.
 
 ## Keep someone who can manage people
 

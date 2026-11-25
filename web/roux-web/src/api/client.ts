@@ -67,7 +67,7 @@ export interface RequestOptions {
   signal?: AbortSignal;
 }
 
-/** GETs `path` (under `baseUrl` unless it starts with a slash). */
+/** GETs `path`, under `baseUrl`. */
 export async function get(path: string, options: RequestOptions = {}): Promise<Response> {
   const url = resolveUrl(path, options.params);
   const response = await fetch(url, {

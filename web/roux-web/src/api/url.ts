@@ -32,12 +32,21 @@ function queryString(params: QueryParams): string {
 }
 
 /**
- * The URL a call goes to: a path without a leading slash goes under `baseUrl`, one with a leading
- * slash is used as it is; `params` become the query string.
+ * The URL a call goes to: `target` under `baseUrl` (`"customers"` is `/api/customers`), with
+ * `params` as the query string. A path is always relative to the API: one that starts with a slash
+ * throws, naming the path to write instead, since it would leave the API (`/customers` would reach
+ * the page, and answer HTML).
  */
 export function resolveUrl(target: string, params?: QueryParams): string {
   const base = withoutTrailingSlashes(apiSettings().baseUrl);
-  const url = target.startsWith("/") ? target : `${base}/${target}`;
+  if (target.startsWith("/")) {
+    // target starts with a slash, so the first run of slashes is the leading one.
+    const relative = target.startsWith(`${base}/`) ? target.slice(base.length + 1) : target.replace(/\/+/, "");
+    throw new Error(
+      `API path "${target}" starts with a slash: paths are relative to the API (${base}), so write "${relative}"`,
+    );
+  }
+  const url = `${base}/${target}`;
   const query = params === undefined ? "" : queryString(params);
   if (query === "") {
     return url;
