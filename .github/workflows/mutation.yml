@@ -13,9 +13,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request replaces its running build; on main every push is checked to the
+# end, so each commit is verified and the badge never shows a cancelled run as failing.
 concurrency:
   group: mutation-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   mutation:

@@ -14,9 +14,11 @@ permissions:
   contents: read
 
 # A newer push to the same branch or PR cancels the run still in progress.
+# A newer push to a pull request replaces its running build; on main every push is checked to the
+# end, so each commit is verified and the badge never shows a cancelled run as failing.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # The Go runtime, fastest check first. Database tests start their own Postgres containers
