@@ -20,6 +20,7 @@ import (
 	"github.com/jwcarman/roux/authn/oidc"
 	"github.com/jwcarman/roux/authn/passkey"
 	"github.com/jwcarman/roux/authz"
+	"github.com/jwcarman/roux/money"
 	"github.com/jwcarman/roux/organization"
 	"github.com/jwcarman/roux/pgdb"
 	"github.com/jwcarman/roux/spa"
@@ -293,6 +294,7 @@ func (*Users) Migrations() []pgdb.Migration {
 //
 //	INVITABLE_ROLES  roles an invitation may give, comma separated (default USER)
 //	ORG_TIME_ZONE    the organization's IANA time zone (default UTC); ORG_LOCALE (default en-US)
+//	ORG_CURRENCY     the ISO 4217 currency the organization deals in, if any (USD)
 //	OWNER_EMAIL      the first owner's address; OWNER_NAME their name (both, or neither)
 func UsersFromEnv(email *EmailLink) *Users { return &Users{email: email} }
 
@@ -312,6 +314,13 @@ func (u *Users) Mount(_ context.Context, k *Kit) error {
 	if err != nil {
 		return err
 	}
+	if code := os.Getenv("ORG_CURRENCY"); code != "" {
+		cur, err := money.ParseCurrency(code)
+		if err != nil {
+			return fmt.Errorf("ORG_CURRENCY: %w", err)
+		}
+		calendar = calendar.WithCurrency(cur)
+	}
 	themes := theme.Service{Pool: k.Pool, Defaults: spa.StockTheme(k.AppName)}
 	u.svc = users.Service{Pool: k.Pool, Host: k.Host, Email: u.email.Method, Invitable: invitable}
 
@@ -320,6 +329,7 @@ func (u *Users) Mount(_ context.Context, k *Kit) error {
 	theme.Register(k.Mux, k.Host, themes)
 	users.Register(k.Mux, k.Host, u.svc)
 	k.ShellTheme = themes.Shell
+	k.Organization = calendar.Context
 	return nil
 }
 

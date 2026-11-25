@@ -52,6 +52,22 @@ func TestADayThatIsNot24HoursEndsWhenItReallyEnds(t *testing.T) {
 	}
 }
 
+func TestACurrencyIsToldWithItsDigits(t *testing.T) {
+	now := func() time.Time { return time.Date(2026, 11, 24, 12, 0, 0, 0, time.UTC) }
+	cal, err := organization.NewCalendar("Asia/Tokyo", "ja-JP", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	yen := cal.WithCurrency("JPY")
+	c := yen.Context()
+	if c.Currency == nil || *c.Currency != "JPY" || c.FractionDigits == nil || *c.FractionDigits != 0 || yen.Currency() != "JPY" {
+		t.Fatalf("%+v", c)
+	}
+	if cal.Context().Currency != nil || cal.Currency() != "" {
+		t.Fatal("WithCurrency must not change the calendar it was called on")
+	}
+}
+
 func TestCalendarChecksItsSettings(t *testing.T) {
 	now := func() time.Time { return time.Date(2026, 11, 24, 12, 0, 0, 0, time.UTC) }
 	if cal, err := organization.NewCalendar("America/New_York", "en-US", now); err != nil || cal.Context().Today != "2026-11-24" {

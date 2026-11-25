@@ -124,6 +124,9 @@ func TestTheThemeIsTheStockOneUntilAModuleSetsIt(t *testing.T) {
 	if err != nil || th.AppName != "Acme" {
 		t.Fatalf("%+v %v", th, err)
 	}
+	if org := k.Organization(); org.TimeZone != "UTC" || org.Locale != "en-US" || org.Currency != nil {
+		t.Fatalf("the organization until a module sets it: %+v", org)
+	}
 }
 
 // tableModule owns a table, through a migration of its own, and contributes a sign-in method.

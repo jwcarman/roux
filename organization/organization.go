@@ -16,6 +16,7 @@ import (
 
 	"github.com/jwcarman/roux/api"
 	"github.com/jwcarman/roux/authn"
+	"github.com/jwcarman/roux/money"
 )
 
 // Path is where the context is served.
@@ -45,11 +46,13 @@ func NewContext(now time.Time, zone *time.Location, locale string) Context {
 	}
 }
 
-// Calendar is the organization's zone and locale over a clock.
+// Calendar is the organization's zone, locale and (when it deals in money) currency
+// over a clock.
 type Calendar struct {
-	zone   *time.Location
-	locale string
-	clock  func() time.Time
+	zone     *time.Location
+	locale   string
+	currency money.Currency
+	clock    func() time.Time
 }
 
 // NewCalendar checks the settings (they fail startup, not a request): the zone must
@@ -77,8 +80,26 @@ func NewCalendar(zone, locale string, clock func() time.Time) (*Calendar, error)
 	return &Calendar{zone: loc, locale: locale, clock: clock}, nil
 }
 
+// WithCurrency is the calendar of an organization that deals in c: the browser is told
+// the currency and its digits, so its money fields and formatting use them.
+func (c *Calendar) WithCurrency(cur money.Currency) *Calendar {
+	copied := *c
+	copied.currency = cur
+	return &copied
+}
+
+// Currency is the organization's currency, or "" when it deals in none.
+func (c *Calendar) Currency() money.Currency { return c.currency }
+
 // Context is the organization as of now.
-func (c *Calendar) Context() Context { return NewContext(c.clock(), c.zone, c.locale) }
+func (c *Calendar) Context() Context {
+	ctx := NewContext(c.clock(), c.zone, c.locale)
+	if c.currency != "" {
+		code, digits := string(c.currency), c.currency.Digits()
+		ctx.Currency, ctx.FractionDigits = &code, &digits
+	}
+	return ctx
+}
 
 // Register serves the context at GET /api/organization, for anyone signed in.
 func Register(mux *api.Mux, host *authn.Host, source func() Context) {

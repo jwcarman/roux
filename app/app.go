@@ -21,12 +21,14 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/jwcarman/roux/api"
 	"github.com/jwcarman/roux/authn"
 	"github.com/jwcarman/roux/authz"
+	"github.com/jwcarman/roux/organization"
 	"github.com/jwcarman/roux/pgdb"
 	"github.com/jwcarman/roux/spa"
 )
@@ -72,6 +74,10 @@ type Kit struct {
 	// ShellTheme is the theme the page carries: the owner's saved one once the theme module is
 	// mounted, else the stock one.
 	ShellTheme func(ctx context.Context) (spa.Theme, error)
+	// Organization is what the page tells the browser about the organization (zone, locale,
+	// today, currency): pass it to spa.Config.Context. The users module sets it from ORG_*;
+	// until then it is UTC and en-US.
+	Organization func() organization.Context
 
 	modules []Module
 }
@@ -104,6 +110,9 @@ func Assemble(ctx context.Context, k *Kit, modules ...Module) error {
 		mods = append(mods, m)
 	}
 	k.modules = mods
+	if k.Organization == nil {
+		k.Organization = func() organization.Context { return organization.NewContext(time.Now(), time.UTC, "en-US") }
+	}
 	if k.ShellTheme == nil {
 		name := k.AppName
 		k.ShellTheme = func(context.Context) (spa.Theme, error) { return spa.StockTheme(name), nil }
