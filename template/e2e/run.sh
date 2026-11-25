@@ -17,7 +17,7 @@ docker compose up -d --wait postgres mailpit
 docker compose exec -T postgres sh -c 'dropdb -U app --if-exists app_e2e && createdb -U app app_e2e'
 test -f frontend/dist/index.html || make web
 go build -o bin/e2e-server ./cmd/server
-(cd e2e && npm ci --no-audit --no-fund >/dev/null && npx playwright install chromium >/dev/null)
+(cd e2e && npm ci --ignore-scripts --no-audit --no-fund >/dev/null && node_modules/.bin/playwright install chromium >/dev/null)
 
 CODE_SECRET=e2e-only-code-secret-not-for-anything-else \
   DATABASE_URL=postgres://app:app@localhost:5432/app_e2e \
@@ -42,4 +42,4 @@ done
 curl -fs "$URL/api/roux/readyz" >/dev/null || { echo "error: the server was not ready at $URL within 60s (bin/e2e-server.log)" >&2; exit 1; }
 
 cd e2e
-E2E_BASE_URL="$URL" E2E_OWNER_EMAIL="$OWNER_EMAIL" E2E_OWNER_NAME="$OWNER_NAME" npx playwright test "$@"
+E2E_BASE_URL="$URL" E2E_OWNER_EMAIL="$OWNER_EMAIL" E2E_OWNER_NAME="$OWNER_NAME" node_modules/.bin/playwright test "$@"
