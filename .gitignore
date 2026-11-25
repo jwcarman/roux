@@ -10,6 +10,11 @@ target/
 .worktrees/
 logs/
 
+# Go: built binaries, compiled test binaries, coverage profiles
+/bin/
+*.test
+*.out
+
 # superpowers working files (SDD ledgers, briefs, review packages)
 .superpowers/
 
