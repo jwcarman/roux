@@ -1,7 +1,10 @@
 # Everyday targets. `make check` runs the Go checks, fastest first, stopping at the first
 # failure; `make build` makes the release binary: one file, with the front end inside.
 
-GOLANGCI_LINT ?= golangci-lint
+# golangci-lint, exactly this version, built into bin/ the first time `make lint` needs it, so the
+# lint never depends on what a machine has installed. Raise the version here.
+GOLANGCI_LINT_VERSION := v2.15.0
+GOLANGCI_LINT := bin/golangci-lint-$(GOLANGCI_LINT_VERSION)
 
 .PHONY: check dev up down e2e fmt lint build web build-dev image test vet clean
 
@@ -29,8 +32,12 @@ e2e: ## the Playwright suite against a fresh copy of the app on port 8099 (its o
 fmt:
 	@out="$$(gofmt -l $$(go list -f '{{.Dir}}' ./...))"; if [ -n "$$out" ]; then echo "gofmt needed:"; echo "$$out"; exit 1; fi
 
-lint:
+lint: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run ./...
+
+$(GOLANGCI_LINT):
+	GOBIN=$(CURDIR)/bin go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	mv bin/golangci-lint $@
 
 build: web ## one self-contained binary (bin/roux-app): front end embedded, stripped
 	go build -tags embedweb -ldflags='-s -w' -trimpath -o bin/roux-app ./cmd/server

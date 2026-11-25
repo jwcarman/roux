@@ -47,7 +47,8 @@ Either way, features use roux by importing from it; no plumbing is written in th
    `frontend/src/routes/_signedIn/`, and an entry in `frontend/src/shell/nav.ts`
    ([The shell](shell.md)).
 
-`make check` runs the Go checks (gofmt, `go vet`, golangci-lint, the tests); in `frontend/`,
+`make check` runs the Go checks (gofmt, `go vet`, golangci-lint, the tests; `make lint` builds the
+Makefile's pinned golangci-lint into `bin/` the first time, so nothing needs installing); in `frontend/`,
 `npm run format` (Prettier), `npm run lint` (ESLint, type-aware), `npm run coverage` (Vitest, 100%
 of lines and branches), `npm run build` and `npm run mutate` run the browser's. ESLint and Prettier
 live in `frontend/lint-tools/`, with an install of their own, which `npm run lint`, `format` and

@@ -207,7 +207,7 @@ func matches(pattern, p string) bool {
 
 // acceptsHTML reports whether Accept names text/html; a wildcard alone does not.
 func acceptsHTML(accept string) bool {
-	for _, part := range strings.Split(accept, ",") {
+	for part := range strings.SplitSeq(accept, ",") {
 		mt, _, err := mime.ParseMediaType(strings.TrimSpace(part))
 		if err == nil && mt == "text/html" {
 			return true

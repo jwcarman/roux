@@ -56,7 +56,7 @@ func chooseEncoding(r *http.Request) string {
 	explicit := map[string]float64{}
 	wildcard := -1.0
 	for _, field := range r.Header.Values("Accept-Encoding") {
-		for _, part := range strings.Split(field, ",") {
+		for part := range strings.SplitSeq(field, ",") {
 			token, params, _ := strings.Cut(strings.TrimSpace(part), ";")
 			q := 1.0
 			if _, v, ok := strings.Cut(strings.ReplaceAll(params, " ", ""), "q="); ok {

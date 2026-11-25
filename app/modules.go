@@ -281,7 +281,7 @@ func PasskeysFromEnv(appName string, email *EmailLink) (*Passkeys, error) {
 	rp := Getenv("PASSKEY_RP_ID", public.Hostname())
 	origins := []string{public.Scheme + "://" + public.Host}
 	if v := os.Getenv("PASSKEY_ORIGINS"); v != "" {
-		for _, o := range strings.Split(v, ",") {
+		for o := range strings.SplitSeq(v, ",") {
 			origins = append(origins, strings.TrimSpace(o))
 		}
 	}
@@ -359,7 +359,7 @@ func JWTFromEnv(email *EmailLink) (*JWT, error) {
 		return nil, errors.New("bearer tokens need sign-in to be on (set CODE_SECRET): a token signs in as an identity that exists")
 	}
 	var audiences []string
-	for _, a := range strings.Split(os.Getenv("JWT_AUDIENCES"), ",") {
+	for a := range strings.SplitSeq(os.Getenv("JWT_AUDIENCES"), ",") {
 		audiences = append(audiences, strings.TrimSpace(a))
 	}
 	m, err := jwt.New(jwt.Config{Issuer: issuer, JWKSURL: os.Getenv("JWT_JWKS_URL"), Audiences: audiences})

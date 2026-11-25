@@ -17,9 +17,15 @@ All notable changes to this project are documented in this file. The format foll
   a restart, with `npm run dev` run beside it for pages. Vite now fails rather than take another
   port when 5173 is busy. `make up` is unchanged, the app as deployed at `:8080`.
 
-- **`make dev` and `make e2e` rebuild the front end whenever it is out of date** (anything under
-  `frontend/` newer than the last build; `npm ci` again when the lock changed), not only when there
-  is no build: before, a page changed or merged after the first build was never served.
+- **`make e2e` rebuilds the front end whenever it is out of date** (anything under `frontend/` newer
+  than the last build; `npm ci` again when the lock changed), not only when there is no build:
+  before, a page changed or merged after the first build was never tested.
+
+- **`make lint` builds its own golangci-lint**, the version the Makefile names
+  (`GOLANGCI_LINT_VERSION`, v2.15.0), into `bin/` the first time, so `make check` and the skill's
+  `check.sh` never depend on what a machine has installed; before, they used whatever
+  `golangci-lint` was on the `PATH` (`check.sh` skipped it when there was none). It is not a Go tool
+  in `go.mod`: the linter's dependencies would be resolved together with the app's.
 
 - **A new app's first branch is `main`** (`create-roux-app`), unless git's `init.defaultBranch`
   names another; it was git's built-in default, `master`, where nothing was set.

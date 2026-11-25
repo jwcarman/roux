@@ -96,12 +96,7 @@ gofmt -w $(go list -f '{{.Dir}}' ./...)
 # The first run rewrites permissions.gen.ts and fails; the second must pass.
 go test ./cmd/server -run TestTheFrontEndListsEveryPermission >/dev/null 2>&1 \
   || go test ./cmd/server -run TestTheFrontEndListsEveryPermission
-make fmt vet
-if command -v "${GOLANGCI_LINT:-golangci-lint}" >/dev/null 2>&1; then
-  make lint
-else
-  echo "check-recipe: SKIPPED golangci-lint (not installed; CI lints recipe-app after this script)" >&2
-fi
+make fmt vet lint
 make test
 (cd frontend && npm ci --ignore-scripts --no-audit --no-fund >/dev/null \
   && npm ci --ignore-scripts --no-audit --no-fund --prefix lint-tools >/dev/null \

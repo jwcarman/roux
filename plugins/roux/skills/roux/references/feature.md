@@ -907,7 +907,7 @@ answering a page, `pageQuery(...)` in the module, and `QueryTable` with its stat
 From the app's root, run the skill's check script (`bash <skill base directory>/scripts/check.sh`)
 and fix what it reports until it ends `check: ok`. In the order the build needs, it runs `gofmt -w`
 (formatting is checked later), the permissions test (rewrites `permissions.gen.ts`, which the
-frontend build needs), `go vet`, `golangci-lint` if installed, the Go tests when a database is
+frontend build needs), `go vet`, golangci-lint (`make lint`, the app's pinned version), the Go tests when a database is
 reachable, then the frontend's tests with the 100% coverage gate and its type-checked build. While
 iterating on the frontend alone, `cd frontend && npm test` is quicker.
 

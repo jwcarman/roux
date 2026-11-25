@@ -34,7 +34,7 @@ app already has all of it; read this when changing it.
 3. Sign in as the owner with the link from Mailpit.
 4. Add features with `feature.md`.
 
-`make check` runs gofmt, `go vet`, golangci-lint and the Go tests; `make e2e` the Playwright suite; `make build` the one-file binary
+`make check` runs gofmt, `go vet`, golangci-lint (the Makefile's pinned version, built into `bin/` on first use) and the Go tests; `make e2e` the Playwright suite; `make build` the one-file binary
 with the front end inside; `make image` the container image; `make up` that image beside Postgres and Mailpit at
 <http://localhost:8080>, the app as deployed (`make down` stops it; not while `make dev` runs: both use port 8080). `npm run lint`/`format` install
 `frontend/lint-tools` when it is missing.

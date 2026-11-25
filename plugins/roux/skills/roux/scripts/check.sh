@@ -6,7 +6,7 @@
 #   2. The permissions test rewrites frontend/src/permissions.gen.ts from permissions() in
 #      cmd/server/modules.go (the frontend fails to compile against a stale one); it runs twice,
 #      since the run that rewrites the file fails.
-#   3. go vet, then golangci-lint when it is installed.
+#   3. go vet, then golangci-lint (`make lint`: the app's pinned version, built into bin/ the first time).
 #   4. The Go tests, when a database is reachable: TEST_DATABASE_URL, or Docker for a container.
 #   5. The frontend: npm ci when node_modules is missing, Prettier (writing) and ESLint if it has them,
 #      its tests with the 100% coverage gate, and its type-checked build.
@@ -57,13 +57,8 @@ fi
 # 3. Vet and lint.
 step "go vet"
 go vet ./... >"$log" 2>&1 || fail "go vet" "fix each finding below (it compiles the tests too)"
-lint="${GOLANGCI_LINT:-golangci-lint}"
-if command -v "$lint" >/dev/null 2>&1; then
-  step "golangci-lint"
-  "$lint" run ./... >"$log" 2>&1 || fail "golangci-lint" "fix each finding below; never silence one with nolint"
-else
-  skipped+=("golangci-lint (not installed; CI runs it)")
-fi
+step "golangci-lint"
+make --no-print-directory lint >"$log" 2>&1 || fail "golangci-lint" "fix each finding below; never silence one with nolint"
 
 # 4. The Go tests.
 if [ -n "${TEST_DATABASE_URL:-}" ] || docker info >/dev/null 2>&1; then
