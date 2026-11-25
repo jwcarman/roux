@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **`rouxtest`, for an application's own tests.** `rouxtest.New(t, schema, migrations...)` is
+  the app's features over a fresh schema with roux's tables; `Role(name, permissions...)`,
+  `Person(name, role)`, `Deactivate`, `At(moment)`, `Migrate` and `Kit()` (to mount the app's
+  routes) on top of authntest's signed-in browsers.
 - **A paginator for a table or view, as jpa-utils' in Java.** `page.New(page.ListConfig{From,
   Columns, Sorts, DefaultSort, Search, Scan})` declares a list once; `Check` runs its queries at
   startup so a misspelled column fails there; `Page(ctx, db, req, search, filters...)` returns a

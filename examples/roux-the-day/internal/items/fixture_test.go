@@ -1,27 +1,19 @@
 package items_test
 
 import (
-	"context"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 
-	"github.com/jwcarman/roux/activity"
-	"github.com/jwcarman/roux/app"
-	"github.com/jwcarman/roux/authn"
 	"github.com/jwcarman/roux/authn/authntest"
-	"github.com/jwcarman/roux/authn/emaillink"
-	"github.com/jwcarman/roux/authz"
-	"github.com/jwcarman/roux/pgdb"
-	"github.com/jwcarman/roux/users"
+	"github.com/jwcarman/roux/rouxtest"
 
 	"roux-the-day/internal/items"
 )
 
 // fx is the items API over a fresh schema, with a team: Olive (OWNER), Ada and Grace (USER).
 type fx struct {
-	*authntest.Env
+	*rouxtest.App
 	zone                string
 	olive, ada, grace   uuid.UUID
 	asOlive, asAda, asG *authntest.Browser
@@ -29,56 +21,17 @@ type fx struct {
 
 func setup(t *testing.T) *fx {
 	t.Helper()
-	env := authntest.New(t, "items", activity.Migration, emaillink.Migration, users.Migration)
-	ctx := context.Background()
-	// The app's own roles (cmd/server's migration), before items grants to them.
-	if _, err := env.Pool.Exec(ctx, `insert into roux_role (id, name) values (gen_random_uuid(), 'USER')`); err != nil {
-		t.Fatal(err)
-	}
-	if err := pgdb.Migrate(ctx, env.Pool, items.Module{}.Migrations()...); err != nil {
-		t.Fatal(err)
-	}
-	f := &fx{Env: env, zone: "America/New_York"}
-	items.Register(&app.Kit{Mux: env.Mux, Host: env.Host}, items.Service{Pool: env.Pool, Clock: env.Clock.Now, Zone: func() string { return f.zone }})
-	env.Serve()
-	f.olive = f.person("Olive Owner", "OWNER")
-	f.ada = f.person("Ada Lovelace", "USER")
-	f.grace = f.person("Grace Hopper", "USER")
-	f.asOlive, f.asAda, f.asG = f.SignedIn(f.olive), f.SignedIn(f.ada), f.SignedIn(f.grace)
+	a := rouxtest.New(t, "items")
+	a.Role("USER") // the app's own role (cmd/server's migration), before items grants to it
+	a.Migrate(items.Module{}.Migrations()...)
+	f := &fx{App: a, zone: "America/New_York"}
+	items.Register(a.Kit(), items.Service{Pool: a.Pool, Clock: a.Clock.Now, Zone: func() string { return f.zone }})
+	a.Serve()
+	f.olive = a.Person("Olive Owner", "OWNER")
+	f.ada = a.Person("Ada Lovelace", "USER")
+	f.grace = a.Person("Grace Hopper", "USER")
+	f.asOlive, f.asAda, f.asG = a.SignedIn(f.olive), a.SignedIn(f.ada), a.SignedIn(f.grace)
 	return f
-}
-
-// person adds a member of the team with the role.
-func (f *fx) person(name, role string) uuid.UUID {
-	f.T.Helper()
-	ctx := context.Background()
-	id, err := authn.CreateIdentity(ctx, f.Pool, f.Clock.Now())
-	if err != nil {
-		f.T.Fatal(err)
-	}
-	if _, err := f.Pool.Exec(ctx, `insert into roux_user (id, version, display_name) values ($1, 0, $2)`, id, name); err != nil {
-		f.T.Fatal(err)
-	}
-	r, found, err := authz.FindRole(ctx, f.Pool, role)
-	if err != nil || !found {
-		f.T.Fatalf("role %s: %v %v", role, found, err)
-	}
-	if err := authz.Assign(ctx, f.Pool, id, r.ID); err != nil {
-		f.T.Fatal(err)
-	}
-	return id
-}
-
-func (f *fx) deactivate(id uuid.UUID) {
-	f.T.Helper()
-	if _, err := f.Pool.Exec(context.Background(), `update roux_identity set status = 'DEACTIVATED' where id = $1`, id); err != nil {
-		f.T.Fatal(err)
-	}
-}
-
-// at moves the clock to a moment (the fixture's clock starts at 2026-11-24 12:00 UTC).
-func (f *fx) at(moment time.Time) {
-	f.Clock.Advance(moment.Sub(f.Clock.Now()))
 }
 
 // item is what a write sends; add fills in what a test does not care about.

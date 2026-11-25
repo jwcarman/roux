@@ -87,7 +87,7 @@ func TestAnItemNeedsATitleADayAndAnAssignee(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			if name == "a deactivated person" {
-				f.deactivate(f.grace)
+				f.Deactivate(f.grace)
 			}
 			full := item{"title": "Order the venue", "day": "2026-11-24", "assigneeIds": []string{f.ada.String()}}
 			for k, v := range c.body {
@@ -162,11 +162,11 @@ func TestListFilters(t *testing.T) {
 func TestTheWeekRunsMondayToSunday(t *testing.T) {
 	f := listFixture(t)
 	// Moving the clock days ahead outlasts a session: sign in again after each move.
-	f.at(time.Date(2026, 11, 30, 12, 0, 0, 0, time.UTC)) // Monday 30 November
+	f.At(time.Date(2026, 11, 30, 12, 0, 0, 0, time.UTC)) // Monday 30 November
 	if got := f.titles(f.SignedIn(f.ada), "?when=week"); !slices.Equal(got, []string{"Next Monday"}) {
 		t.Errorf("the next week: %v", got)
 	}
-	f.at(time.Date(2026, 11, 30, 3, 0, 0, 0, time.UTC).Add(7 * 24 * time.Hour)) // still Sunday 6 December in New York
+	f.At(time.Date(2026, 11, 30, 3, 0, 0, 0, time.UTC).Add(7 * 24 * time.Hour)) // still Sunday 6 December in New York
 	if got := f.titles(f.SignedIn(f.ada), "?when=week"); !slices.Equal(got, []string{"Next Monday"}) {
 		t.Errorf("Sunday night: %v", got)
 	}
@@ -187,7 +187,7 @@ func TestADaylightSavingDayIsOneDay(t *testing.T) {
 	f := listFixture(t)
 	// 2026-11-01 is the day New York's clocks go back; 23:30 that night is 04:30 UTC the next day.
 	f.add(f.asAda, item{"title": "The long day", "day": "2026-11-01"})
-	f.at(time.Date(2026, 11, 2, 4, 30, 0, 0, time.UTC))
+	f.At(time.Date(2026, 11, 2, 4, 30, 0, 0, time.UTC))
 	if got := f.titles(f.asAda, "?when=today"); !slices.Equal(got, []string{"The long day"}) {
 		t.Errorf("today: %v", got)
 	}
@@ -266,7 +266,7 @@ func TestChangingOnlyAssigneesBumpsTheVersion(t *testing.T) {
 func TestAnItemKeepsADeactivatedAssignee(t *testing.T) {
 	f := setup(t)
 	id := "/api/items/" + f.add(f.asAda, item{"assigneeIds": []string{f.grace.String()}})["id"].(string)
-	f.deactivate(f.grace)
+	f.Deactivate(f.grace)
 	if got := f.titles(f.asAda, ""); !slices.Equal(got, []string{"Order the venue"}) {
 		t.Fatalf("listed %v", got)
 	}
