@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-25
+
 ### Breaking changes
 
 - **A user's history shows only roux's own `user.*` kinds.** `GET /api/roux/users/{id}/activities`
@@ -684,7 +686,8 @@ First release: the contracts every roux application shares, on both the Java and
 - Java 25 and Spring Boot 4.1.
 - React, Chakra UI and the TanStack libraries are peer dependencies of `@jwcarman/roux-web`.
 
-[Unreleased]: https://github.com/jwcarman/roux/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/jwcarman/roux/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/jwcarman/roux/releases/tag/v0.5.0
 [0.4.0]: https://github.com/jwcarman/roux/releases/tag/v0.4.0
 [0.3.0]: https://github.com/jwcarman/roux/releases/tag/0.3.0
 [0.2.0]: https://github.com/jwcarman/roux/releases/tag/0.2.0
