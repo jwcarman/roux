@@ -8,7 +8,6 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 ROOT="$PWD"
 EXPORT="$ROOT/scripts/export-app-template.sh"
-ROUX_VERSION="$(sed -n 's:^    <version>\(.*\)</version>$:\1:p' pom.xml | head -1)"
 # The test's own commits need an author; a CI runner has no git identity.
 export GIT_AUTHOR_NAME=test GIT_AUTHOR_EMAIL=test@example.test GIT_COMMITTER_NAME=test GIT_COMMITTER_EMAIL=test@example.test
 WORK="$(mktemp -d)"
@@ -18,11 +17,11 @@ failures=0
 pass() { echo "ok: $1"; }
 fail() { echo "FAIL: $1"; failures=$((failures + 1)); }
 
-# A git repository holding templates/app's tracked files, for a test to change.
+# A git repository holding template's tracked files, for a test to change.
 source_copy() {
   local dir="$WORK/$1"
   mkdir -p "$dir"
-  git -C templates/app ls-files -z | (cd templates/app && xargs -0 tar cf -) | tar xf - -C "$dir"
+  git -C template ls-files -z | (cd template && xargs -0 tar cf -) | tar xf - -C "$dir"
   git -C "$dir" init -q
   git -C "$dir" add -A
   git -C "$dir" -c user.name=t -c user.email=t@example.test commit -qm source
@@ -35,68 +34,68 @@ export_from() {
   "$EXPORT" --from "$from" "$version" "$out" 2>&1
 }
 
-# 1. The copy: the release version, no trace of roux's repository, a wrapper of its own.
+# 1. The copy: roux at the release from the module proxy and npm, nothing pointing into roux.
 out="$WORK/out-release"
-if export_from "$ROOT/templates/app" 9.8.7 "$out" >"$WORK/release.log"; then
+if export_from "$ROOT/template" 9.8.7 "$out" >"$WORK/release.log"; then
   pass "a release export succeeds"
 else
   fail "a release export succeeds"; cat "$WORK/release.log"
 fi
-grep -q '<roux.version>9.8.7</roux.version>' "$out/pom.xml" && pass "roux.version is the release" || fail "roux.version is the release"
+grep -q $'^\tgithub.com/jwcarman/roux v9.8.7$' "$out/go.mod" && pass "go.mod requires roux at v9.8.7" || fail "go.mod requires roux at v9.8.7"
+grep -q '^replace' "$out/go.mod" && fail "the replace of roux is gone" || pass "the replace of roux is gone"
+grep -q "roux's repository" "$out/go.mod" && fail "the replace's comment is gone" || pass "the replace's comment is gone"
+grep -q '^ignore node_modules$' "$out/go.mod" && pass "the rest of go.mod stays" || fail "the rest of go.mod stays"
+grep -q '^github.com/jwcarman/roux ' "$out/go.sum" && fail "go.sum names no roux" || pass "go.sum names no roux"
 grep -q '"@jwcarman/roux-web": "9.8.7"' "$out/frontend/package.json" && pass "roux-web comes from npm at the release" || fail "roux-web comes from npm at the release"
-grep -q 'roux-repository' "$out/pom.xml" && fail "the roux-repository profile is gone" || pass "the roux-repository profile is gone"
-[[ -x "$out/mvnw" ]] && [[ -f "$out/mvnw.cmd" ]] && [[ -f "$out/.mvn/wrapper/maven-wrapper.properties" ]] \
-  && pass "the Maven wrapper is added" || fail "the Maven wrapper is added"
-python3 -c "import json,sys; s=json.load(open(sys.argv[1]))['extraKnownMarketplaces']['roux']['source']; sys.exit(0 if s=={'source':'github','repo':'jwcarman/roux','ref':'9.8.7'} else 1)" "$out/.claude/settings.json" \
-  && pass "roux's plugin marketplace is pinned to the release" || fail "roux's plugin marketplace is pinned to the release"
+[[ -e "$out/frontend/package-lock.json" ]] && fail "the frontend lock is left out" || pass "the frontend lock is left out"
+python3 -c "import json,sys; s=json.load(open(sys.argv[1]))['extraKnownMarketplaces']['roux']['source']; sys.exit(0 if s=={'source':'github','repo':'jwcarman/roux','ref':'v9.8.7'} else 1)" "$out/.claude/settings.json" \
+  && pass "roux's plugin marketplace is pinned to the release's tag" || fail "roux's plugin marketplace is pinned to the release's tag"
 grep -q '"roux@roux": true' "$out/.claude/settings.json" && pass "roux's plugin is enabled" || fail "roux's plugin is enabled"
-[[ -e "$out/.factorypath" ]] && fail "untracked files stay behind" || pass "untracked files stay behind"
-[[ -f "$out/README.md" ]] && [[ -f "$out/frontend/src/App.tsx" ]] && pass "tracked files are copied" || fail "tracked files are copied"
+[[ -f "$out/cmd/server/main.go" ]] && [[ -f "$out/frontend/src/main.tsx" ]] && pass "tracked files are copied" || fail "tracked files are copied"
+[[ -e "$out/coverage.out" ]] && fail "untracked files stay behind" || pass "untracked files stay behind"
 
-# 2. A SNAPSHOT export checks the template follows roux's version.
-export_from "$ROOT/templates/app" "$ROUX_VERSION" "$WORK/out-snapshot" >"$WORK/snapshot.log" \
-  && pass "a SNAPSHOT export at roux's version succeeds" || { fail "a SNAPSHOT export at roux's version succeeds"; cat "$WORK/snapshot.log"; }
-grep -q '"ref"' "$WORK/out-snapshot/.claude/settings.json" && fail "a SNAPSHOT export leaves the marketplace on main" \
-  || pass "a SNAPSHOT export leaves the marketplace on main"
-
-src="$(source_copy stale)"
-sed -i.bak "s:<roux.version>$ROUX_VERSION</roux.version>:<roux.version>0.0.1-SNAPSHOT</roux.version>:" "$src/pom.xml"
-rm "$src/pom.xml.bak"
-if export_from "$src" "$ROUX_VERSION" "$WORK/out-stale" >"$WORK/stale.log"; then
-  fail "a SNAPSHOT export refuses a template behind roux's version"
+# 2. A version as npm writes it: a Go tag is refused, naming the form.
+if export_from "$ROOT/template" v9.8.7 "$WORK/out-v" >"$WORK/v.log"; then
+  fail "a v-prefixed version is refused"
 else
-  grep -q "roux.version" "$WORK/stale.log" && pass "a SNAPSHOT export refuses a template behind roux's version" \
-    || { fail "the refusal names roux.version"; cat "$WORK/stale.log"; }
+  grep -q "0.4.0" "$WORK/v.log" && pass "a v-prefixed version is refused" || { fail "the refusal shows the form"; cat "$WORK/v.log"; }
 fi
 
-# 3. Each forbidden name and directory stops the export.
-for name in web/roux-web roux-parent; do
-  src="$(source_copy "name-${name//\//-}")"
-  echo "see $name" >>"$src/README.md"
-  git -C "$src" commit -qam planted
-  if export_from "$src" 9.8.7 "$WORK/out-$RANDOM" >"$WORK/name.log"; then
-    fail "an export naming $name is refused"
-  else
-    grep -q "$name" "$WORK/name.log" && pass "an export naming $name is refused" || { fail "the refusal names $name"; cat "$WORK/name.log"; }
-  fi
-done
+# 3. Each link into roux's repository, and each forbidden directory or file, stops the export.
+src="$(source_copy no-replace)"
+sed -i.bak '/^replace github.com\/jwcarman\/roux/d' "$src/go.mod" && rm "$src/go.mod.bak"
+git -C "$src" commit -qam planted
+if export_from "$src" 9.8.7 "$WORK/out-$RANDOM" >"$WORK/noreplace.log"; then
+  fail "a go.mod without roux's replace is refused"
+else
+  grep -q "replace" "$WORK/noreplace.log" && pass "a go.mod without roux's replace is refused" || { fail "the refusal names the replace"; cat "$WORK/noreplace.log"; }
+fi
 
-for dir in node_modules target dist test-results; do
-  src="$(source_copy "dir-$dir")"
-  mkdir -p "$src/e2e/$dir"
-  echo x >"$src/e2e/$dir/planted.txt"
-  git -C "$src" add -f "e2e/$dir/planted.txt"
+src="$(source_copy name-roux-web)"
+echo "// see web/roux-web" >>"$src/cmd/server/main.go"
+git -C "$src" commit -qam planted
+if export_from "$src" 9.8.7 "$WORK/out-$RANDOM" >"$WORK/name.log"; then
+  fail "an export naming web/roux-web is refused"
+else
+  grep -q "web/roux-web" "$WORK/name.log" && pass "an export naming web/roux-web is refused" || { fail "the refusal names web/roux-web"; cat "$WORK/name.log"; }
+fi
+
+for path in node_modules dist test-results; do
+  src="$(source_copy "dir-$path")"
+  mkdir -p "$src/e2e/$path"
+  echo x >"$src/e2e/$path/planted.txt"
+  git -C "$src" add -f "e2e/$path/planted.txt"
   git -C "$src" -c user.name=t -c user.email=t@example.test commit -qm planted
   if export_from "$src" 9.8.7 "$WORK/out-$RANDOM" >"$WORK/dir.log"; then
-    fail "an export shipping $dir is refused"
+    fail "an export shipping $path is refused"
   else
-    grep -q "$dir" "$WORK/dir.log" && pass "an export shipping $dir is refused" || { fail "the refusal names $dir"; cat "$WORK/dir.log"; }
+    grep -q "$path" "$WORK/dir.log" && pass "an export shipping $path is refused" || { fail "the refusal names $path"; cat "$WORK/dir.log"; }
   fi
 done
 
 # 4. The output directory must not hold anything already, so nothing stale survives.
 mkdir -p "$WORK/full" && echo x >"$WORK/full/old.txt"
-export_from "$ROOT/templates/app" 9.8.7 "$WORK/full" >"$WORK/full.log" \
+export_from "$ROOT/template" 9.8.7 "$WORK/full" >"$WORK/full.log" \
   && fail "an export into a directory with files in it is refused" || pass "an export into a directory with files in it is refused"
 
 if [[ "$failures" -gt 0 ]]; then

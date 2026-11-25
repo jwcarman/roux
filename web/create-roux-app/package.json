@@ -1,7 +1,7 @@
 {
   "name": "@jwcarman/create-roux-app",
   "version": "0.1.0",
-  "description": "Starts a new roux app: npm create @jwcarman/roux-app acme-gym",
+  "description": "Starts a new roux app (Go and React): npm create @jwcarman/roux-app team-planner",
   "type": "module",
   "license": "Apache-2.0",
   "repository": {

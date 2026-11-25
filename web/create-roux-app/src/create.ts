@@ -1,13 +1,13 @@
-import { chmodSync, cpSync, existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 
 /** The longest name roux's Appearance page takes (roux-spa's `ShellTheme.MAX_APP_NAME`). */
 export const MAX_APP_NAME = 60;
 
 export interface CreateOptions {
-  /** The new app's directory, Maven artifact and npm name: `acme-gym`. */
+  /** The new app's directory, Go module and npm name: `team-planner`. */
   directory: string;
-  /** What people see until the owner renames the app: `Acme Gym`. */
+  /** What people see until the owner renames the app: `Team Planner`. */
   name: string;
 }
 
@@ -32,18 +32,17 @@ const SHIPPED_GITIGNORE = "_gitignore";
 export function directoryError(directory: string): string | undefined {
   return DIRECTORY.test(directory)
     ? undefined
-    : "The directory is the app's Maven artifact and npm name: lowercase letters, digits and single dashes, starting with a letter (acme-gym).";
+    : "The directory is the app's Go module and npm name: lowercase letters, digits and single dashes, starting with a letter (team-planner).";
 }
 
 export function nameError(name: string): string | undefined {
   const trimmed = name.trim();
-  if (trimmed.length === 0 || trimmed.length > MAX_APP_NAME || /\p{Cc}/u.test(trimmed)) {
-    return `The name is 1 to ${MAX_APP_NAME} characters on one line (Acme Gym).`;
-  }
-  return trimmed.includes("${") ? "The name cannot contain ${ (Spring reads it as a placeholder)." : undefined;
+  return trimmed.length === 0 || trimmed.length > MAX_APP_NAME || /\p{Cc}/u.test(trimmed)
+    ? `The name is 1 to ${MAX_APP_NAME} characters on one line (Team Planner).`
+    : undefined;
 }
 
-/** `acme-gym` → `Acme Gym`. */
+/** `team-planner` → `Team Planner`. */
 export function displayNameOf(directory: string): string {
   return directory
     .split("-")
@@ -53,7 +52,7 @@ export function displayNameOf(directory: string): string {
 
 /**
  * The template's names replaced with the app's: `Roux App` with the name (as a JSON string where
- * it is quoted, which YAML reads the same way) and `roux-app` with the directory.
+ * it is quoted, which Go reads as the same string) and `roux-app` with the directory.
  */
 export function renameIn(text: string, { directory, name }: CreateOptions): string {
   // Replacer functions: a replacement string would read $&, $' and $$ in the name as patterns.
@@ -102,7 +101,7 @@ function filesUnder(directory: string): string[] {
 
 /**
  * Copies the template into `options.directory` under `cwd`, names it, restores its .gitignore
- * files, makes `mvnw` runnable and makes the first commit. A directory that exists is left alone.
+ * files and makes the first commit. A directory that exists is left alone.
  */
 export function create(options: CreateOptions, { template, cwd, git }: CreateContext): CreateResult {
   const directory = resolve(cwd, options.directory);
@@ -120,16 +119,9 @@ export function create(options: CreateOptions, { template, cwd, git }: CreateCon
       renameSync(file, join(file, "..", ".gitignore"));
     }
   }
-  const wrapper = join(directory, "mvnw");
-  const hasWrapper = existsSync(wrapper);
-  if (hasWrapper) {
-    chmodSync(wrapper, 0o755);
-  }
   const committed = [
     ["init", "--quiet"],
     ["add", "--all"],
-    // Executable in the commit even where the file system keeps no such bit (Windows).
-    ...(hasWrapper ? [["update-index", "--chmod=+x", "mvnw"]] : []),
     ["commit", "--quiet", "--message", `Start ${options.name} from roux's app template`],
   ].every((args) => git(args, directory));
   return { ok: true, directory, committed };

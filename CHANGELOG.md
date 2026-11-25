@@ -90,6 +90,14 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- **Releases are tagged `v0.4.0`**, as the Go module proxy requires (npm still gets `0.4.0`). The
+  release workflow no longer deploys to Maven Central: it checks the tag and the changelog, builds
+  the module, asks the Go module proxy for the release, publishes roux-web, then bundles the starter
+  with its `go.sum` and lock resolved against the published release and builds it before
+  publishing. The template's export and the packed starter are tested in CI again.
+- **`create-roux-app` makes a Go app**: no Maven wrapper; it calls the directory the app's Go module,
+  prints the Go way to start the app, and takes `${` in a name (it was a Spring placeholder).
+
 - **The Appearance page offers all five shapes at once** (square, slightly rounded, rounded, very
   rounded, extra rounded): "More options" no longer hides two of them.
 

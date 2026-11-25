@@ -65,8 +65,8 @@ jobs:
           working-directory: recipe-app
 
 
-  # The app template (template/): its Go checks, then its front end's tests and build. Its export
-  # for create-roux-app, and its Playwright suite, come back once the starter ships the Go template.
+  # The app template (template/): its Go checks, then its front end's tests and build. (Its export
+  # and the starter are tested in the web job; its Playwright suite is not in CI yet.)
   template:
     runs-on: ubuntu-latest
     defaults:
@@ -189,6 +189,11 @@ jobs:
       - name: Build
         run: npm run build -w @jwcarman/roux-web -w @jwcarman/create-roux-app
         working-directory: web
+      # The template create-roux-app ships: its export, then the packed starter making an app from it.
+      - name: Export the app template
+        run: bash scripts/export-app-template.test.sh
+      - name: The packed starter
+        run: bash web/create-roux-app/pack-test.sh
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-web

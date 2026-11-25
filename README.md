@@ -84,14 +84,33 @@ Go 1.27, PostgreSQL 17, React 19. Licensed under the [Apache License 2.0](LICENS
 
 ## Releasing
 
-Creating a GitHub Release triggers `.github/workflows/release.yml`; the release tag is the version.
-It publishes `@jwcarman/roux-web` to npm, then `@jwcarman/create-roux-app` with the app template at
-that version. If a job fails, use "Re-run failed jobs" rather than re-running everything: npm will
-not accept the same version twice.
+A release is a GitHub Release whose tag is the Go module's version, `v0.4.0` (`v0.4.0-rc.1` for a
+pre-release): the Go module proxy only takes tags that start with `v`. npm gets the same version
+without the `v`. Nothing in the repository holds a version, so there is nothing to bump after.
 
-The workflow is still 0.3.0's: it also deploys the Java modules, and the starter bundles the Java
-template. Both change before 0.4.0, the first Go release, which also needs a tag the Go module
-proxy accepts (`v0.4.0`).
+1. **Main is green**: CI and Mutation passed on the commit to release.
+2. **The changelog and the skill**: in `CHANGELOG.md`, rename `## [Unreleased]` to
+   `## [0.4.0] - YYYY-MM-DD`, start a fresh `## [Unreleased]` above it, and add
+   `[0.4.0]: https://github.com/jwcarman/roux/releases/tag/v0.4.0` (and point `[Unreleased]` at
+   `v0.4.0...HEAD`). Make the skill's "covers roux" line (`plugins/roux/skills/roux/SKILL.md`)
+   the release. Commit and push.
+3. **The release**: `gh release create v0.4.0 --title v0.4.0 --notes-file notes.md`, the notes
+   being the changelog's section. Add `--prerelease` for a pre-release.
+
+That runs `.github/workflows/release.yml`:
+
+- **verify**: the tag is a Go module version, the changelog has its section, the module builds, the
+  template exports, and both npm packages rehearse their publish. Nothing publishes unless it passes.
+- **go**: asks the Go module proxy for the release, so `go get github.com/jwcarman/roux@v0.4.0`
+  works (and pkg.go.dev lists it) at once.
+- **npm**: publishes `@jwcarman/roux-web` (a pre-release under the dist-tag `next`).
+- **starter**: once both serve the release, bundles the app template with its `go.sum` and
+  frontend lock resolved against them, builds the bundled server, and publishes
+  `@jwcarman/create-roux-app`.
+
+If a job fails, use "Re-run failed jobs" rather than re-running everything: npm will not accept the
+same version twice. A tag is never moved once the proxy has served it: the proxy and the checksum
+database keep the first contents for good, so a broken release is fixed by the next version.
 
 npm publishing uses [trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC), so there
 is no npm token secret. On npmjs.com, each package (`@jwcarman/roux-web`, `@jwcarman/create-roux-app`)

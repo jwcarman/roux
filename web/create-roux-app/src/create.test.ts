@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,18 +11,16 @@ let template: string;
 function writeTemplate() {
   template = join(work, "template");
   mkdirSync(join(template, "frontend"), { recursive: true });
-  mkdirSync(join(template, "src/main/resources"), { recursive: true });
-  writeFileSync(join(template, "pom.xml"), "<artifactId>roux-app</artifactId>\n<name>roux-app</name>\n");
+  mkdirSync(join(template, "cmd/server"), { recursive: true });
+  writeFileSync(join(template, "go.mod"), "module roux-app\n");
   writeFileSync(
-    join(template, "src/main/resources/application.yml"),
-    'name: roux-app\napp-name: "Roux App"\nfrom: noreply@roux-app.test\n',
+    join(template, "cmd/server/main.go"),
+    '// Command server runs Roux App.\napp.Main(app.Config{Name: "roux-app", DisplayName: "Roux App"})\n',
   );
   writeFileSync(join(template, "frontend/package.json"), '{ "name": "roux-app-web" }\n');
   writeFileSync(join(template, "README.md"), "# Roux App\n");
   writeFileSync(join(template, "_gitignore"), "target/\n");
   writeFileSync(join(template, "frontend/_gitignore"), "dist/\n");
-  writeFileSync(join(template, "mvnw"), "#!/bin/sh\n");
-  chmodSync(join(template, "mvnw"), 0o644);
   // Not text: copied as it is, even where its bytes happen to spell the name.
   writeFileSync(join(template, "frontend/icon.bin"), Buffer.from([0, 1, ...Buffer.from("roux-app")]));
 }
@@ -51,7 +49,7 @@ describe("directoryError", () => {
     "refuses %j",
     (directory) => {
       expect(directoryError(directory)).toBe(
-        "The directory is the app's Maven artifact and npm name: lowercase letters, digits and single dashes, starting with a letter (acme-gym).",
+        "The directory is the app's Go module and npm name: lowercase letters, digits and single dashes, starting with a letter (team-planner).",
       );
     },
   );
@@ -64,12 +62,11 @@ describe("nameError", () => {
   });
 
   it.each(["", "   ", "x".repeat(61), "Acme\nGym", "Acme\tGym"])("refuses %j", (name) => {
-    expect(nameError(name)).toBe("The name is 1 to 60 characters on one line (Acme Gym).");
+    expect(nameError(name)).toBe("The name is 1 to 60 characters on one line (Team Planner).");
   });
 
-  it("refuses ${, which Spring would read as a placeholder and refuse to start", () => {
-    expect(nameError("Deals ${today}")).toBe("The name cannot contain ${ (Spring reads it as a placeholder).");
-    expect(nameError("Deals $ {today}")).toBeUndefined();
+  it("takes ${ and quotes as they are", () => {
+    expect(nameError('Deals ${today} "now"')).toBeUndefined();
   });
 });
 
@@ -81,9 +78,11 @@ describe("displayNameOf", () => {
 });
 
 describe("renameIn", () => {
-  it("puts the name in a quoted value as a quoted string, so YAML reads it back", () => {
-    expect(renameIn('app-name: "Roux App"', OPTIONS)).toBe('app-name: "Acme Gym"');
-    expect(renameIn('app-name: "Roux App"', { ...OPTIONS, name: 'Joe\'s "Gym"' })).toBe('app-name: "Joe\'s \\"Gym\\""');
+  it("puts the name in a quoted value as a quoted string, so Go reads it back", () => {
+    expect(renameIn('DisplayName: "Roux App"', OPTIONS)).toBe('DisplayName: "Acme Gym"');
+    expect(renameIn('DisplayName: "Roux App"', { ...OPTIONS, name: 'Joe\'s "Gym" \\ ${x}' })).toBe(
+      'DisplayName: "Joe\'s \\"Gym\\" \\\\ ${x}"',
+    );
   });
 
   it("takes a name's $ patterns literally", () => {
@@ -139,13 +138,13 @@ describe("parseArgs", () => {
 describe("create", () => {
   const git = () => vi.fn<(args: string[], cwd: string) => boolean>(() => true);
 
-  it("copies the template under the directory, with the app's names in the seven spots", () => {
+  it("copies the template under the directory, with the app's names in every spot", () => {
     const result = create(OPTIONS, { template, cwd: work, git: git() });
 
     expect(result).toEqual({ ok: true, directory: join(work, "acme-gym"), committed: true });
-    expect(read("pom.xml")).toBe("<artifactId>acme-gym</artifactId>\n<name>acme-gym</name>\n");
-    expect(read("src/main/resources/application.yml")).toBe(
-      'name: acme-gym\napp-name: "Acme Gym"\nfrom: noreply@acme-gym.test\n',
+    expect(read("go.mod")).toBe("module acme-gym\n");
+    expect(read("cmd/server/main.go")).toBe(
+      '// Command server runs Acme Gym.\napp.Main(app.Config{Name: "acme-gym", DisplayName: "Acme Gym"})\n',
     );
     expect(read("frontend/package.json")).toBe('{ "name": "acme-gym-web" }\n');
     expect(read("README.md")).toBe("# Acme Gym\n");
@@ -157,12 +156,6 @@ describe("create", () => {
     expect(read(".gitignore")).toBe("target/\n");
     expect(read("frontend/.gitignore")).toBe("dist/\n");
     expect(existsSync(join(work, "acme-gym/_gitignore"))).toBe(false);
-  });
-
-  it("makes the Maven wrapper runnable", () => {
-    create(OPTIONS, { template, cwd: work, git: git() });
-
-    expect(statSync(join(work, "acme-gym/mvnw")).mode & 0o111).toBe(0o111);
   });
 
   it("copies a file that is not text as it is", () => {
@@ -181,18 +174,8 @@ describe("create", () => {
     expect(run.mock.calls).toEqual([
       [["init", "--quiet"], dir],
       [["add", "--all"], dir],
-      // Executable in the commit even where the file system keeps no such bit (Windows).
-      [["update-index", "--chmod=+x", "mvnw"], dir],
       [["commit", "--quiet", "--message", "Start Acme Gym from roux's app template"], dir],
     ]);
-  });
-
-  it("marks no wrapper executable when the template has none", () => {
-    rmSync(join(template, "mvnw"));
-    const run = git();
-    create(OPTIONS, { template, cwd: work, git: run });
-
-    expect(run.mock.calls.map(([args]) => args[0])).toEqual(["init", "add", "commit"]);
   });
 
   it("says so when git could not make the first commit, and keeps the app", () => {
