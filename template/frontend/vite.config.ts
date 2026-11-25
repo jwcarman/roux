@@ -43,6 +43,8 @@ export default defineConfig({
     // test helpers are not the app's code.
     coverage: {
       provider: "v8",
+      // lcov is what SonarCloud reads; text is the summary printed after the run.
+      reporter: ["text", "lcov"],
       include: ["src/**/*.{ts,tsx}"],
       exclude: ["src/**/*.test.*", "src/testing/**", "src/routeTree.gen.ts", "src/permissions.gen.ts"],
       thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 },

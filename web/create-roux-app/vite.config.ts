@@ -6,6 +6,8 @@ export default defineConfig({
     include: ["src/**/*.test.ts"],
     coverage: {
       provider: "v8",
+      // lcov is what SonarCloud reads; text is the summary printed after the run.
+      reporter: ["text", "lcov"],
       include: ["src/**/*.ts"],
       // bin.ts only hands process.argv to main(); the template is not this package's code.
       exclude: ["src/**/*.test.ts", "src/bin.ts"],

@@ -34,6 +34,8 @@ export default defineConfig({
     testTimeout: 15_000,
     coverage: {
       provider: "v8",
+      // lcov is what SonarCloud reads; text is the summary printed after the run.
+      reporter: ["text", "lcov"],
       include: ["src/**/*.{ts,tsx}"],
       exclude: [
         "src/testing/{contracts,css,fakeServer,location,router,validationMessages}.*",

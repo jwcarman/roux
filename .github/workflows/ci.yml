@@ -25,9 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          # full history, so SonarCloud can attribute new code and blame
-          fetch-depth: 0
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
@@ -40,13 +37,10 @@ jobs:
           version: v2.15.0
       - name: Test
         run: make test
-      # Reads the coverage the tests wrote (coverage.out). Pull requests from forks get no
-      # secrets, so they skip it rather than fail.
-      - name: SonarCloud analysis
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        uses: SonarSource/sonarqube-scan-action@70bad232163b09d998ea0707ee80c0ec80798c16 # v8.5.1
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-go
+          path: coverage.out
 
   # The Claude Code plugin's checks (guides, references, the recipe) return with the plugin's
   # rewrite for the Go runtime: they read the Java runtime, which is gone.
@@ -83,6 +77,12 @@ jobs:
       - name: Front end tests with coverage, then the build
         working-directory: template/frontend
         run: npm ci --ignore-scripts && npm run coverage && npm run build
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-template
+          path: |
+            template/coverage.out
+            template/frontend/coverage/lcov.info
 
   web:
     runs-on: ubuntu-latest
@@ -118,3 +118,37 @@ jobs:
       - name: Build
         run: npm run build -w @jwcarman/roux-web -w @jwcarman/create-roux-app
         working-directory: web
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-web
+          path: |
+            web/roux-web/coverage/lcov.info
+            web/create-roux-app/coverage/lcov.info
+
+  # SonarCloud, once every part has passed, with every part's coverage. Pull requests from forks
+  # get no secrets, so they skip it rather than fail.
+  sonar:
+    needs: [go, template, web]
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # full history, so SonarCloud can attribute new code and blame
+          fetch-depth: 0
+      # Each artifact keeps its paths below the common root of what was uploaded.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: coverage-go
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: coverage-template
+          path: template
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: coverage-web
+          path: web
+      - name: SonarCloud analysis
+        uses: SonarSource/sonarqube-scan-action@70bad232163b09d998ea0707ee80c0ec80798c16 # v8.5.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
