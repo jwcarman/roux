@@ -107,6 +107,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- **The startup lines for sign-in with a provider and for bearer tokens, when off, say what the
+  feature is and how to turn it on** (`OIDC_PROVIDERS_FILE`; `JWT_ISSUER` and `JWT_AUDIENCES`),
+  not just which setting is missing.
+
 - **Breaking: a setting roux cannot use stops startup.** Before, each of these started an app in
   which nobody could sign in, with at most a line in the log:
   - without `CODE_SECRET`, sign-in and everything built on it were off; it is now required;

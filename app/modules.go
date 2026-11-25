@@ -296,7 +296,7 @@ func (j *JWT) SignIn() authn.Method       { return j.Method }
 func JWTFromEnv(email *EmailLink) (*JWT, error) {
 	issuer := os.Getenv("JWT_ISSUER")
 	if issuer == "" {
-		slog.Info("bearer tokens are off: set JWT_ISSUER to turn them on")
+		slog.Info("bearer tokens are off: API callers cannot present a JWT from your authorization server; to turn them on set JWT_ISSUER to its issuer and JWT_AUDIENCES to the audiences a token must name")
 		return nil, nil
 	}
 	if email == nil {
@@ -333,7 +333,7 @@ func (o *OIDC) SignIn() authn.Method       { return o.Method }
 func OIDCFromEnv(email *EmailLink, members *Users) (*OIDC, error) {
 	path := os.Getenv("OIDC_PROVIDERS_FILE")
 	if path == "" {
-		slog.Info("provider sign-in is off: set OIDC_PROVIDERS_FILE to turn it on")
+		slog.Info("sign-in with Google, GitHub or another OpenID Connect provider is off: list the providers in a JSON file and set OIDC_PROVIDERS_FILE to its path (deploy/oidc-providers.dev.json is an example)")
 		return nil, nil
 	}
 	if email == nil || members == nil {
