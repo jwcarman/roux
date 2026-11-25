@@ -421,7 +421,16 @@ func (s Service) RenameMe(ctx context.Context, id uuid.UUID, name string, versio
 
 // Rename renames a user.
 func (s Service) Rename(ctx context.Context, id uuid.UUID, name string, version *int64) (Detail, error) {
-	if err := s.inTx(ctx, func(tx pgx.Tx) error { return s.rename(ctx, tx, id, name, version) }); err != nil {
+	err := s.inTx(ctx, func(tx pgx.Tx) error {
+		if err := s.exists(ctx, tx, id); err != nil {
+			return err
+		}
+		if err := s.mayManage(ctx, tx, id); err != nil {
+			return err
+		}
+		return s.rename(ctx, tx, id, name, version)
+	})
+	if err != nil {
 		return Detail{}, err
 	}
 	return s.Detail(ctx, id)
@@ -468,21 +477,43 @@ func (s Service) giveOnly(ctx context.Context, tx pgx.Tx, id uuid.UUID, role str
 	return activity.Append(ctx, tx, s.now(), id, UserRoleChanged{From: strings.Join(names, ", "), To: role})
 }
 
-// mayManage refuses a change to an owner by anyone who may not manage owners (403), and asks a
-// caller who may for a recent sign-in, as making an owner does: users.manage alone must not
-// reach the people who run the team.
+// mayManage is the rule for one person acting on another: an owner only by someone who may
+// manage owners (users.owners), from a recent sign-in, as making an owner takes; anyone else only
+// by someone holding every permission they hold. So users.manage reaches the people beneath its
+// holder, never those above (403), whatever the app names its roles.
 func (s Service) mayManage(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+	p := authn.PrincipalFrom(ctx)
+	if p == nil {
+		return problem.Forbidden()
+	}
 	roles, err := authz.RolesOf(ctx, tx, id)
 	if err != nil {
 		return err
 	}
-	if !slices.ContainsFunc(roles, func(r authz.Role) bool { return r.Name == authz.RoleOwner }) {
-		return nil
+	if slices.ContainsFunc(roles, func(r authz.Role) bool { return r.Name == authz.RoleOwner }) {
+		if !p.Has(UsersOwners) {
+			return problem.Forbidden()
+		}
+		return s.Host.RequireRecentSignIn(ctx)
 	}
-	if p := authn.PrincipalFrom(ctx); p == nil || !p.Has(UsersOwners) {
-		return problem.Forbidden()
+	rows, err := tx.Query(ctx, `
+		select distinct rp.permission
+		  from roux_identity_role ir
+		  join roux_role_permission rp on rp.role_id = ir.role_id
+		 where ir.identity_id = $1`, id)
+	if err != nil {
+		return err
 	}
-	return s.Host.RequireRecentSignIn(ctx)
+	held, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return err
+	}
+	for _, permission := range held {
+		if !p.Has(permission) {
+			return problem.Forbidden()
+		}
+	}
+	return nil
 }
 
 // mayGive refuses a role holding a permission the caller does not: whoever may invite or manage
@@ -639,6 +670,9 @@ func (s Service) Reactivate(ctx context.Context, id uuid.UUID) (Detail, error) {
 		if status == authn.StatusActive {
 			return problem.Conflict("Already active")
 		}
+		if err := s.mayManage(ctx, tx, id); err != nil {
+			return err
+		}
 		if err := s.setStatus(ctx, tx, id, authn.StatusActive); err != nil {
 			return err
 		}
@@ -652,10 +686,15 @@ func (s Service) Reactivate(ctx context.Context, id uuid.UUID) (Detail, error) {
 
 // SignOutEverywhere ends every session the user has, on every device.
 func (s Service) SignOutEverywhere(ctx context.Context, id uuid.UUID) error {
-	if _, err := s.entry(ctx, s.Pool, id); err != nil {
-		return err
-	}
-	return s.Host.EndAllSessions(ctx, id)
+	return s.inTx(ctx, func(tx pgx.Tx) error {
+		if err := s.exists(ctx, tx, id); err != nil {
+			return err
+		}
+		if err := s.mayManage(ctx, tx, id); err != nil {
+			return err
+		}
+		return authn.EndSessions(ctx, tx, id, s.now())
+	})
 }
 
 // FirstSignIn records a user's first sign-in, which the directory's invited flag

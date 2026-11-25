@@ -480,3 +480,42 @@ func TestNobodyGivesARoleThatHoldsMoreThanTheyDo(t *testing.T) {
 	}
 	lead.Post("/api/roux/users/invitations", map[string]string{"name": "Bob", "email": "bob@example.test", "role": "COACH"}).Want(t, 202, "a role within the lead's own")
 }
+
+func TestEveryChangeToAnOwnerNeedsSomeoneWhoMayManageOwners(t *testing.T) {
+	f := setup(t)
+	second := f.person("Second Owner", "second@example.test", "")
+	owner := f.SignedIn(f.owner)
+	owner.Post("/api/roux/users/"+second.String()+"/owner", nil).Want(t, 200, "a second owner")
+	owner.Post("/api/roux/users/"+second.String()+"/deactivate", nil).Want(t, 200, "deactivating the second owner")
+	lead := f.SignedIn(f.lead("Lee Lead", "lee@example.test"))
+	first, other := "/api/roux/users/"+f.owner.String(), "/api/roux/users/"+second.String()
+	lead.Post(other+"/reactivate", nil).Want(t, 403, "a lead reactivating a deactivated owner")
+	lead.Post(first+"/sign-out", nil).Want(t, 403, "a lead signing an owner out everywhere")
+	lead.Put(first+"/name", map[string]any{"displayName": "Mallory", "version": 0}).Want(t, 403, "a lead renaming an owner")
+	owner.Get("/api/roux/users/me").Want(t, 200, "the owner was signed out")
+	if d := detailAt(t, owner, second); d["status"] != "DEACTIVATED" {
+		t.Fatalf("the refused reactivation left a trace: %v", d)
+	}
+	// An owner may, from a recent sign-in.
+	owner.Post(other+"/reactivate", nil).Want(t, 200, "an owner reactivating an owner")
+}
+
+func TestNobodyManagesSomeoneWhoHoldsMoreThanTheyDo(t *testing.T) {
+	f := setup(t)
+	lead := f.SignedIn(f.lead("Lee Lead", "lee@example.test"))
+	hr := f.manager("Hr", "hr@example.test") // holds users.owners, which the lead does not
+	path := "/api/roux/users/" + hr.String()
+	for name, r := range map[string]authntest.Reply{
+		"deactivate": lead.Post(path+"/deactivate", nil),
+		"demote":     lead.Put(path+"/role", map[string]string{"role": "COACH"}),
+		"sign out":   lead.Post(path+"/sign-out", nil),
+		"rename":     lead.Put(path+"/name", map[string]any{"displayName": "Mallory", "version": 0}),
+	} {
+		if r.StatusCode != 403 {
+			t.Errorf("a lead may %s someone holding more: %d %s", name, r.StatusCode, r.Body)
+		}
+	}
+	// Someone holding no more than the lead is the lead's to manage.
+	peer := f.lead("Pat Peer", "pat@example.test")
+	lead.Put("/api/roux/users/"+peer.String()+"/name", map[string]any{"displayName": "Patricia", "version": 0}).Want(t, 200, "a lead renaming a peer")
+}

@@ -41,9 +41,10 @@ All notable changes to this project are documented in this file. The format foll
   them as before.
 - **API answers are `nosniff` and `no-store`** unless their handler sets its own caching, and a
   static file opened on its own (a stray `.html` or `.svg`) is sandboxed by its own CSP.
-- **Managing users no longer reaches owners.** Changing an owner's role or deactivating an owner
-  takes `users.owners` and a recent sign-in, as making an owner does; `users.manage` alone is a
-  403. Inviting someone or changing a role refuses a role holding a permission the caller does
+- **Managing users reaches only the people beneath you.** Every change to a person (role,
+  deactivate, reactivate, rename, sign out everywhere) needs, for an owner, `users.owners` and a
+  recent sign-in, as making an owner does; for anyone else, every permission they hold. Otherwise
+  it is a 403. Inviting someone or changing a role refuses a role holding a permission the caller does
   not (400 on `role`), so granting `users.manage` or `users.invite` to a lesser role cannot
   escalate.
 - **A bearer token needs a recent sign-in to make or rotate an API key,** as a browser does: the
