@@ -40,6 +40,15 @@ func Getenv(key, fallback string) string {
 	return fallback
 }
 
+// list is a comma-separated variable's entries, each trimmed: "MEMBER, LEAD" is MEMBER and LEAD.
+func list(key, fallback string) []string {
+	entries := strings.Split(Getenv(key, fallback), ",")
+	for i, e := range entries {
+		entries[i] = strings.TrimSpace(e)
+	}
+	return entries
+}
+
 func duration(key string) (time.Duration, error) {
 	v := os.Getenv(key)
 	if v == "" {
@@ -258,7 +267,7 @@ func OIDCFromEnv(email *EmailLink, members *Users) (*OIDC, error) {
 	}
 	role := os.Getenv("OIDC_SIGNUP_ROLE")
 	if role == "" {
-		role = strings.TrimSpace(strings.Split(Getenv("INVITABLE_ROLES", "USER"), ",")[0])
+		role = list("INVITABLE_ROLES", "USER")[0]
 	}
 	m, err := oidc.New(oidc.Config{
 		Providers:  providers,
@@ -306,7 +315,7 @@ func (u *Users) SignUp(ctx context.Context, tx pgx.Tx, id uuid.UUID, name, role 
 
 // Mount registers roux's endpoints.
 func (u *Users) Mount(_ context.Context, k *Kit) error {
-	invitable, err := authz.NewInvitable(strings.Split(Getenv("INVITABLE_ROLES", "USER"), ","))
+	invitable, err := authz.NewInvitable(list("INVITABLE_ROLES", "USER"))
 	if err != nil {
 		return err
 	}
