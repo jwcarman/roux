@@ -291,6 +291,12 @@ func jsonInScript(v any) (string, error) {
 // and styles, and it is sandboxed, so no script in it runs.
 const fileCSP = "default-src 'none'; img-src 'self' data:; style-src 'self'; sandbox"
 
+// isScript is whether a static file is JavaScript, by its extension.
+func isScript(name string) bool {
+	ext := path.Ext(name)
+	return ext == ".js" || ext == ".mjs"
+}
+
 // file serves one static file from the frontend FS. A missing file is a 404
 // (never the shell). If etag is set the file is revalidated by content hash.
 func (h *handler) file(w http.ResponseWriter, r *http.Request, name, cacheControl string, etag bool) {
@@ -307,8 +313,12 @@ func (h *handler) file(w http.ResponseWriter, r *http.Request, name, cacheContro
 	hd.Set("Cache-Control", cacheControl)
 	hd.Set("X-Content-Type-Options", "nosniff")
 	// The page's own CSP governs these files as the page loads them; this one is for a file
-	// opened on its own (a stray .html or .svg in the build), which then runs no script.
-	hd.Set("Content-Security-Policy", fileCSP)
+	// opened on its own (a stray .html or .svg in the build), which then runs no script. A
+	// script is left without: its own policy would govern it only as a worker, blocking every
+	// fetch, and opened on its own it is text (nosniff).
+	if !isScript(name) {
+		hd.Set("Content-Security-Policy", fileCSP)
+	}
 	tag := etagOf(data)
 	if compressible(name) && len(data) >= minCompress {
 		hd.Add("Vary", "Accept-Encoding") // caches must keep the two representations apart

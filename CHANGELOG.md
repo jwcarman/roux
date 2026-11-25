@@ -43,7 +43,7 @@ All notable changes to this project are documented in this file. The format foll
   those headers. Behind a gateway that starts the traces, `TRACE_TRUST_INBOUND=true` continues
   them as before.
 - **API answers are `nosniff` and `no-store`** unless their handler sets its own caching, and a
-  static file opened on its own (a stray `.html` or `.svg`) is sandboxed by its own CSP.
+  static file opened on its own (a stray `.html` or `.svg`) is sandboxed by its own CSP (a script is not, so it can run as a worker).
 - **Managing users reaches only the people beneath you.** Every change to a person (role,
   deactivate, reactivate, rename, sign out everywhere) needs, for an owner, `users.owners` and a
   recent sign-in, as making an owner does; for anyone else, every permission they hold. Otherwise

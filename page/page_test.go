@@ -93,8 +93,9 @@ func TestAnIndexTooBigToSkipStillGivesAnOffsetPostgresTakes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if off := r.Offset(); off < 0 || off > page.MaxOffset {
-			t.Errorf("size %d: offset %d, want within [0, %d]", size, off, page.MaxOffset)
+		// Past every row Postgres can hold: the furthest offset there is, never a wrap to negative.
+		if off := r.Offset(); off != page.MaxOffset {
+			t.Errorf("size %d: offset %d, want %d", size, off, page.MaxOffset)
 		}
 	}
 }

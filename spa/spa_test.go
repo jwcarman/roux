@@ -323,11 +323,24 @@ func TestOtherFilesRevalidateWithETag(t *testing.T) {
 
 func TestAFileOpenedOnItsOwnRunsNoScript(t *testing.T) {
 	h := server(t, spa.Config{})
-	for _, path := range []string{"/favicon.svg", "/robots.txt", "/assets/app-abc123.js"} {
+	for _, path := range []string{"/favicon.svg", "/robots.txt"} {
 		rec := do(h, "GET", path, "")
 		if csp := rec.Header().Get("Content-Security-Policy"); csp != "default-src 'none'; img-src 'self' data:; style-src 'self'; sandbox" {
 			t.Errorf("%s: CSP %q", path, csp)
 		}
+	}
+}
+
+// A script's own CSP governs it only when it runs as a worker, where the file policy would block
+// every fetch; opened on its own, a script is text (nosniff), so it needs none.
+func TestAScriptCarriesNoPolicyOfItsOwnSoItCanRunAsAWorker(t *testing.T) {
+	h := server(t, spa.Config{})
+	rec := do(h, "GET", "/assets/app-abc123.js", "")
+	if csp := rec.Header().Get("Content-Security-Policy"); rec.Code != 200 || csp != "" {
+		t.Fatalf("%d, CSP %q", rec.Code, csp)
+	}
+	if rec.Header().Get("X-Content-Type-Options") != "nosniff" {
+		t.Fatalf("a script is served without nosniff: %v", rec.Header())
 	}
 }
 
