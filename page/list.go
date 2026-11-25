@@ -1,9 +1,4 @@
-// Package paging lists a table or view a page at a time, the way jpa-utils' Paginator does in Java:
-// declared once per list (its view, columns, sorts and search fields), checked when it is built
-// and against the database when the app starts, then asked for a page per request. The app
-// writes the SQL that is particular to it (the view, each filter); paging writes the rest (the
-// count, the search, ORDER BY with a tiebreaker, LIMIT and OFFSET).
-package paging
+package page
 
 import (
 	"cmp"
@@ -13,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-
-	"github.com/jwcarman/roux/page"
 )
 
 // Term is one expression a sort orders by.
@@ -35,9 +28,9 @@ type Querier interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-// Config declares a list. S is its sort type (a string type whose constants are the sortBy
+// ListConfig declares a list. S is its sort type (a string type whose constants are the sortBy
 // values clients send, like a Java sort enum) and T its row.
-type Config[S ~string, T any] struct {
+type ListConfig[S ~string, T any] struct {
 	// From is the table or view, ideally a view shaped for the list; it must have an id column,
 	// the tiebreaker that keeps rows from moving between pages.
 	From sqlText
@@ -55,24 +48,29 @@ type Config[S ~string, T any] struct {
 	Scan func(pgx.CollectableRow) (T, error)
 }
 
-// Paginator pages one list. Build it once (a package variable) with New.
+// Paginator lists a table or view a page at a time, the way jpa-utils' Paginator does in Java:
+// declared once per list (its view, columns, sorts and search fields), checked when it is built
+// and against the database when the app starts, then asked for a page per request. The app writes
+// the SQL that is particular to it (the view, each filter); the paginator writes the rest (the
+// count, the search, ORDER BY with a tiebreaker, LIMIT and OFFSET). Build it once (a package
+// variable) with New.
 type Paginator[S ~string, T any] struct {
-	cfg  Config[S, T]
-	page page.Config
+	cfg  ListConfig[S, T]
+	page Config
 }
 
 // New checks cfg and returns its paginator. It panics on a mistake, so a bad declaration stops the
 // program when the package loads rather than on a request (as jpa-utils fails when it is built).
-func New[S ~string, T any](cfg Config[S, T]) *Paginator[S, T] {
+func New[S ~string, T any](cfg ListConfig[S, T]) *Paginator[S, T] {
 	if err := cfg.problem(); err != "" {
-		panic("paging.New: " + err)
+		panic("page.New: " + err)
 	}
 	names := make([]string, 0, len(cfg.Sorts))
 	for s := range cfg.Sorts {
 		names = append(names, string(s))
 	}
 	slices.Sort(names)
-	return &Paginator[S, T]{cfg: cfg, page: page.Config{
+	return &Paginator[S, T]{cfg: cfg, page: Config{
 		DefaultSize: cfg.DefaultPageSize,
 		MaxSize:     cfg.MaxPageSize,
 		SortFields:  names,
@@ -81,7 +79,7 @@ func New[S ~string, T any](cfg Config[S, T]) *Paginator[S, T] {
 	}}
 }
 
-func (c Config[S, T]) problem() string {
+func (c ListConfig[S, T]) problem() string {
 	switch {
 	case c.From == "", c.Columns == "":
 		return "From and Columns are required"
@@ -93,7 +91,7 @@ func (c Config[S, T]) problem() string {
 		return "DefaultSort is required"
 	case c.Sorts[c.DefaultSort] == nil:
 		return fmt.Sprintf("DefaultSort %q is not one of the sorts", c.DefaultSort)
-	case c.DefaultPageSize > cmp.Or(c.MaxPageSize, page.DefaultMaxSize):
+	case c.DefaultPageSize > cmp.Or(c.MaxPageSize, DefaultMaxSize):
 		return "DefaultPageSize is above MaxPageSize"
 	}
 	texts := []sqlText{c.From, c.Columns}
@@ -119,18 +117,18 @@ func (c Config[S, T]) problem() string {
 }
 
 // Config is the list's paging rules, for api.PageRequest(r, p.Config()).
-func (p *Paginator[S, T]) Config() page.Config { return p.page }
+func (p *Paginator[S, T]) Config() Config { return p.page }
 
 // Page is one page of the rows matching every filter and the search term, sorted by req, with the
 // total count of matches.
-func (p *Paginator[S, T]) Page(ctx context.Context, db Querier, req page.Request, search string, filters ...Filter) (page.Page[T], error) {
+func (p *Paginator[S, T]) Page(ctx context.Context, db Querier, req Request, search string, filters ...Filter) (Page[T], error) {
 	words, err := searchWords(search)
 	if err != nil {
-		return page.Page[T]{}, err
+		return Page[T]{}, err
 	}
 	terms, ok := p.cfg.Sorts[S(req.SortBy)]
 	if !ok {
-		return page.Page[T]{}, fmt.Errorf("paging: %q is not a sort of %s", req.SortBy, p.cfg.From)
+		return Page[T]{}, fmt.Errorf("page: %q is not a sort of %s", req.SortBy, p.cfg.From)
 	}
 	var q query
 	for _, f := range filters {
@@ -140,21 +138,21 @@ func (p *Paginator[S, T]) Page(ctx context.Context, db Querier, req page.Request
 
 	var total int64
 	if err := db.QueryRow(ctx, "select count(*) from "+string(p.cfg.From)+" where "+q.where(), q.args...).Scan(&total); err != nil {
-		return page.Page[T]{}, err
+		return Page[T]{}, err
 	}
 	rows, err := db.Query(ctx, p.selectSQL(&q, terms, req.Direction, req.Size, req.Offset()), q.args...)
 	if err != nil {
-		return page.Page[T]{}, err
+		return Page[T]{}, err
 	}
 	data, err := pgx.CollectRows(rows, p.cfg.Scan)
 	if err != nil {
-		return page.Page[T]{}, err
+		return Page[T]{}, err
 	}
-	return page.Of(data, req, total), nil
+	return Of(data, req, total), nil
 }
 
 // selectSQL is the page query; it appends LIMIT's and OFFSET's arguments to q.
-func (p *Paginator[S, T]) selectSQL(q *query, terms []Term, dir page.Direction, limit, offset int) string {
+func (p *Paginator[S, T]) selectSQL(q *query, terms []Term, dir Direction, limit, offset int) string {
 	where := q.where()
 	return "select " + string(p.cfg.Columns) + " from " + string(p.cfg.From) +
 		" where " + where + " order by " + orderBy(terms, dir) +
@@ -162,9 +160,9 @@ func (p *Paginator[S, T]) selectSQL(q *query, terms []Term, dir page.Direction, 
 }
 
 // orderBy writes the direction itself, never the request's text.
-func orderBy(terms []Term, dir page.Direction) string {
+func orderBy(terms []Term, dir Direction) string {
 	d, nulls := "ASC", "NULLS FIRST"
-	if dir == page.Desc {
+	if dir == Desc {
 		d, nulls = "DESC", "NULLS LAST"
 	}
 	parts := make([]string, 0, len(terms)+1)
@@ -182,16 +180,16 @@ func orderBy(terms []Term, dir page.Direction) string {
 // and with a search: a misspelled column fails here, when the app starts, not on a request.
 func (p *Paginator[S, T]) Check(ctx context.Context, db Querier) error {
 	for _, name := range p.page.SortFields {
-		for _, dir := range []page.Direction{page.Asc, page.Desc} {
+		for _, dir := range []Direction{Asc, Desc} {
 			q := query{conds: []string{"false"}}
 			p.searchFor(&q, []string{"check"})
 			rows, err := db.Query(ctx, p.selectSQL(&q, p.cfg.Sorts[S(name)], dir, 1, 0), q.args...)
 			if err != nil {
-				return fmt.Errorf("paging: %s sorted by %s %s: %w", p.cfg.From, name, dir, err)
+				return fmt.Errorf("page: %s sorted by %s %s: %w", p.cfg.From, name, dir, err)
 			}
 			rows.Close()
 			if err := rows.Err(); err != nil {
-				return fmt.Errorf("paging: %s sorted by %s %s: %w", p.cfg.From, name, dir, err)
+				return fmt.Errorf("page: %s sorted by %s %s: %w", p.cfg.From, name, dir, err)
 			}
 		}
 	}

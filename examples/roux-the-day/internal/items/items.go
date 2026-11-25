@@ -13,9 +13,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/jwcarman/roux/app"
+	"github.com/jwcarman/roux/page"
 	"github.com/jwcarman/roux/pgdb"
-
-	"roux-the-day/internal/paging"
 )
 
 // The items' permissions (migrations/002_permissions.sql grants them).
@@ -57,7 +56,7 @@ func (m Module) Mount(_ context.Context, k *app.Kit) error {
 func (Module) Start(ctx context.Context, k *app.Kit) error { return CheckList(ctx, k.Pool) }
 
 // CheckList runs the items list's queries against db, matching nothing.
-func CheckList(ctx context.Context, db paging.Querier) error { return list.Check(ctx, db) }
+func CheckList(ctx context.Context, db page.Querier) error { return list.Check(ctx, db) }
 
 // Sort is how the list may be sorted: the sortBy values a client sends.
 type Sort string
@@ -69,16 +68,16 @@ const (
 )
 
 // list is the items list: item_list (migrations/001_items.sql), by day unless asked otherwise.
-var list = paging.New(paging.Config[Sort, Row]{
+var list = page.New(page.ListConfig[Sort, Row]{
 	From:    "item_list",
 	Columns: "id, title, day, at_time, done, assignee_names, version",
-	Sorts: map[Sort][]paging.Term{
-		ByDay:      {paging.By("day"), paging.By("at_time").NullsFirst()},
-		ByTitle:    {paging.By("lower(title)")},
-		ByAssignee: {paging.By("lower(first_assignee_name)")},
+	Sorts: map[Sort][]page.Term{
+		ByDay:      {page.By("day"), page.By("at_time").NullsFirst()},
+		ByTitle:    {page.By("lower(title)")},
+		ByAssignee: {page.By("lower(first_assignee_name)")},
 	},
 	DefaultSort: ByDay,
-	Search:      []paging.Field{paging.Contains("title"), paging.Contains("notes")},
+	Search:      []page.Field{page.Contains("title"), page.Contains("notes")},
 	Scan:        scanRow,
 })
 

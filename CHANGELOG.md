@@ -8,6 +8,12 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **A paginator for a table or view, as jpa-utils' in Java.** `page.New(page.ListConfig{From,
+  Columns, Sorts, DefaultSort, Search, Scan})` declares a list once; `Check` runs its queries at
+  startup so a misspelled column fails there; `Page(ctx, db, req, search, filters...)` returns a
+  page with the count, the search (`page.Contains`, `Prefix`, `Exact`, every word in some field),
+  ORDER BY with `id` as the tiebreaker, LIMIT and OFFSET. Filters are `page.Where("day < ?",
+  today)` and `page.WhereIf(cond, ...)`: SQL text is a constant, values are always arguments.
 - **An app's whole `main` in one call.** `app.Main(app.Config{Name, DisplayName, Frontend,
   Modules})` sets up logging and telemetry, the health probes, the database, the modules, the
   front end and a bounded server, and shuts down gracefully; `app.Run(ctx, cfg)` is the same

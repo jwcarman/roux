@@ -1,4 +1,4 @@
-package paging
+package page
 
 import (
 	"slices"
@@ -17,9 +17,9 @@ const maxSearchWords = 10
 type matchMode int
 
 const (
-	contains matchMode = iota
-	prefix
-	exact
+	matchContains matchMode = iota
+	matchPrefix
+	matchExact
 )
 
 // Field is a column a search matches, and how (as jpa-utils' @Searchable).
@@ -29,13 +29,13 @@ type Field struct {
 }
 
 // Contains matches a word anywhere in the column. It cannot use an ordinary index.
-func Contains(col sqlText) Field { return Field{col: col, mode: contains} }
+func Contains(col sqlText) Field { return Field{col: col, mode: matchContains} }
 
 // Prefix matches a column that starts with the word; it can use a text_pattern_ops index on lower(col).
-func Prefix(col sqlText) Field { return Field{col: col, mode: prefix} }
+func Prefix(col sqlText) Field { return Field{col: col, mode: matchPrefix} }
 
 // Exact matches a column equal to the word, ignoring case: for codes and statuses.
-func Exact(col sqlText) Field { return Field{col: col, mode: exact} }
+func Exact(col sqlText) Field { return Field{col: col, mode: matchExact} }
 
 // searchWords splits a term into its distinct lower-cased words, at most maxSearchWords.
 func searchWords(term string) ([]string, error) {
@@ -64,13 +64,13 @@ func (p *Paginator[S, T]) searchFor(q *query, words []string) {
 		for _, f := range p.cfg.Search {
 			col := "lower(" + string(f.col) + ")"
 			switch f.mode {
-			case contains:
+			case matchContains:
 				ors = append(ors, col+` like ? escape '\'`)
 				args = append(args, "%"+likeEscaper.Replace(w)+"%")
-			case prefix:
+			case matchPrefix:
 				ors = append(ors, col+` like ? escape '\'`)
 				args = append(args, likeEscaper.Replace(w)+"%")
-			case exact:
+			case matchExact:
 				ors = append(ors, col+" = ?")
 				args = append(args, w)
 			}

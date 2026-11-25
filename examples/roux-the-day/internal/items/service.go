@@ -12,8 +12,6 @@ import (
 	"github.com/jwcarman/roux/authn"
 	"github.com/jwcarman/roux/page"
 	"github.com/jwcarman/roux/problem"
-
-	"roux-the-day/internal/paging"
 )
 
 // Service is the items' operations.
@@ -59,16 +57,16 @@ func (s Service) List(ctx context.Context, req page.Request, f Filter) (page.Pag
 		return page.Page[Row]{}, err
 	}
 	monday := today.AddDate(0, 0, -(int(today.Weekday())+6)%7)
-	filters := []paging.Filter{
-		paging.WhereIf(f.When == Overdue, "not done and day < ?", today),
-		paging.WhereIf(f.When == Today, "day = ?", today),
-		paging.WhereIf(f.When == ThisWeek, "day between ? and ?", monday, monday.AddDate(0, 0, 6)),
+	filters := []page.Filter{
+		page.WhereIf(f.When == Overdue, "not done and day < ?", today),
+		page.WhereIf(f.When == Today, "day = ?", today),
+		page.WhereIf(f.When == ThisWeek, "day between ? and ?", monday, monday.AddDate(0, 0, 6)),
 	}
 	if f.Assignee != nil {
-		filters = append(filters, paging.Where("assignee_ids && ?", []uuid.UUID{*f.Assignee}))
+		filters = append(filters, page.Where("assignee_ids && ?", []uuid.UUID{*f.Assignee}))
 	}
 	if f.Done != nil {
-		filters = append(filters, paging.Where("done = ?", *f.Done))
+		filters = append(filters, page.Where("done = ?", *f.Done))
 	}
 	return list.Page(ctx, s.Pool, req, f.Search, filters...)
 }
@@ -97,7 +95,7 @@ func (s Service) Get(ctx context.Context, caller *authn.Principal, id uuid.UUID)
 	return get(ctx, s.Pool, caller, id)
 }
 
-func get(ctx context.Context, db paging.Querier, caller *authn.Principal, id uuid.UUID) (Detail, error) {
+func get(ctx context.Context, db page.Querier, caller *authn.Principal, id uuid.UUID) (Detail, error) {
 	rows, err := db.Query(ctx, `
 		select id, title, day, at_time, done, assignee_names, version, notes, created_by
 		  from item_list where id = $1`, id)

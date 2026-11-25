@@ -1,4 +1,4 @@
-package paging
+package page
 
 import (
 	"slices"

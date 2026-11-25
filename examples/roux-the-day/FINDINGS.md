@@ -63,7 +63,7 @@ it, and where in the app it shows. What more than one app would need is extracte
 
 ## Extract into roux (next, in order)
 
-1. **The paginator** (`internal/paging`) into roux's `page` package: `Where`/`WhereIf`, sorts
+1. ~~**The paginator**~~ (done: `page.New`) (`internal/paging`) into roux's `page` package: `Where`/`WhereIf`, sorts
    with a tiebreaker, jpa-utils-style search, and `Check` at start. Proven by the items list; its
    docs say why columns may not quote.
 2. **Civil dates and times**, with the organization's "today" and week.

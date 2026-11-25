@@ -1,4 +1,4 @@
-package paging
+package page
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 )
 
 // sqlText is SQL written into a statement. It is unexported on purpose: Go converts an untyped
-// string constant to it, so paging.Where("day < ?", today) compiles, but not a string variable or
+// string constant to it, so page.Where("day < ?", today) compiles, but not a string variable or
 // a fmt.Sprintf result, so a value cannot be pasted into SQL by mistake. Values travel as
 // arguments. (In Java terms: as if a method took only compile-time constant strings.)
 type sqlText string
@@ -28,9 +28,9 @@ type Filter struct {
 // `col = any(?)` or `arr && ?`). It panics on a mismatch or a forbidden fragment: both are
 // mistakes in the code, found the first time it runs.
 func Where(frag sqlText, args ...any) Filter {
-	mustBeSafe("paging.Where", frag)
+	mustBeSafe("page.Where", frag)
 	if n := strings.Count(string(frag), "?"); n != len(args) {
-		panic(fmt.Sprintf("paging.Where(%q): %d placeholders, %d arguments", frag, n, len(args)))
+		panic(fmt.Sprintf("page.Where(%q): %d placeholders, %d arguments", frag, n, len(args)))
 	}
 	return Filter{frag: frag, args: args, on: true}
 }

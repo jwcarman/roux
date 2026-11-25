@@ -1,4 +1,4 @@
-package paging
+package page_test
 
 import (
 	"context"
@@ -30,16 +30,16 @@ func scanThing(row pgx.CollectableRow) (thing, error) {
 	return t, row.Scan(&t.Name)
 }
 
-func things() Config[thingSort, thing] {
-	return Config[thingSort, thing]{
+func things() page.ListConfig[thingSort, thing] {
+	return page.ListConfig[thingSort, thing]{
 		From:    "thing",
 		Columns: "name",
-		Sorts: map[thingSort][]Term{
-			byName: {By("lower(name)")},
-			byDay:  {By("day"), By("at_time").NullsFirst()},
+		Sorts: map[thingSort][]page.Term{
+			byName: {page.By("lower(name)")},
+			byDay:  {page.By("day"), page.By("at_time").NullsFirst()},
 		},
 		DefaultSort: byName,
-		Search:      []Field{Contains("name"), Prefix("code"), Exact("kind")},
+		Search:      []page.Field{page.Contains("name"), page.Prefix("code"), page.Exact("kind")},
 		Scan:        scanThing,
 	}
 }
@@ -63,7 +63,7 @@ func setup(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
-func request(t *testing.T, p *Paginator[thingSort, thing], sortBy string, dir page.Direction) page.Request {
+func request(t *testing.T, p *page.Paginator[thingSort, thing], sortBy string, dir page.Direction) page.Request {
 	t.Helper()
 	req, err := p.Config().Resolve(nil, nil, sortBy, dir)
 	if err != nil {
@@ -90,7 +90,7 @@ func names(t *testing.T) func(page.Page[thing], error) []string {
 
 func TestPageSortsByTheRequestedSortThenID(t *testing.T) {
 	pool := setup(t)
-	p := New(things())
+	p := page.New(things())
 	ctx := context.Background()
 	asc := names(t)(p.Page(ctx, pool, request(t, p, "NAME", page.Asc), ""))
 	if want := []string{"100% cotton", "Ada Smith", "ada smith", `back\slash`, "Grace Hopper"}; !slices.Equal(asc, want) {
@@ -104,7 +104,7 @@ func TestPageSortsByTheRequestedSortThenID(t *testing.T) {
 
 func TestNullsFirstFlipsWithTheDirection(t *testing.T) {
 	pool := setup(t)
-	p := New(things())
+	p := page.New(things())
 	ctx := context.Background()
 	asc := names(t)(p.Page(ctx, pool, request(t, p, "DAY", page.Asc), ""))
 	if want := []string{"100% cotton", "ada smith", "Ada Smith", "Grace Hopper", `back\slash`}; !slices.Equal(asc, want) {
@@ -119,7 +119,7 @@ func TestNullsFirstFlipsWithTheDirection(t *testing.T) {
 func search(t *testing.T, term string) []string {
 	t.Helper()
 	pool := setup(t)
-	p := New(things())
+	p := page.New(things())
 	return names(t)(p.Page(context.Background(), pool, request(t, p, "", ""), term))
 }
 
@@ -172,26 +172,26 @@ func TestSearchIgnoresCaseDuplicatesAndAnEleventhWord(t *testing.T) {
 
 func TestSearchRefusesATermOver200Characters(t *testing.T) {
 	pool := setup(t)
-	p := New(things())
-	_, err := p.Page(context.Background(), pool, request(t, p, "", ""), strings.Repeat("x", MaxSearchLength+1))
+	p := page.New(things())
+	_, err := p.Page(context.Background(), pool, request(t, p, "", ""), strings.Repeat("x", page.MaxSearchLength+1))
 	var prob *problem.Problem
 	if !errors.As(err, &prob) || prob.Status != http.StatusBadRequest {
 		t.Fatalf("got %v", err)
 	}
-	if _, err := p.Page(context.Background(), pool, request(t, p, "", ""), strings.Repeat("x", MaxSearchLength)); err != nil {
+	if _, err := p.Page(context.Background(), pool, request(t, p, "", ""), strings.Repeat("x", page.MaxSearchLength)); err != nil {
 		t.Fatalf("200 characters: %v", err)
 	}
 }
 
 func TestPageCountsAllMatchesAndReturnsOnePage(t *testing.T) {
 	pool := setup(t)
-	p := New(things())
+	p := page.New(things())
 	two, index := 2, 1
 	req, err := p.Config().Resolve(&index, &two, "NAME", page.Asc)
 	if err != nil {
 		t.Fatal(err)
 	}
-	pg, err := p.Page(context.Background(), pool, req, "", Where("kind = ?", "blue"))
+	pg, err := p.Page(context.Background(), pool, req, "", page.Where("kind = ?", "blue"))
 	if got := names(t)(pg, err); !slices.Equal(got, []string{`back\slash`}) {
 		t.Errorf("page 2 of blue: %v", got)
 	}
@@ -202,7 +202,7 @@ func TestPageCountsAllMatchesAndReturnsOnePage(t *testing.T) {
 
 func TestPageRefusesASortFromAnotherList(t *testing.T) {
 	pool := setup(t)
-	p := New(things())
+	p := page.New(things())
 	req, err := page.Config{SortFields: []string{"PRICE"}}.Resolve(nil, nil, "PRICE", "")
 	if err != nil {
 		t.Fatal(err)
@@ -213,31 +213,31 @@ func TestPageRefusesASortFromAnotherList(t *testing.T) {
 }
 
 func TestNewPanicsOnABadConfig(t *testing.T) {
-	for name, change := range map[string]func(*Config[thingSort, thing]){
-		"no sorts":               func(c *Config[thingSort, thing]) { c.Sorts = nil },
-		"default not a sort":     func(c *Config[thingSort, thing]) { c.DefaultSort = "PRICE" },
-		"no default":             func(c *Config[thingSort, thing]) { c.DefaultSort = "" },
-		"a sort with no terms":   func(c *Config[thingSort, thing]) { c.Sorts[byDay] = nil },
-		"default size above max": func(c *Config[thingSort, thing]) { c.DefaultPageSize, c.MaxPageSize = 50, 10 },
-		"no scan":                func(c *Config[thingSort, thing]) { c.Scan = nil },
-		"no from":                func(c *Config[thingSort, thing]) { c.From = "" },
-		"no columns":             func(c *Config[thingSort, thing]) { c.Columns = "" },
-		"a comment in columns":   func(c *Config[thingSort, thing]) { c.Columns = "name -- x" },
-		"a quote in a term":      func(c *Config[thingSort, thing]) { c.Sorts[byName] = []Term{By("name || 'x'")} },
-		"a semicolon in from":    func(c *Config[thingSort, thing]) { c.From = "thing; drop table thing" },
-		"a quote in a field":     func(c *Config[thingSort, thing]) { c.Search = []Field{Contains("'x'")} },
+	for name, change := range map[string]func(*page.ListConfig[thingSort, thing]){
+		"no sorts":               func(c *page.ListConfig[thingSort, thing]) { c.Sorts = nil },
+		"default not a sort":     func(c *page.ListConfig[thingSort, thing]) { c.DefaultSort = "PRICE" },
+		"no default":             func(c *page.ListConfig[thingSort, thing]) { c.DefaultSort = "" },
+		"a sort with no terms":   func(c *page.ListConfig[thingSort, thing]) { c.Sorts[byDay] = nil },
+		"default size above max": func(c *page.ListConfig[thingSort, thing]) { c.DefaultPageSize, c.MaxPageSize = 50, 10 },
+		"no scan":                func(c *page.ListConfig[thingSort, thing]) { c.Scan = nil },
+		"no from":                func(c *page.ListConfig[thingSort, thing]) { c.From = "" },
+		"no columns":             func(c *page.ListConfig[thingSort, thing]) { c.Columns = "" },
+		"a comment in columns":   func(c *page.ListConfig[thingSort, thing]) { c.Columns = "name -- x" },
+		"a quote in a term":      func(c *page.ListConfig[thingSort, thing]) { c.Sorts[byName] = []page.Term{page.By("name || 'x'")} },
+		"a semicolon in from":    func(c *page.ListConfig[thingSort, thing]) { c.From = "thing; drop table thing" },
+		"a quote in a field":     func(c *page.ListConfig[thingSort, thing]) { c.Search = []page.Field{page.Contains("'x'")} },
 	} {
 		t.Run(name, func(t *testing.T) {
 			cfg := things()
 			change(&cfg)
-			defer wantPanic(t)
-			New(cfg)
+			defer mustPanic(t)
+			page.New(cfg)
 		})
 	}
 }
 
 func TestConfigListsSortsInOrder(t *testing.T) {
-	cfg := New(things()).Config()
+	cfg := page.New(things()).Config()
 	if !slices.Equal(cfg.SortFields, []string{"DAY", "NAME"}) || cfg.DefaultSort != "NAME" || !cfg.NoTiebreak {
 		t.Errorf("%+v", cfg)
 	}
@@ -246,18 +246,18 @@ func TestConfigListsSortsInOrder(t *testing.T) {
 func TestCheckFindsAMisspelledColumn(t *testing.T) {
 	pool := setup(t)
 	ctx := context.Background()
-	if err := New(things()).Check(ctx, pool); err != nil {
+	if err := page.New(things()).Check(ctx, pool); err != nil {
 		t.Fatalf("the good one: %v", err)
 	}
-	for name, change := range map[string]func(*Config[thingSort, thing]){
-		"a column":     func(c *Config[thingSort, thing]) { c.Columns = "nmae" },
-		"a sort term":  func(c *Config[thingSort, thing]) { c.Sorts[byDay] = []Term{By("dya")} },
-		"a search one": func(c *Config[thingSort, thing]) { c.Search = []Field{Contains("cdoe")} },
+	for name, change := range map[string]func(*page.ListConfig[thingSort, thing]){
+		"a column":     func(c *page.ListConfig[thingSort, thing]) { c.Columns = "nmae" },
+		"a sort term":  func(c *page.ListConfig[thingSort, thing]) { c.Sorts[byDay] = []page.Term{page.By("dya")} },
+		"a search one": func(c *page.ListConfig[thingSort, thing]) { c.Search = []page.Field{page.Contains("cdoe")} },
 	} {
 		t.Run(name, func(t *testing.T) {
 			cfg := things()
 			change(&cfg)
-			if err := New(cfg).Check(ctx, pool); err == nil {
+			if err := page.New(cfg).Check(ctx, pool); err == nil {
 				t.Error("no error")
 			}
 		})
@@ -268,8 +268,16 @@ func TestAListWithoutSearchFieldsIgnoresTheTerm(t *testing.T) {
 	pool := setup(t)
 	cfg := things()
 	cfg.Search = nil
-	p := New(cfg)
+	p := page.New(cfg)
 	if got := names(t)(p.Page(context.Background(), pool, request(t, p, "", ""), "nobody")); len(got) != 5 {
 		t.Errorf("got %v", got)
+	}
+}
+
+// mustPanic, deferred, fails the test unless it panicked.
+func mustPanic(t *testing.T) {
+	t.Helper()
+	if recover() == nil {
+		t.Error("no panic")
 	}
 }

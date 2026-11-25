@@ -2,8 +2,12 @@
 // jpa-utils: offset-based, 0-indexed pages, one allowlisted sort field plus an
 // always-appended unique tiebreaker, and an envelope of {data, pagination}.
 //
+// Paginator lists a Postgres table or view by these rules: declare the list once with New (its
+// view, columns, sorts and search fields), Check it when the app starts, and ask it for a Page per
+// request with filters written as Where("day < ?", today).
+//
 // This package is HTTP-agnostic so domain/store code may import it. Parsing a
-// Request from an http.Request lives in kit/api (api.PageRequest).
+// Request from an http.Request lives in api (api.PageRequest).
 package page
 
 import (
