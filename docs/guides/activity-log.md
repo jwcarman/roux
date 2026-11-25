@@ -129,6 +129,12 @@ An activity page, everything that happened across records or only what concerns 
 A scope never set (`activity.Scope{}`), `About()` with no ids, or an empty id is an error, never the
 whole log: a feed that forgot its scope shows nothing.
 
+A feed shows every kind, roux's own `user.*` among them. `.Kinds(kinds...)` narrows either scope to
+the app's own: a kind is a type, or any part of one up to a dot. `Kinds("allowance")` is
+`allowance.recorded` and `allowance.payout.sent` but not `allowances.other`;
+`Kinds("allowance.payout")` is the payouts alone; several kinds show any of them. `Kinds()` with
+none, or a kind that could not be a type (`"Allowance"`, `"allowance."`), is an error.
+
 Who may see which scope is the app's, in its endpoint, under its own permission:
 
 ```go
@@ -138,9 +144,9 @@ k.Handle("GET /api/activity", ActivityRead, func(w http.ResponseWriter, r *http.
 		return err
 	}
 	me := authn.PrincipalFrom(r.Context())
-	scope := activity.Everything()
+	scope := activity.Everything().Kinds("allowance")
 	if !me.Has(AllowancesManage) { // a kid sees only what concerns them
-		scope = activity.About(me.IdentityID)
+		scope = activity.About(me.IdentityID).Kinds("allowance")
 	}
 	out, err := activity.Feed(r.Context(), svc.Pool, svc.Names, req, scope)
 	if err != nil {

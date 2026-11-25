@@ -6,6 +6,14 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- **A feed can show only the app's kinds: `scope.Kinds(kinds...)`.** A kind is a type or any part
+  of one up to a dot, so `activity.About(kid).Kinds("allowance")` is a kid's `allowance.*` rows
+  and nothing else (not roux's `user.*`, not `allowances.*`). `Kinds()` with none, or a kind that
+  could not be a type, is an error. A feed without it shows every kind, as before. Found by an
+  agent keeping its own SQL for a family's allowance feed.
+
 ### Documentation
 
 - **Upgrading**: a guide and a skill card for moving an app to a new roux release, one release at

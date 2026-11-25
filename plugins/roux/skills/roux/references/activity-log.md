@@ -34,13 +34,16 @@ and the browser shows it with `ActivityList`.
   details }`.
 - `activity.Feed(ctx, db, names, req, scope)` → the same page, across records. `scope` is
   `activity.Everything()` or `activity.About(ids...)` (anchored to or related to any); `activity.Scope{}`
-  never set, `About()` with no ids, or an empty id is an error, never everything. The app's endpoint
-  picks the scope by permission:
+  never set, `About()` with no ids, or an empty id is an error, never everything.
+  `.Kinds(kinds...)` narrows a scope to the app's kinds: a kind is a type or any part of one up to a
+  dot (`"allowance"` is `allowance.*`, not `allowances.*`; `"allowance.recorded"` is that type).
+  Without it the feed has every kind, roux's `user.*` too. The app's endpoint picks the scope by
+  permission:
 
   ```go
-  scope := activity.Everything()
+  scope := activity.Everything().Kinds("allowance")
   if me := authn.PrincipalFrom(r.Context()); !me.Has(AllowancesManage) {
-  	scope = activity.About(me.IdentityID) // a kid: only what concerns them
+  	scope = activity.About(me.IdentityID).Kinds("allowance") // a kid: only what concerns them
   }
   out, err := activity.Feed(r.Context(), svc.Pool, svc.Names, req, scope)
   ```

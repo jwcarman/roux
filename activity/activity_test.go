@@ -318,3 +318,55 @@ func TestAFeedWithoutAScopeShowsNothingAndSaysWhy(t *testing.T) {
 		}
 	}
 }
+
+func TestAFeedShowsOnlyTheKindsItIsGiven(t *testing.T) {
+	pool := setup(t)
+	ctx := context.Background()
+	ada := uuid.New()
+	for i, typ := range []string{"allowance.recorded", "allowance.payout.sent", "allowances.other", "user.renamed", "allowance_x.done", "task.done"} {
+		if err := activity.Append(ctx, pool, t0.Add(time.Duration(i)*time.Minute), uuid.New(), custom{typ, typ}, ada); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, c := range []struct {
+		scope activity.Scope
+		want  string
+	}{
+		// A kind is the type, or any part of it up to a dot: never a longer word, never a wildcard.
+		{activity.Everything().Kinds("allowance"), "allowance.payout.sent|allowance.recorded"},
+		{activity.Everything().Kinds("allowance.payout"), "allowance.payout.sent"},
+		{activity.Everything().Kinds("allowance.recorded"), "allowance.recorded"},
+		{activity.Everything().Kinds("allowance", "task"), "task.done|allowance.payout.sent|allowance.recorded"},
+		{activity.Everything().Kinds("allowance_x"), "allowance_x.done"},
+		{activity.About(ada).Kinds("allowance"), "allowance.payout.sent|allowance.recorded"},
+		{activity.About(uuid.New()).Kinds("allowance"), ""},
+		// The last Kinds is the one that counts.
+		{activity.Everything().Kinds("task").Kinds("user"), "user.renamed"},
+	} {
+		f, got := feedOf(t, pool, c.scope, 0, 20)
+		if strings.Join(got, "|") != c.want || f.Pagination.TotalElementCount != int64(len(got)) {
+			t.Errorf("want %q, got %v (total %d)", c.want, got, f.Pagination.TotalElementCount)
+		}
+	}
+}
+
+func TestKindsThatCouldNotBeATypeAreRefused(t *testing.T) {
+	pool := setup(t)
+	ctx := context.Background()
+	for _, c := range []struct {
+		scope activity.Scope
+		want  string
+	}{
+		{activity.Everything().Kinds(), "Kinds needs at least one kind"},
+		{activity.Everything().Kinds("Allowance"), `kind "Allowance"`},
+		{activity.Everything().Kinds("allowance."), `kind "allowance."`},
+		{activity.Everything().Kinds(""), `kind ""`},
+		{activity.Everything().Kinds("allow%"), `kind "allow%"`},
+		{activity.Scope{}.Kinds("allowance"), "the feed has no scope"},
+		{activity.About().Kinds("allowance"), "About needs at least one id"},
+	} {
+		if _, err := activity.Feed(ctx, pool, nil, req(t, 0, 20), c.scope); err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%v; want an error containing %q", err, c.want)
+		}
+	}
+}

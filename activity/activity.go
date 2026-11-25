@@ -142,6 +142,7 @@ type Querier interface {
 type Scope struct {
 	everything bool
 	about      []uuid.UUID
+	kinds      []string // nil: every kind
 }
 
 // Everything is the whole activity log, for someone who may see all of it.
@@ -159,20 +160,54 @@ func About(ids ...uuid.UUID) Scope {
 	return Scope{about: about}
 }
 
+// Kinds narrows the scope to the activity of these kinds. A kind is a type ("allowance.recorded")
+// or any part of one up to a dot ("allowance", "allowance.entry"), so Kinds("allowance") is every
+// allowance.* type and nothing else (not allowances.*). Without it a feed shows every kind, roux's
+// own user.* among them. The last call's kinds are the ones that count. Kinds() with none, or a
+// kind that could not be a type, is an error from Feed.
+func (s Scope) Kinds(kinds ...string) Scope {
+	s.kinds = append([]string{}, kinds...)
+	return s
+}
+
+var kindPattern = regexp.MustCompile(`^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$`)
+
 // Feed is the activity in scope, newest first, a page at a time (the request's index and size;
 // its sort is ignored), across records: an app's activity page. Who may see which scope is the
 // app's to decide, in its endpoint. A Scope never set, or About with no ids or an empty one, is an
-// error, never the whole log.
+// error, never the whole log; so are Kinds with none or one that could not be a type.
 func Feed(ctx context.Context, db Querier, names Names, req page.Request, scope Scope) (page.Page[Entry], error) {
-	switch {
-	case scope.everything:
-		return activitylog.Read(ctx, db, names, req, "true")
-	case scope.about == nil:
-		return page.Page[Entry]{}, errors.New("activity: the feed has no scope: pass activity.Everything() or activity.About(ids...)")
-	case len(scope.about) == 0:
-		return page.Page[Entry]{}, errors.New("activity: About needs at least one id (Everything() is the whole log)")
-	case contains(scope.about, uuid.Nil):
-		return page.Page[Entry]{}, errors.New("activity: About was given an empty id")
+	where, args, err := scope.where()
+	if err != nil {
+		return page.Page[Entry]{}, err
 	}
-	return activitylog.Read(ctx, db, names, req, "anchor_id = any($1) or related_ids && $1", scope.about)
+	if scope.kinds != nil {
+		if len(scope.kinds) == 0 {
+			return page.Page[Entry]{}, errors.New("activity: Kinds needs at least one kind (leave it off for every kind)")
+		}
+		for _, k := range scope.kinds {
+			if len(k) > maxType || !kindPattern.MatchString(k) {
+				return page.Page[Entry]{}, fmt.Errorf("activity: kind %q is not a type or a part of one up to a dot (allowance, allowance.recorded)", k)
+			}
+		}
+		args = append(args, scope.kinds)
+		n := len(args)
+		where = fmt.Sprintf("(%s) and exists (select 1 from unnest($%d::text[]) k where type = k or starts_with(type, k || '.'))", where, n)
+	}
+	return activitylog.Read(ctx, db, names, req, where, args...)
+}
+
+// where is the scope's condition on roux_activity and its values ($1...).
+func (s Scope) where() (string, []any, error) {
+	switch {
+	case s.everything:
+		return "true", nil, nil
+	case s.about == nil:
+		return "", nil, errors.New("activity: the feed has no scope: pass activity.Everything() or activity.About(ids...)")
+	case len(s.about) == 0:
+		return "", nil, errors.New("activity: About needs at least one id (Everything() is the whole log)")
+	case contains(s.about, uuid.Nil):
+		return "", nil, errors.New("activity: About was given an empty id")
+	}
+	return "anchor_id = any($1) or related_ids && $1", []any{s.about}, nil
 }
