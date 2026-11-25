@@ -4,6 +4,19 @@
 
 # roux
 
+[![CI](https://github.com/jwcarman/roux/actions/workflows/ci.yml/badge.svg)](https://github.com/jwcarman/roux/actions/workflows/ci.yml)
+[![Docs](https://github.com/jwcarman/roux/actions/workflows/docs.yml/badge.svg)](https://github.com/jwcarman/roux/actions/workflows/docs.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/jwcarman/roux.svg)](https://pkg.go.dev/github.com/jwcarman/roux)
+[![npm](https://img.shields.io/npm/v/@jwcarman/roux-web?label=roux-web)](https://www.npmjs.com/package/@jwcarman/roux-web)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Go](https://img.shields.io/github/go-mod/go-version/jwcarman/roux?label=Go)](https://go.dev/)
+
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=jwcarman_roux&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=jwcarman_roux)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=jwcarman_roux&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=jwcarman_roux)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=jwcarman_roux&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=jwcarman_roux)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=jwcarman_roux&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=jwcarman_roux)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jwcarman_roux&metric=coverage)](https://sonarcloud.io/summary/new_code?id=jwcarman_roux)
+
 roux is said "roo". It is the base a Go + React business application is built on: sign-in,
 roles and permissions, the team, errors a person can read, paged lists, forms, money, dates and the
 activity log, written once with contracts that keep both sides honest.
