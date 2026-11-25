@@ -206,7 +206,7 @@ The server's refusals have fixed shapes (`contracts/problem-*.json` in roux's re
 | Answer | Status | As the server answers |
 | --- | --- | --- |
 | `invalidFields({ name: "Must not be blank" })` | 400 | `problem.Validation` or `problem.InvalidField` |
-| `invariantViolation("A class meets at most 7 times a week")` | 400 | `problem.BadRequest` |
+| `badRequest("A class meets at most 7 times a week")` | 400 | `problem.BadRequest` |
 | `notFound("No label l9")` | 404 | `problem.NotFound` |
 | `stale()` | 409 | a save at a version that is no longer the latest |
 | `serverError(errorId?)` | 500 | an unexpected failure, with the reference it logged |

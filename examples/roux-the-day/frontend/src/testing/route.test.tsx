@@ -20,7 +20,7 @@ describe("renderRoute", () => {
   });
 
   it("opens the path signed out when permissions is null", async () => {
-    // The sign-in page asks who which providers are on; answered, the test does not race it.
+    // The sign-in page asks the server which providers are on; answered, the test does not race it.
     server.use(http.get("/api/roux/auth/sign-in", () => HttpResponse.json({ providers: [] })));
     const { router } = renderRoute("/", { permissions: null });
 

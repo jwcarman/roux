@@ -26,7 +26,7 @@ describe("api settings", () => {
     configureApi({ baseUrl: "/api", csrfBootstrapPath: "/api/roux/auth/me", sessionPathPrefix: "/api/" });
   });
 
-  it("defaults to who's paths", () => {
+  it("defaults to roux's paths", () => {
     expect(apiSettings()).toEqual({
       baseUrl: "/api",
       csrfBootstrapPath: "/api/roux/auth/me",

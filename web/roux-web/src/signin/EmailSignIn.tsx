@@ -25,7 +25,7 @@ export async function sendLink(address: string): Promise<"sent" | "failed"> {
 /**
  * Sign-in by email: "Email me a link" for an address, then, with `Check your email`, either open the
  * link or type the code from the same email (`autoComplete="one-time-code"`), which signs in here and
- * goes where the visitor was going. who's refusal of a code is told under the field.
+ * goes where the visitor was going. The server's refusal of a code is told under the field.
  */
 export function EmailSignIn() {
   const [sentTo, setSentTo] = useState<string | null>(null);

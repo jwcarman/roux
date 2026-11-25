@@ -2,7 +2,7 @@
 // same server as the API. The built files are an fs.FS (typically embedded):
 // index.html at the root and content-hashed files under assets/.
 //
-// Behavior, matching roux's Spring implementation:
+// Behavior:
 //
 //   - A GET or HEAD whose Accept names text/html (a wildcard alone does not), whose
 //     path has no file extension and is not under an excluded path is answered

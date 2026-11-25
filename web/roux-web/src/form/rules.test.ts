@@ -498,7 +498,9 @@ describe("money()", () => {
 
   it("is an error in an organization without a currency", () => {
     setOrganization(testOrganization({ currency: null, fractionDigits: null }));
-    expect(() => money().safeParse("150")).toThrow("roux.money.currency is not set: the organization has no currency");
+    expect(() => money().safeParse("150")).toThrow(
+      "ORG_CURRENCY is not set: the organization has no currency (set it on the server, such as ORG_CURRENCY=USD)",
+    );
   });
 
   it("counts decimal places by the currency's digits", () => {

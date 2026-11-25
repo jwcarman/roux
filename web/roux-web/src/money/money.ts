@@ -9,11 +9,13 @@ export interface Money {
   currency: string;
 }
 
-/** The organization's currency (`roux.money.currency`) and its digits, from the context. */
+/** The organization's currency (`ORG_CURRENCY`) and its digits, from the context. */
 export function organizationCurrency(): { currency: string; fractionDigits: number } {
   const { currency, fractionDigits } = organization();
   if (currency === null) {
-    throw new Error("roux.money.currency is not set: the organization has no currency");
+    throw new Error(
+      "ORG_CURRENCY is not set: the organization has no currency (set it on the server, such as ORG_CURRENCY=USD)",
+    );
   }
   // The context carries a currency with its digits, never one without the other.
   return { currency, fractionDigits: fractionDigits as number };

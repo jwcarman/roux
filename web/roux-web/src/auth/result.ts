@@ -24,7 +24,7 @@ export type Cancelled = PromptFailure<"cancelled">;
 export type AlreadyRegistered = PromptFailure<"already-registered">;
 
 /**
- * The reasons a call that needs a recent sign-in can fail with a 401. who's `Roux-Error` header tells
+ * The reasons a call that needs a recent sign-in can fail with a 401. The `Roux-Error` header tells
  * `"signed-out"` from `"reauthentication-required"`; `"sign-in-required"` is either, when an
  * application's error handling dropped the header (`me()` then tells which).
  */
@@ -76,7 +76,7 @@ export function unwrap<T, R extends string, D>(result: AuthResult<T, R, D> | Pro
     return result.value;
   }
   throw new AuthError<D | undefined>(
-    `who answered ${result.status}: ${result.reason}`,
+    `the server answered ${result.status}: ${result.reason}`,
     result.reason,
     result.status,
     result.detail,

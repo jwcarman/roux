@@ -60,7 +60,7 @@ describe("AuthHttp", () => {
     const fetch = answering(() => new Response("{", { status: 200 }));
     const failure = new AuthHttp({ fetch }).call({ ...CALL, read: () => Promise.reject(broken) });
 
-    await expect(failure).rejects.toThrow("who answered GET /thing with a body it could not read");
+    await expect(failure).rejects.toThrow("the server answered GET /thing with a body it could not read");
     await expect(failure).rejects.toMatchObject({
       name: "AuthError",
       reason: "unexpected",
@@ -73,7 +73,7 @@ describe("AuthHttp", () => {
     const fetch = answering(() => new Response(null, { status: 418 }));
     const failure = new AuthHttp({ fetch }).call({ ...CALL, reason: () => undefined });
 
-    await expect(failure).rejects.toThrow(new AuthError("who answered GET /thing with 418", "unexpected", 418));
+    await expect(failure).rejects.toThrow(new AuthError("the server answered GET /thing with 418", "unexpected", 418));
   });
 
   it("reads the code from the body only when it is a string in an object", async () => {

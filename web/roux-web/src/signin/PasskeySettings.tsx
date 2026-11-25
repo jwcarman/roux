@@ -21,7 +21,7 @@ const PASSKEYS = ["who", "passkeys"] as const;
 
 const NOT_ADDED = "Could not add the passkey. Sign in again and retry.";
 
-/** Why a passkey was not added, by who's reason; any other reason gets the general message. */
+/** Why a passkey was not added, by the server's reason; any other reason gets the general message. */
 const NOT_ADDED_BECAUSE: Partial<Record<string, string>> = {
   cancelled: "Adding the passkey was cancelled.",
   "already-registered": "This device already has a passkey for your account.",

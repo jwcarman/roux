@@ -18,7 +18,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/jwcarman/roux/apperr"
 	"github.com/jwcarman/roux/problem"
 )
 
@@ -115,8 +114,8 @@ func JSON(w http.ResponseWriter, status int, v any) error {
 // fields and trailing data with a 400 problem.
 func Decode(r *http.Request, v any) error { return decode(r, v, true) }
 
-// DecodeLenient is Decode for roux's own endpoints, which (like Spring Boot's JSON
-// mapper) ignore members they do not know, so a client may send more than is read.
+// DecodeLenient is Decode for roux's own endpoints, which ignore members they do not
+// know, so an older or newer client may send more than is read.
 func DecodeLenient(r *http.Request, v any) error { return decode(r, v, false) }
 
 func decode(r *http.Request, v any, strict bool) error {
@@ -185,20 +184,11 @@ type Mux struct {
 	unguarded []string
 }
 
-// NewMux returns a Mux with default mappings for the apperr sentinels.
+// NewMux returns an empty Mux. A handler answers a refusal by returning a *problem.Problem
+// (problem.NotFound, problem.Conflict, ...), wrapped or not.
 func NewMux() *Mux {
 	m := &Mux{sm: http.NewServeMux()}
 	m.roux = m.Kit(strings.TrimSuffix(RouxPrefix, "/"), problem.Write)
-	// The answer is the sentinel's alone: what the domain wrapped it with ("item 42: ...") is
-	// context for the log, not for the client.
-	for target, p := range map[error]func() *problem.Problem{
-		apperr.ErrNotFound:     func() *problem.Problem { return problem.NotFound("Not found") },
-		apperr.ErrConflict:     func() *problem.Problem { return problem.Conflict("Conflict") },
-		apperr.ErrUnauthorized: problem.Unauthorized,
-		apperr.ErrForbidden:    problem.Forbidden,
-	} {
-		m.MapError(target, func(error) *problem.Problem { return p() })
-	}
 	return m
 }
 

@@ -50,7 +50,7 @@ export interface Email<D> {
 
 /** One of your email addresses. */
 export interface EmailAddress {
-  /** who's id for it, which `remove` and `add`'s `replaces` take. */
+  /** The server's id for it, which `remove` and `add`'s `replaces` take. */
   id: string;
   address: string;
   createdAt: string;

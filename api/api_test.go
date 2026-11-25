@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/jwcarman/roux/api"
-	"github.com/jwcarman/roux/apperr"
 	"github.com/jwcarman/roux/problem"
 )
 
@@ -43,9 +42,8 @@ func TestErrorResolution(t *testing.T) {
 		err   error
 		want  int
 	}{
-		{"default sentinel", nil, apperr.ErrNotFound, 404},
-		{"wrapped default", nil, fmt.Errorf("ctx: %w", apperr.ErrConflict), 409},
-		{"all defaults", nil, apperr.ErrForbidden, 403},
+		{"a problem", nil, problem.NotFound("No such item"), 404},
+		{"a wrapped problem", nil, fmt.Errorf("ctx: %w", problem.Conflict("Taken")), 409},
 		{"embedded problem", nil, fmt.Errorf("ctx: %w", problem.BadRequest("x")), 400},
 		{"problem source", nil, fmt.Errorf("ctx: %w", selfErr{}), 418},
 		{"unmapped is 500", nil, errors.New("boom"), 500},
@@ -58,9 +56,6 @@ func TestErrorResolution(t *testing.T) {
 		{"type mapping declines", func(m *api.Mux) {
 			api.MapType(m, func(e *libErr) *problem.Problem { return nil })
 		}, &libErr{Code: 1}, 500},
-		{"later mapping overrides default", func(m *api.Mux) {
-			m.MapError(apperr.ErrNotFound, func(error) *problem.Problem { return problem.New(410, "") })
-		}, apperr.ErrNotFound, 410},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -154,7 +149,7 @@ func TestKitMountsUnderItsBaseWithItsOwnErrors(t *testing.T) {
 	}
 	kit := m.Kit("/kitbase", custom)
 	kit.Handle("GET /thing", okHandler)
-	kit.Handle("GET /fail", func(http.ResponseWriter, *http.Request) error { return apperr.ErrConflict })
+	kit.Handle("GET /fail", func(http.ResponseWriter, *http.Request) error { return problem.Conflict("Conflict") })
 	m.Fallback(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("fallback")) }))
 
 	get := func(method, path string) *httptest.ResponseRecorder {
@@ -255,14 +250,14 @@ func TestValidationIsRouxs400WithSortedFieldErrors(t *testing.T) {
 	}
 }
 
-func TestASentinelsWrappingStaysOnTheServer(t *testing.T) {
+func TestAProblemsWrappingStaysOnTheServer(t *testing.T) {
 	m := api.NewMux()
 	m.Handle("GET /api/x", func(http.ResponseWriter, *http.Request) error {
-		return fmt.Errorf("item 42 in secret_items: %w", apperr.ErrNotFound)
+		return fmt.Errorf("item 42 in secret_items: %w", problem.NotFound("No such item"))
 	})
 	rec := httptest.NewRecorder()
 	m.ServeHTTP(rec, httptest.NewRequest("GET", "/api/x", nil))
-	if body := rec.Body.String(); rec.Code != 404 || strings.Contains(body, "secret_items") || !strings.Contains(body, `"detail":"Not found"`) {
+	if body := rec.Body.String(); rec.Code != 404 || strings.Contains(body, "secret_items") || !strings.Contains(body, `"detail":"No such item"`) {
 		t.Fatalf("%d %s", rec.Code, body)
 	}
 }

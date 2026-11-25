@@ -1,9 +1,9 @@
-// Package apikey is API key authentication (who-apikey): a client sends a key in a header and
+// Package apikey is API key authentication: a client sends a key in a header and
 // is signed in for that request, with no session, no cookie and no CSRF token. Every key
 // expires, holds only the permissions it was made for, and records when it was last used. Only
 // a key's SHA-256 is stored: the key is shown once, when it is made.
 //
-// Endpoints under who's base path, for the caller's own keys (a person at a browser; a key never
+// Endpoints under roux's base path, for the caller's own keys (a person at a browser; a key never
 // lists, makes, rotates or revokes keys, so a leaked key cannot make itself permanent):
 //
 //	GET    /api/roux/auth/me/api-keys                  [{id, name, scopes, createdAt, expiresAt, lastUsedAt}], by name
@@ -40,7 +40,7 @@ import (
 //go:embed migrations/*.sql
 var migrations embed.FS
 
-// Migration is the API key schema; it runs after who's.
+// Migration is the API key schema; it runs after authn's.
 var Migration = pgdb.Migration{Name: "roux-authn-apikey", FS: migrations, Dir: "migrations", After: []string{"roux-authn"}}
 
 // Defaults.

@@ -168,7 +168,7 @@ func TestConfigValidation(t *testing.T) {
 		}
 	}
 
-	// Defaults are who's.
+	// Defaults are roux's.
 	m, _ := New(good)
 	if m.cfg.CodeLength != 6 || m.cfg.CodeMaxAttempts != 5 || m.cfg.TokenTTL != 5*time.Minute || m.cfg.ResendInterval != time.Minute {
 		t.Errorf("defaults: %+v", m.cfg)

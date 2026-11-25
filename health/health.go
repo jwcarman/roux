@@ -5,8 +5,7 @@
 //	GET /api/roux/readyz   readiness: 200 only if every registered check passes and the
 //	              service is not shutting down; otherwise 503 (stop sending traffic).
 //
-// Bodies follow the familiar Spring Actuator shape,
-// {"status":"UP","checks":{"database":"UP"}}. Failure details are logged, never
+// Bodies are {"status":"UP","checks":{"database":"UP"}}. Failure details are logged, never
 // returned, so the (usually unauthenticated) endpoint can't leak internals.
 package health
 

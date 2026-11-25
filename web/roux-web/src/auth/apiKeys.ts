@@ -10,7 +10,7 @@ export interface ApiKey {
   createdAt: string;
   /** When it stops, or stopped, signing in. */
   expiresAt: string;
-  /** When it last signed in, to within who's last-used interval; null if never. */
+  /** When it last signed in, to within roux's last-used interval; null if never. */
   lastUsedAt: string | null;
 }
 

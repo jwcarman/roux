@@ -153,7 +153,7 @@ func TestMigrationsAndSignInMethodsAreCollectedFromEveryModule(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, table := range []string{"t_first", "t_second", "roux_identity", "roux_role"} { // and who's own
+	for _, table := range []string{"t_first", "t_second", "roux_identity", "roux_role"} { // and roux's own
 		var found bool
 		if err := pool.QueryRow(context.Background(), `select to_regclass($1) is not null`, table).Scan(&found); err != nil || !found {
 			t.Errorf("table %s: %v %v", table, found, err)

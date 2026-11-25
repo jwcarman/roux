@@ -1,4 +1,4 @@
-// Package jwt is bearer-token sign-in for API-only callers (who-jwt): a client sends
+// Package jwt is bearer-token sign-in for API-only callers: a client sends
 // "Authorization: Bearer <access token>" from your authorization server and is signed in for that
 // request, with no session, no cookie and no CSRF token. The token's (issuer, subject) is the same
 // credential a provider account linked by browser sign-in is (package oidc), so one person reaches

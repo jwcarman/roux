@@ -90,7 +90,7 @@ describe("SessionProvider", () => {
     expect(signedOut).toBe(true);
   });
 
-  it("asks who again when an API call finds the session gone", async () => {
+  it("asks the server again when an API call finds the session gone", async () => {
     const endSession = signedIn();
     server.use(http.get("/api/anything", () => new HttpResponse(null, { status: 401 })));
     renderSession();

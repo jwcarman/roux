@@ -1,5 +1,5 @@
 // Package oidc is sign-in with a provider account: Google, GitHub or any OpenID Connect
-// provider (who-oidc). Endpoints under who's base path:
+// provider. Endpoints under /api/roux/auth:
 //
 //	GET    /api/roux/auth/oidc/authorize/{id}     starts a sign-in: redirects to the provider
 //	GET    /api/roux/auth/oidc/callback/{id}      the provider's answer: signs in, or redirects with ?pending= / ?error=
@@ -44,7 +44,7 @@ import (
 //go:embed migrations/*.sql
 var migrations embed.FS
 
-// Migration is the provider-account schema; it runs after who's.
+// Migration is the provider-account schema; it runs after authn's.
 var Migration = pgdb.Migration{Name: "roux-authn-oidc", FS: migrations, Dir: "migrations", After: []string{"roux-authn"}}
 
 // methodName is how /api/roux/auth/me reports a session that signed in with a provider.

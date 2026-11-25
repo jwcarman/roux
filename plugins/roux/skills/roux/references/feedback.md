@@ -120,5 +120,5 @@ Clear toasts after each test: `act(() => toaster.remove())`.
 
 - `useConfirm outside ConfirmProvider` in a test that renders without one.
 - A button's refusal with field `errors` shows only the generic detail: refuse buttons with
-  `InvariantViolationException`/`ConflictException` on the server.
+  `problem.BadRequest` or `problem.Conflict` on the server.
 - `useServerAction`'s `failure` can't tell a 409 apart; the server's `detail` under it does.

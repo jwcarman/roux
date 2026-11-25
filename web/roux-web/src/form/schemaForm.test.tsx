@@ -10,7 +10,7 @@ import { z } from "zod";
 import { sendJson } from "../api/client";
 import { createQueryClient } from "../api/queryClient";
 import { Toaster, toaster } from "../feedback/toaster";
-import { invalidFields, invariantViolation, stale } from "../testing/problems";
+import { invalidFields, badRequest, stale } from "../testing/problems";
 import { renderHookWithProviders, renderWithProviders } from "../testing/render";
 import { server } from "../testing/server";
 import { FormDialog } from "./FormDialog";
@@ -215,7 +215,7 @@ describe("useSchemaForm", () => {
   });
 
   it("toasts a 400 without field errors by its detail", async () => {
-    answerCreate(() => invariantViolation("Already active"));
+    answerCreate(() => badRequest("Already active"));
     const user = show();
 
     await fill(user, { name: "Ann", email: "ann@example.com" });
@@ -400,7 +400,7 @@ describe("useSchemaForm", () => {
   });
 
   it("does not call onSaved listeners when the save is refused", async () => {
-    answerCreate(() => invariantViolation("Already active"));
+    answerCreate(() => badRequest("Already active"));
     const saved = vi.fn();
     const user = show();
     current?.onSaved(saved);

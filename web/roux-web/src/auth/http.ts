@@ -10,8 +10,8 @@ import {
 /** How a client is made. */
 export interface AuthClientOptions<D> {
   /**
-   * Where who is: `who.base-path` on the page's origin (default `/api/roux/auth`), or an absolute URL. An
-   * absolute one works only when the page can read who's `XSRF-TOKEN` cookie (the same site, with
+   * Where sign-in's endpoints are, on the page's origin (default `/api/roux/auth`), or an absolute URL. An
+   * absolute one works only when the page can read roux's `XSRF-TOKEN` cookie (the same site, with
    * the cookie's domain covering both).
    */
   baseUrl?: string;
@@ -55,7 +55,7 @@ export async function nothing(): Promise<void> {
   // a success with no body to read
 }
 
-/** A 401 on a call that needs a recent sign-in, told apart by who's `Roux-Error` code. */
+/** A 401 on a call that needs a recent sign-in, told apart by its `Roux-Error` code. */
 export function signInRequired(status: number, code: string | null): SignInRequired | undefined {
   if (status !== 401) {
     return undefined;
@@ -96,8 +96,8 @@ export function removeCredential(
 }
 
 /**
- * who's code for a failure: the `Roux-Error` header, or, where it cannot be read (a page on
- * another origin whose CORS configuration does not expose it), the `code` of who's Problem
+ * The server's code for a failure: the `Roux-Error` header, or, where it cannot be read (a page on
+ * another origin whose CORS configuration does not expose it), the `code` of roux's Problem
  * Details body. Reads a copy, so `decodeError` still gets the body.
  */
 async function errorCode(response: Response): Promise<string | null> {
@@ -129,7 +129,7 @@ function csrfToken(): string | undefined {
   return cookie === undefined ? undefined : decodeURIComponent(cookie.slice(CSRF_COOKIE.length + 1));
 }
 
-/** Sends who's requests: the URL, the cookies, CSRF, and reading the answer into a result. */
+/** Sends sign-in's requests: the URL, the cookies, CSRF, and reading the answer into a result. */
 export class AuthHttp<D> {
   private readonly base: string;
   private readonly credentials: RequestCredentials;
@@ -168,7 +168,7 @@ export class AuthHttp<D> {
         return { ok: true, value: await call.read(response) };
       } catch (e) {
         throw new AuthError(
-          `who answered ${where} with a body it could not read`,
+          `the server answered ${where} with a body it could not read`,
           "unexpected",
           response.status,
           undefined,
@@ -180,7 +180,7 @@ export class AuthHttp<D> {
     }
     const reason = call.reason(response.status, await errorCode(response));
     if (reason === undefined) {
-      throw new AuthError(`who answered ${where} with ${response.status}`, "unexpected", response.status);
+      throw new AuthError(`the server answered ${where} with ${response.status}`, "unexpected", response.status);
     }
     return { ok: false, reason, status: response.status, detail: await this.decodeError(response) };
   }

@@ -6,7 +6,7 @@ import { today } from "../organization/organization";
 
 /*
  * Rule helpers for a form's Zod schema, in the server's words: each message is the one in
- * ContributorValidationMessages.properties, so a field reads the same whether the browser or the
+ * contracts/messages.json (the Go problem package's), so a field reads the same whether the browser or the
  * server caught the mistake. Messages never name the field; they sit under its label.
  *
  * Each helper is a small builder: its state (`required`, a limit, a format) is rebuilt into a fresh

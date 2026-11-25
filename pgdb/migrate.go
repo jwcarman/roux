@@ -21,13 +21,13 @@ import (
 // Migration is one library's (or the application's) contribution to the
 // database schema. Libraries export a Migration value; the application collects
 // them and passes them all to Migrate, which orders them by their declared
-// dependencies. (Same idea as Spring's "migratory": contributors declare a
-// unique name plus after/before, and the runner sorts them.)
+// dependencies: each declares a unique name plus After and Before, and the runner sorts
+// them.
 //
 //	var Migration = pgdb.Migration{Name: "items", FS: migrations, Dir: "migrations"}
 type Migration struct {
 	// Name is unique across all contributors: lowercase letters and digits,
-	// words joined by single '-' (e.g. "who-rbac").
+	// words joined by single '-' (e.g. "roux-users").
 	Name string
 	// FS and Dir locate the *.sql files, applied in lexical order (001_..., 002_...).
 	FS  fs.FS

@@ -96,7 +96,7 @@ func TestSavingThemeStripsLowersAndVersions(t *testing.T) {
 		t.Fatalf("GET after PUT: %s", got)
 	}
 	// An edit from the version just read goes through, and members the server does not
-	// know are ignored (as Spring's JSON mapper does).
+	// know are ignored (api.DecodeLenient).
 	next := valid(1)
 	next["appName"] = "Fit Club 2"
 	next["somethingElse"] = true

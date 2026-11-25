@@ -1,6 +1,6 @@
 # Forms beyond the recipe
 
-The common create/edit dialog is `feature.md` steps 9–10. This card covers the rule helpers, every
+The common create/edit dialog is `feature.md` step 10. This card covers the rule helpers, every
 field, a form on a page, 409s, and forms that don't save through a mutation.
 
 ## Rules

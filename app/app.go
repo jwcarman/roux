@@ -70,7 +70,7 @@ type Kit struct {
 	AppName string
 	// SecureCookies marks every cookie Secure whatever the request looks like (see authn.Config).
 	SecureCookies bool
-	// Host guards routes (Guard, Open, HandleSigned) and sets who's endpoints. Set by Assemble
+	// Host guards routes (Guard, Open) and serves sign-in's endpoints. Set by Assemble
 	// before any module is mounted.
 	Host *authn.Host
 	// ShellTheme is the theme the page carries: the owner's saved one once the theme module is
@@ -152,10 +152,10 @@ func (k *Kit) Drain() {
 	}
 }
 
-// coreMigrations belong to who itself, not to any module.
+// coreMigrations are sign-in's and permissions' own tables, not any module's.
 var coreMigrations = []pgdb.Migration{authn.Migration, authz.Migration}
 
-// Assemble migrates the database, registers who with the modules' sign-in methods, then mounts
+// Assemble migrates the database, registers sign-in with the modules' methods, then mounts
 // and starts the modules. A failure names the module.
 func Assemble(ctx context.Context, k *Kit, modules ...Module) error {
 	mods, err := distinct(modules)

@@ -12,7 +12,7 @@ import (
 	"github.com/jwcarman/roux/authn/authntest"
 )
 
-// What OWNER holds in this environment: who's identity permissions and users.*
+// What OWNER holds in this environment: roux's identity permissions and users.*
 // (the theme's migration is not part of it).
 const ownerPermissions = "roux.admin users.invite users.manage users.owners users.read"
 
@@ -239,7 +239,7 @@ func TestTheLastAdministratorStays(t *testing.T) {
 	hr := f.SignedIn(f.manager("Hr", "hr@example.test")) // may manage users, is not an administrator
 	path := "/api/roux/users/" + f.owner.String()
 
-	// Deactivating the only administrator, or taking their role away, is refused with who's last-admin.
+	// Deactivating the only administrator, or taking their role away, is refused with roux's last-admin.
 	for name, r := range map[string]authntest.Reply{
 		"deactivate": hr.Post(path+"/deactivate", nil),
 		"demote":     hr.Put(path+"/role", map[string]string{"role": "USER"}),

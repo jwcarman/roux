@@ -1,6 +1,5 @@
 // Package authz is roles and permissions: a person has roles, a role grants
 // permissions, and what a person may do is the union of their roles' permissions.
-// It is who-rbac's model under roux's names.
 //
 // Permissions are plain strings ("users.read"), declared as constants by the module
 // that checks them. Each module's migration grants them to the roles that should
@@ -108,7 +107,7 @@ func Remove(ctx context.Context, db authn.DBTX, identityID, roleID uuid.UUID) er
 // ErrLastAdmin means a change would leave no active identity able to manage people.
 var ErrLastAdmin = errors.New("authz: the change would leave no active administrator")
 
-// LastAdminProblem is how the API answers ErrLastAdmin: who's last-admin problem.
+// LastAdminProblem is how the API answers ErrLastAdmin: roux's last-admin problem.
 func LastAdminProblem() *problem.Problem {
 	p := problem.Conflict("The team needs someone active who can manage people")
 	p.Type = "urn:roux:error:last-admin"

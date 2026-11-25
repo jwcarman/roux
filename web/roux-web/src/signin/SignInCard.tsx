@@ -18,7 +18,7 @@ export interface SignInCardProps {
 }
 
 /**
- * The sign-in card, for `SignInFrame`: the ways of signing in who reports as on. An emailed link
+ * The sign-in card, for `SignInFrame`: the ways of signing in the server reports as on. An emailed link
  * comes first; below a divider, a passkey and each OIDC provider. Once the link is sent the card
  * turns to checking email: the address it went to, the code from the email beside Sign in, a way
  * back to a different address, and sending it again.

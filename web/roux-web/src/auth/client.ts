@@ -19,7 +19,7 @@ export interface SignInOptions {
   providers: SignInProvider[];
 }
 
-/** who's browser endpoints, each a typed call. */
+/** roux's sign-in endpoints for a browser, each a typed call. */
 export interface AuthClient<D> {
   /** The ways of signing in that are on; public. */
   signInOptions(): Promise<AuthResult<SignInOptions, never, D>>;
@@ -36,7 +36,7 @@ export interface AuthClient<D> {
 }
 
 /**
- * Creates a client for who at `baseUrl` (default `/api/roux/auth`, who's default `who.base-path`).
+ * Creates a client for roux's sign-in endpoints at `baseUrl` (default `/api/roux/auth`).
  *
  * @throws Error if `baseUrl` has a query or fragment
  */

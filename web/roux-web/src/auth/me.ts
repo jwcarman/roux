@@ -24,7 +24,7 @@ export interface Me {
   credentials: CredentialCounts;
 }
 
-/** Your own account, everything under who's `/me` (`client.me`). */
+/** Your own account, everything under `/api/roux/auth/me` (`client.me`). */
 export interface MyAccount<D> {
   /** Who is signed in, and their permissions. */
   get(): Promise<AuthResult<Me, "signed-out", D>>;

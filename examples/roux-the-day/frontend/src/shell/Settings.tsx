@@ -42,7 +42,7 @@ export function Settings() {
       </Section>
       <Separator />
       <Section title="Passkeys" description="Sign in with your fingerprint, face or device PIN.">
-        {/* who's own: the list, Remove, and Add a passkey; a session that ended is refreshed. */}
+        {/* roux-web's own: the list, Remove, and Add a passkey; a session that ended is refreshed. */}
         <PasskeySettings onSignedOut={refresh} />
       </Section>
     </Stack>

@@ -19,7 +19,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
 	"github.com/jwcarman/roux/api"
-	"github.com/jwcarman/roux/apperr"
 	"github.com/jwcarman/roux/problem"
 	"github.com/jwcarman/roux/telemetry"
 )
@@ -36,7 +35,7 @@ func harness(t *testing.T) (http.Handler, *tracetest.SpanRecorder) {
 	mux := api.NewMux()
 	mux.Handle("GET /api/things/{id}", func(w http.ResponseWriter, r *http.Request) error {
 		if r.PathValue("id") == "9" {
-			return apperr.ErrNotFound
+			return problem.NotFound("No such thing")
 		}
 		if r.PathValue("id") == "500" {
 			return errors.New("db exploded")

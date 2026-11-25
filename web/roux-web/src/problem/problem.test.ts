@@ -47,6 +47,14 @@ describe("problemOf", () => {
     });
   });
 
+  it("keeps the code and the trace the server sent", async () => {
+    const problem = await problemOf(
+      problemResponse({ title: "Forbidden", status: 403, code: "invalid-csrf-token", traceId: "4bf92f35" }, 403),
+    );
+    expect(problem.code).toBe("invalid-csrf-token");
+    expect(problem.traceId).toBe("4bf92f35");
+  });
+
   it("drops field errors it cannot read and keeps the error id", async () => {
     const problem = await problemOf(
       problemResponse(
@@ -116,7 +124,10 @@ describe("problemOf", () => {
 
   it("leaves out what the body does not say", async () => {
     const problem = await problemOf(
-      problemResponse({ title: "Gone", status: 410, detail: 1, instance: 2, errorId: 3, errors: [] }, 410),
+      problemResponse(
+        { title: "Gone", status: 410, detail: 1, instance: 2, errorId: 3, code: 4, traceId: 5, errors: [] },
+        410,
+      ),
     );
     expect(problem).toStrictEqual({ type: "about:blank", title: "Gone", status: 410 });
   });

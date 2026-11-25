@@ -18,7 +18,7 @@ describe("ProviderSignInButton", () => {
     ["apple", "Continue with Apple"],
     ["gitlab", "Continue with GitLab"],
     ["okta", "Continue with Okta"],
-  ])("draws %s as %s, linking to who's authorize URL", (provider, label) => {
+  ])("draws %s as %s, linking to roux's authorize URL", (provider, label) => {
     renderWithProviders(<ProviderSignInButton provider={provider} />);
 
     expect(link(label)).toHaveAttribute("href", `/api/roux/auth/oidc/authorize/${provider}`);
@@ -59,7 +59,7 @@ describe("ProviderSignInButton", () => {
     expect(colors).toEqual(["#f25022", "#7fba00", "#00a4ef", "#ffb900"]);
   });
 
-  it("gives a provider it does not know a generic icon and who's display name", () => {
+  it("gives a provider it does not know a generic icon and roux's display name", () => {
     renderWithProviders(<ProviderSignInButton provider="acme-sso" name="Acme Single Sign-On" />);
 
     expect(link("Continue with Acme Single Sign-On")).toHaveAttribute("href", "/api/roux/auth/oidc/authorize/acme-sso");
@@ -139,7 +139,7 @@ describe("each provider's button", () => {
 });
 
 describe("ProviderSignInButtons", () => {
-  it("draws one button for each provider the server reports, with who's names", async () => {
+  it("draws one button for each provider the server reports, with roux's names", async () => {
     server.use(
       http.get("/api/roux/auth/sign-in", () =>
         HttpResponse.json({

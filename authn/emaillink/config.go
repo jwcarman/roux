@@ -18,7 +18,7 @@ const (
 	minCodeSecretLength    = 32
 )
 
-// Config configures email-link sign-in. Zero values take who's defaults.
+// Config configures email-link sign-in. Zero values take roux's defaults.
 type Config struct {
 	// LinkBaseURL is the page of the app that receives sign-in links; the link
 	// is this URL followed by "#token=" and the token. Required.

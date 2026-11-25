@@ -3,7 +3,7 @@ import { getJson } from "../api/client";
 import { resolveUrl } from "../api/url";
 
 /**
- * What the server says about the organization (`roux.organization.*`, `roux.money.currency`): where
+ * What the server says about the organization (`ORG_TIME_ZONE`, `ORG_LOCALE`, `ORG_CURRENCY`): where
  * it is, how it writes, and what today is there. The page carries it in `#app-context`; `GET
  * /api/organization` answers it too.
  */

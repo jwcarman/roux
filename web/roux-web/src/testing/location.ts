@@ -2,7 +2,7 @@ import { vi } from "vitest";
 
 /**
  * Makes `window.location.replace` a spy and leaves the rest of `location` as it is (the fake network
- * resolves relative URLs against it, and who-client reads its hash). Undo with `vi.unstubAllGlobals()`.
+ * resolves relative URLs against it, and the sign-in link reads its hash). Undo with `vi.unstubAllGlobals()`.
  */
 export function stubLocationReplace() {
   const replace = vi.fn<(url: string) => void>();

@@ -123,7 +123,7 @@ export interface ProviderSignInButtonProps extends Omit<ButtonProps, "children" 
 
 /**
  * A "Continue with Google" button for one OIDC provider: a link (a full page load, because the
- * provider's own sign-in page has to open) to who's authorize URL, drawn as that provider's
+ * provider's own sign-in page has to open) to roux's authorize URL, drawn as that provider's
  * published guidance asks, in the visitor's light or dark mode. A provider roux does not know gets a
  * generic icon and its display name (`name`, which `ProviderSignInButtons` passes from who). `icon`
  * and `label` override. Usable on its own, on a sign-in page that lays out its own buttons.
@@ -153,8 +153,8 @@ export function ProviderSignInButton({ provider, name, label, icon, ...props }: 
 }
 
 /**
- * One `ProviderSignInButton` for each provider the server reports as on (`auth.signInOptions()`), in who's
- * order and with who's display names; nothing when there are none, or while they load.
+ * One `ProviderSignInButton` for each provider the server reports as on (`auth.signInOptions()`), in roux's
+ * order and with roux's display names; nothing when there are none, or while they load.
  */
 export function ProviderSignInButtons() {
   const options = useSignInOptions();

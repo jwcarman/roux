@@ -76,7 +76,7 @@ func TestSignInOptionsWithNoMethods(t *testing.T) {
 	if res.Code != 200 || res.Header().Get("Content-Type") != "application/json" {
 		t.Fatalf("%d %v", res.Code, res.Header())
 	}
-	// Exactly who's shape and key order, with nothing on and an empty (not null) list.
+	// Exactly roux's shape and key order, with nothing on and an empty (not null) list.
 	if got, want := strings.TrimSpace(res.Body.String()), `{"email":false,"passkey":false,"providers":[]}`; got != want {
 		t.Fatalf("body = %s, want %s", got, want)
 	}
@@ -116,7 +116,7 @@ func TestMeWhenSignedOut(t *testing.T) {
 		}
 	}
 	if _, has := body["instance"]; has {
-		t.Errorf("who's body has no instance member: %v", body)
+		t.Errorf("roux's body has no instance member: %v", body)
 	}
 	// /me issues the CSRF cookie whether or not anyone is signed in.
 	if res.cookie == nil {
@@ -148,7 +148,7 @@ func TestErrorsUnderTheBasePathAreWhosFormat(t *testing.T) {
 func TestCSRFRules(t *testing.T) {
 	h := app(t, authn.Config{})
 
-	// A request with no token is refused with who's code, and still gets a cookie to retry with.
+	// A request with no token is refused with roux's code, and still gets a cookie to retry with.
 	res := send(h, "POST", "/api/roux/auth/logout")
 	if res.Code != 403 || res.Header().Get("Roux-Error") != "invalid-csrf-token" || res.cookie == nil || res.cookie.Value == "" {
 		t.Fatalf("no token: %d %v cookie=%v", res.Code, res.Header(), res.cookie)

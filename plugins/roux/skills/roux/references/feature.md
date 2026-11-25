@@ -595,7 +595,7 @@ func TestAnEditFromAnOldVersionIsRefused(t *testing.T) {
   uniqueness, the stale edit (`409`), the missing version, delete and `404`.
 - The tests need PostgreSQL: `TEST_DATABASE_URL` if set, else a container per run (Docker).
 
-### 12. Query keys: `frontend/src/queryKeys.ts`
+### 8. Query keys: `frontend/src/queryKeys.ts`
 
 One more entry in `queryKeys`:
 
@@ -608,7 +608,7 @@ labels: {
 },
 ```
 
-### 11. The resource module: `frontend/src/labels/labels.ts`
+### 9. The resource module: `frontend/src/labels/labels.ts`
 
 <!-- file: frontend/src/labels/labels.ts -->
 ```ts
@@ -671,7 +671,7 @@ export const updateLabel = (id: string, version: number) =>
 - `update` sends the request and `version`, nothing else: `api.Decode` refuses a member the server
   does not take (`id`, say) with a `400`.
 
-### 8. The form dialog: `frontend/src/labels/LabelFormDialog.tsx`
+### 10. The form dialog: `frontend/src/labels/LabelFormDialog.tsx`
 
 <!-- file: frontend/src/labels/LabelFormDialog.tsx -->
 ```tsx
@@ -707,7 +707,7 @@ export function LabelFormDialog({ label, trigger }: { label?: Label; trigger: Re
   on success.
 - A date field is `<f.InputField label="Starts on" type="date" />`. Other fields: `forms.md`.
 
-### 9. The page: `frontend/src/labels/LabelsPage.tsx`
+### 11. The page: `frontend/src/labels/LabelsPage.tsx`
 
 A short list (never more than a few hundred rows) is fetched whole with `SimpleQueryTable`:
 
@@ -757,7 +757,7 @@ export function LabelsPage() {
 `initialSort={{ id: "startsOn", desc: false }}` (or the server's order). A remove button:
 `useServerAction` with `useConfirm` (`feedback.md`).
 
-### 10. The route and the nav entry
+### 12. The route and the nav entry
 
 `frontend/src/routes/_signedIn/labels.tsx` (thin: guard and component):
 

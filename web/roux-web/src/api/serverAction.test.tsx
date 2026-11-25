@@ -7,7 +7,7 @@ import { Toaster, toaster } from "../feedback/toaster";
 import { ApiError, sendJson } from "./client";
 import { createQueryClient } from "./queryClient";
 import { assertRefreshesHonoured, refusalToast, useServerAction } from "./serverAction";
-import { invariantViolation } from "../testing/problems";
+import { badRequest } from "../testing/problems";
 import { renderHookWithProviders, renderWithProviders } from "../testing/render";
 import { server } from "../testing/server";
 
@@ -61,7 +61,7 @@ describe("useServerAction", () => {
   });
 
   it("toasts the server's reason under the default title and answers false on a refusal", async () => {
-    answerArchive(() => invariantViolation("Already archived"));
+    answerArchive(() => badRequest("Already archived"));
     renderWithProviders(<Toaster />);
     const { result } = renderHookWithProviders(() => useServerAction(archive), createQueryClient());
 
@@ -77,7 +77,7 @@ describe("useServerAction", () => {
   });
 
   it("titles the toast with failure(variables)", async () => {
-    answerArchive(() => invariantViolation("Already archived"));
+    answerArchive(() => badRequest("Already archived"));
     renderWithProviders(<Toaster />);
     const { result } = renderHookWithProviders(
       () => useServerAction(archive, { failure: (v) => `Could not archive ${v.name}` }),
@@ -92,7 +92,7 @@ describe("useServerAction", () => {
   });
 
   it("titles the toast with a fixed failure string", async () => {
-    answerArchive(() => invariantViolation("Already archived"));
+    answerArchive(() => badRequest("Already archived"));
     renderWithProviders(<Toaster />);
     const { result } = renderHookWithProviders(
       () => useServerAction(archive, { failure: "Archive failed" }),

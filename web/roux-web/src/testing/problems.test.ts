@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contract } from "./contracts";
-import { invalidFields, invariantViolation, notFound, serverError, stale } from "./problems";
+import { invalidFields, badRequest, notFound, serverError, stale } from "./problems";
 
 type Problem = Record<string, unknown>;
 
@@ -28,8 +28,8 @@ describe("problem answers", () => {
     });
   });
 
-  it("invariantViolation answers as the server does for a broken rule", async () => {
-    expect(await answered(invariantViolation("A class meets at most 7 times a week"))).toEqual({
+  it("badRequest answers as the server does for a broken rule", async () => {
+    expect(await answered(badRequest("A class meets at most 7 times a week"))).toEqual({
       status: 400,
       type: "application/problem+json",
       body: served("problem-invariant.json"),

@@ -11,7 +11,7 @@ import (
 	"github.com/jwcarman/roux/api"
 )
 
-// CSRF follows who's scheme (Spring Security's csrf.spa()): a script-readable
+// CSRF is the double-submit scheme roux-web's client follows: a script-readable
 // XSRF-TOKEN cookie that the page sends back in an X-XSRF-TOKEN header on every
 // unsafe request. The cookie is loaded on every request, signed in or not, so
 // the page always has a token to send.
@@ -99,7 +99,7 @@ func (h *Host) setCSRFCookie(w http.ResponseWriter, r *http.Request, token strin
 	http.SetCookie(w, h.cookieFor(r, token))
 }
 
-// clearCSRF deletes the cookie, as who's logout does; the client fetches a
+// clearCSRF deletes the cookie, as roux's logout does; the client fetches a
 // fresh one (GET /me sets it) for whoever signs in next.
 func (h *Host) clearCSRF(w http.ResponseWriter, r *http.Request) {
 	c := h.cookieFor(r, "")

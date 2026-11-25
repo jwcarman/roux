@@ -14,9 +14,9 @@ const (
 	errorHeader     = "Roux-Error"
 )
 
-// authProblem is who's error body: exactly these members, with detail null for
+// authProblem is roux's error body: exactly these members, with detail null for
 // a 5xx (whose message may carry what a client must not see). traceId is an
-// extra member, which who's clients ignore, that ties the error to its trace.
+// extra member, which roux's clients ignore, that ties the error to its trace.
 type authProblem struct {
 	Type    string  `json:"type"`
 	Title   string  `json:"title"`
@@ -27,7 +27,7 @@ type authProblem struct {
 }
 
 // codeFor names a failure: its own code if it has one, else one from its status,
-// as who does for anything that has no exception of its own.
+// as roux does for anything that has no exception of its own.
 func codeFor(p *problem.Problem) string {
 	if p.Code != "" {
 		return p.Code
@@ -54,7 +54,7 @@ func codeFor(p *problem.Problem) string {
 	}
 }
 
-// render answers every failure under who's base path as who does: RFC 9457
+// render answers every failure under roux's base path as roux does: RFC 9457
 // problem details with type urn:roux:error:<code>, and the code again in a
 // Roux-Error header so a client can tell failures apart without parsing a body.
 func render(w http.ResponseWriter, r *http.Request, p *problem.Problem) {
@@ -78,8 +78,8 @@ func render(w http.ResponseWriter, r *http.Request, p *problem.Problem) {
 	_ = json.NewEncoder(w).Encode(body)
 }
 
-// NewError is a problem with who's stable error code, for a sign-in method or an
-// account endpoint to return: under who's base path it is rendered as
+// NewError is a problem with roux's stable error code, for a sign-in method or an
+// account endpoint to return: under roux's base path it is rendered as
 // urn:roux:error:<code> with a Roux-Error header.
 func NewError(status int, code, detail string) *problem.Problem {
 	p := problem.New(status, detail)

@@ -5,14 +5,7 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type UserDetail, userKeys } from "@jwcarman/roux-web/users";
 import { ConfirmProvider, Toaster, toaster } from "@jwcarman/roux-web/feedback";
-import {
-  invariantViolation,
-  pageOf,
-  paletteOf,
-  renderWithProviders,
-  server,
-  serverError,
-} from "@jwcarman/roux-web/testing";
+import { badRequest, pageOf, paletteOf, renderWithProviders, server, serverError } from "@jwcarman/roux-web/testing";
 import { UserDetailView } from "./UserDetailView";
 
 const GRACE: UserDetail = {
@@ -129,7 +122,7 @@ describe("UserDetailView", () => {
   });
 
   it("shows the server's reason when it refuses", async () => {
-    answer(() => invariantViolation("The team needs at least one active owner"));
+    answer(() => badRequest("The team needs at least one active owner"));
     const { user } = show(GRACE, true);
     await user.click(screen.getByRole("button", { name: "Deactivate" }));
     const dialog = await screen.findByRole("alertdialog");

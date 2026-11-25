@@ -148,7 +148,7 @@ func (h *Host) credentialCounts(ctx context.Context, db DBTX, identityID uuid.UU
 	return counts, nil
 }
 
-// meResponse is who's GET /api/roux/auth/me answer, with who's names and its nulls kept.
+// meResponse is roux's GET /api/roux/auth/me answer, with roux's names and its nulls kept.
 type meResponse struct {
 	IdentityID        string           `json:"identityId"`
 	Permissions       []string         `json:"permissions"`

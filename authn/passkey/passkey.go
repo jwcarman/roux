@@ -1,6 +1,6 @@
-// Package passkey is sign-in with passkeys (WebAuthn): who-passkey. A passkey is the
+// Package passkey is sign-in with passkeys (WebAuthn). A passkey is the
 // only factor: the device verifies the person (a PIN, a fingerprint, a face) and holds
-// a discoverable credential, so nobody types a name. Endpoints under who's base path:
+// a discoverable credential, so nobody types a name. Endpoints under /api/roux/auth:
 //
 //	POST   /api/roux/auth/passkey/sign-in/options   a challenge for the browser; no session needed
 //	POST   /api/roux/auth/passkey/sign-in           200 {"identityId"} and a session, or 401
@@ -44,7 +44,7 @@ import (
 //go:embed migrations/*.sql
 var migrations embed.FS
 
-// Migration is the passkey schema; it runs after who's.
+// Migration is the passkey schema; it runs after authn's.
 var Migration = pgdb.Migration{Name: "roux-authn-passkey", FS: migrations, Dir: "migrations", After: []string{"roux-authn"}}
 
 const (
@@ -114,7 +114,7 @@ func (m *Method) Mount(h *authn.Host) error {
 	return nil
 }
 
-// ---- who's errors ----
+// ---- roux's errors ----
 
 func invalidRegistration() error {
 	return authn.NewError(http.StatusBadRequest, "invalid-passkey-registration", "Invalid passkey registration")

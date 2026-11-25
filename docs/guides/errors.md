@@ -226,7 +226,6 @@ statement aborts the transaction, and everything after it fails.
 | A route matched with the wrong method | 405 | `Method PATCH is not allowed for this resource.` |
 | `pgx.ErrNoRows` returned as it is | 404 | `The requested resource does not exist.` |
 | A unique or foreign-key violation returned as it is | 409 | `A resource with these values already exists.`, `The operation conflicts with a related resource.` (never the database's text) |
-| `apperr.ErrNotFound`, `ErrConflict`, `ErrUnauthorized`, `ErrForbidden` (wrapped or not) | 404, 409, 401, 403 | `Not found`, `Conflict`, or as above |
 | Anything under `/api/roux/auth/` | its status | sign-in's own problems, with `type` `urn:roux:error:<code>` and `code` |
 | A panic | 500 | `Something went wrong`, with `errorId` |
 | Anything else | 500 | `Something went wrong`, with `errorId` (`contracts/problem-server-error.json`) |

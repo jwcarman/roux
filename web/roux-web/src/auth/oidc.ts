@@ -47,7 +47,7 @@ export interface Oidc<D> {
 
 /** A provider account linked to you. */
 export interface LinkedAccount {
-  /** who's id for it, which `unlink` takes. */
+  /** The server's id for it, which `unlink` takes. */
   id: string;
   /** The provider's registration id, or its issuer when no registration matches any more. */
   provider: string;

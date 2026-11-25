@@ -131,6 +131,16 @@ All notable changes to this project are documented in this file. The format foll
   (`z.string()`), or a rule behind `.transform`, showed no required indicator and no `maxLength`,
   without a sign; it now throws when it renders, naming the field and the fix. A checkbox's
   `z.boolean()` is the exception.
+- **Breaking: the `apperr` package is gone.** Its sentinels (`ErrNotFound`, `ErrConflict`, ...)
+  were a second way to answer a refusal, beside `problem`, and answered a bare `Not found`. Return
+  `problem.NotFound("No such item")` and its siblings.
+- **Breaking: roux-web's test helper `invariantViolation` is `badRequest`,** the name of what it
+  stands for on the server (`problem.BadRequest`).
+- **The browser's `Problem` keeps `code` and `traceId`,** which the server sends and `problemOf`
+  used to drop.
+- **Comments and messages name roux, not its Java ancestors:** no more `who`, Spring or
+  `roux.money.currency` (the money error now says to set `ORG_CURRENCY`); sign-in's errors say
+  "the server answered". `feature.md`'s steps are numbered in reading order.
 - **Sign-in refusals are logged at Info:** an unknown address, a wrong or used code, a deactivated
   person. They were at Debug, so a sign-in that silently did nothing left no trace at the default
   level.

@@ -38,7 +38,7 @@ import (
 //go:embed migrations/*.sql
 var migrations embed.FS
 
-// Migration is the users' schema: after who's, the roles, the email addresses the
+// Migration is the users' schema: after authn's, the roles, the email addresses the
 // directory reads, and the activity log.
 var Migration = pgdb.Migration{
 	Name: "roux-users", FS: migrations, Dir: "migrations",
@@ -698,7 +698,7 @@ func (s Service) SignOutEverywhere(ctx context.Context, id uuid.UUID) error {
 }
 
 // FirstSignIn records a user's first sign-in, which the directory's invited flag
-// reads. Register hooks it to who's sign-ins.
+// reads. Register hooks it to every sign-in.
 func (s Service) FirstSignIn(ctx context.Context, id uuid.UUID, at time.Time) error {
 	_, err := s.Pool.Exec(ctx,
 		`update roux_user set first_signed_in_at = $2 where id = $1 and first_signed_in_at is null`, id, at)

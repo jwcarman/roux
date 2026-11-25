@@ -185,7 +185,7 @@ func (e *env) settle() int {
 	return len(e.out.all())
 }
 
-// browser is a client with cookies that follows who's CSRF protocol like who-client.
+// browser is a client with cookies that sends the CSRF header as roux-web's client does.
 type browser struct {
 	t    *testing.T
 	base string

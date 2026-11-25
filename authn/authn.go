@@ -1,7 +1,6 @@
-// Package authn is who you are: sessions, and the sign-in methods that start them. It is
-// served in the shape of the who identity contract, because that is what roux-web's
-// who-client calls: who's paths, JSON, error format and CSRF scheme, so the same front end
-// works against this server unchanged.
+// Package authn is who you are: sessions, and the sign-in methods that start them, under
+// /api/roux/auth. Its paths, JSON, error format and CSRF scheme are what roux-web's auth client
+// calls (contracts/ holds the shared shapes): change them together.
 //
 // The core serves
 //
@@ -12,8 +11,8 @@
 // plus the sessions behind them (roux_session, one cookie per browser, checked
 // against the database on every request). Sign-in methods plug in as Methods:
 // emaillink is the first; passkeys, providers, API keys and the account endpoints
-// follow. Every error under the base path is who's problem format (see render)
-// and every endpoint follows who's CSRF scheme (see csrf).
+// follow. Every error under the base path is roux's problem format (see render)
+// and every endpoint follows roux's CSRF scheme (see csrf).
 //
 // With no Pool the core is the signed-out world only: nobody can sign in.
 package authn
@@ -46,7 +45,7 @@ type Config struct {
 	// Pool stores identities and sessions. Without it nobody can sign in.
 	Pool *pgxpool.Pool
 	// SessionTimeout is how long a session may sit unused before it ends
-	// (who's server session timeout); default 30 minutes.
+	// (the session's idle timeout); default 30 minutes.
 	SessionTimeout time.Duration
 	// SessionLifetime is the longest a session lasts, however busy: past it the person signs in
 	// again, so a stolen cookie kept warm still dies. Default 12 hours.
@@ -109,7 +108,7 @@ type Host struct {
 	onSignedIn      []func(ctx context.Context, identityID uuid.UUID, at time.Time) error
 }
 
-// Handle registers "METHOD /path" (relative to the base path) behind who's CSRF check.
+// Handle registers "METHOD /path" (relative to the base path) behind roux's CSRF check.
 func (h *Host) Handle(pattern string, fn api.HandlerFunc) { h.kit.Handle(pattern, h.csrf(fn)) }
 
 // SecureCookie says whether a cookie set in answer to the request carries the Secure flag:
@@ -135,7 +134,7 @@ func (h *Host) now() time.Time { return h.clock().UTC() }
 // AddCounter registers a credential counter for /api/roux/auth/me's "credentials".
 func (h *Host) AddCounter(c Counter) { h.counters = append(h.counters, c) }
 
-// Register mounts who's endpoints on mux under cfg.BasePath and mounts methods.
+// Register mounts roux's endpoints on mux under cfg.BasePath and mounts methods.
 // The returned Host guards the application's own routes (see Host.Guard).
 func Register(mux *api.Mux, cfg Config, methods ...Method) (*Host, error) {
 	base := BasePath

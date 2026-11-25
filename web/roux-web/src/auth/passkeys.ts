@@ -28,7 +28,7 @@ export interface Passkeys<D> {
   signIn(): Promise<AuthResult<SignedIn, "rejected", D> | Cancelled>;
 }
 
-/** One of your passkeys, named by its WebAuthn credential id; who's own id is never shown. */
+/** One of your passkeys, named by its WebAuthn credential id; the server's own id is never shown. */
 export interface Passkey {
   credentialId: string;
   label: string;

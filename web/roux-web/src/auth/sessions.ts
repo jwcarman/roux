@@ -2,7 +2,7 @@ import { browserSessionRequired, json, nothing, signedOut, signInRequired, type 
 import type { BrowserSessionRequired, SignInRequired, AuthResult } from "./result";
 
 /**
- * One browser this person is signed in on. The id is who's own, never the session cookie, so the
+ * One browser this person is signed in on. The id is the server's own, never the session cookie, so the
  * list can be shown without exposing a session.
  */
 export interface Session {

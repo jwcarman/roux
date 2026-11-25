@@ -1,7 +1,6 @@
-// Package emaillink is sign-in by an emailed link or typed code: who's
-// who-email-link. A person enters an address and gets an email with a link and a
-// short code; opening the link or typing the code signs them in. It mounts two
-// endpoints under who's base path:
+// Package emaillink is sign-in by an emailed link or typed code. A person enters an
+// address and gets an email with a link and a short code; opening the link or typing the
+// code signs them in. It mounts two endpoints under /api/roux/auth:
 //
 //	POST /api/roux/auth/email/send     {"email"}                      always 202, whoever is asked about
 //	POST /api/roux/auth/email/sign-in  {"token"} or {"email","code"}  200 {"identityId"} + session, or 401
@@ -37,7 +36,7 @@ import (
 //go:embed migrations/*.sql
 var migrations embed.FS
 
-// Migration is the email-link schema; it runs after who's.
+// Migration is the email-link schema; it runs after authn's.
 var Migration = pgdb.Migration{Name: "roux-authn-emaillink", FS: migrations, Dir: "migrations", After: []string{"roux-authn"}}
 
 // maxBodyBytes caps the JSON a sign-in or send request may carry.

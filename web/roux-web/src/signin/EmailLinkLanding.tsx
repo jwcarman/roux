@@ -5,7 +5,7 @@ import { useSignInReturn } from "./returnTo";
 import { auth } from "./auth";
 
 /**
- * The page an emailed sign-in link opens (who's `email-link.link-base-url`, such as `/signin/link`):
+ * The page an emailed sign-in link opens (`PUBLIC_URL/signin/link`):
  * it takes the token out of the address bar and history, signs in with it once, and goes where the
  * visitor was going. A link that is used or too old is told, and so is a sign-in who could not
  * answer, each with a way back to `signInPath`.

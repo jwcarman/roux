@@ -10,7 +10,7 @@ the kits: the database, people and browsers, time, route tests, paged answers an
 - Sign in only through `a.SignedIn(id)`: it signs in as the browser does and carries the CSRF token.
 - Never `new QueryClient()` in a test: `testQueryClient()` or `renderWithProviders`, or
   `meta.refreshes` never runs and forms never close.
-- Build browser-side problems with the kit (`invalidFields`, `invariantViolation`, `notFound`,
+- Build browser-side problems with the kit (`invalidFields`, `badRequest`, `notFound`,
   `stale`, `serverError`), in the server's words.
 - A test that fails is a finding to fix, not to delete.
 
@@ -68,7 +68,7 @@ func TestTodayIsTheOrganizationsDay(t *testing.T) {
   `checkAllAnswered()` (the setup runs these).
 - `renderWithProviders(ui, client?)`, `renderHookWithProviders(hook, client?, props?)`,
   `testQueryClient()`.
-- Problems: `invalidFields({ name: "..." })` 400, `invariantViolation("...")` 400, `notFound("...")`
+- Problems: `invalidFields({ name: "..." })` 400, `badRequest("...")` 400, `notFound("...")`
   404, `stale()` 409, `serverError(errorId?)` 500.
 - `pageOf(rows, params)`: a page as a list endpoint answers.
 - `TEST_USER`: who `signedInAs` signs in as (`id`, `displayName`, `email`).

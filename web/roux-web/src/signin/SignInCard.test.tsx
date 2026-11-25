@@ -8,7 +8,7 @@ import { renderWithProviders } from "../testing/render";
 import { server } from "../testing/server";
 import { SignInCard } from "./SignInCard";
 
-/** The ways of signing in who reports as on. */
+/** The ways of signing in the server reports as on. */
 function options(email: boolean, passkey: boolean, providers: { id: string; name: string }[] = []) {
   server.use(http.get("/api/roux/auth/sign-in", () => HttpResponse.json({ email, passkey, providers })));
 }

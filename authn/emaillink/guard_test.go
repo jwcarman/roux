@@ -43,7 +43,7 @@ func (e *env) signedIn() *browser {
 func TestGuardedRoutesAnswerAsRouxDoes(t *testing.T) {
 	e := setup(t)
 
-	// Anonymous: 401 "Sign in to continue", in the kit's problem format, not who's.
+	// Anonymous: 401 "Sign in to continue", in the kit's problem format, not roux's.
 	anon := e.browser().get("/api/me-only")
 	body := anon.json(t)
 	if anon.StatusCode != 401 || body["detail"] != "Sign in to continue" || body["title"] != "Unauthorized" ||

@@ -15,6 +15,10 @@ export interface Problem {
   errors?: FieldProblem[];
   /** On a 500 only: the reference the server logged the failure under. */
   errorId?: string;
+  /** A stable name for the refusal, where the server gives one (`invalid-csrf-token`). */
+  code?: string;
+  /** The request's trace, where tracing is on: what to search the traces and logs for. */
+  traceId?: string;
 }
 
 function isFieldProblem(value: unknown): value is FieldProblem {
@@ -43,6 +47,8 @@ export async function problemOf(response: Response): Promise<Problem> {
     if (typeof body.detail === "string") problem.detail = body.detail;
     if (typeof body.instance === "string") problem.instance = body.instance;
     if (typeof body.errorId === "string") problem.errorId = body.errorId;
+    if (typeof body.code === "string") problem.code = body.code;
+    if (typeof body.traceId === "string") problem.traceId = body.traceId;
     if (Array.isArray(body.errors) && body.errors.length > 0 && body.errors.every(isFieldProblem)) {
       problem.errors = body.errors;
     }

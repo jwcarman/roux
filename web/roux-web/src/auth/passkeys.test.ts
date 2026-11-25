@@ -84,7 +84,7 @@ describe("passkeys.supported", () => {
 });
 
 describe("me.passkeys.register", () => {
-  it("turns who's options into bytes, and the new passkey back into who's JSON", async () => {
+  it("turns roux's options into bytes, and the new passkey back into roux's JSON", async () => {
     let body: unknown;
     server.use(
       http.post(at("/api/roux/auth/me/passkeys/options"), () => HttpResponse.json(CREATION_OPTIONS)),

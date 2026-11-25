@@ -20,7 +20,7 @@ import (
 type Principal struct {
 	IdentityID   uuid.UUID
 	CredentialID uuid.UUID
-	// SessionID is who's id for the session (not the cookie): what the account endpoints show.
+	// SessionID is roux's id for the session (not the cookie): what the account endpoints show.
 	SessionID uuid.UUID
 	// Permissions is sorted, and never nil.
 	Permissions []string
@@ -77,7 +77,7 @@ func (h *Host) principal(r *http.Request) (*Principal, error) {
 	}, nil
 }
 
-// Guard protects one of the application's routes: CSRF-checked like who's own, then
+// Guard protects one of the application's routes: CSRF-checked like roux's own, then
 // signed in (401 "Sign in to continue"), then holding the permission when one is
 // named (403 "You do not have permission"). The handler finds who is calling with
 // PrincipalFrom. Name no permission to ask only that the caller be signed in.
@@ -113,7 +113,7 @@ func (h *Host) Open(fn api.HandlerFunc) api.HandlerFunc {
 }
 
 // RequireRecentSignIn refuses a caller who signed in longer ago than the recent
-// window, with who's reauthentication-required (401): the person signs in again and
+// window, with roux's reauthentication-required (401): the person signs in again and
 // retries. It is for actions only a fresh sign-in should be able to take.
 func (h *Host) RequireRecentSignIn(ctx context.Context) error {
 	p := PrincipalFrom(ctx)
@@ -140,8 +140,8 @@ func (h *Host) OnSignedIn(fn func(ctx context.Context, identityID uuid.UUID, at 
 	h.onSignedIn = append(h.onSignedIn, fn)
 }
 
-// HandleSigned registers a route under who's base path (relative, like Handle) for a
-// person at a browser: CSRF-checked, then 401 not-signed-in in who's format, then 403
+// HandleSigned registers a route under roux's base path (relative, like Handle) for a
+// person at a browser: CSRF-checked, then 401 not-signed-in in roux's format, then 403
 // browser-session-required for a request an API key signed in (or one with a key beside the
 // session cookie), then fn with who is calling. It is the guard every /api/roux/auth/me/* endpoint
 // uses, so a leaked key can never change how someone signs in.

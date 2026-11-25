@@ -67,7 +67,7 @@ func NewWith(t *testing.T, schema string, clk *Clock, methods []authn.Method, mi
 	return NewWithConfig(t, schema, clk, nil, methods, migrations...)
 }
 
-// NewWithConfig is NewWith with a say in who's configuration: tune adjusts what the test
+// NewWithConfig is NewWith with a say in roux's configuration: tune adjusts what the test
 // would otherwise get (the pool, the clock and the permissions are already set).
 func NewWithConfig(t *testing.T, schema string, clk *Clock, tune func(*authn.Config), methods []authn.Method, migrations ...pgdb.Migration) *Env {
 	t.Helper()
@@ -137,7 +137,7 @@ func (e *Env) SignedIn(identityID uuid.UUID) *Browser {
 	return b
 }
 
-// Browser is a client with cookies that sends who's CSRF header like who-client does.
+// Browser is a client with cookies that sends the CSRF header as roux-web's client does.
 type Browser struct {
 	T    *testing.T
 	Base string

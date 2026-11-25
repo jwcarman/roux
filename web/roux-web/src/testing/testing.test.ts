@@ -4,9 +4,9 @@ describe("@jwcarman/roux-web/testing", () => {
   it("the testing entry exports the kit", async () => {
     expect(Object.keys(await import("./index")).sort()).toEqual([
       "TEST_USER",
+      "badRequest",
       "checkAllAnswered",
       "invalidFields",
-      "invariantViolation",
       "listen",
       "notFound",
       "pageOf",

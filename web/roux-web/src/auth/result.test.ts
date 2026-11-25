@@ -18,7 +18,7 @@ describe("unwrap", () => {
     } catch (e) {
       expect(e).toMatchObject({
         name: "AuthError",
-        message: "who answered 409: nope",
+        message: "the server answered 409: nope",
         reason: "nope",
         status: 409,
         detail: "taken",
