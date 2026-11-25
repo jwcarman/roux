@@ -80,10 +80,21 @@ beforeEach(() => {
 
 const latest = () => requests[requests.length - 1];
 
-/** The Add item button, once the team has loaded: until then it is a different, disabled one. */
+/**
+ * The Add item button, once the page and the team have loaded: until then it is a different,
+ * disabled one. The whole route renders first (shell, page, list), which on CI's runner, with
+ * coverage on, can take longer than testing-library's one-second default.
+ */
 async function enabledAddButton() {
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Add item" })).toBeEnabled(),
+  await screen.findByRole(
+    "link",
+    { name: "Draft the agenda" },
+    { timeout: 5000 },
+  );
+  await waitFor(
+    () =>
+      expect(screen.getByRole("button", { name: "Add item" })).toBeEnabled(),
+    { timeout: 5000 },
   );
   return screen.getByRole("button", { name: "Add item" });
 }
