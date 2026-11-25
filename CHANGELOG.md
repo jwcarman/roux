@@ -6,6 +6,17 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-25
+
+### Breaking changes
+
+- **roux's server is Go.** The Spring Boot runtime (the Maven modules, the BOM and the archetype)
+  is gone; `github.com/jwcarman/roux` is a Go module at the repository root, its endpoints under
+  `/api/roux`. `@jwcarman/roux-web` keeps its name and talks to the Go server. A new app starts with
+  `npm create @jwcarman/roux-app <name>` (Go and React; Go 1.27, Node 20 or later). An app built on
+  0.3.0 or earlier stays on the Java line: there is no migration path, and its Maven artifacts remain
+  on Maven Central. The guides and the Claude Code skill describe the Go runtime only.
+
 ### Security
 
 - **`github.com/klauspost/compress` is v1.20.2** (from v1.19.1), in roux, the template and Roux The
@@ -580,7 +591,8 @@ First release: the contracts every roux application shares, on both the Java and
 - Java 25 and Spring Boot 4.1.
 - React, Chakra UI and the TanStack libraries are peer dependencies of `@jwcarman/roux-web`.
 
-[Unreleased]: https://github.com/jwcarman/roux/compare/0.3.0...HEAD
+[Unreleased]: https://github.com/jwcarman/roux/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/jwcarman/roux/releases/tag/v0.4.0
 [0.3.0]: https://github.com/jwcarman/roux/releases/tag/0.3.0
 [0.2.0]: https://github.com/jwcarman/roux/releases/tag/0.2.0
 [0.1.0]: https://github.com/jwcarman/roux/releases/tag/0.1.0
