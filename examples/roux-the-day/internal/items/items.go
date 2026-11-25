@@ -24,6 +24,9 @@ const (
 	ItemsDeleteAny = "items.delete.any" // delete an item someone else wrote
 )
 
+// Permissions is every permission items checks, for the app's list of them.
+var Permissions = []string{ItemsRead, ItemsWrite, ItemsDeleteAny}
+
 //go:embed migrations/*.sql
 var migrations embed.FS
 

@@ -8,6 +8,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **The front end's permissions generated from the server's, and the grants checked.**
+  `rouxtest.PermissionsFile(t, path, permissions...)` writes `frontend/src/permissions.gen.ts`
+  (a constant per permission, and `PERMISSIONS`), failing once when it was stale so the change
+  is committed; `rouxtest.CheckGrants(t, db, permissions...)` fails when OWNER lacks one or a role
+  is granted one nobody declares. `app.RouxPermissions()` is roux's own. The template's
+  `cmd/server/permissions_test.go` runs both over every migration the app runs; an app lists
+  its permissions in `permissions()` in `modules.go`, roux's then its own.
 - **Active members by id, for a feature that refers to people.** `users.MustBeActive(ctx, db,
   field, ids)` refuses ids that are not active members (400 on the field, "Must be active members
   of the team"); `users.Members(ctx, db, ids)` names them, by name, with whether each is still

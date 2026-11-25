@@ -63,3 +63,9 @@ func (*appRoles) Name() string { return "app-roles" }
 func (*appRoles) Migrations() []pgdb.Migration {
 	return []pgdb.Migration{{Name: "app-roles", FS: appMigrations, Dir: "migrations", After: []string{"roux-users"}}}
 }
+
+// permissions is every permission the application checks: roux's, then its own. Its permissions
+// test writes them into the front end (frontend/src/permissions.gen.ts) and checks the grants.
+func permissions() []string {
+	return app.RouxPermissions()
+}
