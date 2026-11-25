@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
+	"runtime/debug"
 	"syscall"
 	"time"
 	_ "time/tzdata" // zones must not depend on the machine the app runs on
@@ -104,7 +106,8 @@ func Run(ctx context.Context, cfg Config) error {
 	srv := Server(addr, telemetry.HTTP(api.Recoverer(mux), health.LivePath, health.ReadyPath), secure)
 	errc := make(chan error, 1)
 	go func() { errc <- srv.ListenAndServe() }()
-	slog.Info("listening", "addr", addr)
+	slog.Info(kit.AppName+" is up at "+Getenv("PUBLIC_URL", "http://localhost:8080"),
+		"roux", rouxVersion(debug.ReadBuildInfo()), "go", runtime.Version(), "addr", addr)
 
 	select {
 	case err := <-errc:
@@ -165,4 +168,28 @@ func frontendFS(built func() (fs.FS, bool)) fs.FS {
 	}
 	slog.Warn("no front end: serving the stand-in page (set FRONTEND_DIR, or build with `make build`)")
 	return spa.StandIn()
+}
+
+// rouxModule is roux's Go module path, which the app's build info lists with its version.
+const rouxModule = "github.com/jwcarman/roux"
+
+// rouxVersion is the roux the binary was built with: the release (v0.4.0), "local (../)" when the
+// app builds against a checkout through a replace, or "unknown" without build info.
+func rouxVersion(info *debug.BuildInfo, ok bool) string {
+	if !ok {
+		return "unknown"
+	}
+	if info.Main.Path == rouxModule {
+		return info.Main.Version
+	}
+	for _, dep := range info.Deps {
+		if dep.Path != rouxModule {
+			continue
+		}
+		if dep.Replace != nil {
+			return "local (" + dep.Replace.Path + ")"
+		}
+		return dep.Version
+	}
+	return "unknown"
 }

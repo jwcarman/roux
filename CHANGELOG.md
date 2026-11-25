@@ -25,6 +25,9 @@ All notable changes to this project are documented in this file. The format foll
   written for the Java build and failed at once; both apps' suites pass against the Go server.
 - **`SMTP_USERNAME` and `SMTP_PASSWORD`,** the mail server's login (both or neither), so SendGrid,
   SES and the like work.
+- **One line says the app is up:** `Team Planner is up at http://localhost:8080`, with the roux
+  it was built with (`roux=v0.4.0`, or `local (../)` against a checkout), Go's version and the
+  address. It replaces `listening`.
 - **`PASSKEYS`** (`true` or `false`, default `true`) turns passkeys off.
 - **The template's front end has Prettier and ESLint** (`npm run format`, `format:check`, `lint`),
   with roux-web's settings, in `frontend/lint-tools/`; CI checks both. The skill's `check.sh` runs
