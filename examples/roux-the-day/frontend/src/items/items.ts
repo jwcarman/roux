@@ -176,6 +176,6 @@ const DAY = new Intl.DateTimeFormat("en-US", {
 
 /** When an item is, as the list shows it: `Tue, Nov 24 · 10:30`, or `Tue, Nov 24 · All day`. */
 export function whenOf(item: Pick<ItemRow, "day" | "at">): string {
-  const day = new Date(item.day + "T00:00:00Z");
-  return `${DAY.format(day)} · ${item.at ?? "All day"}`;
+  // A date alone ("2026-11-24") is read as midnight UTC, which DAY formats in UTC.
+  return `${DAY.format(new Date(item.day))} · ${item.at ?? "All day"}`;
 }
