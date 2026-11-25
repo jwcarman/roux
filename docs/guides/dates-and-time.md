@@ -57,8 +57,8 @@ func (s Service) today() (time.Time, error) {
 }
 ```
 
-and its module passes them, from the kit (a module listed after the users module, whose `Mount`
-sets `k.Organization`):
+and its module passes them, from the kit (the users module sets `k.Organization` before any
+other module mounts, wherever it is listed):
 
 ```go
 Register(k, Service{

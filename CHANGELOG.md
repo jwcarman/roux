@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **The users module mounts first,** whatever the order of the module list, so
+  `k.Organization()` and `k.ShellTheme` are the app's own settings in every module's `Mount` and
+  `Start`, not UTC and `en-US`. The guides and the skill no longer warn about module order.
+
 - **An app can reword any of roux's emails** (`authn/emaillink`): each email is now a pair of Go
   templates (`<name>.txt` with its subject, `<name>.html` in a shared `layout.html`), and a file of
   the same name in the app's `cmd/server/emails/` replaces roux's. `app.EmailLinkFromEnv(appName,

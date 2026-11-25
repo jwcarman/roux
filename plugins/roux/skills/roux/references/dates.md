@@ -23,8 +23,7 @@ Settings: `ORG_TIME_ZONE` (an IANA zone, default `UTC`; an offset is refused), `
 (BCP 47, default `en-US`).
 
 Server: `k.Organization()` → `organization.Context` (in the browser, `OrganizationContext`) (`TimeZone`, `Locale`, `Today`, `TodayEndsAt`,
-`Currency`, `FractionDigits`); it is UTC and `en-US` until the users module mounts, so call it per
-request (as below), not once at `Mount` in a module listed earlier. The same context is in every
+`Currency`, `FractionDigits`); the users module sets it before any other module mounts, so read it at `Mount` or per request. The same context is in every
 page and at `GET /api/roux/organization` (`organization.Path`, signed in), built by the users
 module's `organization.Calendar`.
 

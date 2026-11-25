@@ -40,7 +40,7 @@ database, the wire and the browser. An app has one currency, `ORG_CURRENCY`.
    price_minor_units bigint not null,
    price_currency    text   not null check (char_length(price_currency) = 3),
    ```
-2. The module reads the currency at `Mount` (listed after the users module):
+2. The module reads the currency at `Mount`:
 
    ```go
    func (m Module) Mount(_ context.Context, k *app.Kit) error {
@@ -73,4 +73,3 @@ Go test: a price in another currency is a field error `Must be in USD`; zero is 
 - Without `ORG_CURRENCY`, `k.Organization().Currency` is nil and the browser has no currency: stop
   at `Mount` with a message naming the setting.
 - `Plus` of two currencies and `Times` past `int64` return errors: return them, don't ignore them.
-- The module listed before the users module: the currency is not read yet.

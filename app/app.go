@@ -12,7 +12,9 @@
 //
 //  1. every module's migrations run together (ordered by their own After/Before declarations);
 //  2. every module's sign-in method is collected and who is registered with them, giving the Host;
-//  3. each module is mounted, in the order listed (it can use Kit.Host);
+//  3. each module is mounted, in the order listed (it can use Kit.Host), except that a module
+//     that mounts first (the users module) is mounted before the others, so Kit.Organization and
+//     Kit.ShellTheme are the application's own whatever the order of the list;
 //  4. each module is started, in the order listed (the first owner, warm-ups).
 package app
 
@@ -53,6 +55,11 @@ type Mounter interface {
 	Mount(ctx context.Context, k *Kit) error
 }
 
+// mountsFirst is a module whose Mount sets what other modules read from the kit while they mount
+// (the users module sets Kit.Organization and Kit.ShellTheme). Assemble mounts it before the
+// others, so the order of the list cannot hand a module the defaults.
+type mountsFirst interface{ mountsFirst() }
+
 // Starter is a module that has work to do once everything is mounted.
 type Starter interface {
 	Start(ctx context.Context, k *Kit) error
@@ -77,8 +84,8 @@ type Kit struct {
 	// mounted, else the stock one.
 	ShellTheme func(ctx context.Context) (spa.Theme, error)
 	// Organization is what the page tells the browser about the organization (zone, locale,
-	// today, currency): pass it to spa.Config.Context. The users module sets it from ORG_*;
-	// until then it is UTC and en-US.
+	// today, currency): pass it to spa.Config.Context. The users module sets it from ORG_*
+	// before any other module mounts; an application without the users module has UTC and en-US.
 	Organization func() organization.Context
 
 	modules []Module
@@ -256,7 +263,18 @@ func migrate(ctx context.Context, k *Kit, mods []Module) ([]authn.Method, error)
 }
 
 func mountAll(ctx context.Context, k *Kit, mods []Module) error {
-	for _, m := range mods {
+	first := func(m Module) bool { _, ok := m.(mountsFirst); return ok }
+	ordered := slices.Clone(mods)
+	slices.SortStableFunc(ordered, func(a, b Module) int {
+		switch {
+		case first(a) && !first(b):
+			return -1
+		case first(b) && !first(a):
+			return 1
+		}
+		return 0
+	})
+	for _, m := range ordered {
 		if mt, ok := m.(Mounter); ok {
 			if err := mt.Mount(ctx, k); err != nil {
 				return fmt.Errorf("app: mounting %s: %w", m.Name(), err)

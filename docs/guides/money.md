@@ -14,8 +14,8 @@ ORG_CURRENCY=USD
 
 The users module reads it (an unknown code stops startup), and the organization's context carries
 the currency and its digits to the browser (`"currency": "USD", "fractionDigits": 2`;
-[Dates and time](dates-and-time.md)). Without it the context's currency is `null`. A module listed
-after the users module (whose `Mount` sets `k.Organization`) reads it from the kit:
+[Dates and time](dates-and-time.md)). Without it the context's currency is `null`. A module reads it from the kit
+(the users module sets `k.Organization` before any other module mounts):
 
 ```go
 func (m Module) Mount(_ context.Context, k *app.Kit) error {

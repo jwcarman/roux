@@ -132,9 +132,6 @@ func (m Module) Mount(_ context.Context, k *app.Kit) error {
 
 - `After` must name `app-roles` (the migration that creates `USER`): without it the grant to `USER`
   may run first, finds no role, and grants nothing, silently.
-- A module that reads `k.Organization()` (the zone, today) at `Mount` is listed after the users
-  module in `modules.go` (step 6): before the users module mounts, it is UTC and `en-US`, not the
-  `ORG_*` settings.
 
 ### 3. The input: `internal/labels/input.go`
 
@@ -929,8 +926,6 @@ before `a.Migrate`.
 - A migration edited after it ran: startup stops on the checksum. Add a new file.
 - `permissions.gen.ts` stale: the frontend's route imports `LABELS_READ` and fails to compile. Run
   `go test ./cmd/server` (twice) or the check script; never edit the file.
-- The module listed before `members` while reading `k.Organization()` at mount: it gets UTC, not
-  `ORG_TIME_ZONE`, and "today" is wrong in other zones.
 - Colours (or any enum) spelled differently in Go and TypeScript: every save is a `400`.
 - The update sending `id` or other members the server lacks: `api.Decode` answers `400`.
 - SQL built with `+` from a value: always `$n` arguments; only constant text is concatenated.

@@ -50,7 +50,7 @@ with the front end inside; `make image` the container image.
   - `app.Drainer`: `Drain()`, work to finish before exit;
   - `app.SignInProvider`: a way of signing in (roux's own modules).
 - `app.Kit`: `Pool`, `AppName`, `Mux`, `Organization` (a func; the users module points it at the
-  `ORG_*` settings when it mounts, UTC and `en-US` until then), and the route methods `Handle`,
+  `ORG_*` settings before any other module mounts; UTC and `en-US` in an app without it), and the route methods `Handle`,
   `HandleSignedIn`, `HandlePublic`.
 - `pgdb.Migration{Name, FS, Dir, After}`; `pgdb.Migrate` keeps checksums in `schema_history`.
   `pgdb.Connect(ctx, url)` is how `app.Main` opens the pool. `app.Getenv(key, fallback)` reads a
@@ -163,7 +163,5 @@ migration.
 
 - A boolean setting other than `true` or `false`, or a duration without a unit (`30`): startup
   stops naming it.
-- A module that reads `k.Organization()` at mount, listed before the users module: it gets UTC
-  and `en-US`, not the `ORG_*` settings.
 - A `PUBLIC_URL` of `http://` for another host is refused unless `COOKIE_SECURE=false` says so.
 - A CSP source like `*` or `'unsafe-inline'` stops the app from starting.
