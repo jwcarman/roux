@@ -16,8 +16,14 @@ All notable changes to this project are documented in this file. The format foll
   however busy it is, so a stolen cookie kept warm still dies. `authn.EndSessions` ends an
   identity's sessions inside a transaction.
 
+- **"An API key was made" email.** Making or rotating a key emails the owner
+  (`apikey.Config.Notify`, wired to `emaillink.Method.APIKeyMade` by `app.APIKeysFromEnv`), as
+  adding a passkey does.
+
 ### Changed
 
+- **A bearer token needs a recent sign-in to make or rotate an API key,** as a browser does: the
+  token's `auth_time`. A leaked access token could otherwise turn itself into a key lasting a year.
 - **Deactivating someone ends their sessions at once,** not at their next request: reactivated
   before then, they used to come back signed in.
 - **Dead sessions are cleared.** A sign-in deletes sessions that ended, idled out or outlived

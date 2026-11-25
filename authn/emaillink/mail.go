@@ -181,6 +181,20 @@ You got this email from %[1]s.
 		"If you did not link it, unlink it and secure your account.")
 }
 
+// apiKeyMadeMessage tells the owner that a secret for an API key was made (a new key or a
+// rotation), so that someone who did not make one notices: a key lasts for months.
+func apiKeyMadeMessage(app, brandColor, to, name string) Message {
+	text := fmt.Sprintf(`%[1]s
+
+A secret for the API key "%[2]s" was made on your account. If you did not make it, revoke it and secure your account.
+
+You got this email from %[1]s.
+`, app, name)
+	return notice(app, brandColor, to, "An API key was made for your "+app+" account", text,
+		"A secret for the API key <strong>"+html.EscapeString(name)+"</strong> was made on your account.",
+		"If you did not make it, revoke it and secure your account.")
+}
+
 // addressConfirmationMessage asks someone to confirm an address they are adding to their
 // account, or making theirs in place of another. The wording is roux's.
 func addressConfirmationMessage(change bool) messageBuilder {

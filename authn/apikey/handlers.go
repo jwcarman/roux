@@ -180,6 +180,7 @@ func (m *Method) create(w http.ResponseWriter, r *http.Request, p *authn.Princip
 	if err != nil {
 		return err
 	}
+	m.notify(r.Context(), p.IdentityID, name)
 	return api.JSON(w, http.StatusCreated, v)
 }
 
@@ -261,6 +262,7 @@ func (m *Method) rotate(w http.ResponseWriter, r *http.Request, p *authn.Princip
 	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
+	m.notify(ctx, p.IdentityID, name)
 	return api.JSON(w, http.StatusCreated, v)
 }
 
@@ -281,11 +283,9 @@ func (m *Method) revoke(w http.ResponseWriter, r *http.Request, p *authn.Princip
 	return nil
 }
 
-// requireRecent: a browser needs a recent sign-in to make or rotate a key; a bearer token does
-// not, since its own lifetime bounds it.
+// requireRecent: making or rotating a key needs a recent sign-in, for a browser and a bearer
+// token alike. A key outlives the token by months, so a leaked token must not be able to make
+// one; a token's sign-in is its auth_time, which a refresh does not move.
 func (m *Method) requireRecent(p *authn.Principal) error {
-	if p.Method == authn.MethodJWT {
-		return nil
-	}
 	return m.host.RequireRecent(p)
 }

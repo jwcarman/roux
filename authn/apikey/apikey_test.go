@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -374,6 +375,55 @@ func TestMakingOrRotatingNeedsASessionThatIsRecent(t *testing.T) {
 		if r := out.Do(c.method, c.path, nil, true); r.StatusCode != 401 || code(t, r) != "not-signed-in" {
 			t.Errorf("%s %s signed out: %d", c.method, c.path, r.StatusCode)
 		}
+	}
+}
+
+func TestABearerTokenMakesOrRotatesAKeyOnlyFromARecentSignIn(t *testing.T) {
+	e := setup(t)
+	id, _ := e.make("ci", "P30D", "report.read")
+	signedInAt := e.Clock.Now()
+	e.Host.AddAuthenticator("Authorization", func(_ *http.Request, _ string) (*authn.Principal, error) {
+		return &authn.Principal{IdentityID: e.owner, Method: authn.MethodJWT, SignedInAt: signedInAt,
+			Permissions: []string{"report.read"}}, nil
+	})
+	bearer := map[string]string{"Authorization": "Bearer access-token"}
+	body := map[string]any{"name": "from a token", "lifetime": "P30D", "scopes": []string{"report.read"}}
+	e.Browser().DoJSONWith("POST", "/api/roux/auth/me/api-keys", body, bearer).Want(t, 201, "a token from a recent sign-in")
+
+	// A refreshed token keeps its auth_time: an hour on, the person must sign in again first.
+	e.Clock.Advance(time.Hour)
+	for _, c := range []struct{ method, path string }{
+		{"POST", "/api/roux/auth/me/api-keys"}, {"POST", "/api/roux/auth/me/api-keys/" + id + "/rotations"},
+	} {
+		r := e.Browser().DoJSONWith(c.method, c.path, body, bearer)
+		if r.StatusCode != 401 || code(t, r) != "reauthentication-required" {
+			t.Errorf("%s %s from a stale sign-in: %d %s", c.method, c.path, r.StatusCode, r.Body)
+		}
+	}
+}
+
+func TestMakingOrRotatingAKeyTellsItsOwner(t *testing.T) {
+	var (
+		mu      sync.Mutex
+		notices []string
+	)
+	e := setup(t, func(c *apikey.Config) {
+		c.Notify = func(_ context.Context, identityID uuid.UUID, name string) error {
+			mu.Lock()
+			defer mu.Unlock()
+			notices = append(notices, identityID.String()+" "+name)
+			return nil
+		}
+	})
+	id, _ := e.make("ci", "P30D", "report.read")
+	e.ada.Post("/api/roux/auth/me/api-keys/"+id+"/rotations", map[string]string{"overlap": "PT0S"}).Want(t, 201, "rotate")
+	e.ada.Post("/api/roux/auth/me/api-keys", map[string]any{"name": "", "lifetime": "P1D"}).Want(t, 400, "a key not made")
+	e.method.Wait()
+	mu.Lock()
+	defer mu.Unlock()
+	want := e.owner.String() + " ci"
+	if len(notices) != 2 || notices[0] != want || notices[1] != want {
+		t.Fatalf("notices %v, want two of %q: one made, one rotated, none refused", notices, want)
 	}
 }
 

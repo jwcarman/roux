@@ -551,3 +551,23 @@ func TestTellingTheOwnerAnAccountWasLinked(t *testing.T) {
 		t.Fatal("emailed an identity with no address")
 	}
 }
+
+func TestTellingTheOwnerAnAPIKeyWasMade(t *testing.T) {
+	e := setup(t)
+	if err := e.method.APIKeyMade(context.Background(), e.ownerID, "<ci>"); err != nil {
+		t.Fatal(err)
+	}
+	m := e.waitForMail(1)[0]
+	if m.To != owner || m.Subject != "An API key was made for your Acme Gym account" ||
+		!strings.Contains(m.Text, `A secret for the API key "<ci>" was made on your account.`) ||
+		!strings.Contains(m.Text, "If you did not make it, revoke it and secure your account.") ||
+		!strings.Contains(m.HTML, "<strong>&lt;ci&gt;</strong>") {
+		t.Fatalf("%+v", m)
+	}
+	if err := e.method.APIKeyMade(context.Background(), uuid.New(), "ci"); err != nil {
+		t.Fatal(err)
+	}
+	if e.settle() != 1 {
+		t.Fatal("emailed an identity with no address")
+	}
+}

@@ -177,6 +177,9 @@ func (*APIKeys) Name() string                 { return "api-keys" }
 func (*APIKeys) Migrations() []pgdb.Migration { return []pgdb.Migration{apikey.Migration} }
 func (k *APIKeys) SignIn() authn.Method       { return k.Method }
 
+// Drain waits for "API key made" notices accepted a moment ago to go out.
+func (k *APIKeys) Drain() { k.Method.Wait() }
+
 // APIKeysFromEnv is the API key module, or nil when API_KEYS=off. Keys are made by a signed-in
 // person, so it needs sign-in to be on.
 //
@@ -191,7 +194,7 @@ func APIKeysFromEnv(email *EmailLink) (*APIKeys, error) {
 		slog.Info("API keys are off")
 		return nil, nil
 	}
-	cfg := apikey.Config{Prefix: os.Getenv("API_KEY_PREFIX"), Header: os.Getenv("API_KEY_HEADER")}
+	cfg := apikey.Config{Prefix: os.Getenv("API_KEY_PREFIX"), Header: os.Getenv("API_KEY_HEADER"), Notify: email.Method.APIKeyMade}
 	longest, err := duration("API_KEY_MAX_LIFETIME")
 	if err != nil {
 		return nil, err

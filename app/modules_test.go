@@ -156,6 +156,8 @@ func TestAPIKeysAreOnByDefault(t *testing.T) {
 	if k.Name() != "api-keys" || len(k.Migrations()) != 1 || k.SignIn() == nil {
 		t.Fatalf("%s %d %v", k.Name(), len(k.Migrations()), k.SignIn())
 	}
+	var drains app.Drainer = k // so shutdown waits for its "API key made" notices
+	drains.Drain()             // nothing in flight: returns at once
 }
 
 func TestAPIKeysRefuseWhatTheyCannotUse(t *testing.T) {

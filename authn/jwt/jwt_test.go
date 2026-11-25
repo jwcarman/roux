@@ -230,18 +230,24 @@ func TestATokenIsNotABrowserSession(t *testing.T) {
 			t.Errorf("%s: %d %s", path, r.StatusCode, r.Body)
 		}
 	}
-	// But a token may manage API keys, with no recent sign-in (its own lifetime bounds it, and its
-	// auth_time is long past here), and a key it made cannot make more keys.
+	// A token may manage API keys, but making or rotating one needs a recent sign-in (its
+	// auth_time), as at a browser: a key outlives the token by months. A key it made cannot make
+	// more keys.
+	keyBody := map[string]any{"name": "ci", "lifetime": "P7D", "scopes": []string{"report.read"}}
 	stale := e.prov.Mint(claims("user-1", map[string]any{"auth_time": e.Clock.Now().Add(-24 * time.Hour).Unix()}))
-	r := e.Browser().DoJSONWith("POST", "/api/roux/auth/me/api-keys", map[string]any{"name": "ci", "lifetime": "P7D", "scopes": []string{"report.read"}}, bearer(stale))
+	if r := e.Browser().DoJSONWith("POST", "/api/roux/auth/me/api-keys", keyBody, bearer(stale)); r.StatusCode != 401 || code(t, r) != "reauthentication-required" {
+		t.Fatalf("a token from a day-old sign-in making a key: %d %s", r.StatusCode, r.Body)
+	}
+	fresh := e.prov.Mint(claims("user-1", map[string]any{"auth_time": e.Clock.Now().Unix()}))
+	r := e.Browser().DoJSONWith("POST", "/api/roux/auth/me/api-keys", keyBody, bearer(fresh))
 	made := r.JSON(t)
 	if r.StatusCode != 201 || made["key"] == nil {
 		t.Fatalf("a token making a key: %d %s", r.StatusCode, r.Body)
 	}
 	if r := e.call("GET", "/api/roux/auth/me/api-keys", stale); r.StatusCode != 200 {
-		t.Fatalf("list keys with a token: %d %s", r.StatusCode, r.Body)
+		t.Fatalf("list keys with a token, however old its sign-in: %d %s", r.StatusCode, r.Body)
 	}
-	rot := e.Browser().DoJSONWith("POST", "/api/roux/auth/me/api-keys/"+made["id"].(string)+"/rotations", map[string]string{"overlap": "PT0S"}, bearer(stale))
+	rot := e.Browser().DoJSONWith("POST", "/api/roux/auth/me/api-keys/"+made["id"].(string)+"/rotations", map[string]string{"overlap": "PT0S"}, bearer(fresh))
 	if rot.StatusCode != 201 {
 		t.Fatalf("a token rotating a key: %d %s", rot.StatusCode, rot.Body)
 	}

@@ -18,6 +18,7 @@
 package apikey
 
 import (
+	"context"
 	"embed"
 	"errors"
 	"fmt"
@@ -25,6 +26,7 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -67,6 +69,10 @@ type Config struct {
 	LastUsedInterval time.Duration
 	// Clock is the time source; default time.Now.
 	Clock func() time.Time
+	// Notify tells the owner a key's secret was made, by making or rotating it (see
+	// emaillink.Method.APIKeyMade). It runs after the answer; a failure is logged, never fails
+	// the key.
+	Notify func(ctx context.Context, identityID uuid.UUID, name string) error
 }
 
 var prefixPattern = regexp.MustCompile(`^[A-Za-z0-9_]{1,19}_$`)
@@ -76,6 +82,23 @@ type Method struct {
 	cfg  Config
 	pool *pgxpool.Pool
 	host *authn.Host
+	wg   sync.WaitGroup // the notices still being sent
+}
+
+// Wait blocks until the "API key made" notices still being sent are done.
+func (m *Method) Wait() { m.wg.Wait() }
+
+// notify tells the owner a key's secret was made, after the answer.
+func (m *Method) notify(ctx context.Context, identityID uuid.UUID, name string) {
+	if m.cfg.Notify == nil {
+		return
+	}
+	ctx = context.WithoutCancel(ctx)
+	m.wg.Go(func() {
+		if err := m.cfg.Notify(ctx, identityID, name); err != nil {
+			slog.WarnContext(ctx, "could not send the API-key-made notice", "err", err)
+		}
+	})
 }
 
 // New validates the configuration (naming the fix in any error) and returns the method.

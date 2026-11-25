@@ -233,6 +233,17 @@ func (m *Method) AccountLinked(ctx context.Context, identityID uuid.UUID, provid
 	return m.cfg.Sender.Send(ctx, accountLinkedMessage(m.cfg.AppName, m.cfg.BrandColor, address, provider))
 }
 
+// APIKeyMade emails the identity's oldest address that a secret for the named API key was made
+// (a new key, or a rotation). An identity with no address is not emailed. A failure is returned
+// for the caller to log; it must not fail the key.
+func (m *Method) APIKeyMade(ctx context.Context, identityID uuid.UUID, name string) error {
+	address, err := oldestAddress(ctx, m.store.pool, identityID)
+	if err != nil || address == "" {
+		return err
+	}
+	return m.cfg.Sender.Send(ctx, apiKeyMadeMessage(m.cfg.AppName, m.cfg.BrandColor, address, name))
+}
+
 // IsAddress reports whether the text is a plain email address (no display name, no
 // angle brackets, no whitespace), of a sane length.
 func IsAddress(s string) bool { return looksLikeAnAddress(s) }
