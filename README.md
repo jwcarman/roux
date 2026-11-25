@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/jwcarman/roux/actions/workflows/ci.yml/badge.svg)](https://github.com/jwcarman/roux/actions/workflows/ci.yml)
 [![Docs](https://github.com/jwcarman/roux/actions/workflows/docs.yml/badge.svg)](https://github.com/jwcarman/roux/actions/workflows/docs.yml)
-[![CodeQL](https://github.com/jwcarman/roux/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/jwcarman/roux/actions/workflows/github-code-scanning/codeql)
+[![CodeQL](https://github.com/jwcarman/roux/actions/workflows/codeql.yml/badge.svg)](https://github.com/jwcarman/roux/actions/workflows/codeql.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/jwcarman/roux.svg)](https://pkg.go.dev/github.com/jwcarman/roux)
 [![npm](https://img.shields.io/npm/v/@jwcarman/roux-web?label=roux-web)](https://www.npmjs.com/package/@jwcarman/roux-web)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
