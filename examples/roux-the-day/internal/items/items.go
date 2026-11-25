@@ -45,7 +45,7 @@ func (m Module) Mount(_ context.Context, k *app.Kit) error {
 	if now == nil {
 		now = time.Now
 	}
-	Register(k.Mux, k.Host, Service{
+	Register(k, Service{
 		Pool:  k.Pool,
 		Clock: now,
 		Zone:  func() string { return k.Organization().TimeZone },

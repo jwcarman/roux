@@ -83,6 +83,30 @@ type Kit struct {
 	modules []Module
 }
 
+// Handle registers one of the application's routes for callers holding permission: an unsafe
+// request must carry the CSRF token (403), and every request must come from someone signed in
+// (401) who holds the permission (403). It is Mux.Handle and Host.Guard in one call,
+// so a route cannot be mounted half guarded. An empty permission panics at startup: a route
+// for anyone signed in is HandleSignedIn, and one for anybody is HandlePublic.
+func (k *Kit) Handle(pattern, permission string, fn api.HandlerFunc) {
+	if permission == "" {
+		panic(fmt.Sprintf("app: route %q names no permission: use HandleSignedIn or HandlePublic", pattern))
+	}
+	k.Mux.Handle(pattern, k.Host.Guard(permission, fn))
+}
+
+// HandleSignedIn registers a route for anyone signed in, whatever they may do (their own
+// settings, say). CSRF-checked like every route.
+func (k *Kit) HandleSignedIn(pattern string, fn api.HandlerFunc) {
+	k.Mux.Handle(pattern, k.Host.Guard("", fn))
+}
+
+// HandlePublic registers a route anybody may call, signed in or not. CSRF-checked like every
+// route; authn.PrincipalFrom finds a signed-in caller and is nil for anyone else.
+func (k *Kit) HandlePublic(pattern string, fn api.HandlerFunc) {
+	k.Mux.Handle(pattern, k.Host.Open(fn))
+}
+
 // Drain waits for the modules' work in flight. Call it after the server has stopped taking requests.
 func (k *Kit) Drain() {
 	for _, m := range k.modules {

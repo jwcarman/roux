@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jwcarman/roux/api"
+	"github.com/jwcarman/roux/app"
 	"github.com/jwcarman/roux/authn"
 	"github.com/jwcarman/roux/problem"
 )
@@ -13,16 +14,16 @@ import (
 // BasePath is where the items' endpoints live.
 const BasePath = "/api/items"
 
-// Register serves the items' endpoints; every one goes through the host's guard (CSRF, sign-in,
-// then the permission).
+// Register serves the items' endpoints; each is a kit route, so CSRF, sign-in and the
+// permission are checked before the handler runs.
 //
 //	GET    /api/items       a page of items: search, when, assignee, status   items.read
 //	POST   /api/items       add an item                                       items.write
 //	GET    /api/items/{id}  one item, with what its dialog needs              items.read
 //	PUT    /api/items/{id}  change it, from the version last seen (409)       items.write
 //	DELETE /api/items/{id}  delete it: its author, or items.delete.any        items.write
-func Register(mux *api.Mux, host *authn.Host, svc Service) {
-	mux.Handle("GET "+BasePath, host.Guard(ItemsRead, func(w http.ResponseWriter, r *http.Request) error {
+func Register(k *app.Kit, svc Service) {
+	k.Handle("GET "+BasePath, ItemsRead, func(w http.ResponseWriter, r *http.Request) error {
 		req, err := api.PageRequest(r, list.Config())
 		if err != nil {
 			return err
@@ -36,8 +37,8 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 			return err
 		}
 		return api.JSON(w, http.StatusOK, out)
-	}))
-	mux.Handle("POST "+BasePath, host.Guard(ItemsWrite, func(w http.ResponseWriter, r *http.Request) error {
+	})
+	k.Handle("POST "+BasePath, ItemsWrite, func(w http.ResponseWriter, r *http.Request) error {
 		in, _, err := decode(r, false)
 		if err != nil {
 			return err
@@ -47,8 +48,8 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 			return err
 		}
 		return api.JSON(w, http.StatusCreated, d)
-	}))
-	mux.Handle("GET "+BasePath+"/{id}", host.Guard(ItemsRead, func(w http.ResponseWriter, r *http.Request) error {
+	})
+	k.Handle("GET "+BasePath+"/{id}", ItemsRead, func(w http.ResponseWriter, r *http.Request) error {
 		id, err := itemID(r)
 		if err != nil {
 			return err
@@ -58,8 +59,8 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 			return err
 		}
 		return api.JSON(w, http.StatusOK, d)
-	}))
-	mux.Handle("PUT "+BasePath+"/{id}", host.Guard(ItemsWrite, func(w http.ResponseWriter, r *http.Request) error {
+	})
+	k.Handle("PUT "+BasePath+"/{id}", ItemsWrite, func(w http.ResponseWriter, r *http.Request) error {
 		id, err := itemID(r)
 		if err != nil {
 			return err
@@ -73,8 +74,8 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 			return err
 		}
 		return api.JSON(w, http.StatusOK, d)
-	}))
-	mux.Handle("DELETE "+BasePath+"/{id}", host.Guard(ItemsWrite, func(w http.ResponseWriter, r *http.Request) error {
+	})
+	k.Handle("DELETE "+BasePath+"/{id}", ItemsWrite, func(w http.ResponseWriter, r *http.Request) error {
 		id, err := itemID(r)
 		if err != nil {
 			return err
@@ -84,7 +85,7 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 		}
 		w.WriteHeader(http.StatusNoContent)
 		return nil
-	}))
+	})
 }
 
 func decode(r *http.Request, needVersion bool) (Input, int64, error) {

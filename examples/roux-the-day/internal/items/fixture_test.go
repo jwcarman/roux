@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jwcarman/roux/activity"
+	"github.com/jwcarman/roux/app"
 	"github.com/jwcarman/roux/authn"
 	"github.com/jwcarman/roux/authn/authntest"
 	"github.com/jwcarman/roux/authn/emaillink"
@@ -38,7 +39,7 @@ func setup(t *testing.T) *fx {
 		t.Fatal(err)
 	}
 	f := &fx{Env: env, zone: "America/New_York"}
-	items.Register(env.Mux, env.Host, items.Service{Pool: env.Pool, Clock: env.Clock.Now, Zone: func() string { return f.zone }})
+	items.Register(&app.Kit{Mux: env.Mux, Host: env.Host}, items.Service{Pool: env.Pool, Clock: env.Clock.Now, Zone: func() string { return f.zone }})
 	env.Serve()
 	f.olive = f.person("Olive Owner", "OWNER")
 	f.ada = f.person("Ada Lovelace", "USER")

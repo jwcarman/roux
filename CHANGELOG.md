@@ -6,6 +6,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- **Guarded routes in one call.** `kit.Handle(pattern, permission, fn)` mounts an application
+  route behind the CSRF check, a sign-in and the permission, so no route is mounted half
+  guarded; an empty permission panics at startup. `kit.HandleSignedIn` is for anyone signed in,
+  `kit.HandlePublic` for anybody. `Mux.Handle` with `Host.Guard` still works.
+
 ## [0.3.0] - 2026-11-24
 
 Upgrading from 0.2.0: read **Breaking changes** first. Each entry says what a roux app changes.
