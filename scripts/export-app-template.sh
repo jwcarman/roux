@@ -9,9 +9,10 @@
 #   VERSION   the roux release, as npm writes it (0.4.0; the Go module's tag is v0.4.0)
 #   OUT       the directory to write; it must not exist or be empty
 #   --from    the template to export (default template/); only its git-tracked files are copied
-#   --locks   resolve the locks against the published release: go.sum through `go mod tidy` (the Go
-#             module proxy must serve v<VERSION>) and the frontend lock's roux-web from npm (npm must
-#             serve it); every other locked version stays the one roux's build tested. Without it
+#   --locks   resolve the locks against the published release: go.sum through `go mod tidy` (the tag
+#             v<VERSION> must exist; release.yml fetches it from GitHub, not the proxy) and the
+#             frontend lock's roux-web from npm (npm must serve it); every other locked version
+#             stays the one roux's build tested. Without it
 #             the frontend lock, which links roux's own roux-web, is left out, and go.sum lacks roux.
 #
 # It fails when the copy still points into roux's repository (a replace of the Go module, a link to
@@ -84,8 +85,9 @@ with open(package_path, "w") as f:
 EOF
 
 if $LOCKS; then
-  # GOFLAGS=-mod=mod: tidy may write go.sum. GONOSUMDB is left alone: the checksum database vouches
-  # for the release like any other module.
+  # GOFLAGS=-mod=mod: tidy may write go.sum. Whether roux comes through the proxy and the checksum
+  # database or straight from its tag is the caller's GONOPROXY and GONOSUMDB; either gives the same
+  # hash.
   (cd "$OUT" && GOFLAGS=-mod=mod go mod tidy)
   # --prefer-online: a roux-web published minutes ago is not in a cached copy of the registry's list.
   (cd "$OUT/frontend" && npm install --package-lock-only --prefer-online --ignore-scripts --no-audit --no-fund >/dev/null)

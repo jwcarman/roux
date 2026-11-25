@@ -8,9 +8,10 @@ permissions:
   contents: read
 
 # A release is a GitHub Release whose tag is the Go module's version: v0.4.0 (v0.4.0-rc.1 for a
-# pre-release). The Go module needs no upload: the Go module proxy serves it from the tag. npm gets
-# the same version without the v (0.4.0). Nothing publishes unless verify passes; then the proxy and
-# roux-web go out side by side, and the starter last, once both serve the release.
+# pre-release). The Go module needs no upload: the tag is the release, and the Go module proxy
+# fetches it at the first `go get`. Nothing is asked of the proxy here: one asked before it has seen
+# the tag remembers "not found" for half an hour. npm gets the same version without the v (0.4.0).
+# Nothing publishes unless verify passes; then roux-web, and the starter once npm serves it.
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -70,30 +71,6 @@ jobs:
           npm publish -w @jwcarman/create-roux-app --access public --dry-run --tag "$([[ "$version" == *-* ]] && echo next || echo latest)"
         working-directory: web
 
-  # Asks the Go module proxy for the release, so it serves it (and pkg.go.dev lists it) now rather
-  # than at the first app's `go get`. The proxy can take a little while to see a new tag.
-  go:
-    needs: verify
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
-        with:
-          go-version: stable
-          cache: false
-      - name: Fetch the release through the proxy
-        env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-          GOPROXY: https://proxy.golang.org
-        run: |
-          for _ in 1 2 3 4 5 6 7 8 9 10; do
-            if go list -m "github.com/jwcarman/roux@$RELEASE_TAG"; then
-              exit 0
-            fi
-            sleep 30
-          done
-          echo "::error::the Go module proxy does not serve github.com/jwcarman/roux@$RELEASE_TAG"
-          exit 1
-
   npm:
     needs: verify
     runs-on: ubuntu-latest
@@ -130,10 +107,12 @@ jobs:
         working-directory: web
 
   # @jwcarman/create-roux-app (npm create @jwcarman/roux-app): the app template at this release, its
-  # go.sum and frontend lock resolved against the roux the proxy and npm now serve. A job of its own,
-  # so a failure here strands neither; re-run it alone ("Re-run failed jobs").
+  # go.sum resolved against roux's tag, fetched from GitHub (GONOPROXY, GONOSUMDB: the hash is computed
+  # from the tag, as the checksum database computes it), and its frontend lock against the roux-web
+  # npm now serves. A job of its own, so a failure here strands roux-web; re-run it alone ("Re-run
+  # failed jobs").
   starter:
-    needs: [go, npm]
+    needs: npm
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -156,6 +135,8 @@ jobs:
       - name: Bundle the template
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          GONOPROXY: github.com/jwcarman/roux
+          GONOSUMDB: github.com/jwcarman/roux
         run: |
           version="${RELEASE_TAG#v}"
           npm version "$version" --no-git-tag-version --allow-same-version -w @jwcarman/create-roux-app
@@ -169,6 +150,9 @@ jobs:
         working-directory: web
       # The app it ships must build against the published roux before anyone can make one.
       - name: Build the bundled app's server
+        env:
+          GONOPROXY: github.com/jwcarman/roux
+          GONOSUMDB: github.com/jwcarman/roux
         run: go build ./... && go vet ./...
         working-directory: web/create-roux-app/template
       - name: Publish the starter

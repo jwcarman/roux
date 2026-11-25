@@ -6,6 +6,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+
+- **A release no longer waits on the Go module proxy.** The release workflow's proxy job is gone:
+  asked for a tag seconds after it was made, the proxy cached "not found" for half an hour and held
+  up the starter (0.4.0's). The starter now resolves roux's `go.sum` from the tag on GitHub
+  (`GONOPROXY`, `GONOSUMDB`), which gives the hash the checksum database records.
+
 ## [0.4.0] - 2026-11-25
 
 ### Breaking changes
