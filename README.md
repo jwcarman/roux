@@ -37,26 +37,13 @@ Apps, never published as they are:
 
 ## Using roux
 
-Every roux app is a Spring Boot app with a React SPA on one origin, who for sign-in, and PostgreSQL.
-The guides in [`docs/guides/`](docs/guides/README.md) say how to build one, one concern each:
+Every roux app is a Go server with a React SPA on one origin, and PostgreSQL. The guides, published
+at <https://jwcarman.github.io/roux/> and kept in [`docs/guides/`](docs/guides/README.md), say how
+to build one, one concern each: getting started, a feature's server side, errors, roles and
+permissions, users, the API client, queries and mutations, forms, tables and paging, money, dates
+and time, the activity log, feedback, the shell, email and testing.
 
-- [Getting started](docs/guides/getting-started.md): `npm create @jwcarman/roux-app`, or by hand the
-  Maven and npm dependencies, who's required settings, the app root, one origin.
-- [Errors](docs/guides/errors.md): throwing errors on the server as Problem Details, and showing them
-  in the browser.
-- [API client](docs/guides/api-client.md): one typed API module per resource.
-- [Queries and mutations](docs/guides/queries-and-mutations.md): `createQueryClient`, query keys,
-  `meta.refreshes`, `useServerAction`.
-- [Forms](docs/guides/forms.md): Zod schemas in the server's words, `useSchemaForm`, fields,
-  `FormDialog`, versions and 409.
-- [Tables and paging](docs/guides/tables-and-paging.md): paged endpoints with jpa-utils, `QueryTable`,
-  search and filters in the URL, infinite lists and selects.
-- [Feedback](docs/guides/feedback.md): toasts, confirmations, error and not-found pages.
-- [Testing](docs/guides/testing.md): Java tests on real who and PostgreSQL, Vitest with MSW,
-  Playwright.
-
-The guides are also the references of roux's Claude Code plugin (`plugins/roux`), so an agent
-building a roux app reads the same pages.
+roux's Agent Skill (`plugins/roux`) is the same knowledge written for an agent.
 
 ## Building
 

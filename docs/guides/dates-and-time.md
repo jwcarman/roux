@@ -10,21 +10,15 @@ This is for the organization's own users (staff). A viewer's own locale is not s
 
 ## The settings
 
-```yaml
-roux:
-  organization:
-    time-zone: America/New_York   # an IANA zone: where the organization's day starts and ends
-    locale: en-US                 # a BCP 47 tag: how dates, numbers and amounts are written
+```bash
+ORG_TIME_ZONE=America/New_York   # an IANA zone: where the organization's day starts and ends
+ORG_LOCALE=en-US                 # a BCP 47 tag: how dates, numbers and amounts are written
 ```
 
-Both are required (`RouxOrganizationProperties`). There is no default: a missing setting fails
-startup with `roux.organization.time-zone must be set to the organization's time zone` (or
-`roux.organization.locale must be set to the organization's locale`); an unknown zone fails binding
-`roux.organization.time-zone`, and a fixed offset (`+05:00`, `UTC+3`) is refused: a place's zone
-knows its daylight saving time, an offset does not (`UTC` and `Etc/GMT+5` are fine). A tag written
-another way says how to write it (`roux.organization.locale must be written en-US, not en-us`), and a
-malformed tag or one the JVM has no locale for fails with
-`roux.organization.locale is not a locale this server knows: <tag>`.
+They default to `UTC` and `en-US`. An unknown zone stops startup (`the time zone "Mars/Base" is
+not an IANA zone`), and so does a locale written any other way than its canonical form (`the
+locale "en-us" must be a BCP 47 tag written canonically, such as en-US`). Prefer a place's zone to
+a fixed offset: a place's zone knows its daylight saving time, an offset does not.
 
 ### What changing a setting does
 
@@ -32,44 +26,63 @@ A redeploy with a new zone or locale is safe: nothing stored is reinterpreted.
 
 | What | After the change |
 | --- | --- |
-| Stored moments (`Instant`, `created_date`) | Unchanged; shown in the new zone. |
+| Stored moments (`timestamptz`, `created_at`) | Unchanged; shown in the new zone. |
 | Stored dates a person picked (a birth date, the day a payment was taken) | Unchanged. |
 | Today, this month, overdue, the default dates | Move to the new zone's. |
 | A date computed from the clock and a zone, then stored | Keeps the old zone's day (which is why you never store one). |
 | Tabs already open | Move on their next load. |
 
-## The server: `OrganizationCalendar`
+## The server
 
-`roux-organization` (in the starter) provides the `OrganizationCalendar` bean. Inject it wherever
-the server needs today:
+A feature that needs today takes the clock and the organization's zone, and works the day out
+from them, never from the server's own zone:
 
-- `today()`: the organization's `LocalDate`;
-- `thisMonth()`: its `YearMonth`;
-- `now()`: a `ZonedDateTime` in the organization's zone;
-- `todayEndsAt()`: the `Instant` the next day starts (a 23- or 25-hour day is right);
-- `zone()` and `locale()`: the settings, for a date taken from an instant
-  (`joinedAt.atZone(calendar.zone()).toLocalDate()`) or text the server writes
-  (`money.format(calendar.locale())`).
+```go
+// Service is the payments' operations.
+type Service struct {
+	Pool  *pgxpool.Pool
+	Clock func() time.Time
+	// Zone is the organization's time zone, for "today" and "this month".
+	Zone func() string
+}
 
-Each reads the instant from the app's `Clock` bean (who's, UTC; `Clock.systemUTC()` without one) and
-applies the organization's zone, never the clock's own. A test that sets the clock sets today on
-both sides:
-
-```java
-@Service
-class PaymentsService {
-  private final OrganizationCalendar calendar;
-
-  MonthlyTotals totals() {
-    YearMonth now = calendar.thisMonth();
-    ...
-  }
+// today is the organization's date now, at midnight UTC (how a Postgres date travels).
+func (s Service) today() (time.Time, error) {
+	zone, err := time.LoadLocation(s.Zone())
+	if err != nil {
+		return time.Time{}, err
+	}
+	y, m, d := s.Clock().In(zone).Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC), nil
 }
 ```
 
-**`@NotInFuture`** (roux-validation) checks against `OrganizationCalendar.today()`, exactly: the
-browser defaults and checks against the same day, so the two never disagree. Outside a roux app (no
-calendar bean) it falls back to the system clock's today plus one day.
+and its module passes them, from the kit (a module listed after the users module, whose `Mount`
+sets `k.Organization`):
+
+```go
+Register(k, Service{
+	Pool:  k.Pool,
+	Clock: now,
+	Zone:  func() string { return k.Organization().TimeZone },
+})
+```
+
+- **A date is a `date` column**, read and written as a `time.Time` at midnight UTC, and answered as
+  `"2026-11-24"` (`d.Format(time.DateOnly)`). Arithmetic on it is `d.AddDate(0, 0, n)`; the
+  Monday of its week is `d.AddDate(0, 0, -(int(d.Weekday())+6)%7)`.
+- **A time of day is a `time` column**, read into a `pgtype.Time` and answered as `"18:30"`. It is
+  a wall-clock time in the organization's zone, never converted.
+- **A moment is a `timestamptz` column** and a `time.Time`, answered as an ISO string (Go's JSON).
+- `k.Organization()` is the whole context below (`TimeZone`, `Locale`, `Today`, `TodayEndsAt`,
+  `Currency`, `FractionDigits`), for text the server writes (`money.Format(locale)`).
+- **A test sets the clock**: `rouxtest.App`'s `Clock` (`a.Clock.Now`, moved with `a.At(moment)`),
+  passed as the service's `Clock`. Today is that moment's date in the organization's zone
+  (`2026-04-15T03:00:00Z` is still April 14 in New York).
+
+A date that may not be in the future is checked against that same day: the day after `today()`
+and later are refused with `problem.MustNotBeInFuture`, so the browser's `notInFuture()` and the
+server never disagree.
 
 ## The context in the page
 
@@ -88,9 +101,8 @@ roux's shell writes the organization's context into every page it serves, beside
 }
 ```
 
-`currency` and `fractionDigits` are `null` without `roux.money.currency`. `GET /api/organization`
-(`OrganizationController`, open to anyone) answers the same. The value is an `OrganizationContext`
-from the `OrganizationContextSource` bean; an app that declares its own source replaces roux's.
+`currency` and `fractionDigits` are `null` without `ORG_CURRENCY`. `GET /api/roux/organization`
+(signed in) answers the same; it is an `organization.Context`.
 
 ## The browser: `@jwcarman/roux-web/organization`
 
@@ -130,7 +142,7 @@ naming the fix. There is no fallback to the device's date or locale.
 
 `@jwcarman/roux-web/dates`, each in the organization's locale, `""` for `null`:
 
-- `formatDate("2026-03-01")`: a `LocalDate`, on that day whatever the zone (`Mar 1, 2026`);
+- `formatDate("2026-03-01")`: a date, on that day whatever the zone (`Mar 1, 2026`);
 - `formatTime("16:30:00")`: a time of day (`4:30 PM`);
 - `formatDateTime("2026-11-21T03:00:00Z")`: a moment, where the organization is
   (`Nov 20, 2026, 10:00 PM`);
@@ -155,24 +167,18 @@ beforeEach(() => setOrganization(testOrganization()));
 
 `testOrganization()` is New York, `en-US`, USD with 2 digits, today `2026-06-15` (a Monday). A test
 that needs another day sets it: `setOrganization(testOrganization({ today: "2026-11-17" }))`. No test
-fakes the device's clock to move today, and none answers `GET /api/organization`.
+fakes the device's clock to move today, and none answers `GET /api/roux/organization`.
 
-On the server, set the `Clock` bean (a test clock) to an instant; today is that instant's date in the
-organization's zone (`2026-04-15T03:00:00Z` is still April 14 in New York).
-
-- **who's sessions expire on that clock.** Moving it hours or weeks ahead signs everyone out: the next
-  request is `401`, which reads like a permissions bug. Sign the person in again after moving it (a
-  fresh browser from `TestUsers`, [Testing](testing.md#signed-in-people-testusers)).
-- **who stamps its own rows with the database's time, not the clock.** An identity's `created_at` (a
-  user's joined moment) is PostgreSQL's `now()`; a test of the date shown for it sets the column with
-  SQL rather than moving the clock.
+On the server, set the test's clock to a moment ([The server](#the-server)). Sessions expire on
+that clock too: moving it hours or weeks ahead signs everyone out, and the next request is `401`,
+which reads like a permissions bug. Sign the person in again after moving it ([Testing](testing.md)).
 
 ## Don't
 
-- Don't take a business date from `new Date()` in the browser, or from `LocalDate.now()` (any clock's
-  own zone) on the server. Use `today()` and `OrganizationCalendar`.
-- Never store a date computed from the clock and a zone: store the moment (an `Instant`), or the date
+- Don't take a business date from `new Date()` in the browser, or from `time.Now()` (the server's
+  own zone) on the server. Use `today()`, and the service's clock in the organization's zone.
+- Never store a date computed from the clock and a zone: store the moment (a `timestamptz`), or the date
   the person picked. A computed date keeps the zone it was computed in.
 - Don't pass a locale or a zone to a formatter, or format with `Intl` or `toLocaleString` yourself.
-- Don't use `@PastOrPresent` for a date a person picks: use `@NotInFuture`
+- Don't check "not in the future" against the server's own today: use the organization's
   ([Forms](forms.md#the-rule-helpers)).

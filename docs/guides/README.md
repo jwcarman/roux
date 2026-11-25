@@ -1,7 +1,7 @@
 # roux guides
 
 - [Getting started](getting-started.md)
-- [Entities and tables](entities.md)
+- [A feature's server side](features.md)
 - [Errors](errors.md)
 - [Roles and permissions](roles.md)
 - [Users](users.md)

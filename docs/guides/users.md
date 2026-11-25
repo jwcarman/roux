@@ -1,225 +1,178 @@
 # Users
 
-A **user** is anyone who can sign in. who owns what makes them able to: the identity, its status, its
-email addresses and passkeys, its roles. roux-users adds the one thing every app shows, a **display
-name**, in its own table, and the endpoints that list, invite and manage users over who.
+A **user** is a member of the team: anyone who can sign in. roux's sign-in owns what makes them
+able to: the identity, its status, its email addresses and passkeys, its roles. The users module
+(`app.UsersFromEnv`, package `users`) adds the one thing every app shows, a **display name**, in
+its own table, and the endpoints that list, invite and manage users.
 
-`roux-users` is in the starter. Its table, `roux_user`, and its view, `roux_user_directory`, come from
-its own changelog, which migratory runs before the app's
-([Getting started](getting-started.md#required-settings)).
+Its table, `roux_user`, and its view, `roux_user_directory`, come from its own migration
+(`users.Migration`, named `roux-users`), which runs before the app's.
 
 ## The rule: anything that signs in is a user
 
-Anything in the app that can sign in is associated with a user; what never signs in has none. Roles
-say what a user may do; the app's own entity, when it has one, says what they are. Pick one of three
-shapes:
+Anything in the app that can sign in is a user; what never signs in is not. Roles say what a user
+may do; the app's own table, when it has one, says what they are. Pick one of three shapes:
 
 | The app's thing | Shape | Example |
 | --- | --- | --- |
-| Is nothing but a person with permissions | **A role only.** No entity: the user and their role are all there is. | An instructor who teaches classes |
-| Always signs in, and has fields of its own | **An entity that shares the user's id**, made when the user joins. | A coach with a belt and a bio |
-| Sometimes signs in | **An entity with an optional link to a user**, set when it is given a login. | A student, some of whom get a portal login |
+| Is nothing but a person with permissions | **A role only.** No table: the user and their role are all there is. | An instructor who teaches classes |
+| Always signs in, and has fields of its own | **A table that shares the user's id.** | A coach with a belt and a bio |
+| Sometimes signs in | **A table with an optional reference to a user**, set when it is given a login. | A student, some of whom get a portal login |
 
-An entity that always signs in maps the user with `@MapsId` and `@JoinColumn(name = "id")`, so its id
-is the user's in a column named `id` (without it, the key column is `user_id`), and is made in a
-`UserJoined` listener for its role ([Roles](roles.md#a-user-joined-userjoined)). roux's own listener
-makes the `AppUser` first (it runs at the highest precedence), so the app's can refer to it:
+A table that shares the user's id makes it its key, and goes when the user does:
 
-```java
-@Entity
-public class Coach {
-  @Id private UUID id;
+```sql
+create table coach (
+    id      uuid primary key references roux_user (id) on delete cascade,
+    belt    text not null default '',
+    version bigint not null default 0
+);
+```
 
-  @MapsId
-  @OneToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "id") // the key column is the user's id, named id
-  private AppUser user;
+roux has no hook that runs when a user joins, so the app makes the row when it is first needed
+(`insert into coach (id) values ($1) on conflict (id) do nothing`), or from its own invite
+endpoint after `users.Service.Invite`.
 
-  private String belt;
+A table for something that only sometimes signs in has its own id and a nullable
+`user_id uuid references roux_user (id) on delete set null`, set when the app invites that row.
 
-  protected Coach() {}
+`roux_user` holds the id (the identity's id), `display_name` (trimmed, 1 to `users.MaxNameLength`,
+80, characters), a version and when they first signed in. It takes no domain columns: put them on
+the app's table.
 
-  public Coach(AppUser user) {
-    this.user = user;
-  }
-}
+## Referring to people
 
-@Component
-class Coaches {
-  private final CoachRepository coaches;
-  private final AppUserRepository users;
+A feature that assigns work to people, or lists who attended, keeps their ids, and checks them in
+the transaction that stores them:
 
-  Coaches(CoachRepository coaches, AppUserRepository users) {
-    this.coaches = coaches;
-    this.users = users;
-  }
-
-  @EventListener
-  void on(UserJoined joined) {
-    if (Roles.COACH.equals(joined.role())) {
-      coaches.save(new Coach(users.getReferenceById(joined.identityId())));
-    }
-  }
+```go
+if err := users.MustBeActive(ctx, tx, "assigneeIds", in.Assignees); err != nil {
+	return err // 400 on assigneeIds: "Must be active members of the team"
 }
 ```
 
-An entity that only sometimes signs in has an ordinary nullable `@OneToOne AppUser user`, with its own
-id: the app sets it when it invites that row (`UserInvitations`, with the app's work in the
-invitation's transaction).
-
-`AppUser` holds the id (who's identity id), `displayName` (trimmed, not blank, at most
-`AppUser.MAX_NAME`, 80, characters), a version and audit columns. It takes no domain fields: put
-them on the app's entity. Deleting the identity deletes the `AppUser`; the app's entity should
-cascade from it too.
+`users.MustBeActive(ctx, db, field, ids)` refuses an id that is not an active member (unknown, or
+deactivated) as a `400` on `field` (`users.MustBeActiveMembers`); the same id twice is one member.
+To show them, `users.Members(ctx, db, ids)` answers each as a `users.Member` (`id`, `name`,
+`active`), by name, leaving out an id that is no member, so a feature that keeps people who have
+since left can still name them and mark them inactive. A feature's table refers to them with
+`references roux_user (id)`.
 
 ## The endpoints
 
-All under `/api/users`, each behind one of roux-users' permissions (`RouxUserPermissions`), which its
-changelog grants to `OWNER`. Grant them to the app's own roles in the app's changelog.
+All under `/api/roux/users` (`users.BasePath`), each behind one of the users' permissions, which
+its migration grants to `OWNER`. Grant them to the app's own roles in the app's migration (the
+template grants `users.read` to `USER`).
 
 | Endpoint | Permission | Does |
 | --- | --- | --- |
-| `GET /me` | signed in | The caller: `{ id, displayName, email, version }` (`Me`) |
-| `PUT /me` | signed in | Renames the caller: `{ displayName, version }` (`NameChange`) |
-| `GET /` | `users.read` | A page of `UserRow` (`id, displayName, email, role, status`); `search`, `role`, `status` (`ACTIVE` by default, or `DEACTIVATED`), sorted by `UserSort`: `NAME` (default), `EMAIL`, `ROLE`, `JOINED` |
-| `GET /{id}` | `users.read` | `UserDetail`: the row plus `joinedAt`, `invited` (never signed in) and `version` |
-| `GET /{id}/activities` | `users.read` | The user's history ([The activity log](activity-log.md)) |
-| `POST /invitations` | `users.invite` | Invites `{ name, email, role }` (`InvitationRequest`); `202 { linkSent }` (`InvitationResult`) |
-| `POST /{id}/invitation` | `users.invite` | Sends the invitation again; `202 { linkSent }`, `false` within who's resend interval |
+| `GET /me` | signed in | The caller: `{ id, displayName, email, version }` (`users.Me`) |
+| `PUT /me` | signed in | Renames the caller: `{ displayName, version }` |
+| `GET /` | `users.read` | A page of `users.Row` (`id, displayName, email, role, status`); `search`, `role`, `status` (`ACTIVE` by default, or `DEACTIVATED`), sorted by `NAME` (the default), `EMAIL`, `ROLE` or `JOINED` |
+| `GET /{id}` | `users.read` | `users.Detail`: the row plus `joinedAt`, `invited` (never signed in) and `version` |
+| `GET /{id}/activities` | `users.read` | The user's history, newest first ([The activity log](activity-log.md)) |
+| `POST /invitations` | `users.invite` | Invites `{ name, email, role }`; `202 { linkSent }` |
+| `POST /{id}/invitation` | `users.invite` | Sends the invitation again; `202 { linkSent }`, `false` within the resend interval |
 | `PUT /{id}/name` | `users.manage` | Renames them: `{ displayName, version }` |
-| `PUT /{id}/role` | `users.manage` | Gives them one role in place of theirs: `{ role }` (`RoleChange`) |
+| `PUT /{id}/role` | `users.manage` | Gives them one role in place of theirs: `{ role }` |
 | `POST /{id}/deactivate` | `users.manage` | Deactivates them |
 | `POST /{id}/reactivate` | `users.manage` | Reactivates them |
 | `POST /{id}/sign-out` | `users.manage` | Ends every session they have; `204` |
 | `POST /{id}/owner` | `users.owners`, and a recent sign-in | Makes them an owner, in place of their role |
 
+`email` and `role` may be `null` (someone who signs in only with a provider has no address).
+roux-web's `@jwcarman/roux-web/users` is the client for all of them.
+
 What they refuse ([Errors](errors.md)):
 
-- An unknown id is `404` "No such user" (`UserNotFoundException`). A stale `version` is `409`.
+- An unknown id is `404` "No such user" (`users.NotFound()`). A stale `version` is `409`; a missing
+  one a `400` on `version`.
 - A blank or overlong name is a field error on `displayName`. An address that already belongs to
   someone is a field error on `email`, "That address already belongs to a user". A role that is not
-  invitable (`roux.roles.invitable`; never `OWNER`) is a field error on `role`, as is an unknown
-  `role` filter on the list.
+  invitable (`INVITABLE_ROLES`; never `OWNER`) is a field error on `role`, "That role cannot be
+  given", as is an unknown `role` filter on the list ("No such role"), and a role holding a
+  permission the caller does not hold ("You cannot give a role with permissions you do not hold").
 - Deactivating yourself is `400` "You cannot deactivate yourself". Deactivating someone deactivated
   is `409` "Already deactivated"; reactivating someone active, `409` "Already active". Resending to
   someone who has signed in is `409` "Already signed in".
 - A change that would leave no one active who can manage people is `409` with code `last-admin`
   ([Roles](roles.md#keep-someone-who-can-manage-people)).
 
-`Users` is the service behind them, for an app's own endpoint or job.
+`users.Service` is the service behind them, for an app's own endpoint or job: `Invite`, `Rename`,
+`ChangeRole`, `Deactivate`, `Reactivate`, `MakeOwner`, `SignOutEverywhere`, `List`, `Detail`,
+`Me` and `Names`.
 
 ## One role per user
 
-An invitation gives one role, and `PUT /{id}/role` replaces whatever the user holds with the one asked
-for, removing each old role through `LastAdminGuard`. Changing to the role they hold already does
-nothing and records nothing. Only invitable roles can be given that way.
+An invitation gives one role, and `PUT /{id}/role` replaces whatever the user holds with the one
+asked for. Changing to the role they hold already does nothing and records nothing. Only invitable
+roles can be given that way.
 
 `OWNER` is given by `POST /{id}/owner`, to someone who is already a user: invite them first, then
-make them an owner. It needs `users.owners` (roux-users grants it to `OWNER` alone; leave it there,
-since whoever holds it can hand out everything) and a recent sign-in (`@RequiresRecentSignIn`,
-`who.security.recent-sign-in`, 10 minutes by default): a caller who signed in longer ago gets who's
-`401` and signs in again. It is recorded as `user.role_changed`.
+make them an owner. It needs `users.owners` (granted to `OWNER` alone; leave it there, since
+whoever holds it can hand out everything) and a recent sign-in (within 10 minutes): a caller who
+signed in longer ago gets `401` and signs in again. It is recorded as `user.role_changed`.
 
 ## Signing out and deactivating
 
-`POST /{id}/sign-out` ends every who session the user has, on every device: their next request is
-`401`. Deactivating does the same through who (a deactivated identity's session ends on its next
-request), so it needs no sign-out of its own. A reactivated user signs in again.
+`POST /{id}/sign-out` ends every session the user has, on every device: their next request is
+`401`. Deactivating ends them too. A reactivated user signs in again.
 
 ## The directory
 
-`UserDirectory` reads `roux_user_directory`, one read-only `UserDirectoryEntry` per user: the name and
-version from `roux_user`, and from who the status (`ACTIVE`, or `DEACTIVATED` for any other), the
-joined date, the role (the first by name, if someone holds more than one) and **the email: the oldest
-of their addresses**, since who marks none as primary. A user changes their addresses through who's
-`/who/me/email-addresses`; the directory follows.
+`roux_user_directory` is one row per user: `id`, `version` and `display_name` from `roux_user`,
+and from sign-in the `status` (`ACTIVE`, or `DEACTIVATED` for any other), `joined_at`, the `role`
+(the first by name, if someone holds more than one), `invited` and **the `email`: the oldest of
+their addresses**, since none is marked primary. A user changes their addresses on their own
+account page; the directory follows.
 
-`UserFilter(search, role, status)` is the list's filter: each word of `search` (up to 10, `%` and `_`
-taken literally) must be in the name or the email, ignoring case; `role` and `status` must match, and
-a `null` status means `ACTIVE`. `UserStatus` and `UserSort` are the list's values.
+`users.Filter{Search, Role, Status}` is the list's filter: each word of `Search` must be in the
+name or the email, ignoring case (`%` and `_` taken literally); `Role` and `Status` must match, and
+an empty status means `ACTIVE`.
 
-## An app's own list (A1)
+## An app's own list
 
-An app that shows users with columns of its own (a coach's belt) writes its own list endpoint over its
-entity, and still searches, filters and sorts by the user's fields. Map the directory onto the entity,
-read-only, on the shared id:
+An app that shows users with columns of its own (a coach's belt) writes its own list over a view
+that joins its table to the directory, and searches, filters and sorts by the user's fields too:
 
-```java
-@Entity
-public class Coach {
-  @Id private UUID id;
-
-  @MapsId
-  @OneToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "id") // the key column is the user's id, named id
-  private AppUser user;
-
-  @OneToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "id", insertable = false, updatable = false)
-  private UserDirectoryEntry entry;
-
-  private String belt;
-  // ...
-}
-
-public interface CoachRepository
-    extends JpaRepository<Coach, UUID>, JpaSpecificationExecutor<Coach> {}
-
-public enum CoachSort implements SortPropertyProvider {
-  NAME("entry.displayName"),
-  EMAIL("entry.email"),
-  BELT("belt");
-  // property and getSortProperty() as for any sort enum
-}
-
-public record CoachRow(UserRow user, String belt) {}
+```sql
+create view coach_list as
+select d.id, d.display_name, d.email, d.status, c.belt
+  from coach c
+  join roux_user_directory d on d.id = c.id;
 ```
 
-`specification(join)` builds the same filter over the app's entity, given how to reach the directory
-from its root:
-
-```java
-private static final Paginator PAGES =
-    Paginator.of(Coach.class, CoachSort.class, cfg -> cfg.defaultSort(CoachSort.NAME));
-
-@Transactional(readOnly = true)
-public PageDto<CoachRow> list(PageSpec spec, UserFilter filter, String belt) {
-  Specification<Coach> users = filter.specification(root -> root.join("entry"));
-  Specification<Coach> belts =
-      (root, query, cb) -> belt == null ? null : cb.equal(root.get("belt"), belt);
-  return PAGES.paginate(
-      spec,
-      pageable -> coaches.findAll(users.and(belts), pageable),
-      coach -> new CoachRow(UserRow.of(coach.getEntry()), coach.getBelt()));
-}
+```go
+var list = page.New(page.ListConfig[Sort, Row]{
+	From:    "coach_list",
+	Columns: "id, display_name, email, belt",
+	Sorts: map[Sort][]page.Term{
+		ByName:  {page.By("lower(display_name)")},
+		ByEmail: {page.By("lower(email)")},
+		ByBelt:  {page.By("belt")},
+	},
+	DefaultSort: ByName,
+	Search:      []page.Field{page.Contains("display_name"), page.Contains("email")},
+	Scan:        scanRow,
+})
 ```
 
-([Tables and paging](tables-and-paging.md#write-a-paged-endpoint) covers the endpoint itself.)
+with `page.Where("status = ?", users.StatusActive)` as a filter. [Tables and paging](tables-and-paging.md#the-server)
+covers the paginator and the endpoint.
 
 ## Its activities
 
-Every change is recorded against the user, in its transaction: `UserInvited` (`user.invited`),
-`UserRenamed` (`user.renamed`, from and to; only when the name changed), `UserDeactivated`
-(`user.deactivated`), `UserReactivated` (`user.reactivated`) and `UserRoleChanged`
-(`user.role_changed`, from and to). The actor is the signed-in user, named by `AppUserActorNames`
-unless the app declares its own `ActorNames`.
-
-## The pieces
-
-- `AppUser`, `AppUserRepository`, and `AppUsers`, the `UserJoined` listener that makes each user's row.
-- `Users`, the service; `UsersController` and `MeController`, the endpoints; `Me`, `UserDetail`,
-  `UserRow`, `NameChange`, `RoleChange`, `InvitationRequest` and `InvitationResult`, what they take
-  and answer; `UserNotFoundException`.
-- `UserDirectory`, `UserDirectoryEntry`, `UserFilter`, `UserSort` and `UserStatus`, the directory and
-  its filter.
-- `RouxUserPermissions` (`USERS_READ`, `USERS_INVITE`, `USERS_MANAGE`, `USERS_OWNERS`).
-- `AppUserActorNames`, and the activity kinds above.
+Every change is recorded against the user, in its transaction: `user.invited`
+(`users.UserInvited`), `user.signed_up` (`users.UserSignedUp`, a provider sign-up),
+`user.renamed` (`users.UserRenamed`, from and to; only when the name changed),
+`user.deactivated`, `user.reactivated` and `user.role_changed` (from and to). The actor is the
+signed-in user, named from `roux_user`.
 
 ## Don't
 
-- Don't add domain fields to `AppUser`, or a second display name to the app's entity: put the app's
-  fields on its own entity, and read the name from the user.
-- Don't make an app entity for every user in a listener that ignores `role`: make it for its role.
-- Don't keep a copy of the user's email: read it from the directory, which follows who.
-- Don't deactivate someone or change their role with `WhoService` or `RbacService` alone: use `Users`,
-  or wrap the change in `LastAdminGuard`.
+- Don't add domain columns to `roux_user`, or a second display name to the app's table: put the
+  app's columns on its own table, and read the name from the user.
+- Don't keep a copy of the user's email: read it from the directory, which follows sign-in.
+- Don't store an id of someone without `users.MustBeActive` in the same transaction.
+- Don't deactivate someone or change their role with SQL of your own: use `users.Service`, or keep
+  the last administrator ([Roles](roles.md#keep-someone-who-can-manage-people)).

@@ -1,10 +1,12 @@
 # Getting started
 
-roux is the base a Spring Boot + React application is built on: a Java starter that answers every
-API error as a Problem Detail, and a web package (`@jwcarman/roux-web`) with the matching API client,
-paging, tables, forms and feedback. A new app starts from roux's app template (below); the rest of
-this guide is what the template already does, for adding roux to an app by hand. Either way,
-features use roux by importing from it; no plumbing is written in the app.
+roux is the base a Go + React application is built on. The server side is a Go module,
+`github.com/jwcarman/roux`: sign-in (emailed links and codes, passkeys, providers, API keys,
+JWTs), roles and permissions, the users directory, errors as Problem Details, paging, money,
+dates, the activity log, and the page shell. The web side is an npm package,
+`@jwcarman/roux-web`, with the matching API client, paging, tables, forms and feedback. A new app
+starts from roux's app template (below); the rest of this guide is what the template already does.
+Either way, features use roux by importing from it; no plumbing is written in the app.
 
 ## Start a new app
 
@@ -14,199 +16,196 @@ features use roux by importing from it; no plumbing is written in the app.
    npm create @jwcarman/roux-app acme-gym
    ```
 
-   `acme-gym` is the directory, the Maven artifact and the npm name: lowercase letters, digits and
+   `acme-gym` is the directory, the Go module and the npm name: lowercase letters, digits and
    single dashes. The app is called "Acme Gym" until the owner renames it on the Appearance page;
    pass another name with `npm create @jwcarman/roux-app acme-gym -- --name "Acme Fitness"`. It is
    roux's app template at the latest release (sign-in, the first owner, the sidebar frame, Users,
-   Settings and Appearance), with roux from Maven Central and npm, a Maven wrapper and a first
-   commit.
-2. **Run it.** With Docker running and JDK 25 installed (the build downloads Node itself):
+   Settings and Appearance), with roux from the Go module proxy and npm, and a first commit.
+2. **Start its database and mail catcher.** With Docker running:
 
    ```bash
-   ./mvnw spring-boot:run -Dspring-boot.run.arguments="--roux.owner.email=you@example.com --roux.owner.name=You"
+   docker compose up -d
    ```
 
-   Spring Boot starts PostgreSQL and Mailpit from `compose.yaml` by itself. The app is at
-   <http://localhost:8080>.
-3. **Sign in as the owner.** On the sign-in page, ask for a link for the `roux.owner.email` address
-   and open it from Mailpit at <http://localhost:8025>. roux made that address the `OWNER` on the
-   first start.
-4. **Add a first page.** Ask your agent for it: the app's `CLAUDE.md` and roux's Claude Code plugin
-   (the `roux` skill) say where each piece goes. The app names the plugin at its roux version; in
-   Claude Code, trust the folder and run `/plugin install roux@roux` once. By hand, a page is a feature folder in
-   `frontend/src/<feature>/`, a route file in `frontend/src/routes/_signedIn/`, and an entry in
-   `frontend/src/shell/nav.ts`; [The shell](shell.md) shows each. `./mvnw verify` runs every test,
-   the browser's included.
+   PostgreSQL listens on `localhost:5432` (user, password and database `app`), and Mailpit catches
+   every email the app sends, readable at <http://localhost:8025>.
+3. **Build the front end and run the server.** With Go 1.27:
+
+   ```bash
+   make web
+   CODE_SECRET=$(openssl rand -base64 32) \
+   DATABASE_URL=postgres://app:app@localhost:5432/app \
+   OWNER_EMAIL=you@example.com OWNER_NAME=You \
+   PASSKEY_RP_ID=localhost PASSKEY_ORIGINS=http://localhost:8080 \
+   FRONTEND_DIR=frontend/dist LOG_FORMAT=text \
+   go run ./cmd/server
+   ```
+
+   The app is at <http://localhost:8080>. While working on pages, run `npm run dev` in `frontend/`
+   as well: Vite serves the pages at <http://localhost:5173>, reloading as you edit, and passes
+   `/api` to the server.
+4. **Sign in as the owner.** On the sign-in page, ask for a link for the `OWNER_EMAIL` address and
+   open it from Mailpit. roux made that address the `OWNER` on the first start.
+5. **Add a first page.** Ask your agent for it: roux's Claude Code plugin (the `roux` skill) says
+   where each piece goes, and the app's `.claude/settings.json` names it, so in Claude Code trust
+   the folder and run `/plugin install roux@roux` once. By hand, a feature is a Go package in
+   `internal/<feature>/` listed in `cmd/server/modules.go` ([A feature's server side](features.md)),
+   and a page is a feature folder in `frontend/src/<feature>/`, a route file in
+   `frontend/src/routes/_signedIn/`, and an entry in `frontend/src/shell/nav.ts`
+   ([The shell](shell.md)).
+
+`make check` runs the Go checks (gofmt, `go vet`, golangci-lint, the tests); in `frontend/`,
+`npm run coverage`, `npm run build` and `npm run mutate` run the browser's. `make build` makes the
+release binary, one file with the front end inside, and `make image` the container image.
 
 ## Requirements
 
 roux supports one stack and nothing else:
 
-- Java 25, Spring Boot 4.1 (`spring-boot-starter-parent` 4.1.x), Maven.
-- PostgreSQL with Liquibase; jpa-utils for paging.
-- who for identity: sign-in, the session and CSRF. Every roux app uses it.
+- Go 1.27, `net/http`'s router, pgx 5.
+- PostgreSQL 17. roux runs its own migrations and the app's.
 - React 19, Chakra UI v3, TanStack Router, Query, Form and Table, Zod 4.
-- Vitest with MSW, and Playwright, for tests.
+- Go's `testing` with a real database, Vitest with MSW, and Playwright, for tests. Database tests
+  start PostgreSQL in Docker, or use `TEST_DATABASE_URL`.
 
-## Add the Java side
+## The server
 
-Import `roux-bom` and depend on `roux-spring-boot-starter`, plus mail, JPA, Liquibase and the
-PostgreSQL driver. Keep Spring Boot's parent as the app's parent: `roux-bom` does not import Spring
-Boot's BOM, so Spring Boot's managed versions stay the parent's.
+An app's whole `main` is one call:
 
-```xml
-<properties>
-    <roux.version>0.3.0</roux.version>
-</properties>
+```go
+// Command server runs Acme Gym.
+package main
 
-<dependencyManagement>
-    <dependencies>
-        <dependency>
-            <groupId>org.jwcarman.roux</groupId>
-            <artifactId>roux-bom</artifactId>
-            <version>${roux.version}</version>
-            <type>pom</type>
-            <scope>import</scope>
-        </dependency>
-    </dependencies>
-</dependencyManagement>
+import (
+	"github.com/jwcarman/roux/app"
+	web "acme-gym/frontend"
+)
 
-<dependencies>
-    <dependency>
-        <groupId>org.jwcarman.roux</groupId>
-        <artifactId>roux-spring-boot-starter</artifactId>
-    </dependency>
-    <!-- the owner's theme (an Appearance page); remove it for a fixed brand -->
-    <dependency>
-        <groupId>org.jwcarman.roux</groupId>
-        <artifactId>roux-theme</artifactId>
-    </dependency>
-    <!-- delivers who's emails (sign-in links, invitations) over SMTP; the roux starter brings who-email, which
-         renders them, but not how they are sent. who-email-smtp brings spring-boot-starter-mail -->
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-mail</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.jwcarman.who</groupId>
-        <artifactId>who-email-smtp</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-liquibase</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.postgresql</groupId>
-        <artifactId>postgresql</artifactId>
-        <scope>runtime</scope>
-    </dependency>
-</dependencies>
+func main() {
+	app.Main(app.Config{Name: "acme-gym", DisplayName: "Acme Gym", Frontend: web.Dist, Modules: modules})
+}
 ```
 
-The starter brings `roux-problems`, `roux-validation` (`@Phone`, `@NotInFuture` and roux's validation messages), `roux-spa` (the shell for any page URL), `roux-jpa` (`Versions`), `roux-money` (`Money` and its constraints: see [Money](money.md)), `roux-organization` (the time zone, locale and today: see [Dates and time](dates-and-time.md)), `roux-activity-log` (a record's history, in roux's table `roux_activity`: see [The activity log](activity-log.md)), `roux-roles` (the `OWNER` role, the first owner and invitable roles: see
-[Roles and permissions](roles.md)), `roux-users` (each user's name, the users endpoints and the directory: see [Users](users.md)), `roux-autoconfigure`, who (`who-spring-boot-starter`, with
-email-link sign-in, `who-email-link`, which renders its mail with `who-email`, and passkeys, `who-passkey`),
-`who-admin` (who's endpoints for managing people, `/who/identities` and `/who/invitations`, open to
-whoever holds `who.identities.manage`, which roux grants to `OWNER`), jpa-utils
-(`org.jwcarman.jpa:jpa-utils`), `spring-boot-starter-validation` and `spring-boot-starter-webmvc`.
-`roux-theme` (the owner changes the look on an Appearance page) is not in the starter: add it beside the starter, with no version, as a new app does. Leave it out for a fixed brand and set `roux.theme.*` instead ([The owner's theme](#the-owners-theme)).
-Do not add who's starter yourself, and do not declare versions for any of them, for who's other
-modules (`who-test`), or for jpa-utils: `roux-bom` pins who 0.26.0 and jpa-utils 0.2.0. The test
-dependencies are in [Testing](testing.md#dependencies).
+`app.Main` runs the app until SIGINT or SIGTERM and exits 1, logging why, if it fails. In order it
+sets up logging and telemetry, the health probes (`/api/roux/healthz` and `/api/roux/readyz`),
+the database (`DATABASE_URL`), the modules, the front end, and an HTTP server on `ADDR` with every
+connection bounded in time. When it is told to stop, it fails readiness, waits `SHUTDOWN_DELAY` so
+a load balancer notices, stops taking requests, and lets the modules finish their work in flight
+(an email accepted a moment ago still goes out). `app.Run(ctx, cfg)` is the same without the
+signals and the exit.
 
-Errors are answered as Problem Details from the first request; see [Errors](errors.md). roux's own
-settings, both optional, are under `roux.problems` (`enabled`, `api-path-prefix`). who's are not
-optional: the app does not start without them.
-
-## Required settings
-
-who's two sign-in methods and roux's first owner fail startup until they are configured, and the
-message names the missing setting. In `application.yml`, for development on `http://localhost:8080`:
-
-```yaml
-roux:
-  organization:              # where the organization is: its day and how it writes (dates-and-time.md)
-    time-zone: America/New_York
-    locale: en-US
-  owner:                     # the first owner, made at startup while no active owner exists
-    email: you@example.com
-    name: You
-  roles:
-    invitable: [MEMBER]      # roles the app's own changelog creates (roles.md); never OWNER
-
-spring:
-  mail:
-    host: localhost   # an SMTP server; in development, Mailpit or similar
-    port: 1025
-
-who:
-  security:
-    public-paths:            # what a signed-out browser may load besides the shell and /assets/**
-      - /favicon.svg
-  email-link:
-    link-base-url: http://localhost:8080/signin/link
-    code-secret: development-only-code-secret-not-for-production
-  passkey:
-    rp-id: localhost
-    allowed-origins: http://localhost:8080
-  email:
-    from: noreply@example.com   # the address every who email is sent from
-```
-
-| Setting | What it is |
+| `app.Config` field | What it is |
 | --- | --- |
-| `roux.organization.time-zone`, `roux.organization.locale` | The organization's IANA time zone (`America/New_York`) and BCP 47 locale (`en-US`): where its day starts and ends ("today", "this month", `@NotInFuture`) and how dates, numbers and amounts are written. Required; a missing or unknown one fails startup naming it. See `dates-and-time.md`. |
-| `roux.owner.email`, `roux.owner.name` | The first owner: while no active identity holds `OWNER`, roux creates one at startup with this address and display name, and publishes `UserJoined` in its transaction (an app adds its own data per user by listening). Once an active owner exists these change nothing. Required. See `roles.md`. |
-| `roux.money.currency` | The app's one currency, an ISO 4217 code (`USD`). Needed once the app has money: it turns on the `MoneySettings` bean and the currency in the organization's context, and `@InCurrency` checks against it. See `money.md`. |
-| `roux.roles.invitable` | The roles an invitation may give, in the order an invite form offers them (`GET /api/roles/invitable`). Each must be a role the app's own changelog creates (roux creates only `OWNER`; see `roles.md`), or every invitation giving it fails. Empty by default, so no invitation passes until it is set; listing `OWNER` fails startup. |
-| `spring.mail.host` | The SMTP server who's emails go through (`who-email-smtp`, over Spring Boot's `JavaMailSender`). Instead of SMTP, an app may register its own `WhoEmailSender` bean (leave out `who-email-smtp`, keep `who-email`): it only delivers, receiving every who email already rendered as an `OutgoingEmail` (`to`, `subject`, `text`, an optional `html`, and the `source` record it was rendered from). Send `text` as `text/plain`, never inside HTML: it is not escaped. roux ships the five emails finished, naming the app and wearing its brand colour; an app replaces one by dropping its own template file, and a subject is the message `who.email.<template>.subject` (see `email.md`). |
-| `who.email-link.link-base-url` | The app's page that receives sign-in links; who appends `#token=...`. Required. |
-| `who.email-link.code-secret` | Keys the typed sign-in codes: at least 32 characters, the same on every instance, from the environment in production. Required. |
-| `who.email.from` | The one address every who email (sign-in links, invitations, the passkey-added notice) is sent from. Required with `who-email-smtp` and a mail host. |
-| `who.passkey.rp-id` | The app's own host (`localhost` in development, `app.example.com` in production). Required. |
-| `who.passkey.allowed-origins` | The origins passkey sign-in may come from. Defaults to `https://<rp-id>`, which does not match `http://localhost:8080`, so set it in development. |
-| `who.security.public-paths` | Paths of the app open to signed-out requests besides who's sign-in endpoints and what roux opens (the shell, `/index.html`, and `/assets/**`, with a built frontend). Every page URL reaches the shell, so no page is listed; list only the files a signed-out browser loads from elsewhere, such as an icon at the root. Anything else answers `401` to a signed-out request. |
+| `Name` | The service's name in traces and logs. |
+| `DisplayName` | The app's name on its pages and in its emails, unless `APP_NAME` says otherwise (and until the owner renames it). |
+| `Frontend` | The front end built into the binary: the `frontend` package's `Dist`. |
+| `Modules` | `func(k *app.Kit) ([]app.Module, error)`: what the app is made of. |
 
-who's and roux's tables need no include. Each library declares its own changelog to
-[migratory](https://github.com/jwcarman/migratory), which who brings, and migratory runs them in
-order (who's, then roux-activity-log's, then roux-roles', which creates `OWNER`, then roux-users' and, when the app has it, roux-theme's)
-before the app's own master changelog. The app's
-changelog holds only its own changesets, and may refer to who's and roux's tables. Three things
-follow:
+### Modules
 
-- `spring.liquibase.enabled=false` turns off only the app's own changelog; who's and roux's tables
-  are still created.
-- `spring.liquibase.drop-first` fails startup. To rebuild a development database, set
-  `migratory.drop-first=true`: it drops everything in the default schema, the app's tables included,
-  before who's, roux's and the app's changelogs run.
-- `migratory.enabled=false` turns off who's and roux's migrations; the app then includes their
-  changelogs in its own master, in migratory's order. A test profile that used
-  `spring.liquibase.enabled=false` to keep Liquibase off the database sets `migratory.enabled=false` too.
+A module is one feature: the tables it owns, the sign-in method it brings, the routes it mounts
+and what it does at startup. `modules.go` lists them, so turning a feature on is a line:
 
-migratory comes with who's starter (who-autoconfigure), which roux's starter brings.
-
-The full list of who's settings is in who's configuration guide
-(`docs/guides/configuration.md` in who's repository, at tag `0.20.0`).
-
-## Add the web side
-
-```
-npm install @jwcarman/roux-web@0.3.0
-npm install @chakra-ui/react @emotion/cache @emotion/react @fontsource-variable/inter @fontsource-variable/lora @fontsource-variable/nunito @jwcarman/who-client @tanstack/react-form @tanstack/react-query @tanstack/react-router @tanstack/react-table culori date-fns react react-icons zod
+```go
+func modules(k *app.Kit) ([]app.Module, error) {
+	mods := []app.Module{&appRoles{}}
+	if k.Pool == nil {
+		return mods, nil // no database, nobody signs in
+	}
+	email, err := app.EmailLinkFromEnv(k.AppName)
+	if err != nil || email == nil {
+		return mods, err // no CODE_SECRET: signing in is off, and so is everything that needs it
+	}
+	members := app.UsersFromEnv(email)
+	passkeys, err := app.PasskeysFromEnv(k.AppName, email)
+	if err != nil {
+		return nil, err
+	}
+	mods = append(mods, email, members, gym.Module{})
+	if passkeys != nil {
+		mods = append(mods, passkeys)
+	}
+	return mods, nil
+}
 ```
 
-The Java and web versions must match: use the same version for `roux.version` and `@jwcarman/roux-web`
-(here `0.3.0`). The second line is the peer dependencies; the app supplies them (`react` `^19.3.1`,
-`@chakra-ui/react` `^3.38.0`, `@emotion/react` and `@emotion/cache` `^11.14.0`,
+Each stock module reads its settings from the environment and is nil when its feature is off. One
+that needs another takes it as an argument (passkeys take the email module), so a missing
+dependency does not compile. roux's stock modules:
+
+| Constructor | The feature |
+| --- | --- |
+| `app.EmailLinkFromEnv(appName)` | Sign-in by an emailed link or typed code. Nil without `CODE_SECRET`. |
+| `app.UsersFromEnv(email)` | The users directory, roles and invitations, the owner's theme, the organization, and the first owner ([Users](users.md), [Roles and permissions](roles.md)). |
+| `app.PasskeysFromEnv(appName, email)` | Passkeys. Nil without `PASSKEY_RP_ID`. |
+| `app.APIKeysFromEnv(email)` | API keys, made by a signed-in person. On unless `API_KEYS=off`. |
+| `app.OIDCFromEnv(email, members)` | Sign-in with Google, GitHub or any OpenID Connect provider. Nil without `OIDC_PROVIDERS_FILE`. |
+| `app.JWTFromEnv(email)` | Bearer tokens from an authorization server, for API-only callers. Nil without `JWT_ISSUER`. |
+
+An app's own feature is a module too: a type with `Name()`, and any of `Migrations()`,
+`Mount(ctx, k)` and `Start(ctx, k)`. [A feature's server side](features.md) builds one.
+
+`app.Assemble` runs every module's migrations together (ordered by each migration's `After` and
+`Before`), registers sign-in with every module's method, then mounts the modules and starts them,
+in the order listed. A failure names the module.
+
+### Settings
+
+Everything else comes from the environment. A missing required setting stops startup, naming it.
+
+| Variable | What it is |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL. Without it the pages are served and nobody can sign in. |
+| `ADDR` | Where the server listens (default `:8080`). |
+| `PUBLIC_URL` | Where browsers reach the app (default `http://localhost:8080`): sign-in links point here, and `https://` marks every cookie Secure. Behind a load balancer that ends TLS, set it to the `https` address. |
+| `COOKIE_SECURE` | `true` or `false`, overriding what `PUBLIC_URL` says. A `PUBLIC_URL` of `http://` for a host other than this machine is refused unless this is `false`. |
+| `APP_NAME` | The app's name, instead of `DisplayName`. |
+| `CODE_SECRET` | At least 32 random characters (`openssl rand -base64 32`), the same on every instance: keys the typed sign-in codes. Signing in is off without it. |
+| `SMTP_ADDR`, `MAIL_FROM` | The mail server, `host:port` (default `localhost:1025`, Mailpit), and the sender (default `no-reply@localhost`). Mail to a server off this machine goes over STARTTLS unless `SMTP_ALLOW_PLAINTEXT=true`. |
+| `EMAIL_RESEND_INTERVAL`, `EMAIL_TOKEN_TTL` | How soon another sign-in email may be asked for, and how long a link or code lasts (defaults `60s` and `5m`). |
+| `OWNER_EMAIL`, `OWNER_NAME` | The first owner: while no active user holds `OWNER`, roux creates one at startup, who signs in with that address. Both or neither; once an active owner exists they change nothing, and an address that belongs to someone else stops startup. |
+| `INVITABLE_ROLES` | The roles an invitation may give, comma separated, in the order an invite form offers them (default `USER`). Each must be a role a migration creates; `OWNER` is refused. See [Roles and permissions](roles.md). |
+| `ORG_TIME_ZONE`, `ORG_LOCALE` | The organization's IANA time zone (default `UTC`) and BCP 47 locale (default `en-US`): where its day starts and ends, and how dates, numbers and amounts are written. See [Dates and time](dates-and-time.md). |
+| `ORG_CURRENCY` | The organization's one currency, an ISO 4217 code (`USD`), once the app has money. See [Money](money.md). |
+| `PASSKEY_RP_ID`, `PASSKEY_ORIGINS` | Passkeys: the app's host (`localhost` in development) and the origins sign-in may come from (default `https://<rp id>`, so set `http://localhost:8080` in development). |
+| `API_KEYS`, `API_KEY_PREFIX`, `API_KEY_HEADER`, `API_KEY_MAX_LIFETIME` | API keys: `off` to turn them off; what every key starts with (default `roux_`); the header (default `X-API-Key`); the longest a key may last (default a year). |
+| `OIDC_PROVIDERS_FILE` | A JSON list of OpenID Connect providers; `${NAME}` in it is an environment variable. Each provider's callback is `PUBLIC_URL/api/roux/auth/oidc/callback/{id}`. `OIDC_SUCCESS_URL`, `OIDC_FAILURE_URL`, `OIDC_LINK_URL` and `OIDC_SIGNUP_ROLE` tune where people land and the role a sign-up gets. |
+| `JWT_ISSUER`, `JWT_AUDIENCES`, `JWT_JWKS_URL` | Bearer tokens: the authorization server's issuer, the audiences a token must name one of, and the keys' address for a server without discovery. |
+| `FRONTEND_DIR` | Serve the front end from this directory (`frontend/dist`) instead of the one in the binary. The page is read once, at startup: restart the server after rebuilding the front end. |
+| `LOG_FORMAT` | `json` (the default) or `text`. |
+| `SHUTDOWN_DELAY` | How long to keep serving after readiness fails, such as `5s`. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` and the other `OTEL_*` | Where traces, metrics and logs go (`compose.yaml`'s `otel` profile runs a collector and Grafana). |
+
+roux's tables and the app's are made by the migrations the modules declare (see
+[A feature's server side](features.md#the-table)). There is nothing to run by hand: every start
+applies the migrations it has not applied, each in its own transaction, and a migration that has
+run is never edited.
+
+### The binary
+
+The `frontend` package carries the built front end into the binary. `embed_web.go` embeds
+`frontend/dist` when built with the `embedweb` tag; `embed_none.go` is the same package without
+it, so `go build`, `go test` and `go vet` need no Node and no `dist` folder. `make build` builds the
+front end, then the binary with the tag; without one, the server serves `FRONTEND_DIR`, or else a
+stand-in page that says how to build the real one. The `Dockerfile` does the same in a container:
+the front end built on Node, the server built on Go, and the binary alone on distroless,
+running as a user who is not root.
+
+## The web side
+
+```
+npm install @jwcarman/roux-web@0.4.0
+npm install @chakra-ui/react @emotion/cache @emotion/react @fontsource-variable/inter @fontsource-variable/lora @fontsource-variable/nunito @tanstack/react-form @tanstack/react-query @tanstack/react-router @tanstack/react-table culori date-fns next-themes react react-icons zod
+```
+
+The Go and web versions must match: use the same version of `github.com/jwcarman/roux` and
+`@jwcarman/roux-web`. The second line is the peer dependencies; the app supplies them (`react`
+`^19.3.1`, `@chakra-ui/react` `^3.38.0`, `@emotion/react` and `@emotion/cache` `^11.14.0`,
 `@tanstack/react-query` `^5.107.1`, `@tanstack/react-form` `^1.33.5`, `@tanstack/react-router`
-`^1.170.46`, `@tanstack/react-table` `^8.21.3`, `@jwcarman/who-client` `^0.25.0`, `date-fns` `^4.4.0`,
-`zod` `^4.6.7`, `culori` `^4.0.2`, `react-icons` `^5.7.0`, and the three theme fonts
-`@fontsource-variable/inter`, `lora` and `nunito` `^5.3.0`). The browser test kit's peers (`vitest`,
-`msw`, `@testing-library/react`, `@testing-library/jest-dom`) are optional; see
+`^1.170.46`, `@tanstack/react-table` `^8.21.3`, `date-fns` `^4.4.0`, `zod` `^4.6.7`, `culori`
+`^4.0.2`, `next-themes` `^0.4.6`, `react-icons` `^5.7.0`, and the three theme fonts
+`@fontsource-variable/inter`, `lora` and `nunito` `^5.3.0`). The browser test kit's peers
+(`vitest`, `msw`, `@testing-library/react`, `@testing-library/jest-dom`) are optional; see
 [Testing](testing.md). The package is ESM only.
 
 Import from a subpath; there is no root import:
@@ -220,47 +219,47 @@ Import from a subpath; there is no root import:
 | `@jwcarman/roux-web/feedback` | toasts (`notify`), confirmations, error and not-found pages | [Feedback](feedback.md) |
 | `@jwcarman/roux-web/form` | Zod rule helpers, `useSchemaForm`, fields, `FormDialog` | [Forms](forms.md) |
 | `@jwcarman/roux-web/dates` | ISO strings to and from date-fns Dates (`parseIsoDate`, `formatIsoDate`, `parseIsoTime`, `formatIsoTime`) | [Forms](forms.md#dates-and-times) |
-| `@jwcarman/roux-web/theme` | `ThemeProvider` (Chakra, the page's theme and the CSP nonce), `useShellTheme`, `createThemeSystem`, `AppearanceSettings` | [The shell](shell.md) |
+| `@jwcarman/roux-web/organization` | the organization's zone, locale, currency and today | [Dates and time](dates-and-time.md) |
+| `@jwcarman/roux-web/money` | amounts: parsing, formatting, the money field | [Money](money.md) |
+| `@jwcarman/roux-web/activity` | a record's history | [The activity log](activity-log.md) |
+| `@jwcarman/roux-web/users` | the users API client, its queries and mutations | [Users](users.md) |
+| `@jwcarman/roux-web/theme` | `ThemeProvider`, colour mode, `useShellTheme`, `createThemeSystem`, `AppearanceSettings` | [The shell](shell.md) |
+| `@jwcarman/roux-web/session`, `auth`, `signin`, `navigation` | the session and route guards, sign-in pages, the sidebar frame | [The shell](shell.md) |
+| `@jwcarman/roux-web/testing` | the browser test kit | [Testing](testing.md) |
 
 ## Set up the app root
 
-`main.tsx` builds one query client with `createQueryClient()` and mounts, once each: the
-`QueryClientProvider`, `ThemeProvider` (Chakra's provider with the app's theme, [The shell](shell.md)), `ConfirmProvider` (for `useConfirm`) around the app, and
-`Toaster` (where `notify` toasts appear) beside it. Before rendering it loads the organization's
-context and starts the day watch ([Dates and time](dates-and-time.md)): without the context, `today()`,
-the formatters and money throw.
+`main.tsx` builds one query client with `createQueryClient()`, loads the organization's context
+and starts the day watch ([Dates and time](dates-and-time.md)) before rendering: without the
+context, `today()`, the formatters and money throw.
 
 ```tsx
-import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createQueryClient } from "@jwcarman/roux-web/api";
-import { ConfirmProvider, Toaster } from "@jwcarman/roux-web/feedback";
 import { loadOrganization, startDayWatch } from "@jwcarman/roux-web/organization";
-import { ThemeProvider } from "@jwcarman/roux-web/theme";
-import { SessionProvider } from "@jwcarman/roux-web/session";
-import { App } from "./App";
+import { App, createAppRouter } from "./App";
 
 const queryClient = createQueryClient();
+const router = createAppRouter(queryClient);
 
-await loadOrganization();
+await loadOrganization().catch((error: unknown) => {
+  document.getElementById("root")!.textContent = `The app could not start: ${String(error)}`;
+  throw error;
+});
 startDayWatch(queryClient);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <ConfirmProvider>
-          <SessionProvider>
-            <App />
-          </SessionProvider>
-        </ConfirmProvider>
-        <Toaster />
-      </ThemeProvider>
-    </QueryClientProvider>
+    <App queryClient={queryClient} router={router} />
   </StrictMode>,
 );
 ```
+
+`App.tsx` mounts, once each: `QueryClientProvider`, `ThemeProvider` (Chakra's provider with the
+app's theme, [The shell](shell.md)), `ColorModeProvider` (light and dark), `ConfirmProvider` (for
+`useConfirm`), `SessionProvider`, and `Toaster` (where `notify` toasts appear), then the router
+once the session has loaded. The route tests render the same `App`.
 
 - Use `createQueryClient()`, never `new QueryClient()`: mutations' `meta.refreshes` only work with
   roux's client, and `useSchemaForm` and `useServerAction` throw when a mutation names
@@ -269,23 +268,23 @@ createRoot(document.getElementById("root")!).render(
   `useConfirm` throws outside `ConfirmProvider`.
 - Pass the same `queryClient` to TanStack Router's context if route loaders prefetch.
 
-`SessionProvider` is roux's ([The shell](shell.md#the-session-and-route-guards)): it loads the caller
-from who and their profile from roux-users, empties the query cache when the identity changes, and
-reloads the caller when an API call reports the session lost. Components read it with `useSession()`,
-and route guards with `context.session.currentMe()`.
+`SessionProvider` is roux's ([The shell](shell.md#the-session-and-route-guards)): it loads the
+caller (`/api/roux/auth/me`) and their profile (`/api/roux/users/me`), empties the query cache
+when the identity changes, and reloads the caller when an API call reports the session lost.
+Components read it with `useSession()`, and route guards with `context.session.currentMe()`.
 
 An app that keeps a session of its own does the same two roux things with
-`useClearQueriesOnIdentityChange(identityId: string | null | undefined): void`, which empties the query
-cache when the identity goes away (`null`) or changes, so nobody sees rows cached for the previous
-user (`undefined`, still loading, changes nothing; call it inside `QueryClientProvider`), and
-`onSessionLost(listener)`, which runs `listener` whenever an `/api` call answers 401 and returns the
-function that stops it.
+`useClearQueriesOnIdentityChange(identityId: string | null | undefined): void`, which empties the
+query cache when the identity goes away (`null`) or changes, so nobody sees rows cached for the
+previous user (`undefined`, still loading, changes nothing; call it inside `QueryClientProvider`),
+and `onSessionLost(listener)`, which runs `listener` whenever an `/api` call answers 401 and
+returns the function that stops it.
 
 ## Point the client at the API
 
-Nothing to do for a standard app. The client's defaults are `baseUrl` `/api`, `csrfBootstrapPath`
-`/who/me` and `sessionPathPrefix` `/api/`, which match a roux server (who serves `/who/me`). Only if the API lives
-elsewhere on the same origin, call `configureApi` once in `main.tsx` before rendering:
+Nothing to do. The client's defaults are `baseUrl` `/api`, `csrfBootstrapPath`
+`/api/roux/auth/me` and `sessionPathPrefix` `/api/`, which match a roux server. Only if the API
+lives elsewhere on the same origin, call `configureApi` once in `main.tsx` before rendering:
 
 ```ts
 import { configureApi } from "@jwcarman/roux-web/api";
@@ -293,66 +292,51 @@ import { configureApi } from "@jwcarman/roux-web/api";
 configureApi({ baseUrl: "/v2", sessionPathPrefix: "/v2/" });
 ```
 
-and set the server's `roux.problems.api-path-prefix` to `/v2/` to match. Details in
-[API client](api-client.md#change-where-the-api-lives).
+Details in [API client](api-client.md#change-where-the-api-lives).
 
 ## One origin
 
-roux requires the SPA and the API to be served from one origin: the client calls relative paths
+roux requires the pages and the API to be served from one origin: the client calls relative paths
 (`/api/...`), the session is a cookie, and CSRF reads a cookie the page can see. Two deployments are
 supported:
 
-1. **One jar (the default).** Spring Boot serves the built SPA from its static resources, and roux
-   (with `static/index.html` on the classpath) answers any page URL with the shell: a GET or HEAD
-   that accepts `text/html`, has no file extension and is not under `/api`, `/who`, `/assets`,
-   `/actuator`, `/.well-known` or `/error`. Adding a page is adding its route file; the server has
-   no list of pages, and an unknown URL gets the shell, whose not-found route answers it. The shell
-   is open to signed-out visitors (with `/assets/**`, which roux also caches for a year), so a
-   reload or a deep link opens the app, which sends the visitor to sign in. A fetch for JSON, an
-   API path (a missing one is still a `404` problem) and a request for a file never get the shell.
-   The filter is `SpaFallbackFilter` (in `roux-spa`, which switches it on by being on the class
-   path: leave the jar out to turn it off); add paths it must leave alone (a server-rendered page) to
-   `roux.spa.excluded-paths` (`RouxSpaProperties`). roux also serves the shell itself, with a
-   nonce, a Content-Security-Policy and the theme in place ([The shell](#the-shell)), so an app
-   writes no controller, header writer or `ErrorViewResolver` for it. An app with its own
-   `SecurityFilterChain` must permit `/index.html` and `/assets/**`, which roux contributes with a
-   `WhoPublicPathContributor` bean. who adds a contributor's paths to `who.security.public-paths`
-   and every other contributor's, so an app that needs more public paths contributes its own bean
-   the same way; it never replaces the `WhoPublicPaths` bean, which would drop every contribution.
-2. **Edge routing.** Static hosting or a CDN serves the SPA, and a proxy on the same domain routes
-   `/api` and `/who` to the app.
+1. **One binary (the default).** The server serves the built front end, and answers any page URL
+   with the shell: a GET or HEAD that accepts `text/html`, has no file extension and is not under
+   `/api/`, `/assets/` or `/.well-known/`. Adding a page is adding its route file; the server has no
+   list of pages, and an unknown URL gets the shell, whose not-found route answers it. The shell is
+   open to signed-out visitors (with `/assets/`, which roux caches for a year), so a reload or a deep
+   link opens the app, which sends the visitor to sign in. A fetch for JSON, an API path (a missing
+   one is still a `404` problem) and a request for a file never get the shell. `spa.Register` does
+   this; `app.Run` calls it.
+2. **Edge routing.** Static hosting or a CDN serves the pages, and a proxy on the same domain routes
+   `/api` to the app.
 
-Separate origins (the SPA on one host calling the API on another, with CORS and cross-site cookies)
-are not supported; `baseUrl` is a path, not a host. In development, Vite's dev server proxies the
-server's paths to Spring Boot:
+Separate origins (the pages on one host calling the API on another, with CORS and cross-site
+cookies) are not supported; `baseUrl` is a path, not a host. In development, Vite's dev server
+passes `/api` to the Go server:
 
 ```ts
 // vite.config.ts
-import { defineConfig } from "vite";
-
 const backend = "http://localhost:8080";
 
 export default defineConfig({
   server: {
     proxy: {
       "/api": backend,
-      "/who": backend,
     },
   },
 });
 ```
 
-Every who endpoint (`/who/me`, `/who/email/send`, `/who/logout`, `/who/passkey/sign-in`, and the signed-in person's own account under `/who/me/...`) is under
-`/who`, so these two entries cover the app's API and its sign-in. Add an entry only for another
-server path the app calls.
+Every sign-in endpoint is under `/api/roux/auth`, so this one entry covers the app's API and its
+sign-in.
 
 ## The shell
 
-roux serves `index.html` (`ShellRoutes`, from `roux-spa`; no code in the app). Each response is
-the built page with four placeholders filled, `Cache-Control: no-store` (a stored copy's nonce
-would not match the next response's policy) and its own `Content-Security-Policy` header. The
-frontend build leaves the placeholders; the app does not start if one is missing (`ShellPage`
-says which):
+roux serves `index.html` (package `spa`; no code in the app). Each response is the built page with
+four placeholders filled, `Cache-Control: no-store` (a stored copy's nonce would not match the next
+response's policy) and its own `Content-Security-Policy` header. The front-end build leaves the
+placeholders; the server does not start if one is missing:
 
 ```html
 <title>__APP_NAME__</title>
@@ -362,94 +346,50 @@ says which):
 
 and `html: { cspNonce: "__CSP_NONCE__" }` in `vite.config.ts`, which makes Vite write
 `nonce="__CSP_NONCE__"` on every script and style tag it emits. The name is HTML-escaped into the
-title; the theme and the organization's context ([Dates and time](dates-and-time.md)) are JSON with every `<` escaped, so nothing in it can end the element. One pass
-fills them, so an app named `__APP_THEME__` shows that name.
+title; the theme and the organization's context ([Dates and time](dates-and-time.md)) are JSON
+with every `<` escaped, so nothing in it can end the element. One pass fills them, so an app named
+`__APP_THEME__` shows that name.
 
-**The policy** (`ContentSecurityPolicy.strict()`): `default-src 'self'`; `script-src` and
-`style-src` `'self'` plus the response's nonce; `img-src 'self' data:`; `font-src`, `connect-src`,
-`frame-src`, `media-src` and `form-action` `'self'`; `object-src 'none'`; `base-uri 'self'`;
-`frame-ancestors 'none'`. It never holds `'unsafe-inline'` or `'unsafe-eval'`. To allow more,
-add sources to a directive with `roux.spa.csp.<directive>` (`script-src`, `style-src`, `img-src`,
-`font-src`, `connect-src`, `frame-src`, `media-src`, `form-action`; `RouxSpaProperties`):
+**The policy:** `default-src 'self'`; `script-src` and `style-src` `'self'` plus the response's
+nonce; `img-src 'self' data:`; `font-src`, `connect-src`, `frame-src`, `media-src` and
+`form-action` `'self'`; `object-src 'none'`; `base-uri 'self'`; `frame-ancestors 'none'`. It never
+holds `'unsafe-inline'` or `'unsafe-eval'`. `spa.Config.CSP` adds sources to a directive, after the
+defaults; nothing loosens `default-src`, `object-src`, `base-uri` or `frame-ancestors`, and a source
+that would undo the policy (`*`, `'unsafe-inline'`, `'unsafe-eval'`, a bare scheme for scripts or
+styles) stops startup. `app.Run` registers the shell with the defaults alone, so an app that needs
+another source calls `app.Assemble` and `spa.Register` itself.
 
-```yaml
-roux:
-  spa:
-    csp:
-      img-src: https://images.example.com
-      connect-src: https://api.example.com, wss://live.example.com
-```
-
-Sources are appended after the defaults, never replacing them. There is no setting for
-`default-src`, `object-src`, `base-uri` or `frame-ancestors`, and a source that would loosen the
-policy (`*`, `'unsafe-inline'`, `'unsafe-eval'`, a bare scheme such as `https:` for scripts or
-styles, or anything holding a space, `;` or `,`) stops the app from starting with a message naming
-the setting.
-
-**The theme** (`ShellTheme`: `appName`, `palette`, `brandColor`, `shape`, `headingFont`,
-`bodyFont`) comes from a `ShellThemeSource` bean, read for every page. Without one, roux reads
-`roux.theme.*` (`RouxThemeProperties`): `app-name` (default `spring.application.name`; an app with
-neither does not start), `palette` (`gray`), `brand-color` (`#3b82f6`), `shape` (`medium`),
-`heading-font` and `body-font` (`standard`). A value the frontend has no look for (a palette
-`mauve`) stops the app from starting. An app that keeps its look elsewhere declares its own
-`ShellThemeSource` bean; `roux-theme` (owner-editable, in roux's own table) provides one.
+**The theme** (`spa.Theme`: `appName`, `palette`, `brandColor`, `shape`, `headingFont`,
+`bodyFont`) is read for every page, so a theme the owner has just saved is in the next page. The
+users module keeps the owner's theme in roux's table `roux_theme`; until the owner chooses, it is
+`spa.StockTheme(appName)` (palette `gray`, brand colour `#3b82f6`, shape `medium`, fonts
+`standard`).
 
 ### The owner's theme
 
-`roux-theme` (added beside the starter) keeps the theme in roux's own table, `roux_theme`: one row, from the
-changelog the jar ships (migratory runs it), whose columns are null until the owner chooses (`roux.theme.*` stands for every part
-not chosen, so the answer is always a whole theme). It brings:
+The users module serves the theme:
 
-- `GET /api/theme` (`ThemeController`), open to anyone, signed out too (the sign-in page needs its look): the whole
-  theme and its `version`, 0 until the first save.
-- `PUT /api/theme`, for whoever holds the `theme.manage` permission
-  (`RouxThemePermissions.THEME_MANAGE`; roux-theme's changelog grants it to `OWNER`): a `ThemeRequest` with the `version` the owner read. A stale one is a
-  `409`, a missing one a `400` on `version` (`Versions.require`). The values are the shell's own
-  (`ShellTheme.PALETTES`, `SHAPES`, `FONTS`, `COLOR`): palette `gray|red|orange|yellow|green|teal|blue|cyan|purple|pink|brand`,
-  shape `square|slight|medium|round|extra-round`, fonts `standard|modern|friendly|classic`, a
-  `#rrggbb` colour (kept lower-case) and a name of 1 to 60 characters (stripped); a bad one is a
-  `400` naming the field.
-- the `ShellThemeSource` the shell reads (`OwnerShellTheme`), so a change shows on the next page
-  load, for everyone.
+- `GET /api/roux/theme`, open to anyone, signed out too (the sign-in page needs its look): the
+  whole theme and its `version`, 0 until the first save.
+- `PUT /api/roux/theme`, for whoever holds `theme.manage` (`theme.ThemeManage`, granted to
+  `OWNER`): the theme with the `version` the owner read. A stale one is a `409`, a missing one a
+  `400` on `version`. The values are the shell's own: palette
+  `gray|red|orange|yellow|green|teal|blue|cyan|purple|pink|brand`, shape
+  `square|slight|medium|round|extra-round`, fonts `standard|modern|friendly|classic`, a `#rrggbb`
+  colour (kept lower-case) and a name of 1 to 60 characters (trimmed); a bad one is a `400` naming
+  the field.
 
-The pieces behind them are `AppTheme` (the entity), `AppThemeRepository` and `ThemeService`, whose
-`current()` answers a `ThemeResponse`: inject the service where the server needs the theme (an email
-that carries the app's name, say).
-
-An app that keeps its look elsewhere declares its own `ShellThemeSource` bean (the API stays); an
-app that wants no owner theme leaves `roux-theme` out of its dependencies. Entities and repositories are found without any entity
-scan or `@EnableJpaRepositories` of the app's; an app that sets its own `@EnableJpaRepositories`
-must still reach `org.jwcarman.roux.theme`.
+The template's Appearance page edits it with roux-web's `AppearanceSettings`.
 
 `@jwcarman/roux-web` runs under this policy: `@jwcarman/roux-web/form` calls
 `z.config({ jitless: true })` when it loads, so Zod never probes `eval`. The package's
 `package.json` marks that file in `sideEffects` so bundlers keep it; do not override `sideEffects`
 for the package or tree-shake it away.
 
-## Things to know
-
-- **who's chain is the app's security.** An app that defines no `SecurityFilterChain` gets who's:
-  every sign-in method mounted, CSRF for the SPA, and `401` (no redirect) for a signed-out request
-  outside `who.security.public-paths`. Defining any `SecurityFilterChain` makes who's back off; the
-  app's own chain must then mount who with `WhoSecurity.all()` (see who's getting-started guide).
-- **Auditing is one annotation.** Write `@EnableJpaAuditing` on a configuration class, with no
-  `auditorAwareRef` and no `dateTimeProviderRef`; roux fills in the rest of every jpa-utils
-  `AuditableEntity`'s audit columns:
-  - `@CreatedBy` and `@LastModifiedBy` are the signed-in identity's id, or `"system"`
-    (`IdentityAuditor.DEFAULT_SYSTEM_AUDITOR`) for work nobody signed in did (startup, a scheduled
-    job). Name the system something else with `roux.auditing.system-auditor` (`RouxAuditingProperties`;
-    blank is refused at startup). roux-jpa's `IdentityAuditor` is registered unless the app defines an
-    `AuditorAware` of its own.
-  - `@CreatedDate` and `@LastModifiedDate` follow the app's `Clock` (roux-jpa's
-    `ClockDateTimeProvider`, registered for you), so a test that sets the clock sets them (an
-    ordering by `created_date` can be tested without waiting); with no `Clock` bean the system clock
-    is used. The same `Clock` is the one `OrganizationCalendar` reads for today, and with it
-    `@NotInFuture` ([Dates and time](dates-and-time.md)).
-
 ## Next
 
-- [Entities and tables](entities.md): a feature's table, entity, repository, service and controller.
-- [Errors](errors.md): throwing errors on the server and showing them in the browser.
+- [A feature's server side](features.md): a feature's table, list, service, handlers and module.
+- [Errors](errors.md): refusing a request on the server and showing why in the browser.
 - [API client](api-client.md): one API module per resource.
 - [Queries and mutations](queries-and-mutations.md), [Forms](forms.md),
   [Tables and paging](tables-and-paging.md), [Feedback](feedback.md), [Testing](testing.md).

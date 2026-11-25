@@ -2,252 +2,123 @@
 
 A roux app is tested at three levels, each against the real thing as far as it can be:
 
-- **Java:** the whole app, with who and PostgreSQL, through MockMvc (`@AppTest`). Controller tests
-  sign in as a role and assert the Problem Details the browser will read.
+- **Go:** each feature's endpoints over a real PostgreSQL, with roux's sign-in, permissions and
+  problems, through an HTTP test server (`rouxtest`). Tests sign in as a person in a role and
+  assert the Problem Details the browser will read.
 - **Vitest with MSW:** components, forms and routes in jsdom, against a fake network that answers
   with the shapes roux's server sends, refusals included.
 - **Playwright:** the built app in a browser, signing in by email link, including a
   Content-Security-Policy test.
 
-The helpers come from roux: `roux-test` for Java and `@jwcarman/roux-web/testing` for the browser.
-The app keeps one helper of its own, `renderRoute`, because it needs the app's route tree. Do not
-import from roux's source.
+The helpers come from roux: `rouxtest` (and `authntest`, `pgtest`) for Go, and
+`@jwcarman/roux-web/testing` for the browser. The app keeps one helper of its own, `renderRoute`,
+because it needs the app's route tree.
 
 ## Dependencies
 
-One test dependency in `pom.xml`, without a version (`roux-bom` manages it). It brings JUnit, AssertJ,
-MockMvc, who-test (with `spring-security-test`), Testcontainers' PostgreSQL and the PostgreSQL driver:
-
-```xml
-<dependency>
-    <groupId>org.jwcarman.roux</groupId>
-    <artifactId>roux-test</artifactId>
-    <scope>test</scope>
-</dependency>
-```
-
-and in the frontend's `package.json`, as dev dependencies: `vitest`, `jsdom`, `msw`,
+Go's tests need nothing beyond the `github.com/jwcarman/roux` module: `rouxtest`, `authntest` and
+`pgtest` are packages in it, and they use the standard `testing` package (no assertion library).
+The frontend's `package.json` has, as dev dependencies: `vitest`, `jsdom`, `msw`,
 `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom`; Playwright
 (`@playwright/test`) lives in its own `e2e/` package.
 
-## Java: the whole app on PostgreSQL
+## Go: a feature over PostgreSQL
 
-Tests run the real app: who's security chain, roux's problem answers, the app's Liquibase changelog
-(after who's and roux's tables, which migratory creates), on PostgreSQL. Nothing is mocked; the app's
-`application.yml` applies, so its required settings
-([Getting started](getting-started.md#required-settings)) are already there. Everything below is in
-`org.jwcarman.roux.test`.
+Tests run the feature as it runs in the app: its migrations after roux's, its routes behind the
+real guard, its errors answered by roux, on PostgreSQL. Nothing is mocked.
 
-### @AppTest
+### The database
 
-One annotation for every test that needs the app: `@SpringBootTest` on the app's own configuration,
-MockMvc, a database of its own, `TestUsers` and `TestClock`, and `roux.owner.email` set to
-`TestUsers.OWNER_EMAIL`.
+`pgtest` gives each test a fresh schema of its own on one PostgreSQL:
 
-```java
-@AppTest
-class StudentsControllerTest { ... }
+- with `TEST_DATABASE_URL` set (`postgres://app:app@localhost:5432/app`), that database;
+- otherwise a PostgreSQL container (`postgres:17-alpine`) started once per test package, on first
+  use, which needs Docker.
 
-@AppTest(webEnvironment = WebEnvironment.RANDOM_PORT) // a test that needs a real port
-class SessionCookieTest { ... }
-```
+A schema is named for the test (`rouxtest.New(t, "ranks")`), dropped if an earlier run left one,
+and the pool's `search_path` is set to it, so tests never see each other's rows. Use a different
+name in each test package that runs at the same time.
 
-Test classes with the same configuration share one running app and one database, so each test starts
-with `users.reset()`. A class that adds `@TestPropertySource` (or `@Import`) gets an app and a
-database of its own.
+### The app: `rouxtest.New`
 
-### The database: TestDatabase
-
-`@AppTest` gives each application context a new, empty database (`app_test_<12 hex>`) on one
-PostgreSQL server per test run: a Testcontainers `postgres:16` started on first use (Docker must be
-running), or, where there is no Docker, the server named by `ROUX_TEST_DATABASE_URL`,
-`ROUX_TEST_DATABASE_USERNAME` and `ROUX_TEST_DATABASE_PASSWORD` (a user who may create databases).
-A test that opens a database itself calls `TestDatabase.create()`; a `@DynamicPropertySource` points
-the app at one with `TestDatabase.register(registry)`.
-
-### Signed-in people: TestUsers
-
-```java
-@Autowired TestUsers users;
-
-@BeforeEach
-void clean_slate() {
-  users.reset(); // every user gone, the app's tables emptied, the owner made again
-}
-
-TestUser ivy = users.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
-ivy.perform(get("/api/students")).andExpect(status().isOk());
-users.owner().perform(delete("/api/plans/" + id)).andExpect(status().isNoContent());
-users.anonymous().perform(get("/api/students")).andExpect(status().isUnauthorized());
-```
-
-- `reset()` removes every user (who's tables, cascading to what refers to them), empties every table
-  that was empty when the app started (after its migrations, before any test: the app's own tables,
-  without naming them), deletes the roles a test made (any role that did not exist when the app
-  started), puts `TestClock` back on real time and makes the owner again, as roux does at startup.
-  What the changelogs put in (roles, grants, roux-theme's theme) stays.
-- `signedIn(name, email, role)` makes a user as a real one is made: who's identity, the address and
-  the role, and `UserJoined` (with that role) published, in one transaction ([Roles](roles.md)). The
-  app's listener for `UserJoined` makes its own data for them, so a test person has what an invited
-  one has. The role is one of the app's, by name; an unknown one fails naming the roles there are. A
-  `Role` a test made itself is accepted too: `signedIn(name, email, role)` with who's `Role`.
-- An address already registered, or a `UserJoined` listener that throws, fails `signedIn` and leaves
-  no one behind.
-- `owner()` is the owner the app made from `TestUsers.OWNER_EMAIL`, signed in; `anonymous()` a
-  browser with no one signed in.
-- `TestUser` is `(id, browser)`: `perform(request)` sends a request as them. The browser is
-  who-test's `WhoMockMvcBrowser`: it keeps the session and cookies between requests, and on `POST`,
-  `PUT`, `PATCH` and `DELETE` sends `X-XSRF-TOKEN` from the `XSRF-TOKEN` cookie, as roux's browser
-  client does; `browser().performWithoutCsrf(request)` proves a write without it is refused (`403`).
-
-### Time: TestClock
-
-`TestClock` is the app's `Clock` in an `@AppTest`: UTC, on real time until a test sets it.
-
-```java
-@Autowired TestClock clock;
-
-clock.set("2026-11-10T17:32:00Z"); // stopped there
-clock.advance(Duration.ofDays(1));  // moved on a day
-clock.useRealTime();               // reset does this too
-```
-
-The app reads time only from the injected `Clock` ([Dates and time](dates-and-time.md)), so a test
-that sets it controls "now" everywhere, who's sessions excepted.
-
-### Mail: RecordingWhoEmailSender and TestMail
-
-Tests sign in through `TestUsers`, so no mail is needed for that. A test of the app's own invitation
-or sign-in emails captures them:
-
-- `RecordingWhoEmailSender`, declared as a bean in the test (`@Import` a `@TestConfiguration` that
-  returns `new RecordingWhoEmailSender()`), replaces who's mail sender and keeps each sign-in or
-  invitation link sent: `sent()` is a list of `Sent(address, link, code)`; `failSends()` makes sends
-  fail (to test what the app does when mail is down); `clear()` forgets them.
-- `TestMail` is a real mail server for an end-to-end test: `TestMail.get()` is a Mailpit
-  (`Mail(smtpHost, smtpPort, apiUrl)`) started on first use, or the one named by
-  `ROUX_TEST_MAIL_SMTP_HOST`, `ROUX_TEST_MAIL_SMTP_PORT` and `ROUX_TEST_MAIL_API_URL`. Point
-  `spring.mail.*` at it and read the mail from its API.
-
-### A controller test
-
-```java
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.util.UUID;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayNameGeneration;
-import org.junit.jupiter.api.DisplayNameGenerator;
-import org.junit.jupiter.api.Test;
-import org.jwcarman.roux.test.AppTest;
-import org.jwcarman.roux.test.TestUser;
-import org.jwcarman.roux.test.TestUsers;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-
-import com.jayway.jsonpath.JsonPath;
-
-@AppTest
-@DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores.class)
-class StudentsControllerTest {
-
-  private static final String STUDENTS = "/api/students";
-
-  @Autowired TestUsers users;
-
-  private TestUser instructor;
-
-  @BeforeEach
-  void clean_slate() {
-    users.reset();
-    instructor = users.signedIn("Ivy Instructor", "ivy@example.org", Roles.INSTRUCTOR);
-  }
-
-  @Test
-  void a_signed_out_caller_is_refused_with_401() throws Exception {
-    users.anonymous().perform(get(STUDENTS)).andExpect(status().isUnauthorized());
-  }
-
-  @Test
-  void a_blank_name_is_a_400_on_the_name_field() throws Exception {
-    instructor
-        .perform(json(post(STUDENTS), "{\"name\":\" \",\"joinedOn\":\"2026-11-01\"}"))
-        .andExpect(status().isBadRequest())
-        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-        .andExpect(jsonPath("$.detail").value("The request has invalid fields"))
-        .andExpect(jsonPath("$.errors[?(@.field == 'name')].message").value("Must not be blank"));
-  }
-
-  @Test
-  void a_missing_student_is_a_404_naming_it() throws Exception {
-    UUID missing = UUID.randomUUID();
-
-    instructor
-        .perform(get(STUDENTS + "/" + missing))
-        .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.detail").value("No student " + missing));
-  }
-
-  @Test
-  void an_unknown_sort_is_a_400_on_sortBy() throws Exception {
-    instructor
-        .perform(get(STUDENTS).param("sortBy", "AGE"))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.errors[0].field").value("sortBy"));
-  }
-
-  @Test
-  void a_stale_version_is_a_409() throws Exception {
-    String id = create("Ada Lovelace");
-
-    instructor
-        .perform(
-            json(
-                put(STUDENTS + "/" + id),
-                "{\"name\":\"Ada King\",\"joinedOn\":\"2026-11-01\",\"version\":7}"))
-        .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.detail").value("This record changed since you loaded it"));
-  }
-
-  private String create(String name) throws Exception {
-    String response =
-        instructor
-            .perform(json(post(STUDENTS), "{\"name\":\"%s\",\"joinedOn\":\"2026-11-01\"}".formatted(name)))
-            .andExpect(status().isCreated())
-            .andReturn()
-            .getResponse()
-            .getContentAsString();
-    return JsonPath.read(response, "$.id");
-  }
-
-  private static MockHttpServletRequestBuilder json(MockHttpServletRequestBuilder request, String body) {
-    return request.contentType(MediaType.APPLICATION_JSON).content(body);
-  }
+```go
+// setup is the ranks API over a fresh schema, with Olive (OWNER) and Ada (USER) signed in.
+func setup(t *testing.T) (owner, user *authntest.Browser) {
+	t.Helper()
+	a := rouxtest.New(t, "ranks")
+	a.Role("USER") // the app's own role, before ranks grants to it
+	a.Migrate(ranks.Module{}.Migrations()...)
+	ranks.Register(a.Kit(), ranks.Service{Pool: a.Pool, Clock: a.Clock.Now})
+	a.Serve()
+	return a.SignedIn(a.Person("Olive Owner", "OWNER")), a.SignedIn(a.Person("Ada Lovelace", "USER"))
 }
 ```
 
-What a controller test asserts:
+- `rouxtest.New(t, schema, migrations...)` migrates roux's tables (identities, roles, sign-in by
+  email, users, the activity log) and any migrations passed into a fresh schema.
+- `a.Role(name, permissions...)` makes a role if there is none of that name and grants it the
+  permissions. `OWNER` exists already. Make the app's own roles (`USER`) **before** migrating a
+  feature whose migration grants to them, as the app's `app-roles` migration does.
+- `a.Migrate(migrations...)` runs more migrations: the feature's.
+- `a.Kit()` is the kit the feature's `Register` mounts its routes on (`Kit.Handle` and the rest),
+  with the test's pool; `a.Serve()` starts the HTTP test server. Register every route before it.
+- `a.Person(name, role)` makes a member of the team (an identity, a user named `name`, an address,
+  the role) and returns their id. `a.Deactivate(id)` deactivates them and ends their sessions.
+- `a.SignedIn(id)` is a browser signed in as them; `a.Browser()` is a signed-out one.
+- `a.Pool` is the database, for arranging rows a test needs and checking what was stored.
 
-- **The status and the user's words.** `$.detail` and `$.errors[?(@.field == 'name')].message` are
-  what the browser shows, word for word, so assert them exactly ([Errors](errors.md)). The content
-  type is `application/problem+json`.
-- **One test per refusal the endpoint can give:** signed out (`401`), a missing permission (`403`,
-  sign in with a role that lacks it), an invalid field (`400` with `errors`), a missing record
-  (`404`), a stale `version` (`409`), an unknown `sortBy` on a list (`400` on `sortBy`).
-- **The happy path through the API**, as the browser calls it: create, read back, update at the
-  version read, list with search, filters and sort.
+### Signed-in browsers
 
-Sign in through `TestUsers`, not with Spring Security Test's `user(...)`: that principal is not a
-who identity, so it has none of the app's roles or permissions, and code that reads the caller's
-identity finds none. Do not send `csrf().asHeader()` either: its token is masked, and who's CSRF
-setup (`csrf.spa()`) refuses it; `WhoMockMvcBrowser` sends the cookie's value, as the browser does.
+A browser (`*authntest.Browser`) keeps its cookies, and sends the CSRF token on every unsafe
+request, as roux-web's client does:
+
+```go
+added := owner.Post("/api/ranks", map[string]any{"name": " Yellow belt ", "colour": "yellow"}).
+	Want(t, 201, "add").JSON(t)
+```
+
+- `Get(path)`, `Post(path, body)`, `Put(path, body)` and `Delete(path)` send JSON;
+  `Do(method, path, body, csrf)` sends one without the CSRF token, to test that refusal.
+- `Want(t, status, what)` fails the test, naming `what` and showing the answer, unless the status is
+  the one wanted, and returns the reply.
+- `JSON(t)` is the body as a `map[string]any` (numbers are `float64`); `Decode(t, &v)` reads it
+  into a struct.
+
+### Time
+
+`a.Clock` starts at 2026-11-24 12:00 UTC. Pass `a.Clock.Now` as the service's clock, and move it
+with `a.At(moment)` or `a.Clock.Advance(d)`. Sessions expire on the same clock: moving it hours or
+weeks ahead signs everyone out, and the next request is `401`. Sign the person in again after
+moving it.
+
+### What to test
+
+One test per behaviour, named for it, and one per refusal, asserting its status and its words:
+
+```go
+func TestTwoRanksMayNotShareANameIgnoringCase(t *testing.T) {
+	owner, _ := setup(t)
+	owner.Post("/api/ranks", map[string]any{"name": "Yellow", "colour": "yellow"}).Want(t, 201, "first")
+	got := owner.Post("/api/ranks", map[string]any{"name": "YELLOW", "colour": "green"}).Want(t, 400, "second").JSON(t)
+	if errs := got["errors"].([]any); errs[0].(map[string]any)["message"] != ranks.NameTaken {
+		t.Fatalf("got %v", got)
+	}
+}
+```
+
+- **Every route's permission**: a person without it gets `403`, and one signed out `401`.
+- **Every field the input checks**, and every refusal the service makes: `400` with the field and
+  its message, `404`, `409` for a stale version.
+- **What the list returns** for each filter, sort and search, and what the service stored.
+- A test of a feature's own words names its constant (`ranks.NameTaken`), and of roux's words
+  roux's (`problem.MustNotBeBlank`), so a change of wording is made in one place.
+
+### The app's own tests
+
+`cmd/server` holds the tests of the app as a whole: the permissions file and the grants
+([Roles and permissions](roles.md#the-permissions-tests)), that `compose.yaml` and the `Dockerfile`
+use pinned releases, and that the front end is embedded. `make test` runs every package with
+coverage (`coverage.out`).
 
 ## Vitest with MSW
 
@@ -333,9 +204,9 @@ The server's refusals have fixed shapes (`contracts/problem-*.json` in roux's re
 
 | Answer | Status | As the server answers |
 | --- | --- | --- |
-| `invalidFields({ name: "Must not be blank" })` | 400 | a Bean Validation failure or an `InvalidFieldException` |
-| `invariantViolation("A class meets at most 7 times a week")` | 400 | an `InvariantViolationException` |
-| `notFound("No rank r9")` | 404 | a `NotFoundException` |
+| `invalidFields({ name: "Must not be blank" })` | 400 | `problem.Validation` or `problem.InvalidField` |
+| `invariantViolation("A class meets at most 7 times a week")` | 400 | `problem.BadRequest` |
+| `notFound("No rank r9")` | 404 | `problem.NotFound` |
 | `stale()` | 409 | a save at a version that is no longer the latest |
 | `serverError(errorId?)` | 500 | an unexpected failure, with the reference it logged |
 
@@ -436,8 +307,8 @@ describe("RankFormDialog", () => {
 
 - Find fields by label (`getByLabelText(/^Name/)`; the required indicator follows the label) and
   buttons by role and name, as a user would.
-- Set the `XSRF-TOKEN` cookie before a write, or the client first asks `/who/me` for one, and that
-  request needs a handler too.
+- Set the `XSRF-TOKEN` cookie before a write, or the client first asks `/api/roux/auth/me` for one,
+  and that request needs a handler too.
 - Assert the request body the server would receive (trimmed, `""` as `null`, `version` on an update),
   the toast (`role="status"` for success; for a failure, find the title text, then its
   `[role=alert]`), and `invalidateQueries` called with the keys in `meta.refreshes`.
@@ -448,46 +319,57 @@ describe("RankFormDialog", () => {
 
 A page that keeps its state in the URL (a `QueryTable` with `params`) is tested through the router.
 `src/testing/route.tsx`, the one test helper that stays the app's own (it needs the app's route tree
-and session), opens a path in the whole app, signed in through a mocked `/who/me`:
+and its `App`), opens a path in the whole app, signed in with roux-web's `signedInAs`:
 
 ```tsx
-import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
-import { http, HttpResponse } from "msw";
-import { routeTree } from "../routeTree.gen";
-import { SessionProvider } from "../session";
-import { renderWithProviders, server, testQueryClient } from "@jwcarman/roux-web/testing";
+import {
+  createBrowserHistory,
+  createMemoryHistory,
+} from "@tanstack/react-router";
+import { render } from "@testing-library/react";
+import { App, createAppRouter } from "../App";
+import {
+  server,
+  signedInAs,
+  testQueryClient,
+} from "@jwcarman/roux-web/testing";
 
 /**
- * Opens `path` in the whole app: the generated route tree in a memory router, signed in with
- * `permissions` (or signed out with `null`). Returns the router, to check where it ended up.
+ * Opens `path` in the whole app, as TanStack's file-based routing guide tests routes: a router
+ * built from the generated route tree, in memory, signed in with `permissions` (or signed out with
+ * `null`). Returns the router, so a test can check where it ended up. `browserHistory` uses the
+ * window's own address bar instead of memory, for what only the browser's history does (a page that
+ * rewrites the address itself, as the sign-in link's does).
  */
-export function renderRoute(path: string, { permissions }: { permissions: string[] | null }) {
-  server.use(
-    http.get("/who/me", () =>
-      permissions === null
-        ? new HttpResponse(null, { status: 401 })
-        : HttpResponse.json({ identityId: "id-1", permissions }),
-    ),
-  );
+export function renderRoute(
+  path: string,
+  {
+    permissions,
+    browserHistory = false,
+  }: { permissions: string[] | null; browserHistory?: boolean },
+) {
+  server.use(...signedInAs(permissions));
   const client = testQueryClient();
-  const router = createRouter({
-    routeTree,
-    history: createMemoryHistory({ initialEntries: [path] }),
-    context: { queryClient: client },
-  });
-  renderWithProviders(
-    <SessionProvider>
-      <RouterProvider router={router} />
-    </SessionProvider>,
+  if (browserHistory) {
+    window.history.replaceState({}, "", path);
+  }
+  const router = createAppRouter(
     client,
+    browserHistory
+      ? createBrowserHistory()
+      : createMemoryHistory({ initialEntries: [path] }),
   );
+  render(<App queryClient={client} router={router} />);
   return { router, client };
 }
 ```
 
-Its context and providers must match the app's own `main.tsx` (here a `queryClient` in the router
-context, and the getting-started guide's `SessionProvider`). A paged endpoint answers with a
-`PageDto`: `pageOf(rows, params)` answers one page of `rows` as a roux list endpoint answers `params`
+`signedInAs(permissions)` answers the session's two requests (`/api/roux/auth/me` and
+`/api/roux/users/me`) for `TEST_USER` holding the permissions, or for nobody (`null`). The helper
+renders the app's own `App`, so the providers and the router's context are the ones `main.tsx`
+uses.
+
+A paged endpoint answers with a `PageDto`: `pageOf(rows, params)` answers one page of `rows` as a roux list endpoint answers `params`
 (page 0 of 20 unless they say otherwise, with the pagination block).
 
 ```tsx
@@ -552,16 +434,15 @@ string the endpoint received.
 ## Playwright
 
 The end-to-end suite (`e2e/`) drives the built app in Chromium against a real database and a real
-mail catcher. In the template a Maven integration test (`E2eIT`, run by Failsafe in `verify`)
-starts PostgreSQL (`TestDatabase`), Mailpit and the app on a free port, passes their URLs to the
-suite in the environment (`E2E_BASE_URL`, `E2E_MAILPIT_URL`), and runs `npx playwright test`. The
-app's arguments set the URL-dependent settings: `who.passkey.rp-id=localhost`,
-`who.passkey.allowed-origins` and the link base URL at the chosen port, and `spring.mail.host` and
-`spring.mail.port` at Mailpit (`who.email.from` set, and `who-email-smtp` on the classpath).
+mail catcher. It is given the app's and Mailpit's addresses in the environment (`E2E_BASE_URL`,
+`E2E_MAILPIT_URL`) and needs the app started first: the binary from `make build` (or `go run
+./cmd/server` with `FRONTEND_DIR=frontend/dist`), on a fresh database, with `SMTP_ADDR` at
+Mailpit, `PASSKEY_RP_ID=localhost` and `PASSKEY_ORIGINS` and `PUBLIC_URL` at the app's address.
+Then, in `e2e/`, `npx playwright test`.
 
 The suite signs in as a user does: it asks for a link on the sign-in page, reads the link from
 Mailpit's API, and opens it. Passkeys use Chrome's virtual authenticator (the DevTools `WebAuthn`
-domain). Requests a test intercepts are who's, under `/who` (`/who/me/passkeys/options`).
+domain). Requests a test intercepts are sign-in's, under `/api/roux/auth`.
 
 ### The Content-Security-Policy test
 
@@ -621,10 +502,11 @@ screen to that walk.
 
 ## Don't
 
-- Don't mock roux, who, the API module or the query client; answer requests with MSW, and run the
-  Java tests against the real app.
+- Don't mock roux, the API module or the query client; answer requests with MSW, and run the Go
+  tests against a real database.
 - Don't build Problem Detail bodies inline in each test; use `problems.ts`, which matches roux's
   contracts.
 - Don't create a `QueryClient` in a test; use `testQueryClient()` (roux's client).
-- Don't use H2 or an in-memory database for the Java tests; roux apps run on PostgreSQL.
+- Don't fake the database in Go tests (an interface over the service, an in-memory store); roux
+  apps run on PostgreSQL.
 - Don't import roux-web's internal test helpers; the app has its own.

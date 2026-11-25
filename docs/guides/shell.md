@@ -65,7 +65,8 @@ is the route guard: guard it with `theme.manage`, which the server enforces too.
 ## Sign-in
 
 `@jwcarman/roux-web/signin` ships the sign-in page whole, and the pieces for an app that lays out its
-own. who is `@jwcarman/who-client` (a peer dependency).
+own. They talk to the server with roux-web's own sign-in client (`createAuthClient()`, from
+`@jwcarman/roux-web/auth`).
 
 ```tsx
 import { SignInCard, SignInFrame } from "@jwcarman/roux-web/signin";
@@ -85,40 +86,40 @@ export function SignIn() {
 - `SignInFrame` (`SignInFrameProps`: `tools`, `children`): a card no wider than 400px, centred on a tinted page from a small screen up; on a
   phone the card is the page. `tools` sit in the top corner. Its children are the card's contents, so
   the emailed link's landing page (`/signin/link`) wears the same card.
-- `SignInCard` (`SignInCardProps`: `appName`, `logo`): "Sign in to `appName`" under `logo`, then the ways who reports as on
-  (`who.signInOptions()`; email and a passkey when who cannot be asked). The emailed link comes first,
+- `SignInCard` (`SignInCardProps`: `appName`, `logo`): "Sign in to `appName`" under `logo`, then the ways the server reports as on
+  (`auth.signInOptions()`; email and a passkey when the server cannot be asked). The emailed link comes first,
   with "Email me a link" at the field's right edge; below a divider, "Have a passkey?" beside "Use a
   passkey" when that is the only other way, or "Other ways to sign in" above a wrapping row of the
   passkey and a `ProviderSignInButton` per provider. Buttons are their label's width. Once the link is
   sent the card turns to `Check your email`: the address it went to, the code beside "Sign in", "Use a
-  different email" (back, the address kept) and "Send it again" (who has no cooldown, so neither does
-  the card). Refusals are told on the card (`role="alert"`).
+  different email" (back, the address kept) and "Send it again" (the server spaces emails to one address,
+  `EMAIL_RESEND_INTERVAL`, and answers every request alike, so the card has no cooldown of its own). Refusals are told on the card (`role="alert"`).
 
 The pieces, for a page of the app's own:
 
 - `EmailSignIn`: "Email me a link" for an address (`email()` rule), then `Check your email` and "Open the
   link, or type the code from the email": a short code field (`autoComplete="one-time-code"`) with
-  "Sign in" beside it, which calls `who.email.signIn({ email, code })`; who's refusal is told under the field.
+  "Sign in" beside it, which calls `auth.email.signIn({ email, code })`; a refusal is told under the field.
 - `PasskeySignInButton`: "Sign in with a passkey"; a refusal or cancel is told under it (`role="alert"`).
-- `ProviderSignInButtons`: one `ProviderSignInButton` per provider `who.signInOptions()` reports, with
-  who's display names; nothing when there are none. `ProviderSignInButton provider="google"` alone is
-  a link (a full page load, because the provider's own page must open) to who's authorize URL, "Continue with
+- `ProviderSignInButtons`: one `ProviderSignInButton` per provider `auth.signInOptions()` reports, with
+  their display names; nothing when there are none. `ProviderSignInButton provider="google"` alone is
+  a link (a full page load, because the provider's own page must open) to the server's authorize URL (`/api/roux/auth/oidc/authorize/{id}`), "Continue with
   Google", drawn as the provider's guidance asks (Google: the four-color G on white with a #747775
   outline, #131314 in dark mode; Microsoft's four squares; Apple, GitHub, GitLab, Okta). Any other provider
-  gets a generic icon and `name` (who's display name; `ProviderSignInButtons` passes it, else the id).
+  gets a generic icon and `name` (the provider's display name; `ProviderSignInButtons` passes it, else the id).
   `label` and `icon` override (`ProviderSignInButtonProps` also takes the button's own Chakra props).
-- `EmailLinkLanding`: the page who's `email-link.link-base-url` opens (`/signin/link`): redeems the token once,
+- `EmailLinkLanding`: the page a sign-in link opens (`PUBLIC_URL/signin/link`): redeems the token once,
   then goes on. A bad link says so, with a link to `signInPath` (`/signin`).
 - `PasskeySettings` (`PasskeySettingsProps`: `onSignedOut`) is the signed-in person's passkeys, for the
   app's Settings page under its own heading: the list (each with "Added … · Last used …" as days in the
   organization's zone, and Remove), "No passkeys yet.", and "Add a passkey" in a dialog that asks for a
   label (`passkeyLabelError`, at most `PASSKEY_LABEL_MAX` characters, checked before the browser makes the
-  passkey). who's refusals are toasts (the last way to sign in stays). When who says the session ended,
+  passkey). The server's refusals are toasts (the last way to sign in stays). When the server says the session ended,
   it calls `onSignedOut`: pass the session's `refresh`, and the guards send the person to sign in.
 - `useSignInReturn()` returns the function every component calls on success: it opens the page the
   visitor asked for, else Home, as a full page load (so the app starts as the person who signed in).
   The route guard that sends a signed-out visitor to sign in calls `rememberSignInReturn(path)`
-  (`isReturnable` says which paths count: never Home, sign-in, `/api` or `/who`; `takeSignInReturn` reads it once).
+  (`isReturnable` says which paths count: never Home, sign-in or `/api`; `takeSignInReturn` reads it once).
   After a sign-in of your own, call `useSignInReturn()()`.
 
 ## The session and route guards
@@ -131,12 +132,12 @@ throws outside one):
 const { me, profile, refresh, refreshProfile, signOut, currentMe } = useSession();
 ```
 
-- `me` is who's `Me` (`identityId`, `permissions`, ...): `undefined` while it loads, `null` when signed out.
-- `profile` is the person's own `Profile` from roux-users' `/api/users/me` (`displayName`, `email`,
+- `me` is the caller (`Me`: `identityId`, `permissions`, ...), from `/api/roux/auth/me`: `undefined` while it loads, `null` when signed out.
+- `profile` is the person's own `Profile` from `/api/roux/users/me` (`displayName`, `email`,
   `version`): `undefined` while it loads, `null` when there is none to show. `refreshProfile()` reloads it
   after a rename.
-- `refresh()` asks who again; it also runs whenever an API call answers 401, so a session that ends on
-  a page is noticed at once. `signOut()` signs out through who.
+- `refresh()` asks the server again; it also runs whenever an API call answers 401, so a session that ends on
+  a page is noticed at once. `signOut()` signs out.
 - `currentMe()` answers the caller as of the server's last answer, before React re-renders: route guards
   read it (`context.session.currentMe()`), so a navigation right after signing in sees the new session.
 - When the person changes (signing in, out, or as someone else), the query cache is emptied.
@@ -211,4 +212,4 @@ as a button with or without one, so the title sits in the same place on every pa
 - Don't mount `ChakraProvider` or Emotion's `CacheProvider` yourself next to `ThemeProvider`.
 - Don't write the theme, the nonce or the page's title into `index.html` by hand: the server does.
 - Don't call `/api/theme` from the app; `AppearanceSettings` is the only caller.
-- Don't hand-write sign-in calls to who or a navigation list of strings: use the components and `defineNav`.
+- Don't hand-write sign-in calls or a navigation list of strings: use the components and `defineNav`.

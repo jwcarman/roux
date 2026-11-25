@@ -1,253 +1,206 @@
 # Roles and permissions
 
-A roux app checks **permissions**, never roles: `@RequiresPermission(Permissions.CLASSES_READ)` on an
-endpoint, a `permission` on a navigation item. A **role** is a named set of permissions that people
-hold. Permissions are constants in code; roles and what they grant are **data**, changed by Liquibase
-changesets like any schema.
+A roux app checks **permissions**, never roles: `k.Handle("GET /api/ranks", ranks.RanksRead, ...)`
+on an endpoint, a `permission` on a navigation item. A **role** is a named set of permissions that
+people hold. Permissions are constants in Go; roles and what they grant are **data**, changed by
+migrations like any schema.
 
 ## What roux gives every app
 
-- **`OWNER`** (`RouxRoles.OWNER`). roux-roles' changelog creates it and grants it who-admin's
-  permissions (`who.identities.read`, `who.identities.manage`). Each roux module grants `OWNER` its own
-  permissions in its own changelog: roux-theme grants `theme.manage`
-  (`RouxThemePermissions.THEME_MANAGE`), and roux-users grants `users.read`, `users.invite`,
-  `users.manage` and `users.owners` (`RouxUserPermissions`, [Users](users.md)). A roux upgrade that adds a permission brings its grant with it.
-  The app grants `OWNER` its own permissions.
-- **The first owner**, from `roux.owner.email` and `roux.owner.name` (both required). While no active
-  identity holds `OWNER`, roux creates one at startup and publishes `UserJoined` for it inside that
-  transaction (below).
-
-  Once an active owner exists, the settings change nothing. If none is active (someone changed the
-  database by hand), the next start makes one again; when another identity already holds the
-  address, startup fails naming `roux.owner.email`.
-- **Invitable roles**, from `roux.roles.invitable` (a list, empty by default; `OWNER` can never be
-  listed). roux refuses any invitation that gives another role, inside the invitation's transaction,
-  whichever endpoint sent it, with who's `InvalidInvitationException` (who's own
-  `POST /who/invitations` answers it as a `400` with code `invalid-request`). It serves the list at
-  `GET /api/roles/invitable` for the invite form. List only roles the app's changelog creates.
-- **The last owner stays.** See "Keep someone who can manage people" below.
-
-## A user joined: UserJoined
-
-A **user** is anyone who can sign in. roux publishes `UserJoined(identityId, name, email, role)`
-whenever a user is created: the first owner at startup (role `OWNER`), someone invited through
-`UserInvitations` (the role they were invited with), and a test's person (`TestUsers.signedIn`,
-[Testing](testing.md)). It is published synchronously, inside the transaction that creates the user,
-so an app that keeps its own data for some users makes it in one listener, and a listener that throws
-rolls the user back. `role` lets a listener act for one role only:
-
-```java
-@Component
-class InstructorProfiles {
-  private final InstructorProfileRepository profiles;
-
-  InstructorProfiles(InstructorProfileRepository profiles) {
-    this.profiles = profiles;
-  }
-
-  @EventListener
-  void on(UserJoined user) {
-    if (Roles.INSTRUCTOR.equals(user.role())) {
-      profiles.save(new InstructorProfile(user.identityId()));
-    }
-  }
-}
-```
-
-`email` is the address as who registered it (trimmed and lower-cased); `role` is the role's name.
-
-## Inviting a user: UserInvitations
-
-roux-users' `POST /api/users/invitations` (`users.invite`) invites by name, email and role
-([Users](users.md)). An app endpoint that invites for a purpose of its own (a coach, made from a form
-that also asks for their belt) invites through `UserInvitations`, which wraps who's
-`InvitationService` and publishes `UserJoined` inside who's invitation transaction:
-
-```java
-Invitation invitation =
-    invitations.invite(
-        request.name(),
-        request.email(),
-        Roles.INSTRUCTOR,
-        identity -> coaches.save(new Coach(identity.id(), request.belt())));
-```
-
-- `invite(name, email, role)` returns who's `Invitation` (the new identity's id, and whether the link
-  was sent). `invite(name, email, role, alsoInTransaction)` runs the app's other work that must commit
-  with the invitation (an activity, a row of its own) after `UserJoined`, in the same transaction.
-- The role is checked as every invitation's is (invitable roles, above). An address already registered
-  is refused with who's `EmailAddressTakenException`, for the endpoint to turn into a field error on
-  `email`.
-- `resend(identityId)` sends the invitation again (who's resend interval applies); it does not know
-  whether they have signed in, which roux-users' endpoint checks.
-- who-admin's own `POST /who/invitations` takes no name, so it publishes no `UserJoined`: a user
-  invited that way gets no `AppUser` and no app data from a listener. Invite through roux's endpoint
-  or the app's.
+- **`OWNER`** (`authz.RoleOwner`). roux's migrations create it, and each of roux's modules grants
+  `OWNER` its own permissions in its own migration: `theme.manage` (`theme.ThemeManage`),
+  `users.read`, `users.invite`, `users.manage` and `users.owners` (`users.UsersRead` and the others,
+  [Users](users.md)), and `roux.admin` (`authz.Admin`, below). `app.RouxPermissions()` lists them. A
+  roux upgrade that adds a permission brings its grant with it. The app grants `OWNER` its own
+  permissions.
+- **The first owner**, from `OWNER_EMAIL` and `OWNER_NAME` (both or neither). While no active
+  identity holds `OWNER`, the users module creates one at startup. Once an active owner exists, the
+  settings change nothing. If none is active (someone changed the database by hand), the next start
+  makes one again; when another identity already holds the address, startup fails.
+- **Invitable roles**, from `INVITABLE_ROLES` (comma separated, default `USER`; `OWNER` is
+  refused). An invitation or a role change that gives another role is refused, `400` on `role`. The
+  list is served at `GET /api/roux/roles/invitable` for the invite form, in the order given. List
+  only roles a migration creates.
+- **The last administrator stays.** See [Keep someone who can manage people](#keep-someone-who-can-manage-people).
 
 ## The app's permissions
 
-One class of constants, `public static final String` each:
+Constants in the package that checks them, and a list of them:
 
-```java
-public final class Permissions {
-  public static final String CLASSES_READ = "classes.read";
-  public static final String CLASSES_MANAGE = "classes.manage";
+```go
+// The ranks' permissions (migrations/001_rank.sql grants them).
+const (
+	RanksRead   = "ranks.read"
+	RanksManage = "ranks.manage"
+)
 
-  private Permissions() {}
+// Permissions is every permission ranks checks, for the app's list of them.
+var Permissions = []string{RanksRead, RanksManage}
+```
+
+A permission is lowercase words joined by dots: the feature, then what it allows (`ranks.read`,
+`items.delete.any`). Reading and changing are usually two (`ranks.read`, `ranks.manage`); "only
+the owner" is a permission granted to `OWNER` alone.
+
+`cmd/server/modules.go` lists every permission the app checks, roux's first:
+
+```go
+func permissions() []string {
+	return append(app.RouxPermissions(), ranks.Permissions...)
 }
 ```
 
 ### Parts of a response only some callers see
 
-`@RequiresPermission` guards a whole endpoint. When the endpoint is open to more people than one of its
-parts (a list's column, and the filter and sort over it), inject roux's `CallerPermissions` and check
-inside it: `has(permission)` answers for the signed-in caller (`false` signed out), and
-`require(permission, what)` refuses with a `403` problem. See
+`k.Handle` guards a whole endpoint. When the endpoint is open to more people than one of its parts
+(a list's column, a delete button's `canDelete`), check the caller inside:
+
+```go
+caller := authn.PrincipalFrom(r.Context())
+if !caller.Has(ItemsDeleteAny) && caller.IdentityID != author {
+	return problem.Forbidden()
+}
+```
+
+`Principal.Has(permission)` answers from the permissions the caller held when the request began;
+`Principal.IdentityID` is who they are. See
 [Tables and paging](tables-and-paging.md#a-column-only-some-people-see).
 
 ## The app's roles
 
-In the app's own changelog (included from its master), by name, inserting only what is missing:
+The app's own roles are made by its own migration, `cmd/server/migrations/`, by name, inserting
+only what is missing:
 
-```xml
-<changeSet id="app-roles-1" author="app">
-    <sql>
-        INSERT INTO who_role (id, name) VALUES (gen_random_uuid(), 'MEMBER')
-          ON CONFLICT (name) DO NOTHING;
-        INSERT INTO who_role_permission (role_id, permission)
-          SELECT r.id, p.permission FROM who_role r
-          CROSS JOIN (VALUES ('classes.read'), ('classes.manage')) AS p(permission)
-          WHERE r.name = 'OWNER'
-          ON CONFLICT DO NOTHING;
-        INSERT INTO who_role_permission (role_id, permission)
-          SELECT r.id, 'classes.read' FROM who_role r WHERE r.name = 'MEMBER'
-          ON CONFLICT DO NOTHING;
-    </sql>
-</changeSet>
+```sql
+-- This application's own roles and what each grants. OWNER is roux's: it holds every
+-- permission (each module's migration grants it its own). USER is anyone invited.
+insert into roux_role (id, name) values (gen_random_uuid(), 'USER') on conflict (name) do nothing;
+insert into roux_role_permission (role_id, permission)
+select r.id, 'users.read' from roux_role r where r.name = 'USER'
+on conflict do nothing;
 ```
 
-Never change a changeset that has run; add a new one.
+The template's `appRoles` module (`modules.go`) runs it, named `app-roles`, after `roux-users`.
+Each feature then grants its own permissions in its own migration, after `app-roles`:
 
-- **Adding a permission** is a constant and a changeset granting it to `OWNER` (and to any other role
-  that should hold it).
-- **Renaming a role** is a changeset: `UPDATE who_role SET name = 'COACH' WHERE name = 'INSTRUCTOR';`.
+```sql
+insert into roux_role_permission (role_id, permission)
+select r.id, p.permission
+  from roux_role r
+ cross join (values ('ranks.read')) as p(permission)
+ where r.name in ('USER', 'OWNER')
+on conflict do nothing;
+
+insert into roux_role_permission (role_id, permission)
+select r.id, 'ranks.manage' from roux_role r where r.name = 'OWNER'
+on conflict do nothing;
+```
+
+Never change a migration that has run; add a new one.
+
+- **Adding a permission** is a constant, an entry in the feature's `Permissions`, and a migration
+  granting it to `OWNER` (and to any other role that should hold it).
+- **Adding a role** is a migration in `cmd/server/migrations/` (and, if people may be invited to
+  it, an entry in `INVITABLE_ROLES`).
+- **Renaming a role** is a migration: `update roux_role set name = 'COACH' where name = 'INSTRUCTOR';`.
   Holders keep it: assignments refer to the role's id.
-- **Taking a permission away** is a changeset deleting the grant from `who_role_permission`.
+- **Taking a permission away** is a migration deleting the grant from `roux_role_permission`.
 
-No startup code creates or syncs roles. A sync breaks a rolling deploy: an old instance that restarts
-meets a role the new version added, or undoes its grants.
+No startup code creates or syncs roles. A sync breaks a rolling deploy: an old instance that
+restarts meets a role the new version added, or undoes its grants.
 
-## The app's roles tests
+## The permissions tests
 
-The app lists its classes of permission constants once, in its tests:
+`cmd/server/permissions_test.go` holds two tests, over `permissions()`:
 
-```java
-final class PermissionClasses {
+```go
+// The front end's list of permissions is the server's: a permission added here is rewritten into
+// frontend/src/permissions.gen.ts, and this test fails once so the change is committed.
+func TestTheFrontEndListsEveryPermission(t *testing.T) {
+	rouxtest.PermissionsFile(t, "../../frontend/src/permissions.gen.ts", permissions()...)
+}
 
-  static final Class<?>[] ALL = {
-    Permissions.class,
-    RouxThemePermissions.class,
-    RouxUserPermissions.class,
-    WhoAdminPermissions.class
-  };
-
-  private PermissionClasses() {}
+// After every migration the app runs, OWNER holds every permission and no role grants one that
+// is not declared: a forgotten grant or a typo in a migration fails here, naming it.
+func TestEveryGrantIsADeclaredPermissionAndOwnerHoldsThemAll(t *testing.T) {
+	t.Setenv("CODE_SECRET", strings.Repeat("s", 40))
+	t.Setenv("PUBLIC_URL", "http://localhost:8080")
+	a := rouxtest.New(t, "app_grants")
+	mods, err := modules(a.Kit())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var migrations []pgdb.Migration
+	for _, m := range mods {
+		if mg, ok := m.(app.Migrator); ok {
+			migrations = append(migrations, mg.Migrations()...)
+		}
+	}
+	a.Migrate(migrations...)
+	rouxtest.CheckGrants(t, a.Pool, permissions()...)
 }
 ```
 
-One test checks the constants and the grants agree, after every migration has run (it needs the
-database, so Docker):
-
-```java
-@AppTest
-class PermissionsTest {
-
-  @Autowired JdbcClient jdbc;
-
-  @Test
-  void rolesGrantExactlyTheDeclaredPermissions() {
-    RoleGrantsCheck.check(jdbc, allOf(PermissionClasses.ALL)); // static import of Permissions.allOf
-  }
-}
-```
-
-Another keeps the frontend's list of permissions generated. It is a plain test, with no Spring and no
-database, so it runs without Docker:
-
-```java
-class PermissionsListTest {
-
-  @Test
-  void frontendListIsCurrent() {
-    PermissionsTypeScript.verify(Path.of("frontend/src/permissions.gen.ts"), PermissionClasses.ALL);
-  }
-}
-```
-
-- `RoleGrantsCheck.check` fails, naming each one, when `OWNER` lacks a constant, holds a permission no
-  constant declares, or any role grants one (a typo in a changeset).
-- `PermissionsTypeScript.verify` writes `permissions.gen.ts` (each constant under its Java name, and
-  `PERMISSIONS`, the array `defineNav` takes) and fails when the committed file was stale. After
-  adding a permission, run `./mvnw test -Dskip.npm -Dtest=PermissionsListTest`: the first run
-  rewrites the file and fails, the second passes; commit the file. `-Dskip.npm` leaves out the
-  frontend's build and tests, which run first and cannot pass against the stale file. Never edit it by hand. Two classes that give one
-  field name different values fail: rename one.
-- List every class whose permissions the app's roles hold in `PermissionClasses.ALL`: the app's,
-  `RouxThemePermissions` when the app has roux-theme, `RouxUserPermissions` when it has roux-users,
-  and `WhoAdminPermissions`.
+- `rouxtest.PermissionsFile` writes `permissions.gen.ts` (a constant per permission, named from it:
+  `ranks.read` is `RANKS_READ`; and `PERMISSIONS`, the array `defineNav` takes) and fails when the
+  committed file was stale. After adding a permission, run `go test ./cmd/server`: the first run
+  rewrites the file and fails, the second passes; commit the file. Never edit it by hand.
+- `rouxtest.CheckGrants` fails, naming each one, when `OWNER` lacks a permission, or any role
+  grants one nobody declares (a typo in a migration). It needs the database.
 
 ## Keep someone who can manage people
 
-who-admin's `LastAdminGuard` refuses a change that would leave no active identity holding
-`who.identities.manage`. In a roux app only `OWNER` holds it, so the guard keeps an active owner.
-who-admin's own endpoints (`/who/identities`) and roux-users' (`/api/users/{id}/deactivate`,
-`/api/users/{id}/role`) use it. The app's own service must too, whenever it deactivates someone or
-takes a role away. Calling `WhoService.deactivate` or `RbacService.removeRoleFromIdentity` directly is
-not guarded:
+`roux.admin` (`authz.Admin`) makes its holder an administrator, and roux refuses a change that
+would leave no active identity holding it. In a roux app only `OWNER` holds it, so the rule keeps
+an active owner. roux's own endpoints (deactivating someone, changing a role) apply it; a change
+it refuses is a `409` with code `last-admin` and the detail "The team needs someone active who can
+manage people" (`authz.LastAdminProblem()`).
 
-```java
-lastAdmin.deactivate(
-    id,
-    () -> {
-      who.deactivate(id);
-      activityLog.append(id, new UserDeactivated());
-      return true;
-    });
+The app's own code must apply it too, whenever it deactivates someone or takes a role away. Inside
+the transaction, after the change, call `authz.EnsureAdmin(ctx, tx)`; it returns
+`authz.ErrLastAdmin` when nobody active is left holding `roux.admin`, and the transaction must then
+roll back:
+
+```go
+err := pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
+	if err := authz.Remove(ctx, tx, identityID, role.ID); err != nil {
+		return err
+	}
+	if err := authz.EnsureAdmin(ctx, tx); errors.Is(err, authz.ErrLastAdmin) {
+		return authz.LastAdminProblem()
+	} else if err != nil {
+		return err
+	}
+	return nil
+})
 ```
 
-For a role removal, wrap it in `lastAdmin.removeRole(identityId, roleId, () -> ...)`. The guard runs
-the change in a transaction (joining the caller's) after locking the roles that grant the permission,
-so two concurrent changes cannot both pass. A refusal is `LastAdminException`, which roux answers as a
-`409` problem with code `last-admin` and the detail "The team needs someone active who can manage
-people".
+Two such changes at once could both pass; take a lock that serializes them first (roux's own use
+a transaction-scoped advisory lock). Prefer roux's endpoints for these changes where you can.
 
-The rule is about managing people, not the name `OWNER`: an app that also grants
-`who.identities.manage` to another role may remove the last owner while someone holding that role is
-active. Grant it to `OWNER` alone unless that is what you want.
+The rule is about managing people, not the name `OWNER`: an app that also grants `roux.admin` to
+another role may remove the last owner while someone holding that role is active. Grant it to
+`OWNER` alone unless that is what you want.
 
 ## The pieces
 
-- `RouxRoles.OWNER`; `Permissions.allOf(Class...)` (every `public static final String`, in declaration
-  order, without duplicates; it throws for a class that has none) and `Permissions.constantsOf`, which
-  keeps the field names.
-- `OwnerBootstrap`, the `ApplicationRunner` that makes the first owner, configured by
-  `RouxOwnerProperties` (`roux.owner.*`); `UserJoined`, published for every user who joins,
-  with their role; `UserInvitations`, invitations by name.
-- `InvitableRoles` (the checked list, from `RouxRolesProperties`, `roux.roles.*`),
-  `InvitableRolesGuard` (the listener on who's `IdentityInvited`) and `InvitableRolesController`.
-- `RoleGrantsCheck` and `PermissionsTypeScript`, for the app's roles tests.
-- `CallerPermissions`, for the parts of a response only some callers see.
-- `RouxThemePermissions`; `WhoAdminProblemsAdvice`, which answers `LastAdminException` on the app's
-  endpoints.
+- `authz.RoleOwner`, `authz.Admin`; `app.RouxPermissions()`.
+- `authz.FindRole(ctx, db, name)`, `authz.RolesOf(ctx, db, identityID)`, `authz.Assign`,
+  `authz.Remove`, `authz.EnsureAdmin`, `authz.ErrLastAdmin`, `authz.LastAdminProblem()`.
+- `authz.Invitable` (`NewInvitable(names)`, `Contains`, `Names`), served by
+  `authz.RegisterInvitable` at `authz.InvitablePath`.
+- `authn.Principal`: `Has(permission)`, `IdentityID`, `Permissions`.
+- `rouxtest.PermissionsFile` and `rouxtest.CheckGrants`, for the app's permissions tests.
+- The tables: `roux_role` (`id`, `name`), `roux_role_permission` (`role_id`, `permission`),
+  `roux_identity_role` (`identity_id`, `role_id`).
 
 ## Don't
 
-- Don't check a role's name in code (`hasRole`, `if (role.equals("OWNER"))`): check a permission.
-- Don't create roles or grant permissions from startup code (an `ApplicationRunner`, a
-  `@PostConstruct`); write a changeset.
-- Don't refer to a role by its id in a changeset: ids differ between databases. Use its name.
-- Don't edit `permissions.gen.ts`, or keep a second list of permissions in the frontend.
-- Don't deactivate someone or remove a role with `WhoService` or `RbacService` alone: wrap the change
-  in `LastAdminGuard`.
-- Don't list `OWNER` in `roux.roles.invitable`, or grant `who.identities.manage` to another role
-  without meaning to.
+- Don't check a role's name in code (`if role == "OWNER"`): check a permission.
+- Don't create roles or grant permissions from startup code (a module's `Start`); write a
+  migration.
+- Don't refer to a role by its id in a migration: ids differ between databases. Use its name.
+- Don't edit `permissions.gen.ts`, or keep a second list of permissions in the front end.
+- Don't deactivate someone or remove a role without `authz.EnsureAdmin` in the same transaction.
+- Don't list `OWNER` in `INVITABLE_ROLES`, or grant `roux.admin` to another role without meaning
+  to.

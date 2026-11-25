@@ -1,0 +1,130 @@
+site_name: roux
+site_description: The base a Go + React application is built on.
+site_url: https://jwcarman.github.io/roux/
+repo_url: https://github.com/jwcarman/roux
+repo_name: jwcarman/roux
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+
+validation:
+  anchors: warn
+  links:
+    absolute_links: warn
+
+# Process artifacts (superpowers specs and plans) stay out of the site.
+exclude_docs: |
+  /superpowers/
+  /requirements.*
+  /guides/README.md
+
+theme:
+  name: material
+  logo: assets/favicon.svg
+  favicon: assets/favicon.svg
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Source Sans 3
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+
+# Declaring plugins replaces MkDocs' default list, so search is named here too.
+plugins:
+  - search
+  # https://llmstxt.org: an index of the docs for coding agents at /llms.txt, every page in
+  # one file at /llms-full.txt, and a Markdown copy of each page beside its HTML.
+  - llmstxt:
+      full_output: llms-full.txt
+      markdown_description: |
+        roux is the base a Go + React application is built on. The server side is the Go module
+        github.com/jwcarman/roux: an app's main is app.Main, its features are modules (a package
+        with SQL migrations, a pgx service and handlers mounted with kit.Handle behind a
+        permission), and roux brings sign-in (emailed links and codes, passkeys, OpenID Connect,
+        API keys, JWTs), roles and permissions, the users directory, Problem Details errors,
+        paging (page.New), money, dates and the activity log. The web side is the npm package
+        @jwcarman/roux-web (React 19, Chakra UI v3, TanStack Router, Query, Form and Table, Zod 4).
+        New apps start from the template: npm create @jwcarman/roux-app. The changelog says what
+        each version has: https://github.com/jwcarman/roux/blob/main/CHANGELOG.md. An Agent Skill
+        packages these guides for coding agents: see the Agent Skill page.
+      sections:
+        Start here:
+          - index.md: what roux is and how an app is put together
+          - guides/getting-started.md: making an app, app.Main and its modules, every environment variable, the web side, the shell
+          - guides/features.md: a feature's server side, its migrations, the module, the input, the service, the handlers, the test
+        The server and the browser:
+          - guides/errors.md: refusing a request with a problem, what roux answers for you, showing refusals in the browser
+          - guides/roles.md: permissions as constants, roles as data, the permissions tests, keeping an administrator
+          - guides/users.md: the team, referring to people, roux's users endpoints, an app's own list of users
+          - guides/tables-and-paging.md: a paged list on the server (page.New) and in the browser (QueryTable, InfiniteList, InfiniteSelect)
+          - guides/forms.md: Zod schemas in the server's words, useSchemaForm, FormDialog, fields, versions and 409s
+          - guides/money.md: amounts in minor units, ORG_CURRENCY, the money field
+          - guides/dates-and-time.md: the organization's zone and today, on the server and in the browser
+          - guides/activity-log.md: a record's history, with activity.Append and ActivityList
+        The browser:
+          - guides/api-client.md: one API module per resource, ApiError, the lost session, CSRF
+          - guides/queries-and-mutations.md: query keys, queries, mutations and meta.refreshes
+          - guides/feedback.md: toasts, confirmations, error and not-found pages
+          - guides/shell.md: the theme, sign-in pages, the session and route guards, navigation
+        Operating:
+          - guides/email.md: the emails roux sends and how they are delivered
+          - guides/testing.md: Go tests with rouxtest, Vitest with MSW, Playwright
+        Optional:
+          - agent-skill.md: installing roux's Agent Skill in Claude Code and other agents
+
+extra_css:
+  - stylesheets/jwcarman.css
+
+nav:
+  - Home: index.md
+  - Guides:
+      - Getting Started: guides/getting-started.md
+      - A Feature's Server Side: guides/features.md
+      - Errors: guides/errors.md
+      - Roles and Permissions: guides/roles.md
+      - Users: guides/users.md
+      - API Client: guides/api-client.md
+      - Queries and Mutations: guides/queries-and-mutations.md
+      - Forms: guides/forms.md
+      - Tables and Paging: guides/tables-and-paging.md
+      - Money: guides/money.md
+      - Dates and Time: guides/dates-and-time.md
+      - The Activity Log: guides/activity-log.md
+      - Feedback: guides/feedback.md
+      - The Shell: guides/shell.md
+      - Email: guides/email.md
+      - Testing: guides/testing.md
+  - Agent Skill: agent-skill.md
+  - Reference:
+      - Go API (pkg.go.dev): https://pkg.go.dev/github.com/jwcarman/roux
+      - Changelog: https://github.com/jwcarman/roux/blob/main/CHANGELOG.md

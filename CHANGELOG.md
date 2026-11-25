@@ -113,6 +113,19 @@ All notable changes to this project are documented in this file. The format foll
   over 1 MiB), and an `apperr` sentinel answers with its own words only, not the context it was
   wrapped with.
 
+### Documentation
+
+- **The guides describe the Go server.** Every guide's server half is rewritten for Go: making an
+  app (`app.Main`, its modules and every environment variable), a feature's server side (now
+  `features.md`, in place of `entities.md`: migrations, the module, the input, the service, the
+  handlers and the test, from an example built and tested in a copy of the template), errors as
+  `*problem.Problem`, permissions and the permissions tests, users, paging with `page.New`, money,
+  dates, the activity log, email and `rouxtest`. The browser halves name the Go server's paths
+  (`/api/roux/...`) and roux-web's own sign-in client.
+- **A docs site**, built with MkDocs Material and published to GitHub Pages
+  (<https://jwcarman.github.io/roux/>), with `llms.txt` and `llms-full.txt` for coding agents and
+  a page on the Agent Skill.
+
 ## [0.3.0] - 2026-11-24
 
 Upgrading from 0.2.0: read **Breaking changes** first. Each entry says what a roux app changes.

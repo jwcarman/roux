@@ -1,7 +1,7 @@
 # API client
 
-`@jwcarman/roux-web/api` is a thin layer over `fetch` for calling the app's own Spring API: relative
-paths under `/api`, the session cookie, Spring Security's CSRF header on every write, and every
+`@jwcarman/roux-web/api` is a thin layer over `fetch` for calling the app's own Go API: relative
+paths under `/api`, the session cookie, roux's CSRF header on every write, and every
 refusal turned into an `ApiError` carrying the server's Problem Detail. An app writes one API module
 per resource, one typed function per endpoint, and calls those functions from TanStack Query
 (`queryFn`, `mutationFn`); pages never call `fetch` directly. Query and mutation wiring
@@ -9,8 +9,7 @@ per resource, one typed function per endpoint, and calls those functions from Ta
 
 ## Write an API module for a resource
 
-One file per resource, exporting one object whose members are the endpoints. This is the template's
-`customers.ts` shape, for students:
+One file per resource, exporting one object whose members are the endpoints. For students:
 
 ```ts
 import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
@@ -112,9 +111,8 @@ export async function exportReady(id: string): Promise<boolean> {
   return response.status === 200;
 }
 
-// For who's own endpoints, prefer who's typed client, @jwcarman/who-client: `who.me.get()`,
-// `who.email.send(address)`, `who.me.passkeys.list()`, `who.signOut()`. It handles who's CSRF
-// cookie and answers a typed result instead of a status.
+// For sign-in's own endpoints (under /api/roux/auth), use roux-web's typed client instead:
+// createAuthClient() from @jwcarman/roux-web/auth. It answers a typed result, not a status.
 ```
 
 To turn a failed `Response` into a problem yourself, use `problemOf` from `/problem` (see
@@ -122,9 +120,10 @@ To turn a failed `Response` into a problem yourself, use `problemOf` from `/prob
 
 ## Call a path outside the API
 
-A path that starts with `/` is used as it is, not put under `baseUrl`: `get("/who/me")`,
-`send("POST", "/who/logout")`. Use this for a who endpoint the client does not cover (all under `/who`); `@jwcarman/who-client` is the way to call the ones it does. Keep the app's own
-endpoints under `/api` and call them without the slash.
+A path that starts with `/` is used as it is, not put under `baseUrl`:
+`getJson("/api/roux/organization")`. Use it for roux's own endpoints (all under `/api/roux`) that
+no roux-web client covers. Keep the app's own endpoints under `/api` and call them without the
+slash.
 
 ## Handle a refused call
 
@@ -167,8 +166,8 @@ function onSessionLost(listener: () => void): () => void; // returns the unsubsc
 ```
 
 Any call whose URL starts with `sessionPathPrefix` (`/api/` by default) and answers 401 calls every
-`onSessionLost` listener. A 401 from `/who/me` does not: that is how a signed-out page learns it is
-signed out. Register one listener, in the session provider, that reloads the caller; the signed-out
+`onSessionLost` listener. A 401 from sign-in's own paths (`/api/roux/auth/`) does not: that is how a signed-out page
+learns it is signed out. Register one listener, in the session provider, that reloads the caller; the signed-out
 routes then send the user to sign in:
 
 ```tsx
@@ -187,19 +186,19 @@ Pages need not handle 401 themselves. Where a page catches errors, skip the lost
 ## CSRF
 
 Writes need no CSRF code in the app. Before every `send`/`sendJson`, the client reads the
-`XSRF-TOKEN` cookie; if it is missing it first `GET`s `csrfBootstrapPath` (`/who/me` by default) to
+`XSRF-TOKEN` cookie; if it is missing it first `GET`s `csrfBootstrapPath` (`/api/roux/auth/me` by default) to
 get one, then sends the token as the `X-XSRF-TOKEN` header. The cookie is read afresh on every call,
 because sign-in and sign-out rotate or clear it. `get` and `getJson` send no CSRF header.
 
-This relies on who's CSRF setup: the cookie `XSRF-TOKEN`, the header `X-XSRF-TOKEN`, and the
-bootstrap from `/who/me`. The names are fixed in the client.
+This matches roux's server: the cookie `XSRF-TOKEN`, the header `X-XSRF-TOKEN`, and the bootstrap
+from `/api/roux/auth/me`, which sets the cookie on any answer. The names are fixed in the client.
 
 ## Change where the API lives
 
 ```ts
 interface ApiSettings {
   baseUrl: string; // default "/api": where a path without a leading slash goes
-  csrfBootstrapPath: string; // default "/who/me": called before the first write to get the CSRF cookie
+  csrfBootstrapPath: string; // default "/api/roux/auth/me": called before the first write to get the CSRF cookie
   sessionPathPrefix: string; // default "/api/": the paths whose 401 means the session is lost
 }
 
@@ -209,8 +208,8 @@ function apiSettings(): ApiSettings; // a copy of the settings in force
 
 `configureApi` merges a partial `ApiSettings` into the current ones; `apiSettings()` returns a copy
 of the settings in force (useful in tests). The defaults match a roux server; most apps never call
-`configureApi`. If the API moves, move
-`sessionPathPrefix` with `baseUrl`, and the server's `roux.problems.api-path-prefix` with them:
+`configureApi`. roux's server keeps every route under `/api`; a different `baseUrl` is for a
+proxy that serves the API under another path. Move `sessionPathPrefix` with it:
 
 ```ts
 configureApi({ baseUrl: "/v2", sessionPathPrefix: "/v2/" });

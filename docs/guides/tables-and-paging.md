@@ -1,6 +1,6 @@
 # Tables and paging
 
-A roux list is paged by the server. The endpoint takes jpa-utils' page parameters (`pageIndex`,
+A roux list is paged by the server. The endpoint takes the page parameters (`pageIndex`,
 `pageSize`, `sortBy`, `sortDirection`) plus its own filters, and answers a `PageDto`: one page of rows
 and where it sits in the whole. In the browser, `@jwcarman/roux-web/table` draws a paged, sortable
 table over such an endpoint (`QueryTable`), with search inputs and filter chips beside it, and
@@ -15,8 +15,8 @@ A paged endpoint reads these query parameters, all optional (`contracts/page-par
 | Parameter | Meaning | When absent |
 | --- | --- | --- |
 | `pageIndex` | The page, counting from 0. | 0 |
-| `pageSize` | Rows per page; kept between 1 and the paginator's maximum (100 unless configured). | the paginator's default (20 unless configured) |
-| `sortBy` | The name of a constant of the endpoint's sort enum (`NAME`, `JOINED_ON`). | the paginator's default sort, if it has one |
+| `pageSize` | Rows per page; kept between 1 and the list's maximum (100 unless configured). | the list's default (20 unless configured) |
+| `sortBy` | One of the list's sorts (`NAME`, `JOINED_ON`): the constants of its sort type on the server. | the list's default sort |
 | `sortDirection` | `ASC` or `DESC` (any case). | `ASC` |
 
 and answers (`contracts/page.json`):
@@ -49,7 +49,7 @@ interface PageParams {
   pageSize?: number;
   sortBy?: string;
   sortDirection?: SortDirection;
-  search?: string; // not jpa-utils': the search term most list endpoints also take
+  search?: string; // the search term most list endpoints also take
 }
 
 interface PageDto<T> {
@@ -69,147 +69,174 @@ interface PaginationDto {
 
 Refusals are Problem Details ([Errors](errors.md)), all `400` with `errors` on the parameter:
 
-- A `sortBy` that is not one of the enum's constants (`contracts/problem-unknown-sort.json`):
+- A `sortBy` that is not one of the list's sorts:
 
   ```json
   {
     "title": "Bad Request",
     "status": 400,
     "detail": "The request has invalid fields",
-    "errors": [{ "field": "sortBy", "message": "Unknown sort by value \"nope\", expecting one of id, name." }],
-    "instance": "/api/contract/page"
+    "errors": [{ "field": "sortBy", "message": "Must be one of EMAIL, JOINED_ON, NAME" }],
+    "instance": "/api/students"
   }
   ```
 
 - A `sortDirection` other than `ASC` or `DESC`: an error on `sortDirection`.
 - A `pageIndex` or `pageSize` that is not a number: an error on that field, `Invalid value`.
 
-The browser never sends these if the table's column ids are the sort enum's names and the URL is read
+The browser never sends these if the table's column ids are the list's sort names and the URL is read
 with `tableSearchOf` (below).
 
-## Write a paged endpoint
+## The server
 
-Three pieces on the server: a sort enum, a `Paginator` in the service, and `PageParams` in the
-controller. jpa-utils comes with `roux-spring-boot-starter`.
+A list is declared once, as a package variable, with `page.New`; the handler reads the page request
+with `api.PageRequest` and asks the list for a page. The paginator writes the count, the search,
+the `ORDER BY` (with `id` last, so rows never move between pages), `LIMIT` and `OFFSET`; the app
+writes the SQL particular to it: the view, and each filter.
 
-The sort enum names what the list can be sorted by; each constant's name is a `sortBy` value and its
-property is the entity's property to sort on:
+### The view
 
-```java
-import org.jwcarman.jpa.pagination.SortPropertyProvider;
+Give each list a view shaped for it: one row per record, with every column the list shows, sorts
+by or searches, and an `id`. Joined and computed values (a person's name, the first of several
+assignees, a count) are columns of the view, so sorting and searching by them is no different
+from any other column:
 
-/** The student list's sorts, by column. */
-public enum StudentSort implements SortPropertyProvider {
-  NAME("name"),
-  EMAIL("email"),
-  JOINED_ON("joinedOn");
+```sql
+-- The student list reads this: their name, their current rank, and when they joined.
+create view student_list as
+select s.id, s.name, s.email, s.joined_on, s.status, r.name as rank_name
+  from student s
+  left join rank r on r.id = s.rank_id;
+```
 
-  private final String property;
+A view is a migration like any table. `create or replace view` may add columns at the end but
+cannot change or drop one; a changed view is `drop view` and `create view` in a new migration.
 
-  StudentSort(String property) {
-    this.property = property;
-  }
+### The list
 
-  @Override
-  public String getSortProperty() {
-    return property;
-  }
+```go
+// Sort is how the list may be sorted: the sortBy values a client sends.
+type Sort string
+
+const (
+	ByName     Sort = "NAME"
+	ByEmail    Sort = "EMAIL"
+	ByJoinedOn Sort = "JOINED_ON"
+)
+
+// list is the student list: student_list, by name unless asked otherwise.
+var list = page.New(page.ListConfig[Sort, Row]{
+	From:    "student_list",
+	Columns: "id, name, email, joined_on, status",
+	Sorts: map[Sort][]page.Term{
+		ByName:     {page.By("lower(name)")},
+		ByEmail:    {page.By("lower(email)").NullsFirst()},
+		ByJoinedOn: {page.By("joined_on")},
+	},
+	DefaultSort:     ByName,
+	DefaultPageSize: 25,
+	Search:          []page.Field{page.Contains("name"), page.Contains("email")},
+	Scan:            scanRow,
+})
+
+// Row is a student as the list shows them.
+type Row struct {
+	ID       uuid.UUID `json:"id"`
+	Name     string    `json:"name"`
+	Email    *string   `json:"email"`
+	JoinedOn string    `json:"joinedOn"` // 2026-11-24
+	Status   string    `json:"status"`
+}
+
+func scanRow(row pgx.CollectableRow) (Row, error) {
+	var r Row
+	var joined time.Time
+	if err := row.Scan(&r.ID, &r.Name, &r.Email, &joined, &r.Status); err != nil {
+		return r, err
+	}
+	r.JoinedOn = joined.Format(time.DateOnly)
+	return r, nil
 }
 ```
 
-The repository extends `SearchableRepository`, and the entity marks the fields a search looks in with
-`@Searchable` (`org.jwcarman.jpa.search.Searchable`; text fields only):
+- **The sort type is a string type** whose constants are the `sortBy` values; each maps to the
+  terms it orders by. The request's direction applies to every term; `NullsFirst()` puts rows with
+  no value first (they come last otherwise, ascending).
+- **`From`, `Columns`, each term and each search field must be constants** in the code: their type
+  is unexported, so a string built at run time does not compile. Values never go in them.
+- **`DefaultPageSize: 25`** matches the browser's `DEFAULT_PAGE_SIZE`; the maximum is 100 unless
+  `MaxPageSize` says otherwise.
+- **Search fields** say how a word matches: `page.Contains(col)` anywhere in the column,
+  `page.Prefix(col)` at its start (it can use an index on `lower(col) text_pattern_ops`), and
+  `page.Exact(col)` the whole value, ignoring case. A search matches when every word of the term is
+  in some field; a blank term matches everything, and one over 200 characters is a `400`.
+- **`page.New` panics on a mistake in the declaration** (a default sort that is not a sort, a
+  column list that is empty), so it stops the program when the package loads.
+- **Check it at startup.** A module's `Start` runs `list.Check(ctx, k.Pool)`, which runs the list's
+  queries for every sort, both ways and with a search, matching nothing: a misspelled column stops
+  the app there, not on a request.
 
-```java
-import java.util.UUID;
+### The filters
 
-import org.jwcarman.jpa.spring.search.SearchableRepository;
-
-public interface StudentRepository extends SearchableRepository<StudentEntity, UUID> {}
-```
-
-The service pages with one `Paginator` per list, and maps each entity to the list's row record:
-
-```java
-import org.jwcarman.jpa.pagination.PageDto;
-import org.jwcarman.jpa.pagination.PageSpec;
-import org.jwcarman.jpa.spring.page.Paginator;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-@Service
-@Transactional
-public class StudentService {
-
-  private static final Paginator PAGES =
-      Paginator.of(
-          StudentEntity.class,
-          StudentSort.class,
-          cfg -> cfg.defaultSort(StudentSort.NAME).defaultPageSize(25));
-
-  private final StudentRepository students;
-
-  public StudentService(StudentRepository students) {
-    this.students = students;
-  }
-
-  /** One page of students matching {@code search} (name or email) and {@code status}. */
-  @Transactional(readOnly = true)
-  public PageDto<Student> list(PageSpec spec, String search, StudentStatus status) {
-    Specification<StudentEntity> matching = students.searchFor(search);
-    Specification<StudentEntity> filtered =
-        status == null
-            ? matching
-            : matching.and((student, query, cb) -> cb.equal(student.get("status"), status));
-    return PAGES.paginate(spec, pageable -> students.findAll(filtered, pageable), Student::of);
-  }
+```go
+// List is a page of students.
+func (s Service) List(ctx context.Context, req page.Request, f Filter) (page.Page[Row], error) {
+	filters := []page.Filter{
+		page.WhereIf(f.Status != "", "status = ?", f.Status),
+		page.WhereIf(f.JoinedAfter != nil, "joined_on > ?", f.JoinedAfter),
+	}
+	return list.Page(ctx, s.Pool, req, f.Search, filters...)
 }
 ```
 
-```java
-import org.jwcarman.jpa.pagination.PageDto;
-import org.jwcarman.jpa.spring.web.PageParams;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+- **`page.Where(fragment, args...)`** is one condition, with a `?` for each argument; the
+  fragment is a constant and the values are always arguments. A slice is one argument: write
+  `rank_id = any(?)`, or `assignee_ids && ?` for an array column.
+- **`page.WhereIf(cond, ...)`** is the condition when `cond` holds and nothing otherwise, so a list
+  of optional filters reads as a list.
+- A `?` count that does not match the arguments panics the first time the line runs.
 
-@RestController
-@RequestMapping("/api/students")
-public class StudentsController {
+### The handler
 
-  private final StudentService students;
+```go
+k.Handle("GET "+BasePath, StudentsRead, func(w http.ResponseWriter, r *http.Request) error {
+	req, err := api.PageRequest(r, list.Config())
+	if err != nil {
+		return err
+	}
+	f, err := filterOf(r)
+	if err != nil {
+		return err
+	}
+	out, err := svc.List(r.Context(), req, f)
+	if err != nil {
+		return err
+	}
+	return api.JSON(w, http.StatusOK, out)
+})
+```
 
-  public StudentsController(StudentService students) {
-    this.students = students;
-  }
+`api.PageRequest(r, list.Config())` reads `pageIndex`, `pageSize`, `sortBy` and `sortDirection`,
+answering a bad one with the `400` above. `filterOf` reads the list's own parameters, and refuses a
+value it does not know as a `400` on that parameter, never ignoring it:
 
-  @GetMapping
-  public PageDto<Student> list(
-      @ModelAttribute PageParams params,
-      @RequestParam(required = false) String search,
-      @RequestParam(required = false) StudentStatus status) {
-    return students.list(params, search, status);
-  }
+```go
+func filterOf(r *http.Request) (Filter, error) {
+	q := r.URL.Query()
+	f := Filter{Search: q.Get("search"), Status: q.Get("status")}
+	switch f.Status {
+	case "", StatusActive, StatusInactive:
+	default:
+		return Filter{}, problem.InvalidField("status", problem.MustBeOneOf(StatusActive, StatusInactive))
+	}
+	return f, nil
 }
 ```
 
-What the pieces do:
-
-- `PageParams` (`org.jwcarman.jpa.spring.web.PageParams`) binds the four parameters; it is a
-  `PageSpec`. Each filter is one more `@RequestParam` and one more `and(...)` on the specification.
-- `Paginator.of(entity, sortEnum, cfg -> ...)` checks at startup that every sort property (and the
-  `id` tiebreaker) is a property of the entity, and fails startup otherwise. `cfg` takes
-  `defaultSort`, `defaultPageSize`, `maxPageSize`, `tiebreaker(...)`, `noTiebreaker()` and
-  `skipPropertyValidation()`. Without a `defaultPageSize` the page size is 20; set it to 25 to match
-  the browser's `DEFAULT_PAGE_SIZE`.
-- `paginate(spec, query, mapper)` turns the request into a `Pageable` (an unknown `sortBy` throws
-  `UnknownSortByValueException`, which roux answers with the 400 above), runs the query, and maps the
-  page into a `PageDto`. Every sort ends with the tiebreaker, so paging is stable.
-- `searchFor(term)` matches every word of the term, ignoring case, in at least one `@Searchable`
-  field; a `null` or blank term matches everything.
+A list whose order is fixed (a history, newest first) reads its request with
+`api.PageRequestUnsorted(r)`, which ignores any `sortBy`. A list already in memory pages with
+`page.Slice(sorted, req)`, and a page fetched some other way is wrapped with `page.Of(rows, req,
+total)`.
 
 ## The list's query
 
@@ -220,11 +247,11 @@ list's filters, with the list's row type, statuses and sorts (the module already
 `queryKeys`):
 
 ```ts
-/** The statuses a student can have: the server's StudentStatus enum. */
+/** The statuses a student can have: the server's StatusActive and StatusInactive. */
 export const STUDENT_STATUSES = ["ACTIVE", "INACTIVE"] as const;
 export type StudentStatus = (typeof STUDENT_STATUSES)[number];
 
-/** The list's sorts: the column ids, and `StudentSort`'s values on the server. */
+/** The list's sorts: the column ids, and the server's `Sort` constants. */
 export const STUDENT_SORTS = ["NAME", "EMAIL", "JOINED_ON"] as const;
 export type StudentSort = (typeof STUDENT_SORTS)[number];
 
@@ -401,7 +428,7 @@ export const Route = createFileRoute("/_signedIn/students/")({
 How it fits together:
 
 - **Column ids are sort names.** A column's `id` is what the table sends as `sortBy`, so it must be
-  a constant of the endpoint's sort enum (`satisfies StudentSort` makes the compiler check it). A
+  one of the list's sorts on the server (`satisfies StudentSort` makes the compiler check it). A
   column the server cannot sort sets `enableSorting: false`; an accessor column without it is
   sortable, and clicking it would ask for a sort the server refuses.
 - **One sort at a time.** A sortable header is a button with `aria-sort`; the first click sorts
@@ -712,29 +739,51 @@ n, and moves a row one step at a time. The pieces, from the dojo's ranks:
   deferrable: `alter table rank add constraint rank_position_key unique (position) deferrable
   initially deferred`. It is checked at commit.
 - **One endpoint per move, answering the new list.** `POST /api/ranks/{id}/move-up` and
-  `.../move-down` return the whole list (`List<Rank>`). A move past either end is a
-  `ConflictException` (`Rank is already the lowest rank`), not a silent no-op.
-- **The service swaps two positions and flushes**, in one transaction:
+  `.../move-down` return the whole list. A move past either end is a `409`
+  (`problem.Conflict("Blue is already the lowest rank")`), not a silent no-op.
+- **The service swaps two positions** in one transaction, with the ladder locked:
 
-```java
-private List<Rank> move(UUID id, int step, String refusal) {
-  List<RankEntity> ladder = ranks.findAllByOrderByPositionAsc();
-  RankEntity rank = find(id);
-  int other = ladder.indexOf(rank) + step;
-  if (other < 0 || other >= ladder.size()) {
-    throw new ConflictException(refusal, rank.getName());
-  }
-  RankEntity neighbour = ladder.get(other);
-  int position = rank.getPosition();
-  rank.moveTo(neighbour.getPosition());
-  neighbour.moveTo(position);
-  ranks.flush();
-  return list();
+```go
+// rung is a rank's place on the ladder.
+type rung struct {
+	ID       uuid.UUID
+	Name     string
+	Position int
+}
+
+// move swaps a rank with its neighbour: step is -1 (up) or 1 (down).
+func (s Service) move(ctx context.Context, id uuid.UUID, step int) ([]Rank, error) {
+	err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `select id, name, position from rank order by position for update`)
+		if err != nil {
+			return err
+		}
+		ladder, err := pgx.CollectRows(rows, pgx.RowToStructByPos[rung])
+		if err != nil {
+			return err
+		}
+		i := slices.IndexFunc(ladder, func(r rung) bool { return r.ID == id })
+		if i < 0 {
+			return notFound()
+		}
+		j := i + step
+		if j < 0 || j >= len(ladder) {
+			return problem.Conflict(fmt.Sprintf("%s is already at the end of the ladder", ladder[i].Name))
+		}
+		_, err = tx.Exec(ctx, `update rank set position = case id when $1 then $4 when $2 then $3 end
+			where id in ($1, $2)`, ladder[i].ID, ladder[j].ID, ladder[i].Position, ladder[j].Position)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return s.List(ctx)
 }
 ```
 
-- **A new row goes to the end** (`maxPosition() + 1`), and **a removal closes the gap**: delete,
-  `flush`, then renumber the rest 1..n by their order and `flush` again.
+- **A new row goes to the end** (`coalesce(max(position), 0) + 1`, with the table locked), and **a
+  removal closes the gap** in the same transaction: `update rank set position = position - 1 where
+  position > $1`.
 - **The browser** has two mutations (`moveRankUp`, `moveRankDown`) that refresh the list (and any
   query that embeds a rank, as the students' do). The row's buttons are disabled at the ends: take
   `first` and `last` from the table in the actions cell, `row.index === 0` and
@@ -750,45 +799,19 @@ column.display({
 });
 ```
 
-## A list sorted or filtered by a computed value: a read-model view
-
-A `Paginator` sorts by one property of the entity. To sort by something computed (last name then
-first, lower-cased) or by something joined (a student's current rank), put it in a database view and
-map a second, read-only entity over it (`@Entity @Immutable @Table(name = "student_list")`, extending
-`BaseEntity`, so its id and version are the writable entity's). Change through the writable entity;
-list and read through the view's. Two traps:
-
-- **Flush before you read the view in the same transaction.** Hibernate flushes pending changes
-  before a query only when the query touches a changed table, and a query over a view names none. A
-  write that answers with the read model (`save`, then `detail(id)`) must `saveAndFlush` (or `flush`
-  after `delete`) first, or the answer misses the row just saved or still shows the one just removed.
-  Nothing fails at compile time.
-- **The view's column types must be the types Hibernate's `validate` expects for the entity.** A
-  joined `varchar(40)` is `varchar(40)` to the view but the entity maps plain `varchar`: cast it
-  (`r.name::varchar`), and give a placeholder column its type (`null::uuid`). `create or replace
-  view` cannot change a column's type, so a changed view is a drop and create (a new changeSet, never
-  an edit of one that has run: its checksum would break existing databases), or `createView
-  replaceIfExists="true"` when the columns keep their types.
-
-A Paginator cannot put nulls last in a sort; the dojo rebuilds the `Pageable`'s `Sort` with
-`Order::nullsLast` inside the query callback.
-
 ## A column only some people see
 
-A list everyone with `students.read` may open can carry fields only some of them may see (a student's
-payment status needs `payments.record`). The endpoint keeps its own permission; the column's is checked
-inside it with `CallerPermissions` (roux-roles), once:
+A list everyone with `students.read` may open can carry fields only some of them may see (a
+student's payment status needs `payments.record`). The endpoint keeps its own permission; the
+column's is checked inside it, once:
 
-```java
-@GetMapping
-@RequiresPermission(Permissions.STUDENTS_READ)
-public PageDto<Student> list(@ModelAttribute PageParams params, @RequestParam(required = false) PaymentState payment) {
-  if (payment != null || StudentSort.PAID_THROUGH.name().equals(params.sortBy())) {
-    caller.require(Permissions.PAYMENTS_RECORD, "Filtering or sorting by payment"); // a 403 problem
-  }
-  boolean withPayment = caller.has(Permissions.PAYMENTS_RECORD);
-  return students.list(params, payment, withPayment); // the rows' payment fields, or null
+```go
+caller := authn.PrincipalFrom(r.Context())
+withPayment := caller.Has(PaymentsRecord)
+if !withPayment && (f.Payment != "" || req.SortBy == string(ByPaidThrough)) {
+	return problem.Forbidden()
 }
+out, err := svc.List(r.Context(), req, f, withPayment) // the rows' payment fields, or null
 ```
 
 - **Refuse the filter and the sort, don't ignore them.** A caller who filters on a field they cannot
@@ -946,7 +969,7 @@ export function studentsExportHref(search: string | undefined, status: StudentSt
   enough), and a test passes alone and fails after another. A column that must read state (the
   select column) is memoized on that state, and a cell that holds a dialog should not depend on it.
 
-Gaps in 0.3.0 that a builder hits:
+Gaps that a builder hits:
 
 - **`InfiniteSelect` is not a form field.** It draws its own label and shows no error message. In a
   schema form, render it inside `form.AppField` and wire it by hand (`value={field.state.value ||
@@ -957,14 +980,14 @@ Gaps in 0.3.0 that a builder hits:
   no booleans.
 - **A selection outlives a filter change.** `createSelectColumn`'s `selected` is the page's state;
   rows filtered out of view stay selected until the page clears it.
-- **`MAX_PAGE_SIZE` assumes the paginator's default maximum.** A server `maxPageSize` below 100 is
+- **`MAX_PAGE_SIZE` assumes the list's default maximum.** A server `MaxPageSize` below 100 is
   not known to the browser: the server answers smaller pages, and `TablePageSizeSelect` still offers
   the larger sizes.
 
 ## Don't
 
-- Don't page, sort or filter a long list in the browser; page it on the server with a `Paginator`.
-- Don't use sort enum constant names that differ from the column ids, or leave `enableSorting` on a
+- Don't page, sort or filter a long list in the browser; page it on the server with `page.New`.
+- Don't use sort names that differ from the column ids, or leave `enableSorting` on a
   column the server cannot sort.
 - Don't read a table's state from the URL without `tableSearchOf`, `enumSearchOf`, `idSearchOf` and `dateSearchOf`.
 - Don't build a list's key or call its API in the page; define its query in the module with

@@ -16,33 +16,29 @@ The form never calls the API, catches an error, or keeps its own submitting stat
 
 ## Write the schema
 
-The schema mirrors the request record's Bean Validation annotations. For a rank, the server's request
-is (the template's `CustomerRequest` shape):
+The schema mirrors the rules of the server's input. For a rank, the server's `validate`
+([A feature's server side](features.md#the-input)) refuses a blank name, a name over 40
+characters and a colour outside its list, and an edit without a `version`:
 
-```java
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
-
-/** A new rank, or new values for one. {@code version} is the version being edited, and is ignored when creating. */
-public record RankRequest(@NotBlank @Size(max = 40) String name, @NotNull BeltColour colour, Long version) {}
-```
-
-`version` is a nullable `Long` with no annotation: a create sends none and the service ignores it. The
-update checks it before changing anything, with `Versions.require` from `org.jwcarman.roux.jpa` (`roux-jpa`)
-(no version is a `400` on `version`; a stale one is the `409`):
-
-```java
-public Rank update(UUID id, RankRequest request) {
-  RankEntity rank = find(id);
-  Versions.require(rank, request.version());
-  rank.change(request.name(), request.colour());
-  return Rank.of(ranks.saveAndFlush(rank));
+```go
+in.Name = strings.TrimSpace(deref(b.Name))
+switch n := utf8.RuneCountInString(in.Name); {
+case n == 0:
+	bad("name", problem.MustNotBeBlank)
+case n > MaxName:
+	bad("name", problem.MustBeBetween(1, MaxName))
+}
+in.Colour = deref(b.Colour)
+if !slices.Contains(Colours, in.Colour) {
+	bad("colour", problem.MustBeOneOf(Colours...))
+}
+if edit && b.Version == nil {
+	bad("version", problem.MustNotBeEmpty)
 }
 ```
 
-Without `version` in the record, Jackson drops the one the client sends and a stale save is never
-refused. See [Errors](errors.md#refuse-a-stale-save-optimistic-locking).
+A create sends no `version`; the update checks the one it is sent before changing anything (a
+stale one is the `409`). See [Errors](errors.md#refuse-a-stale-save).
 
 The browser's schema, in `src/ranks/ranks.ts`, leaves `version` out: it is not a field the user edits.
 `updateRank(id, version)` adds it to the request (`{ ...request, version }`), and `createRank` sends
@@ -52,10 +48,10 @@ none:
 import { oneOf, text } from "@jwcarman/roux-web/form";
 import { z } from "zod";
 
-/** The belt colours a rank can have: the server's BeltColour enum. */
-export const BELT_COLOURS = ["WHITE", "YELLOW", "ORANGE", "GREEN", "BLUE", "BROWN", "BLACK"] as const;
+/** The belt colours a rank can have: the server's Colours. */
+export const BELT_COLOURS = ["white", "yellow", "orange", "green", "blue", "brown", "black"] as const;
 
-/** RankRequest's rules (without the version), in the server's words. */
+/** The rank input's rules (without the version), in the server's words. */
 export const rankRequestSchema = z.object({
   name: text().max(40),
   colour: oneOf(BELT_COLOURS),
@@ -70,45 +66,41 @@ The whole resource module (API functions, queries, `createRank`, `updateRank`) i
 
 ### The rule helpers
 
-Every helper is required until `.optional()`. Each message is the one in roux's
-`ContributorValidationMessages.properties`, so a field reads the same whether the browser or the
-server caught the mistake ([Errors](errors.md#what-else-is-answered-for-you)).
+Every helper is required until `.optional()`. Each message is the one in `contracts/messages.json`,
+which the server's `problem` package uses too, so a field reads the same whether the browser or the
+server caught the mistake ([Errors](errors.md#refuse-one-field-the-client-sent)).
 
-| Helper | The field's value | Output | Messages | Server annotation it mirrors |
+| Helper | The field's value | Output | Messages | The server's check |
 | --- | --- | --- | --- | --- |
-| `text()` | an input's string, trimmed | `string` | `Must not be blank` | `@NotBlank` |
-| `email()` | an input's string, trimmed | `string` | `Must not be blank`, `Must be a valid email address` | `@NotBlank @Email` |
-| `url()` | an input's string, trimmed; `http` or `https` only | `string` | `Must not be blank`, `Must be a valid web address` | `@NotBlank @URL` |
-| `phone()` | an input's string, trimmed: digits, spaces and `+ - ( ) .`, at least 7 digits | `string` | `Must not be blank`, `Is not in the expected format` | `@NotBlank @Phone` (`org.jwcarman.roux.validation`, roux-validation; the same pattern) |
-| `date()` | a `type="date"` input's `YYYY-MM-DD` | `string` (unchanged) | `Must not be empty`, `Is not in the expected format` | `@NotNull LocalDate` |
-| `time()` | a `type="time"` input's `HH:mm` (or the server's `HH:mm:ss`) | `string` (unchanged) | `Must not be empty`, `Is not in the expected format` | `@NotNull LocalTime` |
-| `number()` | a `NumberField`'s `number \| undefined` | `number` | `Must not be empty` | `@NotNull` |
-| `integer()` | a `NumberField`'s `number \| undefined` | `number` | `Must not be empty`, `Must be a whole number` (browser only) | `@NotNull` on an `int`/`Integer`/`long` |
-| `oneOf(values)` | a `SelectField`'s value, `""` for its placeholder | one of `values` | `Must not be empty` | `@NotNull` on an enum |
-| `id()` | a select's value over ids loaded at run time, `""` for its placeholder | `string` | `Must not be empty` | `@NotNull UUID` |
+| `text()` | an input's string, trimmed | `string` | `Must not be blank` | trimmed, then `problem.MustNotBeBlank` when empty |
+| `email()` | an input's string, trimmed | `string` | `Must not be blank`, `Must be a valid email address` | `net/mail.ParseAddress`, then `problem.ValidEmail` |
+| `url()` | an input's string, trimmed; `http` or `https` only | `string` | `Must not be blank`, `Must be a valid web address` | `net/url.Parse` with an `http` or `https` scheme and a host, then `problem.ValidURL` |
+| `phone()` | an input's string, trimmed: digits, spaces and `+ - ( ) .`, at least 7 digits | `string` | `Must not be blank`, `Is not in the expected format` | none yet: write the pattern in `contracts/phone.json` as a Go `regexp` |
+| `date()` | a `type="date"` input's `YYYY-MM-DD` | `string` (unchanged) | `Must not be empty`, `Is not in the expected format` | `time.Parse(time.DateOnly, s)`, else `problem.BadFormat` |
+| `time()` | a `type="time"` input's `HH:mm` (or `HH:mm:ss`) | `string` (unchanged) | `Must not be empty`, `Is not in the expected format` | `time.Parse("15:04", s)`, else `problem.BadFormat` |
+| `number()` | a `NumberField`'s `number \| undefined` | `number` | `Must not be empty` | a `*float64` that is not nil |
+| `integer()` | a `NumberField`'s `number \| undefined` | `number` | `Must not be empty`, `Must be a whole number` (browser only) | a `*int64` that is not nil (a fraction fails to decode) |
+| `oneOf(values)` | a `SelectField`'s value, `""` for its placeholder | one of `values` | `Must not be empty` | `slices.Contains(values, v)`, else `problem.MustBeOneOf(values...)` |
+| `id()` | a select's value over ids loaded at run time, `""` for its placeholder | `string` | `Must not be empty` | `uuid.Parse`, and that the row exists |
 
 Their methods:
 
-| Method | On | Effect | Message | Server |
+| Method | On | Effect | Message | The server's check |
 | --- | --- | --- | --- | --- |
-| `.max(n)` | `text`, `email`, `url`, `phone` | at most `n` characters once trimmed; the input gets `maxLength={n}` | `Must be between 0 and {n} characters` | `@Size(max = n)` |
-| `.min(n)` | `number`, `integer` | at least `n` | `Must be at least {n}` | `@Min(n)` |
-| `.max(n)` | `number`, `integer` | at most `n` | `Must be at most {n}` | `@Max(n)` |
-| `.notInFuture()` | `date` | not after the organization's `today()` | `Must not be in the future` | `@NotInFuture` (roux-validation) |
-| `.optional()` | all | may be left empty (a select at its placeholder); empty gives `null` | none | no `@NotBlank`/`@NotNull` |
+| `.max(n)` | `text`, `email`, `url`, `phone` | at most `n` characters once trimmed; the input gets `maxLength={n}` | `Must be between 0 and {n} characters` | `utf8.RuneCountInString(v) > n`, then `problem.MustBeBetween(0, n)` (or `(1, n)` when required) |
+| `.min(n)` | `number`, `integer` | at least `n` | `Must be at least {n}` | `problem.MustBeAtLeast(n)` |
+| `.max(n)` | `number`, `integer` | at most `n` | `Must be at most {n}` | `problem.MustBeAtMost(n)` |
+| `.notInFuture()` | `date` | not after the organization's `today()` | `Must not be in the future` | the day after the organization's today, then `problem.MustNotBeInFuture` |
+| `.optional()` | all | may be left empty (a select at its placeholder); empty gives `null` | none | a nil pointer passes |
 
-- **A date that may not be in the future** is `date().notInFuture()` in the browser and `@NotInFuture`
-  on the server's `LocalDate`, with the one message `Must not be in the future`. Use them, never
-  `@PastOrPresent`: that compares with today in the server's own zone, not the organization's. Both
-  compare with the organization's today (`today()` in the browser, `OrganizationCalendar.today()` on
-  the server; [Dates and time](dates-and-time.md)), so they never disagree. Neither
-  needs wiring: annotate the request's field (`@NotNull @NotInFuture LocalDate birthDate`; `null` is
-  left to `@NotNull`). A test that sets the `Clock` bean sets the server's today; a browser test sets
-  `setOrganization(testOrganization({ today }))`. (`AfterValidator`, `NotInFutureValidator` and `PhoneValidator`
-  are the constraints' validators; you never reference them.)
-- **A phone number** is `phone()` and `@Phone` (`@NotBlank @Phone String phone`): one pattern,
-  `Phone.PATTERN`, with `contracts/phone.json` and a contract test on each side keeping them
-  identical. A blank value is left to `@NotBlank`, as on the browser.
+- **A date that may not be in the future** is `date().notInFuture()` in the browser, and on the
+  server a comparison with the organization's today, never the server's own (`time.Now()` is the
+  server's zone): both compare with the same day ([Dates and time](dates-and-time.md)), so they never
+  disagree. A browser test sets `setOrganization(testOrganization({ today }))`; a server test sets
+  the clock.
+- **A phone number** is `phone()`. Its pattern is in `contracts/phone.json`; roux's Go side has no
+  phone check yet, so a feature that stores one checks it with that pattern and answers
+  `problem.BadFormat`.
 - Text is trimmed before it is checked and sent. An optional text left blank (or only spaces) is sent
   as `null`; so is an optional date left empty, and an optional number left empty.
 - A blank required value reports only `Must not be blank`; the format check and any `.refine` do not
@@ -117,8 +109,8 @@ Their methods:
   create's `defaultValues` can start a select at its placeholder.
 - **An optional choice** is `oneOf(values).optional()` or `id().optional()`: the select sits at its
   placeholder (`""`, so `defaultValues` is `record.instructorId ?? ""`, or `inputOf(record.instructorId)`),
-  and the parsed value, which is what the mutation sends, is `null` (`UUID instructorId`, no
-  annotation, on the server). Give the select a `placeholder` that says what none means (`No
+  and the parsed value, which is what the mutation sends, is `null` (a `*string` left nil on the
+  server). Give the select a `placeholder` that says what none means (`No
   instructor`); write no `.transform` of your own.
 - The types, for annotating your own helpers: `TextRule<Out>` (`text`, `email`, `url`, `phone`),
   `DateRule<Out>`, `TimeRule<Out>`, `ChoiceRule<V, Out>` (`oneOf`, `id`), `NumberRule<Out>`; `AfterRule<Shape>` is `after()`'s second argument; `Out` is the output, `string | null` or `number | null` once
@@ -137,14 +129,9 @@ export const termSchema = z
 
 #### One field after another
 
-"Ends after it starts" is `@After` on the server and `after()` in the browser, with one message,
-`Must be after {other}`, under the later field. Do not write it as a service check or a `.refine`
-with a message of your own:
-
-```java
-@After(field = "endsAt", other = "startsAt")
-public record ClassRequest(@NotNull LocalTime startsAt, @NotNull LocalTime endsAt) { ... }
-```
+"Ends after it starts" is `after()` in the browser, with one message, `Must be after {other}`,
+under the later field, and the same check on the server. Do not write it as a `.refine` with a
+message of your own:
 
 ```ts
 export const classRequestSchema = after(z.object({ startsAt: time(), endsAt: time() }), {
@@ -153,22 +140,27 @@ export const classRequestSchema = after(z.object({ startsAt: time(), endsAt: tim
 });
 ```
 
+```go
+if in.StartsAt.Valid && in.EndsAt.Valid && in.EndsAt.Microseconds <= in.StartsAt.Microseconds {
+	bad("endsAt", problem.MustBeAfter("starts at"))
+}
+```
+
 - `{other}` is the earlier field's name as words (`startsAt` is `starts at`: `Must be after starts at`).
-  To say `Must be after the start time`, give both sides the label: `@After(..., otherLabel = "the start
-  time")` and `after(schema, { ..., otherLabel: "the start time" })`.
-- It works for `LocalTime`, `LocalDate`, `Instant` and numbers (any `Comparable` the two fields share);
-  a date-time input's `YYYY-MM-DDTHH:mm` too in the browser. Equal is not after.
-- A `null` or empty field is left to its own rule (`@NotNull`, `time()`), so the user sees one mistake at
-  a time. A field that does not exist, or two that cannot be compared, throws on the server: it is a bug,
-  not a field error.
-- Call `after()` last: like `.refine`, it returns Zod's own schema. Several rules on one type repeat the
-  annotation. `contracts/after.json` and a contract test on each side keep the messages equal.
+  To say `Must be after the start time`, give both sides the label: `after(schema, { ...,
+  otherLabel: "the start time" })` and `problem.MustBeAfter("the start time")`.
+- It works for times, dates and numbers; a date-time input's `YYYY-MM-DDTHH:mm` too in the browser.
+  Equal is not after.
+- An empty field is left to its own rule (`time()`), so the person sees one mistake at a time: the
+  server skips the comparison when either side is missing or already wrong.
+- Call `after()` last: like `.refine`, it returns Zod's own schema. `contracts/after.json` keeps
+  the browser's messages; roux's Go side has no `after` helper yet.
 
 ### Dates and times
 
 roux-web's date library is date-fns (a peer dependency). The wire format stays an ISO string: a
-`LocalDate` is `2026-11-17`, a `LocalTime` is `18:30` (what a `type="time"` input holds; Jackson
-writes `18:30:00` and reads either), an instant is an ISO string. Use date-fns directly for
+date is `2026-11-17`, a time of day is `18:30` (what a `type="time"` input holds), an instant is an
+ISO string (Go's `time.Time` in JSON). Use date-fns directly for
 arithmetic and display (`addDays`, `isAfter`, `format`, `startOfWeek`); do not write your own date
 arithmetic. A business date's "today" is the organization's `today()`, never `new Date()`, and
 display goes through `formatDate`, `formatTime` and `formatDateTime` ([Dates and time](dates-and-time.md)).
@@ -184,12 +176,11 @@ function parseIsoTime(iso: string): Date | undefined; // "18:30" or "18:30:00", 
 function formatIsoTime(date: Date): string; // "18:30"
 ```
 
-A time of day is `time()` with a `type="time"` input. On the server it is a plain `LocalTime`
-(`@NotNull LocalTime startsAt`, no `@JsonFormat`): Jackson reads `18:30` and `18:30:00` and writes
-`18:30:00`, so start the form with `timeInputOf(record.startsAt)` (`18:30:00` as `18:30`; `null` as
-`""`) and show it with `formatTime(iso)`. A time the server cannot read
-(`6pm`) is a field error, `Is not in the expected format`, as the browser's rule says
-(`contracts/time.json` holds the two together):
+A time of day is `time()` with a `type="time"` input. On the server it is a `time` column, read
+into a `pgtype.Time` and answered as `"18:30"` ([Dates and time](dates-and-time.md)). Start the
+form with `timeInputOf(record.startsAt)` (`18:30:00` as `18:30`; `null` as `""`) and show it with
+`formatTime(iso)`. A time the server cannot read (`6pm`) is a field error, `Is not in the
+expected format`, as the browser's rule says (`contracts/time.json` holds the browser's cases):
 
 ```tsx
 const classSchema = z.object({ name: text().max(60), startsAt: time(), endsAt: time().optional() });
@@ -212,7 +203,7 @@ indicator:
 import { fieldRules } from "@jwcarman/roux-web/form";
 import { z } from "zod";
 
-/** A required code of three capitals: `@NotBlank @Pattern("[A-Z]{3}") code`. */
+/** A required code of three capitals, as the server's `regexp.MustCompile(`^[A-Z]{3}$`)` checks it. */
 export const code = z
   .string()
   .trim()
@@ -268,7 +259,7 @@ What the user gets with no more code:
 - `Must not be blank` under the name when it is left empty, once the field is left or Save is pressed.
 - A save trims the name, sends `{ name, colour }` through `createRank` or `updateRank`, waits for the
   rank list to refetch, toasts `Rank was saved`, and closes the dialog.
-- The server's `InvalidFieldException("name", "Another rank has this name")` shows under the name
+- The server's `problem.InvalidField("name", "Another rank has this name")` shows under the name
   field, and the dialog stays open.
 - A rank someone else saved meanwhile is refused (409); the form starts over from their rank
   ([below](#versions-and-409-conflicts)).
@@ -335,13 +326,13 @@ on submit when the mutation names `meta.refreshes` and the app's client is not `
 
 `defaultValues` holds what the inputs hold, not what the record holds. A record's `null` must become
 the input's empty value; the schema's parse turns it back into `null` on the way out. Use `inputOf`
-for text, `numberInputOf` for a `NumberField`, `timeInputOf` for a `LocalTime` in a `type="time"`
+for text, `numberInputOf` for a `NumberField`, `timeInputOf` for a time of day in a `type="time"`
 input, and `dateTimeInputOf` for an ISO instant shown in a `type="datetime-local"` input:
 
 ```ts
 function inputOf(value: string | null): string; // null as ""
 function numberInputOf(value: number | null): number | undefined; // null as undefined
-function timeInputOf(iso: string | null): string; // a LocalTime as a time input's value (HH:mm); null as ""
+function timeInputOf(iso: string | null): string; // a time of day as a time input's value (HH:mm); null as ""
 function dateTimeInputOf(iso: string | null): string; // an ISO instant as a datetime-local value, in the browser's time zone; null as ""
 ```
 
@@ -643,10 +634,10 @@ tests; in a form, use them through `f.`.
 An edit form must not quietly undo someone else's save. roux handles this with the record's
 `version`, end to end:
 
-1. **The server** keeps a `version` on the entity and takes the one the client read in the request.
-   `Versions.require` refuses a missing version (`400` on `version`) and, when they differ, throws
-   `ObjectOptimisticLockingFailureException`, answered `409` with `This
-   record changed since you loaded it` ([Errors](errors.md#refuse-a-stale-save-optimistic-locking)).
+1. **The server** keeps a `version` on the row and takes the one the client read in the request. It
+   refuses a missing version (`400` on `version`) and, when they differ, answers
+   `problem.StaleVersion()`: `409` with `This record changed since you loaded it`
+   ([Errors](errors.md#refuse-a-stale-save)).
 2. **The mutation** carries the version it was built with, and refreshes the queries the record comes
    from:
 
@@ -687,9 +678,9 @@ What the app must get right, or a 409 repeats forever:
   `onSettled`, returning the promise:
   `mutation: { ...renameMe(profile.version), onSettled: () => refreshProfile() }`.
 
-A create has no version; its 409 (`ConflictException`, `DataIntegrityViolationException`) is toasted,
-and what was typed is kept. A clash on one field the user typed should be an `InvalidFieldException`
-on that field instead, so it lands under the field ([Errors](errors.md#reject-one-field-the-client-sent)).
+A create has no version; its 409 (`problem.Conflict`, or a unique violation) is toasted, and what
+was typed is kept. A clash on one field the person typed should be `problem.InvalidField` on that
+field instead, so it lands under the field ([Errors](errors.md#refuse-one-field-the-client-sent)).
 
 ## Split a long form
 
@@ -715,7 +706,7 @@ export function ContactFields({ form }: { form: SchemaForm<typeof studentRequest
 
 ## A form that does not save through a mutation
 
-`useSchemaForm` covers create and edit. A form whose submit is something else (who's sign-in link, a
+`useSchemaForm` covers create and edit. A form whose submit is something else (a sign-in link, a
 client-side filter) uses `useAppForm`, the hook `useSchemaForm` is built on: TanStack Form's
 `useForm` with roux's fields and form components. Validate with a Zod schema at the form level, as
 `useSchemaForm` does, and the fields still read `required` and `maxLength` from it:
@@ -723,24 +714,24 @@ client-side filter) uses `useAppForm`, the hook `useSchemaForm` is built on: Tan
 ```tsx
 import { Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
-import { createWhoClient } from "@jwcarman/who-client";
+import { createAuthClient } from "@jwcarman/roux-web/auth";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { email, useAppForm } from "@jwcarman/roux-web/form";
 import { z } from "zod";
 
-const who = createWhoClient(); // who's endpoints, typed (npm install @jwcarman/who-client)
+const auth = createAuthClient(); // sign-in's endpoints, typed
 
 /** The address to email a sign-in link to. */
 const linkRequestSchema = z.object({ email: email() });
 
-/** Emails a sign-in link: a call to who, not a save. */
+/** Emails a sign-in link: a call to sign-in, not a save. */
 export function EmailLinkForm() {
   const [sent, setSent] = useState(false);
   const form = useAppForm({
     defaultValues: { email: "" },
     validators: { onBlur: linkRequestSchema, onSubmit: linkRequestSchema },
     onSubmit: async ({ value }) => {
-      const result = await who.email.send(value.email);
+      const result = await auth.email.send(value.email);
       if (result.ok) {
         setSent(true);
       } else {
@@ -847,13 +838,13 @@ The other building blocks:
 
 ## Things to know
 
-Gaps in 0.3.0 that a builder hits:
+Gaps that a builder hits:
 
 - **A nullable record field needs `inputOf` in `defaultValues`.** An optional text's input is
   `string`, so `email: student.email` (`string | null`) does not compile (`Type 'string | null' is
   not assignable to type 'string'`). Use `inputOf`, `numberInputOf`, `timeInputOf` or `dateTimeInputOf`.
 - **`url()` rejects a host without a dot**, such as `http://localhost:8080`, and **`email()` rejects a
-  domain without a dot**, such as `ann@localhost`, though the server's `@URL` and `@Email` accept both.
+  domain without a dot**, such as `ann@localhost`, though Go's `net/url` and `net/mail` accept both.
   Where such values are valid, write that field's schema with Zod and register it in `fieldRules`
   ([Write a rule the helpers lack](#write-a-rule-the-helpers-lack)).
 - **Call `.max()` and `.optional()` before `.refine()`.** A `.refine` returns Zod's copy of the rule,
