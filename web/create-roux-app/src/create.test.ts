@@ -172,10 +172,18 @@ describe("create", () => {
 
     const dir = join(work, "acme-gym");
     expect(run.mock.calls).toEqual([
+      [["config", "--get", "init.defaultBranch"], dir],
       [["init", "--quiet"], dir],
       [["add", "--all"], dir],
       [["commit", "--quiet", "--message", "Start Acme Gym from roux's app template"], dir],
     ]);
+  });
+
+  it("starts on main when the person has not chosen a default branch", () => {
+    const run = vi.fn((args: string[]) => args[0] !== "config"); // init.defaultBranch is not set
+
+    expect(create(OPTIONS, { template, cwd: work, git: run })).toMatchObject({ ok: true, committed: true });
+    expect(run).toHaveBeenCalledWith(["init", "--quiet", "--initial-branch=main"], join(work, "acme-gym"));
   });
 
   it("says so when git could not make the first commit, and keeps the app", () => {
@@ -190,10 +198,10 @@ describe("create", () => {
   });
 
   it("stops at the first git step that fails", () => {
-    const run = vi.fn(() => false);
+    const run = vi.fn<(args: string[], cwd: string) => boolean>(() => false);
 
     expect(create(OPTIONS, { template, cwd: work, git: run })).toMatchObject({ ok: true, committed: false });
-    expect(run).toHaveBeenCalledOnce();
+    expect(run.mock.calls.map(([args]) => args[0])).toEqual(["config", "init"]);
   });
 
   it("refuses a directory that already exists, and leaves it alone", () => {

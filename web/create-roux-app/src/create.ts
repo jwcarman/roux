@@ -101,7 +101,8 @@ function filesUnder(directory: string): string[] {
 
 /**
  * Copies the template into `options.directory` under `cwd`, names it, restores its .gitignore
- * files and makes the first commit. A directory that exists is left alone.
+ * files and makes the first commit, on main unless git's init.defaultBranch names another branch.
+ * A directory that exists is left alone.
  */
 export function create(options: CreateOptions, { template, cwd, git }: CreateContext): CreateResult {
   const directory = resolve(cwd, options.directory);
@@ -119,8 +120,11 @@ export function create(options: CreateOptions, { template, cwd, git }: CreateCon
       renameSync(file, join(file, "..", ".gitignore"));
     }
   }
+  // The first branch is main, as GitHub and agents expect, unless the person has chosen their own
+  // (init.defaultBranch); git's built-in default is still master.
+  const chosen = git(["config", "--get", "init.defaultBranch"], directory);
   const committed = [
-    ["init", "--quiet"],
+    chosen ? ["init", "--quiet"] : ["init", "--quiet", "--initial-branch=main"],
     ["add", "--all"],
     ["commit", "--quiet", "--message", `Start ${options.name} from roux's app template`],
   ].every((args) => git(args, directory));

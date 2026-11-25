@@ -8,6 +8,9 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- **A new app's first branch is `main`** (`create-roux-app`), unless git's `init.defaultBranch`
+  names another; it was git's built-in default, `master`, where nothing was set.
+
 - **A release no longer waits on the Go module proxy.** The release workflow's proxy job is gone:
   asked for a tag seconds after it was made, the proxy cached "not found" for half an hour and held
   up the starter (0.4.0's). The starter now resolves roux's `go.sum` from the tag on GitHub
