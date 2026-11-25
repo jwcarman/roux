@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Proves the skill's recipe (plugins/roux/skills/roux/references/feature.md): builds its `ranks`
+# Proves the skill's recipe (plugins/roux/skills/roux/references/feature.md, then the paged list
+# of references/lists.md added to the same feature): builds its `labels`
 # feature into a fresh copy of template/ and runs that app's checks: gofmt, go vet, golangci-lint,
 # the Go tests (with the permissions tests) and the front end's tests with their 100% coverage gate
 # and its build.
@@ -16,7 +17,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
-recipe="$root/plugins/roux/skills/roux/references/feature.md"
+recipes="$root/plugins/roux/skills/roux/references/feature.md $root/plugins/roux/skills/roux/references/lists.md"
 app="$root/recipe-app"
 
 cd "$root"
@@ -29,11 +30,12 @@ mkdir -p "$app"
   --exclude=./frontend/coverage --exclude=./coverage.out -cf - .) | (cd "$app" && tar -xf -)
 
 # Write the files and fragments out of the recipe.
-python3 - "$recipe" "$app" <<'PY'
+python3 - "$app" $recipes <<'PY'
 import re, sys
 from pathlib import Path
 
-recipe, app = Path(sys.argv[1]).read_text(), Path(sys.argv[2])
+app = Path(sys.argv[1])
+recipe = "\n".join(Path(name).read_text() for name in sys.argv[2:])  # in order: lists.md builds on feature.md
 blocks = re.findall(r"<!-- (file|fragment): (\S+) -->\n( *)```\w*\n(.*?)\n\3```", recipe, re.S)
 if not blocks:
     sys.exit("check-recipe: no marked blocks in the recipe")
@@ -68,6 +70,9 @@ for kind, target, indent, body in blocks:
         insert_after(modules, "import (\n", "\t" + body.strip() + "\n")
     elif target == "modules-append":
         replace_once(modules, "mods = append(mods, email, members)", body.strip())
+    elif target == "list-handler":
+        insert_before(app / "internal/labels/handlers.go", '\tk.Handle("POST "+BasePath, LabelsManage,',
+                      "".join("\t" + line + "\n" if line else "\n" for line in body.rstrip("\n").split("\n")))
     elif target == "permissions":
         replace_once(modules, "return slices.Concat(app.RouxPermissions())", body.strip())
     elif target == "query-keys":
@@ -86,7 +91,7 @@ print(f"check-recipe: wrote {len(blocks)} blocks", file=sys.stderr)
 PY
 
 cd "$app"
-echo "check-recipe: checking the app with the recipe's feature" >&2
+echo "check-recipe: checking the app with the recipes' feature" >&2
 gofmt -w $(go list -f '{{.Dir}}' ./...)
 # The first run rewrites permissions.gen.ts and fails; the second must pass.
 go test ./cmd/server -run TestTheFrontEndListsEveryPermission >/dev/null 2>&1 \
@@ -101,4 +106,4 @@ make test
 (cd frontend && npm ci --ignore-scripts --no-audit --no-fund >/dev/null \
   && npm ci --ignore-scripts --no-audit --no-fund --prefix lint-tools >/dev/null \
   && npm run coverage && npm run build && npm run lint)
-echo "check-recipe: ok, the recipe's feature builds and passes its checks" >&2
+echo "check-recipe: ok, the recipes' feature builds and passes its checks" >&2

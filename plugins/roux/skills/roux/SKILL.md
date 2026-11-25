@@ -69,7 +69,7 @@ it.** Each reference is rules, exact names, steps, an example, the check and the
 | **A new resource, list, form, page or endpoint; adding a field to one** | `references/feature.md` (~9,000 tokens) — start here |
 | A refusal: 404, a rule, a field, a 409, a stale save, another feature holds it, "already done"; what the browser shows | `references/errors.md` (~1,600 tokens) |
 | Rule helpers and the server's matching checks, a two-field rule (`after()`), every field type, a form on a page, 409s on a form, a custom field, a form that doesn't save | `references/forms.md` (~1,800 tokens) |
-| A list paged by the server (`page.New`), search and filter chips, URL state, a growing list, a picker, row selection, ordered rows, a column only some see | `references/lists.md` (~2,500 tokens) |
+| A list paged by the server (`page.New`), search and filter chips, URL state, a growing list, a picker, row selection, ordered rows, a column only some see | `references/lists.md` (~3,400 tokens) |
 | Permissions, roles, `permissions.gen.ts`, invitable roles, the last administrator | `references/permissions.md` (~1,200 tokens) |
 | Users, invitations, referring to people, a table per user, roux's users endpoints | `references/users.md` (~1,200 tokens) |
 | Toasts, confirmations, a button that runs a mutation, a control that saves on change, error pages | `references/feedback.md` (~1,300 tokens) |

@@ -235,6 +235,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Documentation
 
+- **The skill's lists card is built by CI.** Its server side is now the paged list of the recipe's
+  `labels` feature, and `check-recipe.sh` builds and tests it with the recipe, so what it shows
+  compiles and passes.
+
 - **The guides describe the Go server.** Every guide's server half is rewritten for Go: making an
   app (`app.Main`, its modules and every environment variable), a feature's server side (now
   `features.md`, in place of `entities.md`: migrations, the module, the input, the service, the

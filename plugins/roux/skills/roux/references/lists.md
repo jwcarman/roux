@@ -28,65 +28,97 @@ shown with `QueryTable`, its state in the URL.
 
 ## Steps: a paged list
 
-**Server** (package `github.com/jwcarman/roux/page`, and `api`). The view is a migration:
+The example pages the `labels` of `feature.md` (a name and a colour, made by its steps); its short
+`GET /api/labels` stays. Replace `label`/`labels` with the list's names and `roux-app` with the
+app's module. The Go blocks below are built and tested by `check-recipe.sh`.
 
+**Server** (package `github.com/jwcarman/roux/page`, and `api`). The view is a migration,
+`internal/labels/migrations/002_label_list.sql`; it has one row per label and every column the list
+shows, sorts by or searches, the joined `created_by_name` among them:
+
+<!-- file: internal/labels/migrations/002_label_list.sql -->
 ```sql
-create view item_list as
-select i.id, i.title, i.notes, i.day, i.at_time, i.done, i.version,
-       coalesce(a.names, '{}') as assignee_names,
-       a.names[1]              as first_assignee_name,
-       to_char(i.day, 'YYYY-MM-DD') as day_text
-  from item i
-  left join lateral (
-        select array_agg(u.display_name order by lower(u.display_name), u.id) as names
-          from item_assignee ia join roux_user u on u.id = ia.user_id
-         where ia.item_id = i.id) a on true;
+create view label_list as
+select l.id, l.name, l.colour, l.version,
+       u.display_name as created_by_name
+  from label l
+  join roux_user u on u.id = l.created_by;
 ```
 
-The list, a package variable:
+The list, a package variable, with its row, its filter and the service method, in
+`internal/labels/list.go`:
 
+<!-- file: internal/labels/list.go -->
 ```go
+package labels
+
+import (
+	"context"
+	"net/http"
+	"slices"
+
+	"github.com/google/uuid"
+
+	"github.com/jwcarman/roux/page"
+	"github.com/jwcarman/roux/problem"
+)
+
 // Sort is how the list may be sorted: the sortBy values a client sends.
 type Sort string
 
 const (
-	ByDay      Sort = "DAY"
-	ByTitle    Sort = "TITLE"
-	ByAssignee Sort = "ASSIGNEE"
+	ByName      Sort = "NAME"
+	ByColour    Sort = "COLOUR"
+	ByCreatedBy Sort = "CREATED_BY"
 )
 
 var list = page.New(page.ListConfig[Sort, Row]{
-	From: "item_list",
+	From: "label_list",
 	Sorts: map[Sort][]page.Term{
-		ByDay:      {page.By("day"), page.By("at_time").NullsFirst()},
-		ByTitle:    {page.By("lower(title)")},
-		ByAssignee: {page.By("lower(first_assignee_name)")},
+		ByName:      {page.By("lower(name)")},
+		ByColour:    {page.By("colour"), page.By("lower(name)")},
+		ByCreatedBy: {page.By("lower(created_by_name)")},
 	},
-	DefaultSort:     ByDay,
+	DefaultSort:     ByName,
 	DefaultPageSize: 25,
-	Search:          []page.Field{page.Contains("title"), page.Contains("notes")},
+	Search:          []page.Field{page.Contains("name"), page.Contains("created_by_name")},
 })
 
-// Row is an item as the list shows it: each db tag is a column of the view.
+// Row is a label as the list shows it: each db tag is a column of the view.
 type Row struct {
 	ID            uuid.UUID `json:"id" db:"id"`
-	Title         string    `json:"title" db:"title"`
-	Day           string    `json:"day" db:"day_text"` // 2026-11-24
-	Done          bool      `json:"done" db:"done"`
-	AssigneeNames []string  `json:"assigneeNames" db:"assignee_names"`
+	Name          string    `json:"name" db:"name"`
+	Colour        string    `json:"colour" db:"colour"`
+	CreatedByName string    `json:"createdByName" db:"created_by_name"`
 	Version       int64     `json:"version" db:"version"`
 }
 
-// List is a page of items. f.Done is a *bool: nil when the request asks for neither.
-func (s Service) List(ctx context.Context, req page.Request, f Filter) (page.Page[Row], error) {
-	return list.Page(ctx, s.Pool, req, f.Search, page.WhereIf(f.Done != nil, "done = ?", f.Done))
+// Filter is what a request narrows the list by: Colour is empty when the request names none.
+type Filter struct {
+	Search, Colour string
+}
+
+// Page is a page of labels.
+func (s Service) Page(ctx context.Context, req page.Request, f Filter) (page.Page[Row], error) {
+	return list.Page(ctx, s.Pool, req, f.Search, page.WhereIf(f.Colour != "", "colour = ?", f.Colour))
+}
+
+// filterOf reads the filter from the query; a colour that is not one of Colours is a 400.
+func filterOf(r *http.Request) (Filter, error) {
+	q := r.URL.Query()
+	f := Filter{Search: q.Get("search"), Colour: q.Get("colour")}
+	if f.Colour != "" && !slices.Contains(Colours, f.Colour) {
+		return Filter{}, problem.InvalidField("colour", problem.MustBeOneOf(Colours...))
+	}
+	return f, nil
 }
 ```
 
-The handler, and the filter it reads:
+The handler goes in `Register`, with the module's other routes (`handlers.go`):
 
+<!-- fragment: list-handler -->
 ```go
-k.Handle("GET "+BasePath, ItemsRead, func(w http.ResponseWriter, r *http.Request) error {
+k.Handle("GET "+BasePath+"/page", LabelsRead, func(w http.ResponseWriter, r *http.Request) error {
 	req, err := api.PageRequest(r, list.Config())
 	if err != nil {
 		return err
@@ -95,7 +127,7 @@ k.Handle("GET "+BasePath, ItemsRead, func(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		return err
 	}
-	out, err := svc.List(r.Context(), req, f)
+	out, err := svc.Page(r.Context(), req, f)
 	if err != nil {
 		return err
 	}
@@ -103,48 +135,62 @@ k.Handle("GET "+BasePath, ItemsRead, func(w http.ResponseWriter, r *http.Request
 })
 ```
 
-```go
-func filterOf(r *http.Request) (Filter, error) {
-	q := r.URL.Query()
-	f := Filter{Search: q.Get("search")}
-	switch q.Get("status") {
-	case "":
-	case "open":
-		f.Done = new(false) // a *bool (Go 1.26's new takes a value)
-	case "done":
-		f.Done = new(true)
-	default:
-		return Filter{}, problem.InvalidField("status", problem.MustBeOneOf("open", "done"))
-	}
-	return f, nil
-}
-```
-
 The list's test checks it against the database (every sort, both ways, with a search), so a
-misspelled view, column, sort or search field fails the build. `export_test.go`, beside the
-package:
+misspelled view, column, sort or search field fails the build. `internal/labels/export_test.go`:
 
+<!-- file: internal/labels/export_test.go -->
 ```go
-package items
+package labels
 
-// List is the items list, for its test.
+// List is the labels list, for its test.
 var List = list
 ```
 
-and in `items_test.go`:
+and `internal/labels/list_test.go`:
 
+<!-- file: internal/labels/list_test.go -->
 ```go
+package labels_test
+
+import (
+	"context"
+	"testing"
+
+	"github.com/jwcarman/roux/rouxtest"
+
+	"roux-app/internal/labels"
+)
+
 func TestTheListMatchesTheDatabase(t *testing.T) {
-	f := setup(t)
-	if err := items.List.Check(context.Background(), f.Pool); err != nil {
+	a := rouxtest.New(t, "labels")
+	a.Role("USER")
+	a.Migrate(labels.Module{}.Migrations()...)
+	if err := labels.List.Check(context.Background(), a.Pool); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestThePagedListSearchesFiltersAndRefusesWhatItDoesNotKnow(t *testing.T) {
+	owner, _ := setup(t)
+	owner.Post("/api/labels", map[string]any{"name": "Urgent", "colour": "red"}).Want(t, 201, "first")
+	owner.Post("/api/labels", map[string]any{"name": "Waiting", "colour": "yellow"}).Want(t, 201, "second")
+
+	got := owner.Get("/api/labels/page?colour=red").Want(t, 200, "filter").JSON(t)
+	if rows := got["data"].([]any); len(rows) != 1 || rows[0].(map[string]any)["name"] != "Urgent" {
+		t.Fatalf("filtered %v", got)
+	}
+	got = owner.Get("/api/labels/page?search=wait&sortBy=NAME&sortDirection=DESC").Want(t, 200, "search").JSON(t)
+	if rows := got["data"].([]any); len(rows) != 1 || rows[0].(map[string]any)["name"] != "Waiting" {
+		t.Fatalf("searched %v", got)
+	}
+	owner.Get("/api/labels/page?colour=mauve").Want(t, 400, "unknown colour")
+	owner.Get("/api/labels/page?sortBy=NOPE").Want(t, 400, "unknown sort")
 }
 ```
 
 Wire: `pageIndex` (0-based), `pageSize` (≤ 100), `sortBy`, `sortDirection` (`ASC`/`DESC`); answer
 `{ data, pagination: { pageIndex, pageSize, totalElementCount, totalPageCount, hasNext, hasPrevious } }`.
-An unknown `sortBy` is a 400 on `sortBy` ("Must be one of ASSIGNEE, DAY, TITLE").
+An unknown `sortBy` is a 400 on `sortBy` ("Must be one of COLOUR, CREATED_BY, NAME").
 
 **Module** (`items.ts`): `ITEM_SORTS = ["DAY", "TITLE", "ASSIGNEE"] as const`,
 `ITEM_STATUSES = ["open", "done"] as const`, the row interface (`ItemRow`), and
