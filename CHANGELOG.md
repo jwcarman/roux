@@ -6,6 +6,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Security
+
+- **`github.com/klauspost/compress` is v1.20.2** (from v1.19.1), in roux, the template and Roux The
+  Day: v1.19.1 can panic on malformed compressed input (GO-2026-6865), reachable through the
+  Prometheus metrics handler. CI now runs `govulncheck` on roux and the template, and the repository
+  has CodeQL scanning and Dependabot security updates.
+
 ### Added
 
 - **The mail server is checked at startup,** in the background so startup never waits on it: roux
