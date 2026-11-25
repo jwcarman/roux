@@ -3,6 +3,7 @@ package spa
 import (
 	"bytes"
 	"compress/gzip"
+	"io"
 	"mime"
 	"net/http"
 	"path"
@@ -119,19 +120,9 @@ func (c *compressCache) get(coding, key string, data []byte) []byte {
 
 	e.once.Do(func() {
 		c.compressing.Add(1)
-		var buf bytes.Buffer
-		switch coding {
-		case encBrotli:
-			w := brotli.NewWriterOptions(&buf, brotli.WriterOptions{Quality: brotliQuality})
-			w.Write(data) //nolint:errcheck // writes to a buffer
-			w.Close()     //nolint:errcheck
-		default:
-			w, _ := gzip.NewWriterLevel(&buf, gzip.BestCompression)
-			w.Write(data) //nolint:errcheck
-			w.Close()     //nolint:errcheck
-		}
-		if buf.Len() < len(data)*95/100 {
-			e.out = buf.Bytes()
+		// A file that cannot be compressed, or hardly shrinks, is served as it is.
+		if packed, err := compress(coding, data); err == nil && len(packed) < len(data)*95/100 {
+			e.out = packed
 		}
 	})
 	return e.out
@@ -140,3 +131,25 @@ func (c *compressCache) get(coding, key string, data []byte) []byte {
 // contentType is the type to send for a compressible file (it must be set explicitly:
 // sniffing compressed bytes would see a compressed stream).
 func contentType(name string) string { return mime.TypeByExtension(path.Ext(name)) }
+
+// compress is data in coding (brotli, else gzip), at the strongest level worth serving.
+func compress(coding string, data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	var w io.WriteCloser
+	if coding == encBrotli {
+		w = brotli.NewWriterOptions(&buf, brotli.WriterOptions{Quality: brotliQuality})
+	} else {
+		gz, err := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+		if err != nil {
+			return nil, err
+		}
+		w = gz
+	}
+	if _, err := w.Write(data); err != nil {
+		return nil, err
+	}
+	if err := w.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}

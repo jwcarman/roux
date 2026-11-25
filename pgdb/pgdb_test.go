@@ -70,3 +70,37 @@ func TestConnectRefusesWhatItCannotReach(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestRollbackUndoesAnOpenTransactionAndLeavesACommittedOne(t *testing.T) {
+	pool := pgtest.Pool(t, "pgdb_rollback")
+	ctx := context.Background()
+	if _, err := pool.Exec(ctx, `create table note (body text)`); err != nil {
+		t.Fatal(err)
+	}
+	write := func(body string, commit bool) {
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer pgdb.Rollback(ctx, tx)
+		if _, err := tx.Exec(ctx, `insert into note values ($1)`, body); err != nil {
+			t.Fatal(err)
+		}
+		if commit {
+			if err := tx.Commit(ctx); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	write("kept", true)
+	write("undone", false)
+	var bodies []string
+	rows, err := pool.Query(ctx, `select body from note`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bodies, err = pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil || len(bodies) != 1 || bodies[0] != "kept" {
+		t.Fatalf("notes %v %v", bodies, err)
+	}
+}

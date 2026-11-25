@@ -16,6 +16,7 @@ import (
 
 	"github.com/jwcarman/roux/api"
 	"github.com/jwcarman/roux/authn"
+	"github.com/jwcarman/roux/pgdb"
 )
 
 func cannotManageKeys() error {
@@ -233,7 +234,7 @@ func (m *Method) rotate(w http.ResponseWriter, r *http.Request, p *authn.Princip
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck // a no-op after commit
+	defer pgdb.Rollback(ctx, tx)
 	var (
 		name            string
 		scopes          []string

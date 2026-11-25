@@ -404,7 +404,7 @@ func (m *Method) Register(ctx context.Context, identityID uuid.UUID, address str
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck // a no-op after commit
+	defer pgdb.Rollback(ctx, tx)
 	if err := m.RegisterIn(ctx, tx, identityID, address); err != nil {
 		return err
 	}

@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/jwcarman/roux/authn"
+	"github.com/jwcarman/roux/pgdb"
 )
 
 // stored is one passkey as the database has it.
@@ -136,7 +137,7 @@ func (m *Method) save(ctx context.Context, id uuid.UUID, handle []byte, c webaut
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck // a no-op after commit
+	defer pgdb.Rollback(ctx, tx)
 	if _, err := tx.Exec(ctx, `
 		insert into roux_passkey_credential (credential_uuid, webauthn_id, user_handle, credential, label, created_at)
 		values ($1, $2, $3, $4, $5, $6)`, id, c.ID, handle, raw, label, m.now()); err != nil {
@@ -231,7 +232,7 @@ func (m *Method) startCeremony(ctx context.Context, w http.ResponseWriter, r *ht
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck // a no-op after commit
+	defer pgdb.Rollback(ctx, tx)
 	if old, err := r.Cookie(ceremonyCookie); err == nil && old.Value != "" {
 		if _, err := tx.Exec(ctx, `delete from roux_passkey_ceremony where token_hash = $1`, hashOf(old.Value)); err != nil {
 			return err

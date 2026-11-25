@@ -12,6 +12,7 @@ import (
 
 	"github.com/jwcarman/roux/api"
 	"github.com/jwcarman/roux/authn"
+	"github.com/jwcarman/roux/pgdb"
 )
 
 type pendingRow struct {
@@ -42,7 +43,7 @@ func (m *Method) savePending(w http.ResponseWriter, r *http.Request, rt *runtime
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck // a no-op after commit
+	defer pgdb.Rollback(ctx, tx)
 	if old, err := r.Cookie(pendingCookie); err == nil && old.Value != "" {
 		if _, err := tx.Exec(ctx, `delete from roux_oidc_pending where token_hash = $1`, hashOf(old.Value)); err != nil {
 			return err
@@ -196,7 +197,7 @@ func (m *Method) createIdentity(ctx context.Context, row pendingRow, d SignUpDec
 	if err != nil {
 		return uuid.Nil, uuid.Nil, err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck // a no-op after commit
+	defer pgdb.Rollback(ctx, tx)
 	if identityID, err = authn.CreateIdentity(ctx, tx, m.now()); err != nil {
 		return uuid.Nil, uuid.Nil, err
 	}
@@ -242,7 +243,7 @@ func (m *Method) confirmLink(w http.ResponseWriter, r *http.Request, p *authn.Pr
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck // a no-op after commit
+	defer pgdb.Rollback(ctx, tx)
 	id, err := m.addCredential(ctx, tx, p.IdentityID, row)
 	if err == nil {
 		err = tx.Commit(ctx)

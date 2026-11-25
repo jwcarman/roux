@@ -8,6 +8,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **`pgdb.Rollback(ctx, tx)`,** to defer after `Begin`: it undoes a transaction that was not
+  committed and logs a rollback that fails, so a deferred rollback needs no ignored error.
 - **Light and dark mode in roux-web.** `ColorModeProvider`, `ColorModeButton` and
   `ColorModeSwitch` (for the account menu) are in `@jwcarman/roux-web/theme`; `next-themes` is a
   peer dependency, which a template-made app already has. The template's `shell/colorMode.tsx` is

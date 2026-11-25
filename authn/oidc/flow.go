@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/jwcarman/roux/authn"
+	"github.com/jwcarman/roux/pgdb"
 )
 
 const (
@@ -51,7 +52,7 @@ func (m *Method) begin(w http.ResponseWriter, r *http.Request, rt *runtime, iden
 	if err != nil {
 		return "", err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck // a no-op after commit
+	defer pgdb.Rollback(ctx, tx)
 	if old, err := r.Cookie(flowCookie); err == nil && old.Value != "" {
 		if _, err := tx.Exec(ctx, `delete from roux_oidc_flow where token_hash = $1`, hashOf(old.Value)); err != nil {
 			return "", err

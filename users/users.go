@@ -190,7 +190,7 @@ func (s Service) inTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck // a no-op after commit
+	defer pgdb.Rollback(ctx, tx)
 	if err := fn(tx); err != nil {
 		return err
 	}

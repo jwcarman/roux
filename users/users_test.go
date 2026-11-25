@@ -11,6 +11,7 @@ import (
 	"github.com/jwcarman/roux/authn"
 	"github.com/jwcarman/roux/authn/authntest"
 	"github.com/jwcarman/roux/page"
+	"github.com/jwcarman/roux/pgdb"
 	"github.com/jwcarman/roux/users"
 )
 
@@ -371,7 +372,7 @@ func TestSigningUpWithAProviderAccount(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer tx.Rollback(ctx) //nolint:errcheck
+		defer pgdb.Rollback(ctx, tx)
 		if id, err = authn.CreateIdentity(ctx, tx, f.Clock.Now()); err != nil {
 			t.Fatal(err)
 		}

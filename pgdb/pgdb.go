@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/exaring/otelpgx"
@@ -75,4 +76,13 @@ func RegisterErrors(m *api.Mux) {
 		}
 		return nil // anything else is a genuine 500
 	})
+}
+
+// Rollback rolls tx back unless it was committed: defer it straight after Begin, so a transaction
+// that returns early, or panics, is undone (as a finally block would in Java). After Commit it does
+// nothing; any other failure is logged, since the deferred caller has no way to return it.
+func Rollback(ctx context.Context, tx pgx.Tx) {
+	if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+		slog.WarnContext(ctx, "rolling back a transaction failed", "err", err)
+	}
 }

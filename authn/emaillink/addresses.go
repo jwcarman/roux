@@ -14,6 +14,7 @@ import (
 
 	"github.com/jwcarman/roux/api"
 	"github.com/jwcarman/roux/authn"
+	"github.com/jwcarman/roux/pgdb"
 )
 
 // A signed-in person's own email addresses. They can add one, or make an address theirs in
@@ -333,7 +334,7 @@ func (m *Method) applyAddress(ctx context.Context, identityID uuid.UUID, req pen
 	if err != nil {
 		return uuid.Nil, "", err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck // a no-op after commit
+	defer pgdb.Rollback(ctx, tx)
 
 	var oldID uuid.UUID
 	if req.replaces != nil {

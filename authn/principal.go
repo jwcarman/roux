@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/jwcarman/roux/api"
+	"github.com/jwcarman/roux/pgdb"
 	"github.com/jwcarman/roux/problem"
 )
 
@@ -182,7 +183,7 @@ func (h *Host) RemoveIfNotLast(ctx context.Context, identityID uuid.UUID, remove
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck // a no-op after commit
+	defer pgdb.Rollback(ctx, tx)
 	var locked int
 	if err := tx.QueryRow(ctx, `select 1 from roux_identity where id = $1 for update`, identityID).Scan(&locked); err != nil {
 		return err
