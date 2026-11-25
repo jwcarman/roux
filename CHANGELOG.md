@@ -90,6 +90,9 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- **The Appearance page offers all five shapes at once** (square, slightly rounded, rounded, very
+  rounded, extra rounded): "More options" no longer hides two of them.
+
 - **The template's development services stay on this machine.** `compose.yaml` publishes every
   port on 127.0.0.1 only and pins each image to a release (Postgres 17.6, Mailpit v1.34.0,
   Keycloak 26.0.8, otel-lgtm 0.41.1, the collector 0.165.0); a test in `cmd/server` reads the file

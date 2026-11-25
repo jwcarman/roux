@@ -28,9 +28,6 @@ import { FONTS, PALETTES, RADII, SHAPES, type Font, type Shape, type ShellTheme 
 import { useShellTheme } from "./ThemeProvider";
 import { restoreTheme, saveTheme, themeQuery, themeSchema, type SavedTheme } from "./themeApi";
 
-/** The shapes offered before More options is opened; the default (medium) is one of them. */
-const SIMPLE_SHAPES: readonly Shape[] = ["square", "medium", "round"];
-
 const SHAPE_LABEL: Record<Shape, string> = {
   square: "Square",
   slight: "Slightly rounded",
@@ -217,7 +214,7 @@ function AppearanceEditor({ saved }: Readonly<{ saved: SavedTheme }>) {
 
             <Part title="Shape">
               <HStack wrap="wrap" gap="2">
-                {(moreOpen || !SIMPLE_SHAPES.includes(values.shape) ? SHAPES : SIMPLE_SHAPES).map((shape) => (
+                {SHAPES.map((shape) => (
                   <Button
                     key={shape}
                     aria-pressed={values.shape === shape}

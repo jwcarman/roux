@@ -123,7 +123,7 @@ describe("AppearanceSettings", () => {
     expect(await screen.findByRole("button", { name: "Rounded" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("shows every shape when the one in use is not among the first three", async () => {
+  it("presses the saved shape, whichever it is", async () => {
     server.use(http.get("/api/roux/theme", () => HttpResponse.json({ ...SAVED, shape: "slight" })));
     show();
 
@@ -368,12 +368,12 @@ describe("AppearanceSettings", () => {
     expect(screen.queryByText(/In light mode/)).not.toBeInTheDocument();
   });
 
-  it("offers every shape and both letterings under More options", async () => {
+  it("offers both letterings under More options", async () => {
     serve();
     const { user } = show();
 
-    await user.click(await screen.findByRole("button", { name: "More options" }));
-    await user.click(screen.getByRole("button", { name: "Extra rounded" }));
+    await user.click(await screen.findByRole("button", { name: "Extra rounded" }));
+    await user.click(screen.getByRole("button", { name: "More options" }));
     await user.click(screen.getByRole("button", { name: "Classic headings" }));
     await user.click(screen.getByRole("button", { name: "Modern text" }));
 
@@ -431,25 +431,18 @@ describe("AppearanceSettings", () => {
     expect(screen.getByRole("button", { name: "Gray" })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("offers three shapes until More options, and names every shape", async () => {
+  it("offers all five shapes, named, from square to extra rounded, without More options", async () => {
     serve();
-    const { user } = show();
+    show();
     await screen.findByRole("button", { name: "Rounded" });
 
-    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(
-      expect.arrayContaining(["Square", "Rounded", "Very rounded"]),
-    );
-    expect(screen.queryByRole("button", { name: "Slightly rounded" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Extra rounded" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Square" })).toHaveAttribute("aria-pressed", "false");
-
-    await user.click(screen.getByRole("button", { name: "More options" }));
-    for (const name of ["Square", "Slightly rounded", "Rounded", "Very rounded", "Extra rounded"]) {
-      expect(screen.getByRole("button", { name }), name).toBeInTheDocument();
+    const names = ["Square", "Slightly rounded", "Rounded", "Very rounded", "Extra rounded"];
+    const shapes = screen.getAllByRole("button").filter((b) => names.includes(b.textContent));
+    expect(shapes.map((b) => b.textContent)).toEqual(names);
+    for (const button of shapes) {
+      expect(button).toHaveAttribute("aria-pressed", String(button.textContent === "Rounded"));
     }
-    expect(screen.getByRole("button", { name: "More options" })).toHaveAttribute("aria-expanded", "true");
-    await user.click(screen.getByRole("button", { name: "More options" }));
-    expect(screen.queryByRole("button", { name: "Extra rounded" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "More options" })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("names each lettering and presses the one in use", async () => {
