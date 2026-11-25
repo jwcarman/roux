@@ -20,7 +20,7 @@ function ariaSort<T>(header: Header<T, unknown>): "ascending" | "descending" | "
   return sorted === "desc" ? "descending" : "none";
 }
 
-function SortIcon({ sorted }: { sorted: false | "asc" | "desc" }) {
+function SortIcon({ sorted }: Readonly<{ sorted: false | "asc" | "desc" }>) {
   if (sorted === "asc") {
     return <LuArrowUp aria-hidden />;
   }

@@ -8,6 +8,13 @@ export const USERS_OWNERS = "users.owners";
 export const ADMIN = "roux.admin";
 
 /** Every permission there is: what the navigation's items may need. */
-export const PERMISSIONS = [THEME_MANAGE, USERS_READ, USERS_INVITE, USERS_MANAGE, USERS_OWNERS, ADMIN] as const;
+export const PERMISSIONS = [
+  THEME_MANAGE,
+  USERS_READ,
+  USERS_INVITE,
+  USERS_MANAGE,
+  USERS_OWNERS,
+  ADMIN,
+] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

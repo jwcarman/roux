@@ -51,7 +51,7 @@ export function InfiniteSelect<T>({
   required = false,
   invalid = false,
   pageSize = 20,
-}: InfiniteSelectProps<T>) {
+}: Readonly<InfiniteSelectProps<T>>) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const search = searchTermOf(useDebounce(text, 300), minSearchLength);
@@ -112,19 +112,12 @@ export function InfiniteSelect<T>({
         </Combobox.Control>
         <Combobox.Positioner>
           <Combobox.Content maxH="300px" overflowY="auto" onScroll={onScroll}>
-            {isError ? (
-              <ErrorMessage>Could not load the options.</ErrorMessage>
-            ) : isLoading ? (
-              <Center p="4" role="status" aria-label="Loading">
-                <Spinner size="sm" />
-              </Center>
-            ) : tooShort ? (
-              <Text p="2" fontSize="sm" color="fg.muted">
-                Type at least {minSearchLength} characters to search
-              </Text>
-            ) : (
-              <Combobox.Empty>No items found</Combobox.Empty>
-            )}
+            <OptionsStatus
+              isError={isError}
+              isLoading={isLoading}
+              tooShort={tooShort}
+              minSearchLength={minSearchLength}
+            />
             {!isError &&
               !isLoading &&
               items.map((item) => (
@@ -150,4 +143,31 @@ export function InfiniteSelect<T>({
       </Combobox.Root>
     </Field.Root>
   );
+}
+
+/** What the list says instead of options: it failed, it is loading, the search is too short, or nothing matched. */
+function OptionsStatus({
+  isError,
+  isLoading,
+  tooShort,
+  minSearchLength,
+}: Readonly<{ isError: boolean; isLoading: boolean; tooShort: boolean; minSearchLength: number }>) {
+  if (isError) {
+    return <ErrorMessage>Could not load the options.</ErrorMessage>;
+  }
+  if (isLoading) {
+    return (
+      <Center p="4" role="status" aria-label="Loading">
+        <Spinner size="sm" />
+      </Center>
+    );
+  }
+  if (tooShort) {
+    return (
+      <Text p="2" fontSize="sm" color="fg.muted">
+        Type at least {minSearchLength} characters to search
+      </Text>
+    );
+  }
+  return <Combobox.Empty>No items found</Combobox.Empty>;
 }

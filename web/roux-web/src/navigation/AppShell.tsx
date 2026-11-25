@@ -38,7 +38,7 @@ export function AppShell<Permission extends string>({
   logo,
   account,
   children,
-}: AppShellProps<Permission>) {
+}: Readonly<AppShellProps<Permission>>) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const close = () => setDrawerOpen(false);
 
@@ -104,7 +104,7 @@ function Sidebar<Permission extends string>({
   account,
   compact,
   close,
-}: SidebarProps<Permission>) {
+}: Readonly<SidebarProps<Permission>>) {
   return (
     <Flex direction="column" height="full" py="4" gap="4">
       <Heading

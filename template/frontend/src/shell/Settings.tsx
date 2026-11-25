@@ -11,11 +11,11 @@ function Section({
   title,
   description,
   children,
-}: {
+}: Readonly<{
   title: string;
   description: string;
   children: ReactNode;
-}) {
+}>) {
   return (
     <Stack gap="5">
       <Stack gap="1">

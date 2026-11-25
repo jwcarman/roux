@@ -29,7 +29,7 @@ const ShellThemeContext = createContext<ShellThemeState | null>(null);
  *
  * Mount it once, above everything that uses Chakra.
  */
-export function ThemeProvider({ theme, children }: { theme?: ShellTheme; children: ReactNode }) {
+export function ThemeProvider({ theme, children }: Readonly<{ theme?: ShellTheme; children: ReactNode }>) {
   const [saved, setSaved] = useState(() => theme ?? readPageTheme());
   const [draft, setDraft] = useState<ShellTheme | null>(null);
   const [cache] = useState(() => createCache({ key: "css", nonce: cspNonce() }));

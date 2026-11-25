@@ -24,7 +24,7 @@ export function NavLinks<Permission extends string>({
   permissions,
   compact = false,
   onNavigate,
-}: NavLinksProps<Permission>) {
+}: Readonly<NavLinksProps<Permission>>) {
   const labels = compact ? RAIL_LABELS : {};
   return (
     <Stack as="nav" aria-label="Main" gap="1" px="2" flex="1">

@@ -36,11 +36,20 @@ function queryString(params: QueryParams): string {
  * slash is used as it is; `params` become the query string.
  */
 export function resolveUrl(target: string, params?: QueryParams): string {
-  const base = apiSettings().baseUrl.replace(/\/+$/, "");
+  const base = withoutTrailingSlashes(apiSettings().baseUrl);
   const url = target.startsWith("/") ? target : `${base}/${target}`;
   const query = params === undefined ? "" : queryString(params);
   if (query === "") {
     return url;
   }
   return `${url}${url.includes("?") ? "&" : "?"}${query}`;
+}
+
+/** `path` without the slashes it ends with: "/api//" is "/api". */
+export function withoutTrailingSlashes(path: string): string {
+  let end = path.length;
+  while (end > 0 && path[end - 1] === "/") {
+    end--;
+  }
+  return path.slice(0, end);
 }

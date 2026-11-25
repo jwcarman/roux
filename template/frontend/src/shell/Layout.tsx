@@ -38,11 +38,16 @@ export function Layout() {
       permissions={me.permissions}
       appName={appName}
       logo={<Logo />}
-      account={(layout) => <Account {...layout} />}
+      account={accountArea}
     >
       <Outlet />
     </AppShell>
   );
+}
+
+/** The shell's account area: drawn as a component of its own, so its hooks are its own. */
+function accountArea(layout: AccountLayout) {
+  return <Account {...layout} />;
 }
 
 /** Who is signed in, as roux's account menu: their settings, dark mode and signing out. */
@@ -51,7 +56,11 @@ function Account({ compact, close }: AccountLayout) {
 
   // Signing out ends the session, and the guards then send the caller to sign in.
   return (
-    <AccountMenu name={profile?.displayName} email={profile?.email} compact={compact}>
+    <AccountMenu
+      name={profile?.displayName}
+      email={profile?.email}
+      compact={compact}
+    >
       <AccountMenuLink to="/settings" icon={LuSettings} onNavigate={close}>
         Settings
       </AccountMenuLink>

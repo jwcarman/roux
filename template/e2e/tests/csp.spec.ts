@@ -14,23 +14,34 @@ async function recordViolations(page: Page) {
   await page.addInitScript(() => {
     window.cspViolations = [];
     document.addEventListener("securitypolicyviolation", (event) =>
-      window.cspViolations.push(`${event.effectiveDirective} ${event.blockedURI}`),
+      window.cspViolations.push(
+        `${event.effectiveDirective} ${event.blockedURI}`,
+      ),
     );
   });
 }
 
-test("the app runs under its Content-Security-Policy without a violation", async ({ page, request }) => {
+test("the app runs under its Content-Security-Policy without a violation", async ({
+  page,
+  request,
+}) => {
   await recordViolations(page);
   const response = await page.goto("/");
-  expect(response?.headers()["content-security-policy"]).toMatch(/script-src 'self' 'nonce-[^']+'/);
+  expect(response?.headers()["content-security-policy"]).toMatch(
+    /script-src 'self' 'nonce-[^']+'/,
+  );
   await signInByLink(page, request, ownerEmail);
 
   const nav = page.getByRole("navigation", { name: "Main" });
   await nav.getByRole("link", { name: "Users" }).click();
   const table = page.getByRole("table", { name: "Users" });
-  await expect(page.getByText(/^(Showing 1 to \d+ of \d+ rows|\d+ rows?)$/)).toBeVisible();
+  await expect(
+    page.getByText(/^(Showing 1 to \d+ of \d+ rows|\d+ rows?)$/),
+  ).toBeVisible();
   await table.getByRole("button", { name: "Email" }).click();
-  await expect(table.getByRole("columnheader", { name: "Email" })).toHaveAttribute("aria-sort", "ascending");
+  await expect(
+    table.getByRole("columnheader", { name: "Email" }),
+  ).toHaveAttribute("aria-sort", "ascending");
   await openSettings(page);
   await page.getByRole("button", { name: "Account" }).click();
   await page.getByRole("menuitemcheckbox", { name: "Dark mode" }).click();
@@ -44,21 +55,33 @@ test("the app runs under its Content-Security-Policy without a violation", async
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/users");
   await page.getByRole("button", { name: "Invite user" }).click();
-  await expect(page.getByRole("dialog", { name: "Invite a user" })).toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "Invite a user" }),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.getByRole("table", { name: "Users" }).getByRole("link").first().click();
-  await expect(page.getByRole("heading", { name: "History", level: 3 })).toBeVisible();
+  await page
+    .getByRole("table", { name: "Users" })
+    .getByRole("link")
+    .first()
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "History", level: 3 }),
+  ).toBeVisible();
   await page.goto("/settings");
   await page.getByLabel("Display name").fill(`${ownerName}`);
   await page.getByRole("button", { name: "Save profile" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Profile saved" })).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Profile saved" }),
+  ).toBeVisible();
   expect(await page.evaluate(() => window.cspViolations)).toEqual([]);
 });
 
 test("a script injected into the page does not run", async ({ page }) => {
   await recordViolations(page);
   await page.goto("/signin");
-  await expect(page.getByRole("heading", { name: /^Sign in to /, level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /^Sign in to /, level: 1 }),
+  ).toBeVisible();
 
   await page.evaluate(() => {
     const script = document.createElement("script");
@@ -67,10 +90,14 @@ test("a script injected into the page does not run", async ({ page }) => {
   });
 
   expect(await page.evaluate(() => window.injectedScriptRan)).toBeUndefined();
-  expect(await page.evaluate(() => window.cspViolations)).toEqual([expect.stringMatching(/^script-src-elem inline/)]);
+  expect(await page.evaluate(() => window.cspViolations)).toEqual([
+    expect.stringMatching(/^script-src-elem inline/),
+  ]);
 });
 
-test("dark mode is set as the page is parsed, before the app starts", async ({ page }) => {
+test("dark mode is set as the page is parsed, before the app starts", async ({
+  page,
+}) => {
   await page.addInitScript(() => {
     localStorage.setItem("theme", "dark");
     document.addEventListener("readystatechange", () => {
@@ -80,7 +107,9 @@ test("dark mode is set as the page is parsed, before the app starts", async ({ p
     });
   });
   await page.goto("/signin");
-  await expect(page.getByRole("heading", { name: /^Sign in to /, level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /^Sign in to /, level: 1 }),
+  ).toBeVisible();
 
   expect(await page.evaluate(() => window.modeAtParse)).toContain("dark");
 });

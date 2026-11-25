@@ -6,7 +6,12 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Toaster, toaster } from "@jwcarman/roux-web/feedback";
 import { queryKeys } from "../queryKeys";
-import { invalidFields, renderWithProviders, server, serverError } from "@jwcarman/roux-web/testing";
+import {
+  invalidFields,
+  renderWithProviders,
+  server,
+  serverError,
+} from "@jwcarman/roux-web/testing";
 import { InviteForm } from "./InviteForm";
 
 /** Answers the invitation with `response`, and counts how many invitations were sent. */
@@ -23,7 +28,9 @@ function answer(response: () => Response) {
 
 /** The roles the server says an invitation may give, in its order. */
 function invitable(roles: string[]) {
-  server.use(http.get("/api/roux/roles/invitable", () => HttpResponse.json(roles)));
+  server.use(
+    http.get("/api/roux/roles/invitable", () => HttpResponse.json(roles)),
+  );
 }
 
 /** A list of users on the page: the invitation refreshes it. `load` answers each fetch. */
@@ -43,17 +50,25 @@ async function openInvite(load: () => Promise<string> = async () => "loaded") {
   const invalidate = vi.spyOn(client, "invalidateQueries");
   const user = userEvent.setup();
   // the button waits for the server's roles
-  await waitFor(() => expect(screen.getByRole("button", { name: "Invite user" })).toBeEnabled());
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Invite user" })).toBeEnabled(),
+  );
   await user.click(screen.getByRole("button", { name: "Invite user" }));
   const dialog = await screen.findByRole("dialog", { name: "Invite a user" });
   return { invalidate, user, dialog };
 }
 
-async function invite(name: string, email: string, load?: () => Promise<string>) {
+async function invite(
+  name: string,
+  email: string,
+  load?: () => Promise<string>,
+) {
   const opened = await openInvite(load);
   await opened.user.type(screen.getByLabelText(/^Name/), name);
   await opened.user.type(screen.getByLabelText(/^Email/), email);
-  await opened.user.click(screen.getByRole("button", { name: "Send invitation" }));
+  await opened.user.click(
+    screen.getByRole("button", { name: "Send invitation" }),
+  );
   return opened;
 }
 
@@ -69,11 +84,18 @@ describe("InviteForm", () => {
 
   it("invites from a dialog, toasts, closes and refreshes the list", async () => {
     answer(() => HttpResponse.json({ linkSent: true }, { status: 202 }));
-    const { invalidate, dialog } = await invite("Ada Lovelace", "ada@example.com");
+    const { invalidate, dialog } = await invite(
+      "Ada Lovelace",
+      "ada@example.com",
+    );
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Invitation sent");
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Invitation sent",
+    );
     await waitFor(() => expect(dialog).toHaveAttribute("data-state", "closed"));
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.users.lists() });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: queryKeys.users.lists(),
+    });
   });
 
   it("invites as a user unless another role is chosen", async () => {
@@ -87,13 +109,21 @@ describe("InviteForm", () => {
     const { user } = await openInvite();
     const role = screen.getByLabelText(/^Role/);
     expect(role).toHaveValue("USER");
-    expect(within(role).getAllByRole("option").map((option) => option.textContent)).toEqual(["User", "Admin"]);
+    expect(
+      within(role)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["User", "Admin"]);
 
     await user.type(screen.getByLabelText(/^Name/), "Ivy");
     await user.type(screen.getByLabelText(/^Email/), "ivy@example.com");
     await user.click(screen.getByRole("button", { name: "Send invitation" }));
     await waitFor(() => expect(bodies).toHaveLength(1));
-    expect(bodies[0]).toEqual({ name: "Ivy", email: "ivy@example.com", role: "USER" });
+    expect(bodies[0]).toEqual({
+      name: "Ivy",
+      email: "ivy@example.com",
+      role: "USER",
+    });
   });
 
   it("offers only the roles the server lists, the first chosen", async () => {
@@ -102,21 +132,31 @@ describe("InviteForm", () => {
 
     const role = screen.getByLabelText(/^Role/);
     expect(role).toHaveValue("ADMIN");
-    expect(within(role).getAllByRole("option").map((option) => option.textContent)).toEqual(["Admin"]);
+    expect(
+      within(role)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Admin"]);
   });
 
   it("names a role it has no label for as the server does", async () => {
     invitable(["USER", "COACH"]);
     await openInvite();
 
-    expect(within(screen.getByLabelText(/^Role/)).getAllByRole("option").map((option) => option.getAttribute("value"))).toEqual([
-      "USER",
-      "COACH",
-    ]);
+    expect(
+      within(screen.getByLabelText(/^Role/))
+        .getAllByRole("option")
+        .map((option) => option.getAttribute("value")),
+    ).toEqual(["USER", "COACH"]);
   });
 
   it("cannot be opened until the server has said which roles may be invited", async () => {
-    server.use(http.get("/api/roux/roles/invitable", () => new Promise<Response>(() => undefined)));
+    server.use(
+      http.get(
+        "/api/roux/roles/invitable",
+        () => new Promise<Response>(() => undefined),
+      ),
+    );
     renderWithProviders(<InviteForm />);
 
     expect(screen.getByRole("button", { name: "Invite user" })).toBeDisabled();
@@ -126,7 +166,11 @@ describe("InviteForm", () => {
     invitable([]);
     renderWithProviders(<InviteForm />);
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "Invite user" })).toBeDisabled());
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Invite user" }),
+      ).toBeDisabled(),
+    );
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -146,7 +190,11 @@ describe("InviteForm", () => {
     await user.click(screen.getByRole("button", { name: "Send invitation" }));
 
     await waitFor(() => expect(bodies).toHaveLength(1));
-    expect(bodies[0]).toEqual({ name: "Ivy", email: "ivy@example.com", role: "ADMIN" });
+    expect(bodies[0]).toEqual({
+      name: "Ivy",
+      email: "ivy@example.com",
+      role: "ADMIN",
+    });
   });
 
   it("stays open until the list has refreshed, so a quick second invitation can be sent", async () => {
@@ -155,7 +203,9 @@ describe("InviteForm", () => {
     const load = vi
       .fn<() => Promise<string>>()
       .mockResolvedValueOnce("before")
-      .mockImplementation(() => new Promise<string>((resolve) => (refreshed = resolve)));
+      .mockImplementation(
+        () => new Promise<string>((resolve) => (refreshed = resolve)),
+      );
     const { dialog } = await invite("Ada Lovelace", "ada@example.com", load);
     await waitFor(() => expect(load).toHaveBeenCalledTimes(2));
 
@@ -172,36 +222,53 @@ describe("InviteForm", () => {
     const { invalidate } = await invite("Ada Lovelace", "ada@example.com");
 
     // The toaster also keeps an empty live region with role="alert": find the toast by its text.
-    const title = await screen.findByText("Ada Lovelace was added, but the invitation email could not be sent.");
+    const title = await screen.findByText(
+      "Ada Lovelace was added, but the invitation email could not be sent.",
+    );
     const toast = title.closest("[role=alert]");
     expect(toast).not.toBeNull();
-    expect(toast).toHaveTextContent("Ask them to sign in from the sign-in page with ada@example.com.");
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.users.lists() });
+    expect(toast).toHaveTextContent(
+      "Ask them to sign in from the sign-in page with ada@example.com.",
+    );
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: queryKeys.users.lists(),
+    });
   });
 
   it("keeps the dialog open with the error under Email when the address is already a user", async () => {
     answer(() => invalidFields({ email: "That address is already a user" }));
     const { dialog } = await invite("Ada Lovelace", "ada@example.com");
 
-    expect(await screen.findByText("That address is already a user")).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Email/)).toHaveAttribute("aria-invalid", "true");
+    expect(
+      await screen.findByText("That address is already a user"),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Email/)).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
     expect(dialog).toHaveAttribute("data-state", "open");
   });
 
   it("checks the name and address, in the server's words, before sending anything", async () => {
-    const sent = answer(() => HttpResponse.json({ linkSent: true }, { status: 202 }));
+    const sent = answer(() =>
+      HttpResponse.json({ linkSent: true }, { status: 202 }),
+    );
     const { user } = await openInvite();
     await user.type(screen.getByLabelText(/^Email/), "not-an-address");
     await user.click(screen.getByRole("button", { name: "Send invitation" }));
 
     expect(await screen.findByText("Must not be blank")).toBeInTheDocument();
-    expect(screen.getByText("Must be a valid email address")).toBeInTheDocument();
+    expect(
+      screen.getByText("Must be a valid email address"),
+    ).toBeInTheDocument();
     expect(sent.count).toBe(0);
   });
 
   it("says the invitation could not be sent when the server fails", async () => {
     answer(() => serverError());
     await invite("Ada Lovelace", "ada@example.com");
-    expect(await screen.findByText("Could not send the invitation")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Could not send the invitation"),
+    ).toBeInTheDocument();
   });
 });

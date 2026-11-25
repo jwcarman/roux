@@ -37,7 +37,7 @@ export function directoryError(directory: string): string | undefined {
 
 export function nameError(name: string): string | undefined {
   const trimmed = name.trim();
-  if (trimmed.length === 0 || trimmed.length > MAX_APP_NAME || /[\p{Cc}]/u.test(trimmed)) {
+  if (trimmed.length === 0 || trimmed.length > MAX_APP_NAME || /\p{Cc}/u.test(trimmed)) {
     return `The name is 1 to ${MAX_APP_NAME} characters on one line (Acme Gym).`;
   }
   return trimmed.includes("${") ? "The name cannot contain ${ (Spring reads it as a placeholder)." : undefined;

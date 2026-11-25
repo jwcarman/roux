@@ -1,7 +1,7 @@
 import { Heading, Link, Stack, Text } from "@chakra-ui/react";
 
 /** What a URL that leads nowhere shows: an unknown page, or a record that does not exist. */
-export function NotFoundPage({ title = "Page not found" }: { title?: string }) {
+export function NotFoundPage({ title = "Page not found" }: Readonly<{ title?: string }>) {
   return (
     <Stack gap="4" py="8">
       <Heading as="h2">{title}</Heading>

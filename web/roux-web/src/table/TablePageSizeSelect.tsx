@@ -18,7 +18,7 @@ export function offeredPageSizes(pageSizes: number[], current: number): number[]
 }
 
 /** Rows per page. */
-export function TablePageSizeSelect<T>({ table, pageSizes = PAGE_SIZES }: TablePageSizeSelectProps<T>) {
+export function TablePageSizeSelect<T>({ table, pageSizes = PAGE_SIZES }: Readonly<TablePageSizeSelectProps<T>>) {
   const current = table.getState().pagination.pageSize;
   const offered = offeredPageSizes(pageSizes, current);
   return (

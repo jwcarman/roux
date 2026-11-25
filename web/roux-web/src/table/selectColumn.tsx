@@ -29,7 +29,7 @@ export function createSelectColumn<T>({
     header: ({ table }) => {
       const rows = table.getRowModel().rows.map((row) => row.original);
       const chosen = rows.filter((row) => selected.has(keyOf(row))).length;
-      const checked = rows.length > 0 && chosen === rows.length ? true : chosen > 0 ? "indeterminate" : false;
+      const checked = headerState(chosen, rows.length);
 
       function onChange(select: boolean) {
         const next = new Map(selected);
@@ -80,4 +80,12 @@ export function createSelectColumn<T>({
       );
     },
   });
+}
+
+/** The header checkbox: ticked when every row on the page is chosen, a dash when some are. */
+function headerState(chosen: number, rows: number): boolean | "indeterminate" {
+  if (rows > 0 && chosen === rows) {
+    return true;
+  }
+  return chosen > 0 ? "indeterminate" : false;
 }

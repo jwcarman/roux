@@ -7,7 +7,7 @@ import { FormField, type FormFieldProps } from "./FormField";
 export type MoneyFieldProps = Omit<FormFieldProps, "children">;
 
 /** An amount, typed as text (`150`, `150.50`) beside the organization's currency symbol; `money()` reads it. */
-export function MoneyField({ label, helperText, required }: MoneyFieldProps) {
+export function MoneyField({ label, helperText, required }: Readonly<MoneyFieldProps>) {
   const field = useFieldContext<string>();
   return (
     <FormField label={label} helperText={helperText} required={required}>

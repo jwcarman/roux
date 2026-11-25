@@ -23,7 +23,7 @@ export interface SignInCardProps {
  * turns to checking email: the address it went to, the code from the email beside Sign in, a way
  * back to a different address, and sending it again.
  */
-export function SignInCard({ appName, logo }: SignInCardProps) {
+export function SignInCard({ appName, logo }: Readonly<SignInCardProps>) {
   const [address, setAddress] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
 
@@ -48,7 +48,7 @@ interface ChooseHowProps extends SignInCardProps {
   onSent: (address: string) => void;
 }
 
-function ChooseHow({ appName, logo, initialEmail, onSent }: ChooseHowProps) {
+function ChooseHow({ appName, logo, initialEmail, onSent }: Readonly<ChooseHowProps>) {
   const options = useSignInOptions();
   const ways = options.isError ? FALLBACK : options.data;
 
@@ -88,7 +88,7 @@ function Ways({ ways, initialEmail, onSent }: { ways: SignInOptions } & Omit<Cho
  * The passkey and the providers. Under an emailed link they are labelled: "Have a passkey?" beside a
  * passkey that is the only other way, "Other ways to sign in" above several.
  */
-function OtherWays({ ways, labelled }: { ways: SignInOptions; labelled: boolean }) {
+function OtherWays({ ways, labelled }: Readonly<{ ways: SignInOptions; labelled: boolean }>) {
   const { signIn, error } = usePasskeySignIn();
   const passkey = ways.passkey && (
     <Button variant="outline" onClick={() => void signIn()}>
@@ -132,7 +132,7 @@ function OtherWays({ ways, labelled }: { ways: SignInOptions; labelled: boolean 
 }
 
 /** After the link is sent: where it went, the code, a different address, and sending it again. */
-function CheckYourEmail({ email, onBack }: { email: string; onBack: () => void }) {
+function CheckYourEmail({ email, onBack }: Readonly<{ email: string; onBack: () => void }>) {
   const [again, setAgain] = useState<"sent" | "failed" | null>(null);
 
   async function sendAgain() {

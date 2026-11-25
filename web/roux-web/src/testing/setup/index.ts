@@ -42,9 +42,16 @@ if (typeof window !== "undefined") {
       }) as MediaQueryList;
   }
   globalThis.ResizeObserver ??= class {
-    observe(): void {}
-    unobserve(): void {}
-    disconnect(): void {}
+    // jsdom lays nothing out, so there is never a size change to report
+    observe(): void {
+      // nothing to watch
+    }
+    unobserve(): void {
+      // nothing watched
+    }
+    disconnect(): void {
+      // nothing to let go of
+    }
   };
   window.scrollTo = () => undefined; // jsdom has one, but it only logs "Not implemented"
   if (typeof Element.prototype.scrollTo !== "function") Element.prototype.scrollTo = () => undefined;

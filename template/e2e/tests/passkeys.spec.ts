@@ -23,7 +23,10 @@ async function virtualAuthenticator(page: Page): Promise<CDPSession> {
   return cdp;
 }
 
-test("a passkey is added in Settings, signs the person in, and can be removed", async ({ page, request }) => {
+test("a passkey is added in Settings, signs the person in, and can be removed", async ({
+  page,
+  request,
+}) => {
   await virtualAuthenticator(page);
 
   // Registering needs a recent sign-in, so start with the emailed link.
@@ -37,24 +40,34 @@ test("a passkey is added in Settings, signs the person in, and can be removed", 
   await page.getByRole("button", { name: "Add a passkey" }).click();
   await page.getByLabel("Passkey label").fill(label);
   await page.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Passkey added" })).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Passkey added" }),
+  ).toBeVisible();
   await expect(page.getByText(label)).toBeVisible();
 
   // Sign out, then sign in with nothing but the passkey.
   await page.getByRole("button", { name: "Account" }).click();
   await page.getByRole("menuitem", { name: "Sign out" }).click();
-  await expect(page.getByRole("heading", { name: /^Sign in to /, level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /^Sign in to /, level: 1 }),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Use a passkey" }).click();
-  await expect(page.getByRole("heading", { name: /^Welcome/, level: 2 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /^Welcome/, level: 2 }),
+  ).toBeVisible();
 
   // Remove it. This session signed in with that very passkey, so removing it ends the session
   // (who's rule): the page lands back on sign-in.
   await openSettings(page);
   await expect(page.getByText(label)).toBeVisible();
   await page.getByRole("button", { name: `Remove ${label}` }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Passkey removed" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /^Sign in to /, level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Passkey removed" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /^Sign in to /, level: 1 }),
+  ).toBeVisible();
 
   // The passkey is gone: signing in by link shows an empty list again.
   await signInByLink(page, request, ownerEmail);

@@ -6,7 +6,7 @@ import { FormField, type FormFieldProps } from "./FormField";
 export type CheckboxFieldProps = Omit<FormFieldProps, "children" | "controlLabelled">;
 
 /** A checkbox for a boolean field, named by its own label. */
-export function CheckboxField({ label, helperText, required }: CheckboxFieldProps) {
+export function CheckboxField({ label, helperText, required }: Readonly<CheckboxFieldProps>) {
   const field = useFieldContext<boolean>();
   return (
     <FormField label={label} helperText={helperText} required={required} controlLabelled>

@@ -97,7 +97,7 @@ export function AppearanceSettings() {
   return <AppearanceEditor saved={theme.data} />;
 }
 
-function AppearanceEditor({ saved }: { saved: SavedTheme }) {
+function AppearanceEditor({ saved }: Readonly<{ saved: SavedTheme }>) {
   const { preview } = useShellTheme();
   // Open from the start when the look in use needs it to be seen: the owner's own color.
   const [moreOpen, setMoreOpen] = useState(saved.palette === "brand");
@@ -318,7 +318,11 @@ function AppearanceEditor({ saved }: { saved: SavedTheme }) {
 }
 
 /** One part of the page: its title, a line on what it is for, and its contents. */
-function Section({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+function Section({
+  title,
+  description,
+  children,
+}: Readonly<{ title: string; description: string; children: ReactNode }>) {
   return (
     <Stack gap="5" as="section" aria-label={title}>
       <Stack gap="1">
@@ -335,7 +339,7 @@ function Section({ title, description, children }: { title: string; description:
 }
 
 /** A group of choices within a section, under its own small heading. */
-function Part({ title, children }: { title: string; children: ReactNode }) {
+function Part({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
   return (
     <Stack gap="3" as="section" aria-label={title}>
       <Heading as="h4" size="sm">
@@ -354,7 +358,7 @@ interface FontChoicesProps {
 }
 
 /** One button per lettering, each showing the app's name in it. */
-function FontChoices({ current, sample, suffix, onChoose }: FontChoicesProps) {
+function FontChoices({ current, sample, suffix, onChoose }: Readonly<FontChoicesProps>) {
   return (
     <SimpleGrid minChildWidth="48" gap="2">
       {FONTS.map((font) => (

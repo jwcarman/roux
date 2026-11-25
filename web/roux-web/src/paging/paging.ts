@@ -114,8 +114,8 @@ export async function fetchAllPages<T>(
   { maxPages = MAX_PAGES }: { maxPages?: number } = {},
 ): Promise<T[]> {
   const rows: T[] = [];
-  let pageIndex: number | undefined = params.pageIndex ?? 0;
-  for (let fetched = 0; pageIndex !== undefined; fetched++) {
+  // One page at a time: each answer says whether there is a next.
+  const fetchFrom = async (pageIndex: number, fetched: number): Promise<T[]> => {
     if (fetched === maxPages) {
       throw new Error(`fetchAllPages: the list has more than ${maxPages} pages`);
     }
@@ -124,9 +124,10 @@ export async function fetchAllPages<T>(
       throw new Error(`fetchAllPages: asked for page ${pageIndex}, got page ${page.pagination.pageIndex} again`);
     }
     rows.push(...page.data);
-    pageIndex = nextPageIndex(page);
-  }
-  return rows;
+    const next = nextPageIndex(page);
+    return next === undefined ? rows : fetchFrom(next, fetched + 1);
+  };
+  return fetchFrom(params.pageIndex ?? 0, 0);
 }
 
 /** A table's page, page size, sort and search, as kept in the URL; absent means the default. */

@@ -23,12 +23,16 @@ describe("/appearance", () => {
     );
     renderRoute("/appearance", { permissions: [THEME_MANAGE] });
 
-    expect(await screen.findByRole("heading", { name: "Appearance" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Appearance" }),
+    ).toBeInTheDocument();
   });
 
   it("sends someone who may not change them to Home", async () => {
     const { router } = renderRoute("/appearance", { permissions: [] });
-    expect(await screen.findByRole("heading", { name: /^Welcome/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /^Welcome/ }),
+    ).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/");
   });
 });

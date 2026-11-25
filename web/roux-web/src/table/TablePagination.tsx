@@ -3,7 +3,7 @@ import type { Table } from "@tanstack/react-table";
 import { LuChevronLeft, LuChevronRight, LuChevronsLeft, LuChevronsRight } from "react-icons/lu";
 
 /** First, previous, a page number field, next and last; a page typed past the end goes to the last. For more than one page. */
-export function TablePagination<T>({ table }: { table: Table<T> }) {
+export function TablePagination<T>({ table }: Readonly<{ table: Table<T> }>) {
   const pageCount = table.getPageCount();
   const pageIndex = table.getState().pagination.pageIndex;
 

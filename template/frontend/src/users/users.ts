@@ -1,7 +1,11 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
 import { email, text } from "@jwcarman/roux-web/form";
-import { pageQuery, type PageDto, type PageParams } from "@jwcarman/roux-web/paging";
+import {
+  pageQuery,
+  type PageDto,
+  type PageParams,
+} from "@jwcarman/roux-web/paging";
 import { z } from "zod";
 import { historyQuery } from "@jwcarman/roux-web/activity";
 import type { Profile } from "@jwcarman/roux-web/session";
@@ -47,17 +51,21 @@ export type UserStatusAction = "deactivate" | "reactivate";
 export const usersApi = {
   list: (params: PageParams & UserFilters, signal?: AbortSignal) =>
     getJson<PageDto<User>>("roux/users", { params, signal }),
-  get: (id: string, signal?: AbortSignal) => getJson<UserDetail>(path`roux/users/${id}`, { signal }),
-  invite: (invitation: Invitation) => sendJson<InvitationResult>("POST", "roux/users/invitations", invitation),
+  get: (id: string, signal?: AbortSignal) =>
+    getJson<UserDetail>(path`roux/users/${id}`, { signal }),
+  invite: (invitation: Invitation) =>
+    sendJson<InvitationResult>("POST", "roux/users/invitations", invitation),
   changeStatus: (id: string, action: UserStatusAction) =>
     sendJson<UserDetail>("POST", path`roux/users/${id}/${action}`),
-  rename: (rename: Rename & { version: number }) => sendJson<Profile>("PUT", "roux/users/me", rename),
+  rename: (rename: Rename & { version: number }) =>
+    sendJson<Profile>("PUT", "roux/users/me", rename),
 };
 
 /** The roles an invitation may give, in the order the server lists them (`roux.roles.invitable`). */
 export const invitableRolesQuery = queryOptions({
   queryKey: queryKeys.roles.invitable(),
-  queryFn: ({ signal }) => getJson<string[]>("roux/roles/invitable", { signal }),
+  queryFn: ({ signal }) =>
+    getJson<string[]>("roux/roles/invitable", { signal }),
 });
 
 /** A user, for a detail page's loader (`ensureQueryData`) and the page (`useSuspenseQuery`). */
@@ -77,7 +85,10 @@ export function usersPage(filters: UserFilters) {
 
 /** A user's history, newest first, as an ActivityList takes it. */
 export function activitiesPage(id: string) {
-  return historyQuery(queryKeys.users.activities(id), path`roux/users/${id}/activities`);
+  return historyQuery(
+    queryKeys.users.activities(id),
+    path`roux/users/${id}/activities`,
+  );
 }
 
 /** Invites a user; the directory refreshes. */
@@ -89,9 +100,14 @@ export const inviteUser = mutationOptions({
 /** Deactivates or reactivates the user `id`; their page, the directory and their history refresh. */
 export const changeUserStatus = (id: string) =>
   mutationOptions({
-    mutationFn: ({ action }: { action: UserStatusAction }) => usersApi.changeStatus(id, action),
+    mutationFn: ({ action }: { action: UserStatusAction }) =>
+      usersApi.changeStatus(id, action),
     meta: {
-      refreshes: [queryKeys.users.detail(id), queryKeys.users.lists(), queryKeys.users.activities(id)],
+      refreshes: [
+        queryKeys.users.detail(id),
+        queryKeys.users.lists(),
+        queryKeys.users.activities(id),
+      ],
     },
   });
 

@@ -46,11 +46,18 @@ export async function settle(timeout = 1000): Promise<void> {
   // A request reaches MSW a turn after the app sends it, and the app handles the answer a turn after
   // it arrives: let each happen before looking.
   await nextTurn();
-  while (inFlight.size > 0 && !deadline.aborted) {
-    await nextTurn(10);
-  }
+  await drain(deadline);
   inFlight.clear();
   await nextTurn();
+}
+
+/** Waits, a few milliseconds at a time, until no request is in flight or the deadline passes. */
+async function drain(deadline: AbortSignal): Promise<void> {
+  if (inFlight.size === 0 || deadline.aborted) {
+    return;
+  }
+  await nextTurn(10);
+  return drain(deadline);
 }
 
 function nextTurn(ms = 0): Promise<void> {

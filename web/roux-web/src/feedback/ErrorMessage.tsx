@@ -7,7 +7,7 @@ export interface ErrorMessageProps {
 }
 
 /** An error alert (`role="alert"`), announced when it appears. */
-export function ErrorMessage({ title, children }: ErrorMessageProps) {
+export function ErrorMessage({ title, children }: Readonly<ErrorMessageProps>) {
   return (
     <Alert.Root status="error" role="alert">
       <Alert.Indicator />

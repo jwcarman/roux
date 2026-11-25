@@ -21,7 +21,7 @@ export function ActivityList({
   query,
   emptyText = "Nothing has happened yet.",
   now,
-}: ActivityListProps) {
+}: Readonly<ActivityListProps>) {
   return (
     <InfiniteList
       aria-label={label}

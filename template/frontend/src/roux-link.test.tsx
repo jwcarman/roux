@@ -12,12 +12,16 @@ function NameForm() {
   const form = useSchemaForm({
     schema,
     defaultValues: { name: "" },
-    mutation: mutationOptions({ mutationFn: async (values: z.output<typeof schema>) => values }),
+    mutation: mutationOptions({
+      mutationFn: async (values: z.output<typeof schema>) => values,
+    }),
   });
   return (
     <form.AppForm>
       <form.Form>
-        <form.AppField name="name">{(f) => <f.InputField label="Name" />}</form.AppField>
+        <form.AppField name="name">
+          {(f) => <f.InputField label="Name" />}
+        </form.AppField>
       </form.Form>
     </form.AppForm>
   );

@@ -8,7 +8,13 @@ import { PERMISSIONS } from "../permissions.gen";
  * The person's own pages (Settings) are in the account menu (Layout.tsx), not here.
  */
 export const nav = defineNav(PERMISSIONS, [
-  { label: "Home", to: "/", icon: LuHouse, description: "A welcome page.", start: true },
+  {
+    label: "Home",
+    to: "/",
+    icon: LuHouse,
+    description: "A welcome page.",
+    start: true,
+  },
   {
     label: "Users",
     to: "/users",

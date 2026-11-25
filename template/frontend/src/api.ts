@@ -12,4 +12,3 @@ export interface UserDetail extends User {
   /** When their identity was created (ISO 8601). */
   joinedAt: string;
 }
-

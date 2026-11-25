@@ -8,12 +8,28 @@ import { USERS_INVITE, USERS_READ } from "../../../permissions.gen";
 import { renderRoute } from "../../../testing/route";
 
 const USERS = [
-  { id: "u-1", displayName: "Ada Lovelace", email: "ada@example.org", role: "OWNER", status: "ACTIVE" },
-  { id: "u-2", displayName: "Grace Hopper", email: "grace@example.org", role: "USER", status: "ACTIVE" },
+  {
+    id: "u-1",
+    displayName: "Ada Lovelace",
+    email: "ada@example.org",
+    role: "OWNER",
+    status: "ACTIVE",
+  },
+  {
+    id: "u-2",
+    displayName: "Grace Hopper",
+    email: "grace@example.org",
+    role: "USER",
+    status: "ACTIVE",
+  },
 ];
 
 /** Enough users for a second page. */
-const MANY = Array.from({ length: 30 }, (_, i) => ({ ...USERS[1], id: `m-${i}`, displayName: `User ${i}` }));
+const MANY = Array.from({ length: 30 }, (_, i) => ({
+  ...USERS[1],
+  id: `m-${i}`,
+  displayName: `User ${i}`,
+}));
 
 /** Every directory request's query string, in order. */
 let requests: URLSearchParams[];
@@ -26,7 +42,9 @@ beforeEach(() => {
       requests.push(params);
       const pageIndex = Number(params.get("pageIndex") ?? 0);
       const pageSize = Number(params.get("pageSize") ?? 20);
-      return HttpResponse.json(pageOf(pageIndex === 0 ? USERS : MANY, { pageIndex, pageSize }));
+      return HttpResponse.json(
+        pageOf(pageIndex === 0 ? USERS : MANY, { pageIndex, pageSize }),
+      );
     }),
     http.get("/api/roux/roles/invitable", () => HttpResponse.json(["USER"])),
   );
@@ -37,9 +55,15 @@ describe("/users", () => {
     renderRoute("/users", { permissions: [USERS_READ] });
 
     const table = await screen.findByRole("table", { name: "Users" });
-    expect(await within(table).findByRole("link", { name: "Grace Hopper" })).toHaveAttribute("href", "/users/u-2");
-    expect(within(table).getByRole("cell", { name: "Owner" })).toBeInTheDocument();
-    expect(within(table).getByRole("cell", { name: "User" })).toBeInTheDocument();
+    expect(
+      await within(table).findByRole("link", { name: "Grace Hopper" }),
+    ).toHaveAttribute("href", "/users/u-2");
+    expect(
+      within(table).getByRole("cell", { name: "Owner" }),
+    ).toBeInTheDocument();
+    expect(
+      within(table).getByRole("cell", { name: "User" }),
+    ).toBeInTheDocument();
   });
 
   it("has a Name, an Email and a Role column, sorted by name to start", async () => {
@@ -47,7 +71,11 @@ describe("/users", () => {
 
     const table = await screen.findByRole("table", { name: "Users" });
     const headers = within(table).getAllByRole("columnheader");
-    expect(headers.map((header) => header.textContent)).toEqual(["Name", "Email", "Role"]);
+    expect(headers.map((header) => header.textContent)).toEqual([
+      "Name",
+      "Email",
+      "Role",
+    ]);
     expect(headers[0]).toHaveAttribute("aria-sort", "ascending");
   });
 
@@ -55,12 +83,16 @@ describe("/users", () => {
     renderRoute("/users", { permissions: [USERS_READ] });
 
     const status = await screen.findByRole("group", { name: "Status" });
-    expect(within(status).getByRole("button", { name: "Active" })).toHaveAttribute("aria-pressed", "true");
+    expect(
+      within(status).getByRole("button", { name: "Active" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   it("offers the invite form only to someone who may invite", async () => {
     renderRoute("/users", { permissions: [USERS_READ, USERS_INVITE] });
-    expect(await screen.findByRole("button", { name: "Invite user" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Invite user" }),
+    ).toBeInTheDocument();
   });
 
   it("does not offer the invite form to someone who may not invite", async () => {
@@ -70,7 +102,9 @@ describe("/users", () => {
   });
 
   it("filters by role and status from the URL, and leaves out values it does not know", async () => {
-    const { router } = renderRoute("/users?role=OWNER&status=DEACTIVATED", { permissions: [USERS_READ] });
+    const { router } = renderRoute("/users?role=OWNER&status=DEACTIVATED", {
+      permissions: [USERS_READ],
+    });
     await waitFor(() => expect(requests.length).toBeGreaterThan(0));
     expect(requests.at(-1)?.get("role")).toBe("OWNER");
     expect(requests.at(-1)?.get("status")).toBe("DEACTIVATED");
@@ -83,26 +117,54 @@ describe("/users", () => {
     const { router } = renderRoute("/users", { permissions: [USERS_READ] });
     const user = userEvent.setup();
 
-    await user.click(within(await screen.findByRole("group", { name: "Role" })).getByRole("button", { name: "Owners" }));
-    await waitFor(() => expect(router.state.location.search).toEqual({ role: "OWNER" }));
+    await user.click(
+      within(await screen.findByRole("group", { name: "Role" })).getByRole(
+        "button",
+        { name: "Owners" },
+      ),
+    );
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ role: "OWNER" }),
+    );
 
-    await user.click(within(screen.getByRole("group", { name: "Status" })).getByRole("button", { name: "Deactivated" }));
-    await waitFor(() => expect(router.state.location.search).toEqual({ role: "OWNER", status: "DEACTIVATED" }));
+    await user.click(
+      within(screen.getByRole("group", { name: "Status" })).getByRole(
+        "button",
+        { name: "Deactivated" },
+      ),
+    );
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({
+        role: "OWNER",
+        status: "DEACTIVATED",
+      }),
+    );
 
-    await user.click(within(screen.getByRole("group", { name: "Status" })).getByRole("button", { name: "Active" }));
-    await waitFor(() => expect(router.state.location.search).toEqual({ role: "OWNER" }));
+    await user.click(
+      within(screen.getByRole("group", { name: "Status" })).getByRole(
+        "button",
+        { name: "Active" },
+      ),
+    );
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ role: "OWNER" }),
+    );
   });
 
   it("searches as the user types, replacing the history entry, and starts again from the first page", async () => {
-    const { router } = renderRoute("/users?pageIndex=1", { permissions: [USERS_READ] });
+    const { router } = renderRoute("/users?pageIndex=1", {
+      permissions: [USERS_READ],
+    });
 
     const box = await screen.findByRole("searchbox", { name: "Search users" });
     const entries = router.history.length;
 
     await userEvent.type(box, "ada");
 
-    await waitFor(() => expect(router.state.location.search).toEqual({ search: "ada" }));
-    expect(router.history.length).toBe(entries);
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ search: "ada" }),
+    );
+    expect(router.history).toHaveLength(entries);
   });
 
   it("puts a chosen sort in the URL", async () => {
@@ -111,12 +173,16 @@ describe("/users", () => {
 
     await userEvent.click(within(table).getByRole("button", { name: "Email" }));
 
-    await waitFor(() => expect(router.state.location.search).toEqual({ sortBy: "EMAIL" }));
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ sortBy: "EMAIL" }),
+    );
   });
 
   it("sends someone who may not read users to Home", async () => {
     const { router } = renderRoute("/users", { permissions: [] });
-    expect(await screen.findByRole("heading", { name: /^Welcome/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /^Welcome/ }),
+    ).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/");
   });
 });

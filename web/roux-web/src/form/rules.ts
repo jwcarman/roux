@@ -143,7 +143,7 @@ export function url(): TextRule {
  * What a phone number looks like: digits, spaces and `+ - ( ) .`, at least 7 digits. The server's
  * `@Phone` carries the same string (`Phone.PATTERN`), and `contracts/phone.json` holds the two together.
  */
-export const PHONE_PATTERN = "^(?=(?:\\D*\\d){7})[\\d +\\-().]+$";
+export const PHONE_PATTERN = String.raw`^(?=(?:\D*\d){7})[\d +\-().]+$`;
 const PHONE = new RegExp(PHONE_PATTERN);
 
 /** Required phone number: digits, spaces and `+ - ( ) .`, at least 7 digits: `Is not in the expected format`. */

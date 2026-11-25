@@ -15,10 +15,14 @@ describe("ColorModeButton", () => {
     );
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole("button", { name: "Switch to dark mode" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Switch to dark mode" }),
+    );
     expect(document.documentElement).toHaveClass("dark");
 
-    await user.click(screen.getByRole("button", { name: "Switch to light mode" }));
+    await user.click(
+      screen.getByRole("button", { name: "Switch to light mode" }),
+    );
     expect(document.documentElement).toHaveClass("light");
     expect(document.documentElement).not.toHaveClass("dark");
   });

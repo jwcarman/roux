@@ -10,14 +10,14 @@ import { auth } from "./auth";
  * visitor was going. A link that is used or too old is told, and so is a sign-in who could not
  * answer, each with a way back to `signInPath`.
  */
-export function EmailLinkLanding({ signInPath = "/signin" }: { signInPath?: string }) {
+export function EmailLinkLanding({ signInPath = "/signin" }: Readonly<{ signInPath?: string }>) {
   const finish = useSignInReturn();
   // A link works once: asking through a query shares the one answer between StrictMode's two mounts.
   const redemption = useQuery({
     queryKey: ["roux", "emailLink"],
     queryFn: async () => {
       const result = await auth.email.signInFromLocation();
-      return result !== null && result.ok;
+      return result?.ok === true;
     },
     retry: false,
     staleTime: Infinity,

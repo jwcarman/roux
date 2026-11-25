@@ -128,7 +128,7 @@ describe("QueryTable", () => {
 
     await user.clear(screen.getByRole("spinbutton", { name: "Page" }));
 
-    expect(query.mock.calls.length).toBe(calls);
+    expect(query.mock.calls).toHaveLength(calls);
     expect(screen.getByText("Showing 26 to 50 of 60 rows")).toBeInTheDocument();
   });
 

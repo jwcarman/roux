@@ -1,3 +1,4 @@
+import { withoutTrailingSlashes } from "../api/url";
 import {
   type BrowserSessionRequired,
   type LastCredential,
@@ -128,7 +129,7 @@ function normalize(baseUrl: string): string {
   if (baseUrl.includes("?") || baseUrl.includes("#")) {
     throw new Error(`roux-web auth: baseUrl must have no query or fragment, but is ${baseUrl}`);
   }
-  return baseUrl.replace(/\/+$/, "");
+  return withoutTrailingSlashes(baseUrl);
 }
 
 function csrfToken(): string | undefined {

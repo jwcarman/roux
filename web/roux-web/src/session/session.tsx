@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Me } from "../auth";
 import { getJson, onSessionLost } from "../api/client";
 import { useClearQueriesOnIdentityChange } from "../api/queryClient";
@@ -101,15 +101,17 @@ const SessionContext = createContext<Session | null>(null);
  * roux-users, asks again whenever an API call answers 401, and empties the query cache when the
  * person changes. Mount it once, inside the query client's provider; `useSession()` reads it.
  */
-export function SessionProvider({ children }: { children: ReactNode }) {
+export function SessionProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [session] = useState(createSession);
   const { me, profile } = useSyncExternalStore(session.subscribe, session.state);
   useClearQueriesOnIdentityChange(me === null ? null : me?.identityId);
-  const { currentMe, refresh, refreshProfile, signOut } = session;
+  // A new value only when who is signed in changes, so its readers render only then.
+  const value = useMemo(() => {
+    const { currentMe, refresh, refreshProfile, signOut } = session;
+    return { me, currentMe, profile, refresh, refreshProfile, signOut };
+  }, [session, me, profile]);
 
-  return (
-    <SessionContext value={{ me, currentMe, profile, refresh, refreshProfile, signOut }}>{children}</SessionContext>
-  );
+  return <SessionContext value={value}>{children}</SessionContext>;
 }
 
 /** The session `SessionProvider` holds; throws outside one. */

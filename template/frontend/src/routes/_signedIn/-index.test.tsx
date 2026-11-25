@@ -10,7 +10,12 @@ describe("Home", () => {
   it("welcomes the signed-in user by name, in the page's heading", async () => {
     renderRoute("/", { permissions: [] });
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Welcome, Test User" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "Welcome, Test User",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("welcomes a caller who has no profile to show without a name", async () => {
@@ -26,13 +31,17 @@ describe("Home", () => {
 
     await vi.waitFor(() => expect(asked).toBe(true));
     await delay(50);
-    expect(screen.getByRole("heading", { level: 2, name: "Welcome" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Welcome" }),
+    ).toBeInTheDocument();
   });
 
   it("says which app they are signed in to", async () => {
     renderRoute("/", { permissions: [] });
 
-    expect(await screen.findByText(/^You're signed in to .+\.$/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/^You're signed in to .+\.$/),
+    ).toBeInTheDocument();
   });
 
   it("is a blank page to start from: no links of its own", async () => {

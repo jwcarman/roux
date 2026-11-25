@@ -54,7 +54,7 @@ export interface LinkRequestFormProps {
 }
 
 /** The address field and "Email me a link"; a send that fails is told under it. */
-export function LinkRequestForm({ initialEmail, onSent }: LinkRequestFormProps) {
+export function LinkRequestForm({ initialEmail, onSent }: Readonly<LinkRequestFormProps>) {
   const [sendError, setSendError] = useState<string | null>(null);
 
   const form = useAppForm({
@@ -96,7 +96,7 @@ export function LinkRequestForm({ initialEmail, onSent }: LinkRequestFormProps) 
 const NOT_ACCEPTED = "That code did not work. Check it, or ask for a new email.";
 
 /** The code from the emailed message, for the address it was sent to: a short field with Sign in beside it. */
-export function CodeForm({ email }: { email: string }) {
+export function CodeForm({ email }: Readonly<{ email: string }>) {
   const finish = useSignInReturn();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);

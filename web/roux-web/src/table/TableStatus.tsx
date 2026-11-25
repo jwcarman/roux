@@ -11,9 +11,12 @@ export function TableStatus<T>({ table, ...props }: TextProps & { table: Table<T
   );
   return (
     <Text aria-live="polite" color="fg.muted" fontSize="sm" {...props}>
-      {table.getPageCount() > 1
-        ? `Showing ${first} to ${last} of ${total} rows`
-        : `${total} ${total === 1 ? "row" : "rows"}`}
+      {table.getPageCount() > 1 ? `Showing ${first} to ${last} of ${total} rows` : rowCount(total)}
     </Text>
   );
+}
+
+/** "1 row", "3 rows". */
+function rowCount(total: number): string {
+  return `${total} ${total === 1 ? "row" : "rows"}`;
 }

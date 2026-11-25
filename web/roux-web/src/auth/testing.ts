@@ -1,7 +1,5 @@
 import { afterEach } from "vitest";
-import { server } from "../testing/server";
-
-export { server };
+export { server } from "../testing/server";
 
 // The CSRF cookie a test set goes with the test.
 afterEach(clearCsrfCookie);

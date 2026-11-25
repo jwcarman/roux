@@ -7,7 +7,7 @@ export const Route = createFileRoute("/_signedIn/")({
   // Opening the app goes to the start place in nav.ts, when it is another page.
   // A guard that sent the caller to Home says so in the history state (see guards.ts).
   beforeLoad: ({ context, location }) => {
-    const to = openingRedirect(nav, context.me.permissions, location.state.home === true);
+    const to = openingRedirect(nav, context.me.permissions, location.state);
     if (to) {
       throw redirect({ to });
     }

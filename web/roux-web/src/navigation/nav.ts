@@ -106,13 +106,13 @@ export function startPathFor<Permission extends string>(
 }
 
 /**
- * Where opening `/` sends a caller: the start place, unless `home` says a guard sent them to Home
- * (so a start place that refuses them cannot loop); `null` shows Home.
+ * Where opening `/` sends a caller: the start place, unless the history `state` says a guard sent
+ * them to Home (`home: true`, so a start place that refuses them cannot loop); `null` shows Home.
  */
 export function openingRedirect<Permission extends string>(
   nav: Nav<Permission>,
   permissions: Permissions | null | undefined,
-  home: boolean,
+  state: { home?: unknown },
 ): NavTo | null {
-  return home ? null : startPathFor(nav, permissions);
+  return state.home === true ? null : startPathFor(nav, permissions);
 }

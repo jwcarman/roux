@@ -147,9 +147,7 @@ export function emailAddresses<D>(http: AuthHttp<D>): EmailAddresses<D> {
       body: proof,
       read: json<ConfirmedAddress>(),
       reason: (status, code): ConfirmAddressFailure | undefined =>
-        signInRequired(status, code) ??
-        browserSessionRequired(status, code) ??
-        (status === 400 ? "rejected" : status === 409 ? "conflict" : undefined),
+        signInRequired(status, code) ?? browserSessionRequired(status, code) ?? confirmRefusal(status),
     });
   return {
     list: () =>
@@ -178,4 +176,12 @@ export function emailAddresses<D>(http: AuthHttp<D>): EmailAddresses<D> {
         reason: removeCredential,
       }),
   };
+}
+
+/** A confirmation the server refuses: a wrong or used proof (400), or an address taken meanwhile (409). */
+function confirmRefusal(status: number): "rejected" | "conflict" | undefined {
+  if (status === 400) {
+    return "rejected";
+  }
+  return status === 409 ? "conflict" : undefined;
 }

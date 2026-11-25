@@ -34,7 +34,7 @@ export function FormField({
   required: requiredProp,
   controlLabelled = false,
   children,
-}: FormFieldProps) {
+}: Readonly<FormFieldProps>) {
   const field = useFieldContext<unknown>();
   const submitted = useStore(field.form.store, (state) => state.submissionAttempts > 0);
   const required = requiredProp ?? rulesOfField(field.form, field.name).required;

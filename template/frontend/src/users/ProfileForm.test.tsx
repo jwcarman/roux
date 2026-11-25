@@ -6,23 +6,41 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Toaster, toaster } from "@jwcarman/roux-web/feedback";
 import type { Profile } from "@jwcarman/roux-web/session";
 import { SessionProvider } from "@jwcarman/roux-web/session";
-import { renderWithProviders, server, serverError, stale } from "@jwcarman/roux-web/testing";
+import {
+  renderWithProviders,
+  server,
+  serverError,
+  stale,
+} from "@jwcarman/roux-web/testing";
 import { ProfileForm } from "./ProfileForm";
 
 /** The signed-in user's profile, as last saved; a rename at another version is a 409. */
 function serveProfile() {
-  let current: Profile = { displayName: "Ada Lovelace", email: "ada@example.com", version: 2 };
+  let current: Profile = {
+    displayName: "Ada Lovelace",
+    email: "ada@example.com",
+    version: 2,
+  };
   const renames: unknown[] = [];
   server.use(
-    http.get("/api/roux/auth/me", () => HttpResponse.json({ identityId: "id-1", permissions: [] })),
+    http.get("/api/roux/auth/me", () =>
+      HttpResponse.json({ identityId: "id-1", permissions: [] }),
+    ),
     http.get("/api/roux/users/me", () => HttpResponse.json(current)),
     http.put("/api/roux/users/me", async ({ request }) => {
-      const body = (await request.json()) as { displayName: string; version: number };
+      const body = (await request.json()) as {
+        displayName: string;
+        version: number;
+      };
       renames.push(body);
       if (body.version !== current.version) {
         return stale();
       }
-      current = { ...current, displayName: body.displayName, version: body.version + 1 };
+      current = {
+        ...current,
+        displayName: body.displayName,
+        version: body.version + 1,
+      };
       return HttpResponse.json(current);
     }),
   );
@@ -81,12 +99,17 @@ describe("ProfileForm", () => {
     await user.type(name, "Ada King");
     await user.click(screen.getByRole("button", { name: "Save profile" }));
 
-    expect(await screen.findByText("This record changed since you loaded it")).toBeInTheDocument();
+    expect(
+      await screen.findByText("This record changed since you loaded it"),
+    ).toBeInTheDocument();
     await waitFor(() => expect(name).toHaveValue("Countess of Lovelace"));
 
     await user.click(screen.getByRole("button", { name: "Save profile" }));
     await waitFor(() => expect(renames).toHaveLength(2));
-    expect(renames[1]).toEqual({ displayName: "Countess of Lovelace", version: 3 });
+    expect(renames[1]).toEqual({
+      displayName: "Countess of Lovelace",
+      version: 3,
+    });
   });
 
   it("says the profile could not be saved when the server fails", async () => {
@@ -97,6 +120,8 @@ describe("ProfileForm", () => {
     await user.type(name, " King");
     await user.click(screen.getByRole("button", { name: "Save profile" }));
 
-    expect(await screen.findByText("Could not save the profile")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Could not save the profile"),
+    ).toBeInTheDocument();
   });
 });

@@ -27,7 +27,7 @@ export function SearchInput({
   placeholder,
   width = "100%",
   size = "md",
-}: SearchInputProps) {
+}: Readonly<SearchInputProps>) {
   const pressingClear = useRef(false);
 
   function clear() {

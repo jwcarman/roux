@@ -21,7 +21,7 @@ export interface AccountMenuProps {
  * menu of `children` above it. In the icon rail only the initials show. Made for `AppShell`'s
  * `account`.
  */
-export function AccountMenu({ name, email, compact, children }: AccountMenuProps) {
+export function AccountMenu({ name, email, compact, children }: Readonly<AccountMenuProps>) {
   const labels = compact ? RAIL_LABELS : {};
   return (
     // Fixed, so neither the sidebar nor the drawer clips it; not portalled, so the drawer keeps focus in it.

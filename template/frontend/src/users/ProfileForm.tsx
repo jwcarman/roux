@@ -19,7 +19,10 @@ interface ProfileEditorProps {
   refreshProfile: () => Promise<void>;
 }
 
-function ProfileEditor({ profile, refreshProfile }: ProfileEditorProps) {
+function ProfileEditor({
+  profile,
+  refreshProfile,
+}: Readonly<ProfileEditorProps>) {
   const form = useSchemaForm({
     schema: renameSchema,
     defaultValues: { displayName: profile.displayName },

@@ -35,7 +35,7 @@ interface Pending {
 }
 
 /** The app's one confirmation dialog, for `useConfirm`. */
-export function ConfirmProvider({ children }: { children: ReactNode }) {
+export function ConfirmProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [pending, setPending] = useState<Pending | null>(null);
   const cancel = useRef<HTMLButtonElement>(null);
 

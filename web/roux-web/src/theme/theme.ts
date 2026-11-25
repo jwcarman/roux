@@ -1,6 +1,6 @@
 import { createSystem, defaultConfig, defineConfig, type SystemContext } from "@chakra-ui/react";
 import { brandPalette, SHADES } from "./brandPalette";
-import { FONT_FAMILY, FONTS, type Font } from "./fonts";
+import { FONT_FAMILY, type Font } from "./fonts";
 
 /**
  * The palettes the owner can choose: Chakra's built-in ones, and `brand`, generated from the
@@ -25,7 +25,7 @@ export type Palette = (typeof PALETTES)[number];
 export const SHAPES = ["square", "slight", "medium", "round", "extra-round"] as const;
 export type Shape = (typeof SHAPES)[number];
 
-export { FONTS, type Font };
+export { FONTS, type Font } from "./fonts";
 
 /** How the app looks and what it is called: what the server writes into the page. */
 export interface ShellTheme {

@@ -131,12 +131,12 @@ export function useSchemaForm<S extends FormSchema, TData>(options: SchemaFormOp
   const started = useRef(given);
   // The draft a conflict (409) refused; see the conflict check below.
   const refused = useRef<unknown>(undefined);
-  if (!useSelector(form.store, (state) => state.isTouched)) {
-    started.current = given;
-  } else if (form.state.values === refused.current && evaluate(defaultValues, started.current.defaults)) {
-    // Refused, but the record the form shows is unchanged (someone else changed only what it does
-    // not show, or nothing): the draft is kept, and moves on to the caller's latest mutation, so its
-    // next save is at the new version rather than refused again.
+  // A touched draft starts again only when a conflict refused it but the record the form shows is
+  // unchanged (someone else changed only what it does not show, or nothing): the draft is kept, and
+  // moves on to the caller's latest mutation, so its next save is at the new version rather than
+  // refused again.
+  const touched = useSelector(form.store, (state) => state.isTouched);
+  if (!touched || (form.state.values === refused.current && evaluate(defaultValues, started.current.defaults))) {
     started.current = given;
   }
   const { mutateAsync } = useMutation(started.current.mutation);

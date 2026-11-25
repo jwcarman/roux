@@ -8,7 +8,7 @@ import { useFormContext } from "../formContext";
  * submits, and nothing else calls `handleSubmit`. The browser's own validation is off; the form's
  * validators speak for it, in the app's words.
  */
-export function Form({ children }: { children: ReactNode }) {
+export function Form({ children }: Readonly<{ children: ReactNode }>) {
   const form = useFormContext();
   return (
     <form
@@ -57,7 +57,7 @@ export function ResetButton({ children = "Reset", ...props }: Omit<ButtonProps, 
 }
 
 /** "Saving…" (or `children`), announced, while the form submits. */
-export function SubmittingIndicator({ children = "Saving…" }: { children?: ReactNode }) {
+export function SubmittingIndicator({ children = "Saving…" }: Readonly<{ children?: ReactNode }>) {
   const form = useFormContext();
   const submitting = useStore(form.store, (state) => state.isSubmitting);
   if (!submitting) {

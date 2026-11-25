@@ -41,7 +41,7 @@ function dayOf(value: string | null): string {
  * Remove), "No passkeys yet.", and "Add a passkey" in a dialog. Place it in the app's Settings page,
  * under the page's own heading for it.
  */
-export function PasskeySettings({ onSignedOut }: PasskeySettingsProps) {
+export function PasskeySettings({ onSignedOut }: Readonly<PasskeySettingsProps>) {
   const [adding, setAdding] = useState(false);
   const passkeys = useQuery({
     queryKey: PASSKEYS,

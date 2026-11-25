@@ -12,7 +12,7 @@ export interface SignInFrameProps {
  * The signed-out page: a card no wider than 400px, centred on a tinted page from a small screen up.
  * On a phone the card is the page: no border, no shadow, the page's own background.
  */
-export function SignInFrame({ tools, children }: SignInFrameProps) {
+export function SignInFrame({ tools, children }: Readonly<SignInFrameProps>) {
   return (
     <Box position="relative">
       <Flex position="absolute" top="3" right="4" zIndex="1">

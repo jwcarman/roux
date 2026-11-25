@@ -10,7 +10,11 @@ import { ConfirmProvider, Toaster } from "@jwcarman/roux-web/feedback";
 import { ThemeProvider } from "@jwcarman/roux-web/theme";
 import { routeTree } from "./routeTree.gen";
 import { ColorModeProvider } from "./shell/colorMode";
-import { SessionProvider, useSession, type Session } from "@jwcarman/roux-web/session";
+import {
+  SessionProvider,
+  useSession,
+  type Session,
+} from "@jwcarman/roux-web/session";
 
 /** The app's router: its routes, with the query client their loaders use. `history` is the browser's unless given. */
 export function createAppRouter(
@@ -41,10 +45,10 @@ declare module "@tanstack/react-router" {
 function SessionRoutes({
   router,
   session,
-}: {
+}: Readonly<{
   router: AppRouter;
   session: Session;
-}) {
+}>) {
   useEffect(() => {
     void router.invalidate();
   }, [router, session.me]);
@@ -52,7 +56,7 @@ function SessionRoutes({
 }
 
 /** The routes once the session has loaded: until then, a spinner. */
-function Routes({ router }: { router: AppRouter }) {
+function Routes({ router }: Readonly<{ router: AppRouter }>) {
   const session = useSession();
   if (session.me === undefined) {
     return (
@@ -68,10 +72,10 @@ function Routes({ router }: { router: AppRouter }) {
 export function App({
   queryClient,
   router,
-}: {
+}: Readonly<{
   queryClient: QueryClient;
   router: AppRouter;
-}) {
+}>) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>

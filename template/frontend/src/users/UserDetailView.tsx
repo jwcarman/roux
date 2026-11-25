@@ -38,7 +38,7 @@ export function UserDetailView({
   user,
   canManage,
   isSelf,
-}: UserDetailViewProps) {
+}: Readonly<UserDetailViewProps>) {
   const confirm = useConfirm();
   const active = user.status === "ACTIVE";
   const { run, pending: busy } = useServerAction<UserDetail, StatusChange>(

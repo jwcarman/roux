@@ -41,7 +41,7 @@ export function InfiniteList<T>({
   emptyText = "Nothing to show.",
   errorText = "Could not load the list.",
   containerProps,
-}: InfiniteListProps<T>) {
+}: Readonly<InfiniteListProps<T>>) {
   const sentinel = useRef<HTMLDivElement>(null);
   const canObserve = typeof IntersectionObserver !== "undefined";
   const observes = canObserve && loadMode !== "manual";

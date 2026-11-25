@@ -115,7 +115,7 @@ describe("where the app opens", () => {
   });
 
   it("does not redirect a caller a guard just sent to Home", () => {
-    expect(openingRedirect(nav, ["members.read"], false)).toBe("/members");
-    expect(openingRedirect(nav, ["members.read"], true)).toBeNull();
+    expect(openingRedirect(nav, ["members.read"], {})).toBe("/members");
+    expect(openingRedirect(nav, ["members.read"], { home: true })).toBeNull();
   });
 });

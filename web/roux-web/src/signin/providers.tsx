@@ -128,7 +128,7 @@ export interface ProviderSignInButtonProps extends Omit<ButtonProps, "children" 
  * generic icon and its display name (`name`, which `ProviderSignInButtons` passes from who). `icon`
  * and `label` override. Usable on its own, on a sign-in page that lays out its own buttons.
  */
-export function ProviderSignInButton({ provider, name, label, icon, ...props }: ProviderSignInButtonProps) {
+export function ProviderSignInButton({ provider, name, label, icon, ...props }: Readonly<ProviderSignInButtonProps>) {
   const brand = BRANDS[provider.toLowerCase()];
   const look = brand ?? GENERIC;
   const style = (palette: Palette) => ({ bg: palette.bg, color: palette.color, borderColor: palette.border });

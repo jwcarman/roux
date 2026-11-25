@@ -57,7 +57,7 @@ export function FormDialog({
   open: controlledOpen,
   onOpenChange,
   children,
-}: FormDialogProps) {
+}: Readonly<FormDialogProps>) {
   const [ownOpen, setOwnOpen] = useState(false);
   const open = controlledOpen ?? ownOpen;
 
