@@ -47,9 +47,12 @@ Either way, features use roux by importing from it; no plumbing is written in th
 `make check` runs the Go checks (gofmt, `go vet`, golangci-lint, the tests); in `frontend/`,
 `npm run format` (Prettier), `npm run lint` (ESLint, type-aware), `npm run coverage` (Vitest, 100%
 of lines and branches), `npm run build` and `npm run mutate` run the browser's. ESLint and Prettier
-live in `frontend/lint-tools/`, with an install of their own (`npm ci` there once): typescript-eslint
-does not yet support TypeScript 7, the app's compiler. `make build` makes the
-release binary, one file with the front end inside, and `make image` the container image.
+live in `frontend/lint-tools/`, with an install of their own, which `npm run lint`, `format` and
+`format:check` make when it is missing: typescript-eslint does not yet support TypeScript 7, the
+app's compiler. `make build` makes the release binary, one file with the front end inside, and
+`make image` the container image. `make up` runs that image as a deployment does, beside Postgres
+and Mailpit (`docker compose --profile app`), at <http://localhost:8080>; `make down` stops it. Stop
+`make dev` first: both serve on port 8080.
 
 ## Requirements
 

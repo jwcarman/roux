@@ -26,6 +26,29 @@ services:
       - "127.0.0.1:1025:1025"   # SMTP
       - "127.0.0.1:8025:8025"   # web UI and API
 
+  # The app itself, built from the Dockerfile and run as a deployment runs it, beside Postgres and
+  # Mailpit: `make up` (http://localhost:8080), `make down` to stop. Stop `make dev` first: both
+  # serve on port 8080.
+  app:
+    profiles: ["app"]
+    build: .
+    image: roux-app
+    environment:
+      DATABASE_URL: postgres://app:app@postgres:5432/app
+      SMTP_ADDR: mailpit:1025
+      SMTP_ALLOW_PLAINTEXT: "true" # Mailpit offers no TLS, and this network is Docker's own
+      CODE_SECRET: development-only-code-secret-do-not-deploy
+      PUBLIC_URL: http://localhost:8080
+      OWNER_EMAIL: ${OWNER_EMAIL:-owner@example.com}
+      OWNER_NAME: ${OWNER_NAME:-Owner}
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
   # A local OpenID Connect provider for provider sign-in: `docker compose --profile oidc up -d`.
   # Realm "roux-app" (users alice/alice and bob/bob) at http://localhost:8180, admin console admin/admin.
   # Run the server with

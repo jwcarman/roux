@@ -18,12 +18,14 @@ var release = regexp.MustCompile(`:v?\d+\.\d+(\.\d+)?(-[a-z0-9]+)?$`)
 type compose struct {
 	Services map[string]struct {
 		Image string `yaml:"image"`
+		Build any    `yaml:"build"`
 		Ports []any  `yaml:"ports"`
 	} `yaml:"services"`
 }
 
-// The development services stay on this machine, and each runs a release, not whatever
-// "latest" is today: their passwords are app/app and admin/admin.
+// The development services stay on this machine, and each pulled image is a release, not whatever
+// "latest" is today: their passwords are app/app and admin/admin. The app's own image is built
+// here, from the Dockerfile, so it has no release to pin.
 func TestTheDevelopmentServicesAreLocalAndPinned(t *testing.T) {
 	raw, err := os.ReadFile("../../compose.yaml")
 	if err != nil {
@@ -37,7 +39,7 @@ func TestTheDevelopmentServicesAreLocalAndPinned(t *testing.T) {
 		t.Fatal("no services: the compose file is not where the test looks")
 	}
 	for name, s := range c.Services {
-		if !release.MatchString(s.Image) {
+		if s.Build == nil && !release.MatchString(s.Image) {
 			t.Errorf("%s: image %q is not pinned to a release", name, s.Image)
 		}
 		for _, p := range s.Ports {

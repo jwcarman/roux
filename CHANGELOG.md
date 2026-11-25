@@ -8,6 +8,21 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **The mail server is checked at startup,** in the background so startup never waits on it: roux
+  connects, secures the connection and signs in, sending nothing, and logs `mail server ready` or an
+  ERROR naming the cause (`emaillink.SMTPSender.Check`). An `SMTP_ADDR` that is not `host:port`, or a
+  `MAIL_FROM` that is not an address, stops startup. An email that fails to send is now logged as an
+  ERROR, not a WARN: nobody can sign in until it is fixed. The email module now drains at shutdown,
+  so a sign-in email accepted a moment before still goes out.
+
+- **`make up` runs the app in Docker as a deployment does:** the image built from the Dockerfile,
+  beside Postgres and Mailpit (a new `app` service in `compose.yaml`, under the `app` profile);
+  `make down` stops it. CI builds the template's image and runs that stack, checking that a sign-in
+  email arrives (`scripts/check-image.sh`).
+
+- **`npm run lint`, `format` and `format:check` install `frontend/lint-tools` when it is missing,**
+  instead of failing with "No such file or directory".
+
 - **The users module mounts first,** whatever the order of the module list, so
   `k.Organization()` and `k.ShellTheme` are the app's own settings in every module's `Mount` and
   `Start`, not UTC and `en-US`. The guides and the skill no longer warn about module order.

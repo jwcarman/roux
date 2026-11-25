@@ -9,6 +9,9 @@
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "mutate": "stryker run",
+    "preformat": "test -d lint-tools/node_modules || npm ci --prefix lint-tools --no-audit --no-fund",
+    "preformat:check": "test -d lint-tools/node_modules || npm ci --prefix lint-tools --no-audit --no-fund",
+    "prelint": "test -d lint-tools/node_modules || npm ci --prefix lint-tools --no-audit --no-fund",
     "format": "lint-tools/node_modules/.bin/prettier --write .",
     "format:check": "lint-tools/node_modules/.bin/prettier --check .",
     "lint": "lint-tools/node_modules/.bin/eslint -c lint-tools/eslint.config.mjs ."

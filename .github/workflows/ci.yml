@@ -110,6 +110,24 @@ jobs:
             template/coverage.out
             template/frontend/coverage/lcov.info
 
+  # The template's container image, run as `make up` runs it (scripts/check-image.sh): built from
+  # the Dockerfile, beside Postgres and Mailpit, ready, and sending a sign-in email.
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 'lts/*'
+      - name: roux-web's install
+        working-directory: web
+        run: npm ci --ignore-scripts
+      - name: The image, beside Postgres and Mailpit
+        run: scripts/check-image.sh
+
   # The example app, built in rounds to find what roux is missing (examples/roux-the-day/FINDINGS.md).
   roux-the-day:
     runs-on: ubuntu-latest

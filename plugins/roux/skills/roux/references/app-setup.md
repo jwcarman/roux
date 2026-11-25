@@ -32,7 +32,9 @@ app already has all of it; read this when changing it.
 4. Add features with `feature.md`.
 
 `make check` runs gofmt, `go vet`, golangci-lint and the Go tests; `make e2e` the Playwright suite; `make build` the one-file binary
-with the front end inside; `make image` the container image.
+with the front end inside; `make image` the container image; `make up` that image beside Postgres and Mailpit at
+<http://localhost:8080> (`make down` stops it; not while `make dev` runs). `npm run lint`/`format` install
+`frontend/lint-tools` when it is missing.
 
 ## Names: the server
 

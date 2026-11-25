@@ -7,7 +7,8 @@ import tseslint from "typescript-eslint";
 
 // ESLint config for the front end, run from frontend/ (npm run lint). The imports resolve from this
 // directory's node_modules, beside this file: the front end has no ESLint of its own, since
-// typescript-eslint needs TypeScript 6 and the app compiles with 7. Run `npm ci` here once.
+// typescript-eslint needs TypeScript 6 and the app compiles with 7. npm run lint, format and
+// format:check install it when it is missing.
 
 // The defect rules, as errors: noir's list (its ts-tools/eslint.config.mjs), on ESLint 10's plugins.
 // A duplicated JSX attribute needs no rule: TypeScript refuses one (TS17001).
