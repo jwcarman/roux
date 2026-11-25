@@ -15,9 +15,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request replaces its running analysis; on main every push is analysed to the
+# end, since a cancelled analysis is uploaded as a failed one.
 concurrency:
   group: codeql-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   analyze:
