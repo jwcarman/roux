@@ -1,11 +1,7 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
 import { date, text, time } from "@jwcarman/roux-web/form";
-import {
-  pageQuery,
-  type PageDto,
-  type PageParams,
-} from "@jwcarman/roux-web/paging";
+import { pageQuery, type PageDto, type PageParams } from "@jwcarman/roux-web/paging";
 import { z } from "zod";
 import type { ItemDetail, ItemRow } from "../api";
 import type { User } from "@jwcarman/roux-web/users";
@@ -50,19 +46,15 @@ export interface ItemBody {
 export const itemsApi = {
   list: (params: PageParams & ItemFilters, signal?: AbortSignal) =>
     getJson<PageDto<ItemRow>>("items", { params, signal }),
-  get: (id: string, signal?: AbortSignal) =>
-    getJson<ItemDetail>(path`items/${id}`, { signal }),
+  get: (id: string, signal?: AbortSignal) => getJson<ItemDetail>(path`items/${id}`, { signal }),
   add: (body: ItemBody) => sendJson<ItemDetail>("POST", "items", body),
-  update: (id: string, body: ItemBody) =>
-    sendJson<ItemDetail>("PUT", path`items/${id}`, body),
+  update: (id: string, body: ItemBody) => sendJson<ItemDetail>("PUT", path`items/${id}`, body),
   remove: (id: string) => sendJson<undefined>("DELETE", path`items/${id}`),
 };
 
 /** The list under `filters`, as a QueryTable takes it. */
 export function itemsPage(filters: ItemFilters) {
-  return pageQuery(queryKeys.items.list(filters), (params, signal) =>
-    itemsApi.list({ ...params, ...filters }, signal),
-  );
+  return pageQuery(queryKeys.items.list(filters), (params, signal) => itemsApi.list({ ...params, ...filters }, signal));
 }
 
 /** The most items a week shows: one page, the most the server sends at once. */
@@ -178,8 +170,7 @@ export const addItem = mutationOptions({
 /** Changes item `id` from `version`; a change made since answers 409. The lists and it refresh. */
 export const updateItem = (id: string, version: number) =>
   mutationOptions({
-    mutationFn: (values: ItemOutput) =>
-      itemsApi.update(id, bodyOf(values, version)),
+    mutationFn: (values: ItemOutput) => itemsApi.update(id, bodyOf(values, version)),
     meta: {
       refreshes: [queryKeys.items.lists(), queryKeys.items.detail(id)],
     },

@@ -1,9 +1,8 @@
 import { Stack, Text } from "@chakra-ui/react";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { useSchemaForm } from "@jwcarman/roux-web/form";
-import type { Profile } from "@jwcarman/roux-web/session";
+import { type Profile, useSession } from "@jwcarman/roux-web/session";
 import { renameMe, renameSchema } from "@jwcarman/roux-web/users";
-import { useSession } from "@jwcarman/roux-web/session";
 
 /** The signed-in user's own profile: rename, with the email shown as text (it cannot change here). */
 export function ProfileForm() {

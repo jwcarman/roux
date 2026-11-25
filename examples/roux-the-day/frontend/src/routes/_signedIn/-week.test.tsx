@@ -44,8 +44,7 @@ let answer: () => Response;
 
 beforeEach(() => {
   requests = [];
-  answer = () =>
-    HttpResponse.json(pageOf(ITEMS, { pageIndex: 0, pageSize: 100 }));
+  answer = () => HttpResponse.json(pageOf(ITEMS, { pageIndex: 0, pageSize: 100 }));
   server.use(
     http.get("/api/items", ({ request }) => {
       requests.push(new URL(request.url).searchParams);
@@ -61,9 +60,7 @@ describe("/week", () => {
   it("shows the week Monday to Sunday, each item under its day, asking for that week only", async () => {
     renderRoute("/week?week=2026-11-25", { permissions: [ITEMS_READ] });
 
-    expect(
-      await screen.findByRole("heading", { name: "Nov 23 – Nov 29, 2026" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Nov 23 – Nov 29, 2026" })).toBeInTheDocument();
     await screen.findByRole("link", { name: "Draft the agenda" });
     expect(latest()).toEqual({
       from: "2026-11-23",
@@ -72,9 +69,7 @@ describe("/week", () => {
       sortBy: "DAY",
       sortDirection: "ASC",
     });
-    const days = within(
-      screen.getByRole("group", { name: "Days of the week" }),
-    ).getAllByRole("region");
+    const days = within(screen.getByRole("group", { name: "Days of the week" })).getAllByRole("region");
     expect(days.map((d) => d.getAttribute("aria-label"))).toEqual([
       "Monday, November 23",
       "Tuesday, November 24",
@@ -85,9 +80,7 @@ describe("/week", () => {
       "Sunday, November 29",
     ]);
     const monday = day("Monday, November 23");
-    expect(
-      within(monday).getByRole("link", { name: "Draft the agenda" }),
-    ).toHaveAttribute("href", "/items/i-1");
+    expect(within(monday).getByRole("link", { name: "Draft the agenda" })).toHaveAttribute("href", "/items/i-1");
     expect(within(monday).getByText("10:30")).toBeInTheDocument();
     expect(within(monday).getByText("All day")).toBeInTheDocument();
     const [open, done] = within(monday).getAllByRole("listitem");
@@ -98,9 +91,7 @@ describe("/week", () => {
         name: "Order the venue",
       }),
     ).toBeInTheDocument();
-    expect(
-      within(day("Tuesday, November 24")).getByText("Nothing planned"),
-    ).toBeInTheDocument();
+    expect(within(day("Tuesday, November 24")).getByText("Nothing planned")).toBeInTheDocument();
     expect(screen.queryByText("Could not load the week")).toBeNull();
   });
 
@@ -126,17 +117,13 @@ describe("/week", () => {
     await screen.findByRole("heading", { name: "Nov 23 – Nov 29, 2026" });
 
     await user.click(screen.getByRole("button", { name: "Next week" }));
-    expect(
-      await screen.findByRole("heading", { name: "Nov 30 – Dec 6, 2026" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Nov 30 – Dec 6, 2026" })).toBeInTheDocument();
     expect(router.state.location.search).toEqual({ week: "2026-11-30" });
     await waitFor(() => expect(latest().from).toBe("2026-11-30"));
 
     await user.click(screen.getByRole("button", { name: "Previous week" }));
     await user.click(screen.getByRole("button", { name: "Previous week" }));
-    expect(
-      await screen.findByRole("heading", { name: "Nov 16 – Nov 22, 2026" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Nov 16 – Nov 22, 2026" })).toBeInTheDocument();
 
     expect(screen.getByRole("button", { name: "This week" })).toBeEnabled();
     await user.click(screen.getByRole("button", { name: "This week" }));
@@ -179,21 +166,15 @@ describe("/week", () => {
       });
     renderRoute("/week?week=2026-11-25", { permissions: [ITEMS_READ] });
     expect(
-      await screen.findByText(
-        "Showing the first 100 of 140 items: choose Mine, or see them all in Items.",
-      ),
+      await screen.findByText("Showing the first 100 of 140 items: choose Mine, or see them all in Items."),
     ).toBeInTheDocument();
   });
 
   it("says so when the week cannot be loaded", async () => {
     answer = () => serverError();
     renderRoute("/week?week=2026-11-25", { permissions: [ITEMS_READ] });
-    expect(
-      await screen.findByText("Could not load the week"),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("group", { name: "Days of the week" }),
-    ).toBeNull();
+    expect(await screen.findByText("Could not load the week")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Days of the week" })).toBeNull();
   });
 
   it("sends someone who may not read items Home, without asking for the week", async () => {

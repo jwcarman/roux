@@ -14,9 +14,7 @@ describe("icons", () => {
   it("come from one set, Lucide (react-icons/lu), the set Chakra's own examples use", () => {
     expect(SOURCES.length).toBeGreaterThan(10);
     const offenders = SOURCES.filter(([, source]) =>
-      [...source.matchAll(/from\s+["'](react-icons\/[^"']+)["']/g)].some(
-        ([, module]) => module !== "react-icons/lu",
-      ),
+      [...source.matchAll(/from\s+["'](react-icons\/[^"']+)["']/g)].some(([, module]) => module !== "react-icons/lu"),
     ).map(([path]) => path);
     expect(offenders).toEqual([]);
   });

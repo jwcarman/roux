@@ -1,12 +1,4 @@
-import {
-  Badge,
-  Button,
-  Flex,
-  Heading,
-  Link,
-  Stack,
-  Text,
-} from "@chakra-ui/react";
+import { Badge, Button, Flex, Heading, Link, Stack, Text } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { LuChevronLeft, LuChevronRight } from "react-icons/lu";
@@ -46,11 +38,7 @@ function WeekItem({ item }: Readonly<{ item: ItemRow }>) {
 }
 
 /** One day's row: its name on the left, with a Today badge on today, and its items by time. */
-function WeekDay({
-  day,
-  items,
-  isToday,
-}: Readonly<{ day: string; items: ItemRow[]; isToday: boolean }>) {
+function WeekDay({ day, items, isToday }: Readonly<{ day: string; items: ItemRow[]; isToday: boolean }>) {
   const heading = dayHeading(day);
   return (
     <Flex
@@ -62,12 +50,7 @@ function WeekDay({
       borderTopWidth="1px"
     >
       <Stack gap="0" w="16" flexShrink="0" aria-hidden>
-        <Text
-          textStyle="xs"
-          fontWeight="semibold"
-          color="fg.muted"
-          textTransform="uppercase"
-        >
+        <Text textStyle="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase">
           {heading.weekday}
         </Text>
         <Text textStyle="2xl" fontWeight="semibold" lineHeight="1.1">
@@ -102,8 +85,7 @@ export function Week() {
   const monday = mondayOf(search.week ?? today);
   const days = weekDays(monday);
   const week = useQuery(weekQuery(monday, days[6], search.assignee));
-  const show = (first?: string) =>
-    navigate({ search: (previous) => ({ ...previous, week: first }) });
+  const show = (first?: string) => navigate({ search: (previous) => ({ ...previous, week: first }) });
   const thisWeek = mondayOf(today);
 
   return (
@@ -111,28 +93,13 @@ export function Week() {
       <PageHeader title="Week" />
       <Flex gap="3" wrap="wrap" align="center" justify="space-between">
         <Flex gap="2" align="center" wrap="wrap">
-          <Button
-            size="sm"
-            variant="outline"
-            aria-label="Previous week"
-            onClick={() => show(addDays(monday, -7))}
-          >
+          <Button size="sm" variant="outline" aria-label="Previous week" onClick={() => show(addDays(monday, -7))}>
             <LuChevronLeft aria-hidden />
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={monday === thisWeek}
-            onClick={() => show(undefined)}
-          >
+          <Button size="sm" variant="outline" disabled={monday === thisWeek} onClick={() => show()}>
             This week
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            aria-label="Next week"
-            onClick={() => show(addDays(monday, 7))}
-          >
+          <Button size="sm" variant="outline" aria-label="Next week" onClick={() => show(addDays(monday, 7))}>
             <LuChevronRight aria-hidden />
           </Button>
           <Heading as="h2" textStyle="lg" ms="2">
@@ -144,26 +111,18 @@ export function Week() {
           options={WHOSE}
           value={search.assignee}
           allLabel="Everyone"
-          onChange={(assignee) =>
-            navigate({ search: (previous) => ({ ...previous, assignee }) })
-          }
+          onChange={(assignee) => navigate({ search: (previous) => ({ ...previous, assignee }) })}
         />
       </Flex>
       {week.isError && <Text color="fg.error">Could not load the week</Text>}
       {week.data?.pagination.hasNext && (
         <Text color="fg.muted" textStyle="sm">
-          Showing the first {WEEK_LIMIT} of{" "}
-          {week.data.pagination.totalElementCount} items: choose Mine, or see
-          them all in Items.
+          Showing the first {WEEK_LIMIT} of {week.data.pagination.totalElementCount} items: choose Mine, or see them all
+          in Items.
         </Text>
       )}
       {week.data && (
-        <Stack
-          role="group"
-          aria-label="Days of the week"
-          gap="0"
-          borderBottomWidth="1px"
-        >
+        <Stack role="group" aria-label="Days of the week" gap="0" borderBottomWidth="1px">
           {days.map((day) => (
             <WeekDay
               key={day}

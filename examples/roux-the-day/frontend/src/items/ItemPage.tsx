@@ -1,10 +1,6 @@
 import { Button, Link, Stack } from "@chakra-ui/react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import {
-  getRouteApi,
-  Link as RouterLink,
-  useNavigate,
-} from "@tanstack/react-router";
+import { getRouteApi, Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { LuArrowLeft, LuTrash2 } from "react-icons/lu";
 import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, useConfirm } from "@jwcarman/roux-web/feedback";
@@ -15,14 +11,7 @@ import { ITEMS_WRITE } from "../permissions.gen";
 import { useMe } from "../routes/_signedIn";
 import { choicesOf } from "./AssigneesField";
 import { ItemFields } from "./ItemFields";
-import {
-  deleteItem,
-  itemQuery,
-  itemSchema,
-  teamQuery,
-  updateItem,
-  valuesOf,
-} from "./items";
+import { deleteItem, itemQuery, itemSchema, teamQuery, updateItem, valuesOf } from "./items";
 
 const route = getRouteApi("/_signedIn/items/$itemId");
 
@@ -40,25 +29,16 @@ export function Item() {
           All items
         </RouterLink>
       </Link>
-      <PageHeader title={item.title}>
-        {item.canDelete && <DeleteButton item={item} />}
-      </PageHeader>
+      <PageHeader title={item.title}>{item.canDelete && <DeleteButton item={item} />}</PageHeader>
       {me.permissions.includes(ITEMS_WRITE) && team && (
         // Keyed by version: a save (or another's, after a 409) starts the form over from the item.
-        <ItemForm
-          key={item.version}
-          item={item}
-          people={choicesOf(team, item.assignees)}
-        />
+        <ItemForm key={item.version} item={item} people={choicesOf(team, item.assignees)} />
       )}
     </Stack>
   );
 }
 
-function ItemForm({
-  item,
-  people,
-}: Readonly<{ item: ItemDetail; people: ReturnType<typeof choicesOf> }>) {
+function ItemForm({ item, people }: Readonly<{ item: ItemDetail; people: ReturnType<typeof choicesOf> }>) {
   const form = useSchemaForm({
     schema: itemSchema,
     defaultValues: valuesOf(item),
@@ -100,12 +80,7 @@ function DeleteButton({ item }: Readonly<{ item: ItemDetail }>) {
     }
   };
   return (
-    <Button
-      variant="outline"
-      colorPalette="red"
-      loading={pending}
-      onClick={remove}
-    >
+    <Button variant="outline" colorPalette="red" loading={pending} onClick={remove}>
       <LuTrash2 aria-hidden />
       Delete
     </Button>

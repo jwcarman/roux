@@ -1,14 +1,7 @@
-import {
-  createBrowserHistory,
-  createMemoryHistory,
-} from "@tanstack/react-router";
+import { createBrowserHistory, createMemoryHistory } from "@tanstack/react-router";
 import { render } from "@testing-library/react";
 import { App, createAppRouter } from "../App";
-import {
-  server,
-  signedInAs,
-  testQueryClient,
-} from "@jwcarman/roux-web/testing";
+import { server, signedInAs, testQueryClient } from "@jwcarman/roux-web/testing";
 
 /**
  * Opens `path` in the whole app, as TanStack's file-based routing guide tests routes: a router
@@ -19,10 +12,7 @@ import {
  */
 export function renderRoute(
   path: string,
-  {
-    permissions,
-    browserHistory = false,
-  }: { permissions: string[] | null; browserHistory?: boolean },
+  { permissions, browserHistory = false }: { permissions: string[] | null; browserHistory?: boolean },
 ) {
   server.use(...signedInAs(permissions));
   const client = testQueryClient();
@@ -31,9 +21,7 @@ export function renderRoute(
   }
   const router = createAppRouter(
     client,
-    browserHistory
-      ? createBrowserHistory()
-      : createMemoryHistory({ initialEntries: [path] }),
+    browserHistory ? createBrowserHistory() : createMemoryHistory({ initialEntries: [path] }),
   );
   render(<App queryClient={client} router={router} />);
   return { router, client };

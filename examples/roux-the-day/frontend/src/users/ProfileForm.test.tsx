@@ -4,14 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Toaster, toaster } from "@jwcarman/roux-web/feedback";
-import type { Profile } from "@jwcarman/roux-web/session";
-import { SessionProvider } from "@jwcarman/roux-web/session";
-import {
-  renderWithProviders,
-  server,
-  serverError,
-  stale,
-} from "@jwcarman/roux-web/testing";
+import { type Profile, SessionProvider } from "@jwcarman/roux-web/session";
+import { renderWithProviders, server, serverError, stale } from "@jwcarman/roux-web/testing";
 import { ProfileForm } from "./ProfileForm";
 
 /** The signed-in user's profile, as last saved; a rename at another version is a 409. */
@@ -23,9 +17,7 @@ function serveProfile() {
   };
   const renames: unknown[] = [];
   server.use(
-    http.get("/api/roux/auth/me", () =>
-      HttpResponse.json({ identityId: "id-1", permissions: [] }),
-    ),
+    http.get("/api/roux/auth/me", () => HttpResponse.json({ identityId: "id-1", permissions: [] })),
     http.get("/api/roux/users/me", () => HttpResponse.json(current)),
     http.put("/api/roux/users/me", async ({ request }) => {
       const body = (await request.json()) as {
@@ -99,9 +91,7 @@ describe("ProfileForm", () => {
     await user.type(name, "Ada King");
     await user.click(screen.getByRole("button", { name: "Save profile" }));
 
-    expect(
-      await screen.findByText("This record changed since you loaded it"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("This record changed since you loaded it")).toBeInTheDocument();
     await waitFor(() => expect(name).toHaveValue("Countess of Lovelace"));
 
     await user.click(screen.getByRole("button", { name: "Save profile" }));
@@ -120,8 +110,6 @@ describe("ProfileForm", () => {
     await user.type(name, " King");
     await user.click(screen.getByRole("button", { name: "Save profile" }));
 
-    expect(
-      await screen.findByText("Could not save the profile"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Could not save the profile")).toBeInTheDocument();
   });
 });

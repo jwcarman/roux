@@ -1,10 +1,4 @@
-import {
-  LuCalendarDays,
-  LuHouse,
-  LuListTodo,
-  LuPalette,
-  LuUsers,
-} from "react-icons/lu";
+import { LuCalendarDays, LuHouse, LuListTodo, LuPalette, LuUsers } from "react-icons/lu";
 import { defineNav } from "@jwcarman/roux-web/navigation";
 import { PERMISSIONS } from "../permissions.gen";
 

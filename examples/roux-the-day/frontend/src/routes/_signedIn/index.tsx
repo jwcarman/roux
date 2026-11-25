@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_signedIn/")({
   beforeLoad: ({ context, location }) => {
     const to = openingRedirect(nav, context.me.permissions, location.state);
     if (to) {
-      throw redirect({ to });
+      redirect({ to, throw: true });
     }
   },
   component: Home,

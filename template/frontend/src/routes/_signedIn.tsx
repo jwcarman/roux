@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type { Me } from "@jwcarman/roux-web/session";
+import { type Me, requireSignedIn } from "@jwcarman/roux-web/session";
 import { rememberSignInReturn } from "@jwcarman/roux-web/signin";
-import { requireSignedIn } from "@jwcarman/roux-web/session";
 
 /**
  * The routes under `_signedIn/` need a signed-in caller; a signed-out visitor goes to sign in and,

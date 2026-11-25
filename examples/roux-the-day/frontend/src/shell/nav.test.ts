@@ -5,11 +5,13 @@ import { nav } from "./nav";
 
 describe("the app's navigation", () => {
   it("lists every page to someone who may see them all", () => {
-    expect(
-      navItemsFor(nav, [ITEMS_READ, USERS_READ, THEME_MANAGE]).map(
-        (item) => item.label,
-      ),
-    ).toEqual(["Home", "Items", "Week", "Users", "Appearance"]);
+    expect(navItemsFor(nav, [ITEMS_READ, USERS_READ, THEME_MANAGE]).map((item) => item.label)).toEqual([
+      "Home",
+      "Items",
+      "Week",
+      "Users",
+      "Appearance",
+    ]);
   });
 
   it("leaves out a page that needs a permission the caller lacks", () => {
@@ -22,21 +24,18 @@ describe("the app's navigation", () => {
 
   it("says where each page is and what it is for, opening on Home", () => {
     expect(
-      navItemsFor(nav, [ITEMS_READ, USERS_READ, THEME_MANAGE]).map(
-        ({ label, to, description, start }) => ({
-          label,
-          to,
-          description,
-          start,
-        }),
-      ),
+      navItemsFor(nav, [ITEMS_READ, USERS_READ, THEME_MANAGE]).map(({ label, to, description, start }) => ({
+        label,
+        to,
+        description,
+        start,
+      })),
     ).toEqual([
       { label: "Home", to: "/", description: "A welcome page.", start: true },
       {
         label: "Items",
         to: "/items",
-        description:
-          "The team's plans: what is happening, when, and who has it.",
+        description: "The team's plans: what is happening, when, and who has it.",
         start: undefined,
       },
       {

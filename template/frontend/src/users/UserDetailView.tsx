@@ -2,9 +2,8 @@ import { Badge, Button, DataList, Flex, Heading, Stack } from "@chakra-ui/react"
 import { LuUserCheck, LuUserX } from "react-icons/lu";
 import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, useConfirm } from "@jwcarman/roux-web/feedback";
-import type { UserDetail } from "@jwcarman/roux-web/users";
 import { ActivityList } from "@jwcarman/roux-web/activity";
-import { changeUserStatus, userActivitiesPage, type UserStatusAction } from "@jwcarman/roux-web/users";
+import { changeUserStatus, userActivitiesPage, type UserDetail, type UserStatusAction } from "@jwcarman/roux-web/users";
 import { roleLabel } from "./users";
 import { formatDateTime } from "@jwcarman/roux-web/dates";
 

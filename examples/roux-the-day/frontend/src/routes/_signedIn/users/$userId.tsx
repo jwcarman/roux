@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_signedIn/users/$userId")({
       await context.queryClient.ensureQueryData(userQuery(params.userId));
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
-        throw notFound();
+        notFound({ throw: true });
       }
       throw error;
     }

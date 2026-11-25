@@ -86,23 +86,29 @@ type Session struct {
 
 type store struct{ pool *pgxpool.Pool }
 
-func (s store) start(ctx context.Context, identityID, credentialID uuid.UUID, method, userAgent, tokenHash string, now time.Time, keep time.Duration) error {
+// newSession is a sign-in to record: who, with which credential and method, from which browser.
+type newSession struct {
+	IdentityID, CredentialID uuid.UUID
+	Method, UserAgent        string
+	TokenHash                string
+	Now                      time.Time
+}
+
+func (s store) start(ctx context.Context, n newSession, keep time.Duration) error {
 	id, err := uuid.NewV7()
 	if err != nil {
 		return err
 	}
-	if len(userAgent) > 512 {
-		userAgent = userAgent[:512]
-	}
 	var ua *string
-	if userAgent != "" {
-		ua = &userAgent
+	if n.UserAgent != "" {
+		agent := n.UserAgent[:min(len(n.UserAgent), 512)]
+		ua = &agent
 	}
-	s.purge(ctx, now.Add(-keep))
+	s.purge(ctx, n.Now.Add(-keep))
 	_, err = s.pool.Exec(ctx,
 		`insert into roux_session (id, identity_id, credential_id, sign_in_method, signed_in_at, last_seen_at, user_agent, token_hash)
 		 values ($1, $2, $3, $4, $5, $5, $6, $7)`,
-		id, identityID, credentialID, method, now, ua, tokenHash)
+		id, n.IdentityID, n.CredentialID, n.Method, n.Now, ua, n.TokenHash)
 	return err
 }
 

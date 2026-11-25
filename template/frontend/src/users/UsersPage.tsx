@@ -4,10 +4,9 @@ import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { PageHeader } from "@jwcarman/roux-web/navigation";
 import type { TableSearch } from "@jwcarman/roux-web/paging";
 import { DEFAULT_PAGE_SIZE, DebouncedSearchInput, FilterChips, QueryTable } from "@jwcarman/roux-web/table";
-import { type User } from "@jwcarman/roux-web/users";
+import { type User, usersPage } from "@jwcarman/roux-web/users";
 import { useMe } from "../routes/_signedIn";
 import { USERS_INVITE } from "../permissions.gen";
-import { usersPage } from "@jwcarman/roux-web/users";
 import { roleLabel } from "./users";
 import { InviteForm } from "./InviteForm";
 

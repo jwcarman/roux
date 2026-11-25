@@ -77,7 +77,10 @@ func (h *Host) CreateSession(ctx context.Context, identityID, credentialID uuid.
 		return "", err
 	}
 	now := h.now()
-	if err := h.store.start(ctx, identityID, credentialID, method, userAgent, hashToken(token), now, max(deadSessionsKept, h.sessionTimeout)); err != nil {
+	if err := h.store.start(ctx, newSession{
+		IdentityID: identityID, CredentialID: credentialID, Method: method,
+		UserAgent: userAgent, TokenHash: hashToken(token), Now: now,
+	}, max(deadSessionsKept, h.sessionTimeout)); err != nil {
 		return "", err
 	}
 	for _, fn := range h.onSignedIn {

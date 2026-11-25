@@ -76,6 +76,8 @@ export default tseslint.config(
         "error",
         { selector: "ImportNamespaceSpecifier", message: "No star imports: import each name you use" },
       ],
+      // One import per module, types included (Sonar's S3863).
+      "no-duplicate-imports": "error",
     },
   },
   // The build's own scripts (stryker-route-paths.mjs) are plain JavaScript, outside the TypeScript project.

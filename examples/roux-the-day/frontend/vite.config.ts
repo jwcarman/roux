@@ -11,10 +11,7 @@ export default defineConfig({
   // own chunk; it must come before react(). Its settings are in tsr.config.json. Under Vitest it
   // leaves out its hot-reload code, which no test can reach, so a route file's coverage is its own
   // code.
-  plugins: [
-    tanstackRouter({ codeSplittingOptions: { addHmr: !process.env.VITEST } }),
-    react(),
-  ],
+  plugins: [tanstackRouter({ codeSplittingOptions: { addHmr: !process.env.VITEST } }), react()],
   // Inside roux's own repository roux-web is a link to its source. Resolving through a link rather
   // than to its real path makes its imports of React and the other peers find this app's
   // node_modules, so there is one React; from npm it changes nothing. Vitest reads this too.

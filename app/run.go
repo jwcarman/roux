@@ -111,7 +111,8 @@ func Run(ctx context.Context, cfg Config) error {
 		if d, err := time.ParseDuration(os.Getenv("SHUTDOWN_DELAY")); err == nil {
 			time.Sleep(d)
 		}
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		// ctx is already cancelled; the shutdown keeps its values but gets ten seconds of its own.
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 		defer cancel()
 		if err := srv.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err

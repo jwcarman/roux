@@ -3,24 +3,12 @@ import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { PageHeader } from "@jwcarman/roux-web/navigation";
 import type { TableSearch } from "@jwcarman/roux-web/paging";
-import {
-  DEFAULT_PAGE_SIZE,
-  DebouncedSearchInput,
-  FilterChips,
-  QueryTable,
-} from "@jwcarman/roux-web/table";
+import { DEFAULT_PAGE_SIZE, DebouncedSearchInput, FilterChips, QueryTable } from "@jwcarman/roux-web/table";
 import type { ItemRow } from "../api";
 import { ITEMS_WRITE } from "../permissions.gen";
 import { useMe } from "../routes/_signedIn";
 import { AddItem } from "./AddItem";
-import {
-  ITEM_SORTS,
-  ITEM_STATUSES,
-  ITEM_WHENS,
-  itemsPage,
-  whenOf,
-  type ItemSort,
-} from "./items";
+import { ITEM_SORTS, ITEM_STATUSES, ITEM_WHENS, itemsPage, whenOf, type ItemSort } from "./items";
 
 /** The list's URL: page, sort and search, plus its filters. `assignee` is `me` or a user's id. */
 export type ItemsSearch = TableSearch<ItemSort> & {
@@ -62,10 +50,7 @@ const COLUMNS: ColumnDef<ItemRow, unknown>[] = [
     header: "Title",
     cell: (info) => (
       <Link asChild>
-        <RouterLink
-          to="/items/$itemId"
-          params={{ itemId: info.row.original.id }}
-        >
+        <RouterLink to="/items/$itemId" params={{ itemId: info.row.original.id }}>
           {info.getValue()}
         </RouterLink>
       </Link>
@@ -79,12 +64,7 @@ const COLUMNS: ColumnDef<ItemRow, unknown>[] = [
     id: "STATUS",
     header: "Status",
     enableSorting: false,
-    cell: (info) =>
-      info.getValue() ? (
-        <Badge colorPalette="green">Done</Badge>
-      ) : (
-        <Badge>Open</Badge>
-      ),
+    cell: (info) => (info.getValue() ? <Badge colorPalette="green">Done</Badge> : <Badge>Open</Badge>),
   }),
 ];
 
@@ -108,9 +88,7 @@ export function Items() {
 
   return (
     <Stack gap="6">
-      <PageHeader title="Items">
-        {me.permissions.includes(ITEMS_WRITE) && <AddItem />}
-      </PageHeader>
+      <PageHeader title="Items">{me.permissions.includes(ITEMS_WRITE) && <AddItem />}</PageHeader>
       <DebouncedSearchInput
         label="Search items"
         placeholder="Search items"

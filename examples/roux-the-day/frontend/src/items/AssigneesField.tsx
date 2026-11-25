@@ -15,17 +15,12 @@ export interface Choice {
  * submit, so an error shows once it is found. A deactivated person already on the item
  * is listed so they can be unticked; they cannot be kept, which the server refuses.
  */
-export function AssigneesField({
-  label,
-  people,
-}: Readonly<{ label: string; people: Choice[] }>) {
+export function AssigneesField({ label, people }: Readonly<{ label: string; people: Choice[] }>) {
   const field = useFieldContext<string[]>();
   const messages = errorMessages(field.state.meta.errors);
   const chosen = field.state.value;
   const toggle = (id: string, checked: boolean) =>
-    field.handleChange(
-      checked ? [...chosen, id] : chosen.filter((other) => other !== id),
-    );
+    field.handleChange(checked ? [...chosen, id] : chosen.filter((other) => other !== id));
   return (
     <Fieldset.Root invalid={messages.length > 0}>
       <Fieldset.Legend textStyle="sm" fontWeight="medium">
@@ -39,15 +34,11 @@ export function AssigneesField({
           <Checkbox.Root
             key={person.id}
             checked={chosen.includes(person.id)}
-            onCheckedChange={({ checked }) =>
-              toggle(person.id, checked === true)
-            }
+            onCheckedChange={({ checked }) => toggle(person.id, checked === true)}
           >
             <Checkbox.HiddenInput onBlur={field.handleBlur} />
             <Checkbox.Control />
-            <Checkbox.Label>
-              {person.active ? person.name : `${person.name} (deactivated)`}
-            </Checkbox.Label>
+            <Checkbox.Label>{person.active ? person.name : `${person.name} (deactivated)`}</Checkbox.Label>
           </Checkbox.Root>
         ))}
       </Stack>
@@ -59,18 +50,12 @@ export function AssigneesField({
 }
 
 /** The team's active members, plus anyone on the item who has since been deactivated. */
-export function choicesOf(
-  team: { id: string; displayName: string }[],
-  current: Choice[] = [],
-): Choice[] {
+export function choicesOf(team: { id: string; displayName: string }[], current: Choice[] = []): Choice[] {
   const active: Choice[] = team.map((member) => ({
     id: member.id,
     name: member.displayName,
     active: true,
   }));
-  const gone = current.filter(
-    (person) =>
-      !person.active && !active.some((member) => member.id === person.id),
-  );
+  const gone = current.filter((person) => !person.active && !active.some((member) => member.id === person.id));
   return [...active, ...gone];
 }

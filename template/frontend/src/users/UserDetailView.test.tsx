@@ -3,9 +3,8 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { UserDetail } from "@jwcarman/roux-web/users";
+import { type UserDetail, userKeys } from "@jwcarman/roux-web/users";
 import { ConfirmProvider, Toaster, toaster } from "@jwcarman/roux-web/feedback";
-import { userKeys } from "@jwcarman/roux-web/users";
 import {
   invariantViolation,
   pageOf,

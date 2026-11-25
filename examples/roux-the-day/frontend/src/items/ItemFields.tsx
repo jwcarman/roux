@@ -14,35 +14,19 @@ export function ItemFields({
 }>) {
   return (
     <>
-      <form.AppField name="title">
-        {(f) => <f.InputField label="Title" />}
-      </form.AppField>
-      <form.AppField name="day">
-        {(f) => <f.InputField label="Day" type="date" />}
-      </form.AppField>
-      <form.AppField name="allDay">
-        {(f) => <f.CheckboxField label="All day" />}
-      </form.AppField>
+      <form.AppField name="title">{(f) => <f.InputField label="Title" />}</form.AppField>
+      <form.AppField name="day">{(f) => <f.InputField label="Day" type="date" />}</form.AppField>
+      <form.AppField name="allDay">{(f) => <f.CheckboxField label="All day" />}</form.AppField>
       <form.Subscribe selector={(state) => state.values.allDay}>
         {(allDay) =>
           !allDay && (
-            <form.AppField name="at">
-              {(f) => <f.InputField label="Time" type="time" required />}
-            </form.AppField>
+            <form.AppField name="at">{(f) => <f.InputField label="Time" type="time" required />}</form.AppField>
           )
         }
       </form.Subscribe>
-      <form.AppField name="assigneeIds">
-        {() => <AssigneesField label="Assigned to" people={people} />}
-      </form.AppField>
-      <form.AppField name="notes">
-        {(f) => <f.TextAreaField label="Notes" />}
-      </form.AppField>
-      {editing && (
-        <form.AppField name="done">
-          {(f) => <f.CheckboxField label="Done" />}
-        </form.AppField>
-      )}
+      <form.AppField name="assigneeIds">{() => <AssigneesField label="Assigned to" people={people} />}</form.AppField>
+      <form.AppField name="notes">{(f) => <f.TextAreaField label="Notes" />}</form.AppField>
+      {editing && <form.AppField name="done">{(f) => <f.CheckboxField label="Done" />}</form.AppField>}
     </>
   );
 }

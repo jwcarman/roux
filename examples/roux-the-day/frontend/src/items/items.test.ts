@@ -46,12 +46,7 @@ function errorsOf(values: Partial<ItemValues>) {
   const result = parse(values);
   return result.success
     ? {}
-    : Object.fromEntries(
-        result.error.issues.map((issue) => [
-          issue.path.join("."),
-          issue.message,
-        ]),
-      );
+    : Object.fromEntries(result.error.issues.map((issue) => [issue.path.join("."), issue.message]));
 }
 
 describe("an item's form", () => {
@@ -72,15 +67,9 @@ describe("an item's form", () => {
   });
 
   it("needs a title of at most 120 and notes of at most 2000", () => {
-    expect(
-      errorsOf({ title: "x".repeat(120), notes: "x".repeat(2000) }),
-    ).toEqual({});
-    expect(Object.keys(errorsOf({ title: "x".repeat(121) }))).toEqual([
-      "title",
-    ]);
-    expect(Object.keys(errorsOf({ notes: "x".repeat(2001) }))).toEqual([
-      "notes",
-    ]);
+    expect(errorsOf({ title: "x".repeat(120), notes: "x".repeat(2000) })).toEqual({});
+    expect(Object.keys(errorsOf({ title: "x".repeat(121) }))).toEqual(["title"]);
+    expect(Object.keys(errorsOf({ notes: "x".repeat(2001) }))).toEqual(["notes"]);
   });
 });
 
@@ -150,12 +139,8 @@ describe("an item's values", () => {
 
 describe("when an item is", () => {
   it("shows its day and its time, or all day", () => {
-    expect(whenOf({ day: "2026-11-24", at: "10:30" })).toBe(
-      "Tue, Nov 24 · 10:30",
-    );
-    expect(whenOf({ day: "2026-11-24", at: null })).toBe(
-      "Tue, Nov 24 · All day",
-    );
+    expect(whenOf({ day: "2026-11-24", at: "10:30" })).toBe("Tue, Nov 24 · 10:30");
+    expect(whenOf({ day: "2026-11-24", at: null })).toBe("Tue, Nov 24 · All day");
   });
 });
 
@@ -207,9 +192,7 @@ describe("the items queries", () => {
     await expect(fetchWith(itemQuery("i-1").queryFn)).resolves.toEqual({
       id: "i-1",
     });
-    await expect(fetchWith(teamQuery.queryFn)).resolves.toEqual([
-      { id: "u-1" },
-    ]);
+    await expect(fetchWith(teamQuery.queryFn)).resolves.toEqual([{ id: "u-1" }]);
     expect(Object.fromEntries(team ?? [])).toEqual({
       status: "ACTIVE",
       pageSize: "100",

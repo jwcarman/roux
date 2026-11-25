@@ -24,9 +24,7 @@ vi.mock("../../shell/nav", () => ({
 
 describe("opening the app when another page is the start", () => {
   it("goes to the start page", async () => {
-    server.use(
-      http.get("/api/roux/users", () => HttpResponse.json(pageOf([], {}))),
-    );
+    server.use(http.get("/api/roux/users", () => HttpResponse.json(pageOf([], {}))));
     const { router } = renderRoute("/", { permissions: [USERS_READ] });
     await waitFor(() => expect(router.state.location.pathname).toBe("/users"));
   });
@@ -36,9 +34,7 @@ describe("opening the app when another page is the start", () => {
     const { router } = renderRoute("/appearance", {
       permissions: [USERS_READ],
     });
-    expect(
-      await screen.findByRole("heading", { name: /^Welcome/ }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Welcome/ })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/");
   });
 });

@@ -3,14 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  notFound,
-  pageOf,
-  paletteOf,
-  server,
-  serverError,
-  stale,
-} from "@jwcarman/roux-web/testing";
+import { notFound, pageOf, paletteOf, server, serverError, stale } from "@jwcarman/roux-web/testing";
 import type { ItemDetail } from "../../../api";
 import { ITEMS_READ, ITEMS_WRITE } from "../../../permissions.gen";
 import { renderRoute } from "../../../testing/route";
@@ -55,9 +48,7 @@ let deleted: number;
 function serve(item: ItemDetail) {
   server.use(
     http.get("/api/items/i-1", () => HttpResponse.json(item)),
-    http.get("/api/items", () =>
-      HttpResponse.json(pageOf([], { pageIndex: 0, pageSize: 20 })),
-    ),
+    http.get("/api/items", () => HttpResponse.json(pageOf([], { pageIndex: 0, pageSize: 20 }))),
   );
 }
 
@@ -67,9 +58,7 @@ beforeEach(() => {
   document.cookie = "XSRF-TOKEN=token";
   serve(ITEM);
   server.use(
-    http.get("/api/roux/users", () =>
-      HttpResponse.json(pageOf(TEAM, { pageIndex: 0, pageSize: 100 })),
-    ),
+    http.get("/api/roux/users", () => HttpResponse.json(pageOf(TEAM, { pageIndex: 0, pageSize: 100 }))),
     http.put("/api/items/i-1", async ({ request }) => {
       const body = (await request.json()) as Record<string, unknown>;
       saved.push(body);
@@ -93,28 +82,19 @@ async function open(permissions = WRITER) {
 describe("/items/$itemId", () => {
   it("shows the item in its form, with whoever was deactivated since marked", async () => {
     await open();
-    expect(await screen.findByLabelText(/^Title/)).toHaveValue(
-      "Draft the agenda",
-    );
+    expect(await screen.findByLabelText(/^Title/)).toHaveValue("Draft the agenda");
     expect(screen.getByLabelText(/^Day/)).toHaveValue("2026-11-25");
     expect(screen.getByLabelText(/^Time/)).toHaveValue("10:30");
     expect(screen.getByLabelText(/^Notes/)).toHaveValue("two pages");
     const who = screen.getByRole("group", { name: "Assigned to" });
-    expect(
-      within(who).getByRole("checkbox", { name: "Grace Hopper" }),
-    ).toBeChecked();
-    expect(
-      within(who).getByRole("checkbox", { name: "Test User" }),
-    ).not.toBeChecked();
+    expect(within(who).getByRole("checkbox", { name: "Grace Hopper" })).toBeChecked();
+    expect(within(who).getByRole("checkbox", { name: "Test User" })).not.toBeChecked();
     expect(
       within(who).getByRole("checkbox", {
         name: "Kay Antonelli (deactivated)",
       }),
     ).toBeChecked();
-    expect(screen.getByRole("link", { name: "All items" })).toHaveAttribute(
-      "href",
-      "/items",
-    );
+    expect(screen.getByRole("link", { name: "All items" })).toHaveAttribute("href", "/items");
   });
 
   it("saves from the version it was read at, after replacing someone deactivated", async () => {
@@ -143,9 +123,7 @@ describe("/items/$itemId", () => {
     const { user } = await open();
     await user.type(await screen.findByLabelText(/^Title/), "!");
     await user.click(screen.getByRole("button", { name: "Save item" }));
-    expect(
-      await screen.findByText("Could not save the item"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Could not save the item")).toBeInTheDocument();
   });
 
   it("shows no form to someone who may only read items", async () => {
@@ -160,18 +138,12 @@ describe("/items/$itemId", () => {
     const question = await screen.findByRole("alertdialog", {
       name: "Delete Draft the agenda?",
     });
-    expect(
-      within(question).getByText("It is gone for everyone on the team."),
-    ).toBeInTheDocument();
-    expect(
-      paletteOf(within(question).getByRole("button", { name: "Delete" })),
-    ).toBe("red");
+    expect(within(question).getByText("It is gone for everyone on the team.")).toBeInTheDocument();
+    expect(paletteOf(within(question).getByRole("button", { name: "Delete" }))).toBe("red");
     await user.click(within(question).getByRole("button", { name: "Delete" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/items"));
     expect(deleted).toBe(1);
-    expect(
-      await screen.findByText("Deleted Draft the agenda"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Deleted Draft the agenda")).toBeInTheDocument();
   });
 
   it("deletes nothing when the question is cancelled", async () => {
@@ -187,9 +159,7 @@ describe("/items/$itemId", () => {
     await user.click(screen.getByRole("button", { name: "Delete" }));
     const question = await screen.findByRole("alertdialog");
     await user.click(within(question).getByRole("button", { name: "Delete" }));
-    expect(
-      await screen.findByText("Could not delete Draft the agenda"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Could not delete Draft the agenda")).toBeInTheDocument();
   });
 
   it("offers Delete only to the item's author or an owner", async () => {
@@ -201,9 +171,7 @@ describe("/items/$itemId", () => {
   it("shows an all-day item without a time", async () => {
     serve({ ...ITEM, at: null });
     await open();
-    expect(
-      await screen.findByRole("checkbox", { name: "All day" }),
-    ).toBeChecked();
+    expect(await screen.findByRole("checkbox", { name: "All day" })).toBeChecked();
     expect(screen.queryByLabelText(/^Time/)).toBeNull();
   });
 
@@ -216,8 +184,6 @@ describe("/items/$itemId", () => {
   it("shows the error page when the item cannot be loaded", async () => {
     server.use(http.get("/api/items/i-1", () => serverError()));
     renderRoute("/items/i-1", WRITER);
-    expect(
-      await screen.findByRole("heading", { name: "Something went wrong" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Something went wrong" })).toBeInTheDocument();
   });
 });

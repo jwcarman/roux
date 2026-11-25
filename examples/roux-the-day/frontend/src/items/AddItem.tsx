@@ -39,12 +39,7 @@ function AddDialog({ team }: Readonly<{ team: User[] }>) {
     failure: "Could not add the item",
   });
   return (
-    <FormDialog
-      form={form}
-      title="Add an item"
-      trigger={<AddButton />}
-      submitLabel="Add item"
-    >
+    <FormDialog form={form} title="Add an item" trigger={<AddButton />} submitLabel="Add item">
       <ItemFields form={form} people={choicesOf(team)} editing={false} />
     </FormDialog>
   );

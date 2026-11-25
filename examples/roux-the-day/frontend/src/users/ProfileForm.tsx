@@ -1,9 +1,8 @@
 import { Stack, Text } from "@chakra-ui/react";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { useSchemaForm } from "@jwcarman/roux-web/form";
-import type { Profile } from "@jwcarman/roux-web/session";
+import { type Profile, useSession } from "@jwcarman/roux-web/session";
 import { renameMe, renameSchema } from "@jwcarman/roux-web/users";
-import { useSession } from "@jwcarman/roux-web/session";
 
 /** The signed-in user's own profile: rename, with the email shown as text (it cannot change here). */
 export function ProfileForm() {
@@ -19,10 +18,7 @@ interface ProfileEditorProps {
   refreshProfile: () => Promise<void>;
 }
 
-function ProfileEditor({
-  profile,
-  refreshProfile,
-}: Readonly<ProfileEditorProps>) {
+function ProfileEditor({ profile, refreshProfile }: Readonly<ProfileEditorProps>) {
   const form = useSchemaForm({
     schema: renameSchema,
     defaultValues: { displayName: profile.displayName },
@@ -41,9 +37,7 @@ function ProfileEditor({
     <form.AppForm>
       <form.Form>
         <Stack gap="4">
-          <form.AppField name="displayName">
-            {(f) => <f.InputField label="Display name" />}
-          </form.AppField>
+          <form.AppField name="displayName">{(f) => <f.InputField label="Display name" />}</form.AppField>
           <Stack gap="1.5">
             <Text textStyle="sm" fontWeight="medium">
               Email

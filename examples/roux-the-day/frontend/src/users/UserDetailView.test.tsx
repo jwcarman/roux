@@ -3,9 +3,8 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { UserDetail } from "@jwcarman/roux-web/users";
+import { type UserDetail, userKeys } from "@jwcarman/roux-web/users";
 import { ConfirmProvider, Toaster, toaster } from "@jwcarman/roux-web/feedback";
-import { userKeys } from "@jwcarman/roux-web/users";
 import {
   invariantViolation,
   pageOf,
@@ -31,9 +30,7 @@ const GRACE: UserDetail = {
 function answer(response: () => Response) {
   const changes: string[] = [];
   server.use(
-    http.get("/api/roux/users/:id/activities", () =>
-      HttpResponse.json(pageOf([], {})),
-    ),
+    http.get("/api/roux/users/:id/activities", () => HttpResponse.json(pageOf([], {}))),
     http.post("/api/roux/users/:id/:action", ({ params }) => {
       changes.push(String(params.action));
       return response();
@@ -78,9 +75,7 @@ describe("UserDetailView", () => {
   it("shows the user", () => {
     answer(() => HttpResponse.json(GRACE));
     show(GRACE, false);
-    expect(
-      screen.getByRole("heading", { name: "Grace Hopper" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Grace Hopper" })).toBeInTheDocument();
     expect(screen.getByText("grace@example.org")).toBeInTheDocument();
     expect(screen.getByText("User")).toBeInTheDocument();
     expect(screen.getByText("Active")).toBeInTheDocument();
@@ -101,13 +96,9 @@ describe("UserDetailView", () => {
       name: "Deactivate Grace Hopper?",
     });
     expect(dialog).toHaveTextContent("They won't be able to sign in.");
-    await user.click(
-      within(dialog).getByRole("button", { name: "Deactivate" }),
-    );
+    await user.click(within(dialog).getByRole("button", { name: "Deactivate" }));
 
-    expect(
-      await screen.findByText("Grace Hopper was deactivated"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Grace Hopper was deactivated")).toBeInTheDocument();
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalledWith({
         queryKey: userKeys.detail("g1"),
@@ -134,24 +125,16 @@ describe("UserDetailView", () => {
     const { user } = show({ ...GRACE, status: "DEACTIVATED" }, true);
     expect(screen.getByText("Deactivated")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Reactivate" }));
-    expect(
-      await screen.findByText("Grace Hopper was reactivated"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Grace Hopper was reactivated")).toBeInTheDocument();
   });
 
   it("shows the server's reason when it refuses", async () => {
-    answer(() =>
-      invariantViolation("The team needs at least one active owner"),
-    );
+    answer(() => invariantViolation("The team needs at least one active owner"));
     const { user } = show(GRACE, true);
     await user.click(screen.getByRole("button", { name: "Deactivate" }));
     const dialog = await screen.findByRole("alertdialog");
-    await user.click(
-      within(dialog).getByRole("button", { name: "Deactivate" }),
-    );
-    expect(
-      await screen.findByText("The team needs at least one active owner"),
-    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Deactivate" }));
+    expect(await screen.findByText("The team needs at least one active owner")).toBeInTheDocument();
   });
 
   it("asks in red, since deactivating is hard to undo", async () => {
@@ -159,9 +142,7 @@ describe("UserDetailView", () => {
     const { user } = show(GRACE, true);
     await user.click(screen.getByRole("button", { name: "Deactivate" }));
     const dialog = await screen.findByRole("alertdialog");
-    expect(
-      paletteOf(within(dialog).getByRole("button", { name: "Deactivate" })),
-    ).toBe("red");
+    expect(paletteOf(within(dialog).getByRole("button", { name: "Deactivate" }))).toBe("red");
   });
 
   it("says what could not be done when the server fails", async () => {
@@ -169,12 +150,8 @@ describe("UserDetailView", () => {
     const { user } = show(GRACE, true);
     await user.click(screen.getByRole("button", { name: "Deactivate" }));
     const dialog = await screen.findByRole("alertdialog");
-    await user.click(
-      within(dialog).getByRole("button", { name: "Deactivate" }),
-    );
-    expect(
-      await screen.findByText("Could not deactivate Grace Hopper"),
-    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Deactivate" }));
+    expect(await screen.findByText("Could not deactivate Grace Hopper")).toBeInTheDocument();
   });
 
   it("offers Reactivate only for a deactivated user, and only to someone who manages users", () => {

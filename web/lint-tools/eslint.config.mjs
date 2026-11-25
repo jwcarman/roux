@@ -75,6 +75,8 @@ export default tseslint.config(
       ...Object.fromEntries(defects.map((rule) => [rule, "error"])),
       "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { attributes: false } }],
       "no-restricted-syntax": ["error", { selector: "ImportNamespaceSpecifier", message: "No star imports: import each name you use" }],
+      // One import per module, types included (Sonar's S3863).
+      "no-duplicate-imports": "error",
     },
   },
   prettier,

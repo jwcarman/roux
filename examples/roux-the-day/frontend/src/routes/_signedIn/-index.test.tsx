@@ -31,17 +31,13 @@ describe("Home", () => {
 
     await vi.waitFor(() => expect(asked).toBe(true));
     await delay(50);
-    expect(
-      screen.getByRole("heading", { level: 2, name: "Welcome" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Welcome" })).toBeInTheDocument();
   });
 
   it("says which app they are signed in to", async () => {
     renderRoute("/", { permissions: [] });
 
-    expect(
-      await screen.findByText(/^You're signed in to .+\.$/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/^You're signed in to .+\.$/)).toBeInTheDocument();
   });
 
   it("is a blank page to start from: no links of its own", async () => {
