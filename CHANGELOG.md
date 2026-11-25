@@ -149,6 +149,8 @@ All notable changes to this project are documented in this file. The format foll
   there is no scan code to keep in step. A field without a tag, or a tag that is not a plain column
   name, makes `page.New` panic, naming the field and the tag to write. A value in another form
   than the database keeps it (a date as `2026-11-24`) is the view's work (`to_char`).
+- **`emaillink.Method.EnsureIdentity` is one transaction:** the identity and its address commit
+  together, so a failure between them can no longer leave an identity nobody can sign in as.
 - **SMTP on port 465 speaks TLS from the first byte** (implicit TLS, RFC 8314); any other port
   is upgraded with STARTTLS, as before. The email guide's new "Sending for real" shows an email
   service (Postmark, SendGrid, SES and the like) set up through its SMTP endpoint.

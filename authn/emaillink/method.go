@@ -479,14 +479,19 @@ func (m *Method) EnsureIdentity(ctx context.Context, address string) (id uuid.UU
 			return owner, false, err
 		}
 	}
-	id, err = authn.CreateIdentity(ctx, m.store.pool, m.now())
+	// The identity and its address commit together: never an identity nobody can sign in as.
+	tx, err := m.store.pool.Begin(ctx)
 	if err != nil {
 		return uuid.Nil, false, err
 	}
-	if err := m.Register(ctx, id, address); err != nil {
+	defer pgdb.Rollback(ctx, tx)
+	if id, err = authn.CreateIdentity(ctx, tx, m.now()); err != nil {
 		return uuid.Nil, false, err
 	}
-	return id, true, nil
+	if err := m.RegisterIn(ctx, tx, id, address); err != nil {
+		return uuid.Nil, false, err
+	}
+	return id, true, tx.Commit(ctx)
 }
 
 func ownerOf(ctx context.Context, db authn.DBTX, credentialID uuid.UUID) (uuid.UUID, bool, error) {

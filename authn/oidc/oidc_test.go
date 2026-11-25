@@ -893,3 +893,78 @@ func TestEveryCookieIsSecureWhenConfiguredEvenOverPlainHTTP(t *testing.T) {
 		})
 	}
 }
+
+func TestStartingAgainReplacesTheBrowsersUnfinishedSignIn(t *testing.T) {
+	e := setup(t)
+	e.policy.open()
+	b := e.Browser()
+	for range 2 {
+		if r := b.Get("/api/roux/auth/oidc/authorize/test"); r.StatusCode != http.StatusFound {
+			t.Fatalf("start: %d %s", r.StatusCode, r.Body)
+		}
+	}
+	if n := e.count(`select count(*) from roux_oidc_flow`); n != 1 {
+		t.Fatalf("flows: %d, want the one started last", n)
+	}
+
+	// The same for an account waiting to be confirmed: the newer replaces the older.
+	e.user("u1", map[string]any{"email": "first@example.test"})
+	e.signInWith(b, "test")
+	e.user("u2", map[string]any{"email": "second@example.test"})
+	e.signInWith(b, "test")
+	if n := e.count(`select count(*) from roux_oidc_pending`); n != 1 {
+		t.Fatalf("pending: %d, want one", n)
+	}
+	if got := b.Get("/api/roux/auth/oidc/pending").JSON(t)["displayName"]; got != "second@example.test" {
+		t.Fatalf("pending is %v", got)
+	}
+}
+
+func TestAProviderThatCannotBeReachedSendsThePersonToTheFailurePage(t *testing.T) {
+	e := setup(t)
+	e.prov.Server.Close()
+	r := e.Browser().Get("/api/roux/auth/oidc/authorize/test")
+	if r.StatusCode != http.StatusFound || r.Header.Get("Location") != "/?error=signin-failed" {
+		t.Fatalf("%d %q", r.StatusCode, r.Header.Get("Location"))
+	}
+	if n := e.count(`select count(*) from roux_oidc_flow`); n != 0 {
+		t.Fatalf("a flow was kept: %d", n)
+	}
+}
+
+func TestAVeryLongNameIsShortenedTo320Characters(t *testing.T) {
+	e := setup(t)
+	e.policy.open()
+	e.user("u1", map[string]any{"email": strings.Repeat("é", 400)})
+	b := e.Browser()
+	e.signInWith(b, "test")
+	name, _ := b.Get("/api/roux/auth/oidc/pending").JSON(t)["displayName"].(string)
+	if len([]rune(name)) != 320 {
+		t.Fatalf("%d characters", len([]rune(name)))
+	}
+}
+
+func TestALinkStandsWhenTellingTheOwnerFails(t *testing.T) {
+	var told int
+	e := setup(t, func(c *oidc.Config) {
+		c.Notify = func(context.Context, uuid.UUID, string) error { told++; return fmt.Errorf("the mail server is down") }
+	})
+	_, ada := e.signUp("test", "u1", nil)
+	e.linkOctocat(t, ada) // answers 200 with the credential
+	if told != 1 || e.count(`select count(*) from roux_federated_credential`) != 2 {
+		t.Fatalf("told %d; credentials %d", told, e.count(`select count(*) from roux_federated_credential`))
+	}
+}
+
+func TestAnAccountWhoseIdentityLinkIsGoneIsUnknownAgain(t *testing.T) {
+	e := setup(t)
+	e.signUp("test", "u1", nil)
+	if _, err := e.Pool.Exec(context.Background(), `delete from roux_credential_identity
+		where credential_id in (select id from roux_federated_credential)`); err != nil {
+		t.Fatal(err)
+	}
+	e.user("u1", nil)
+	if got := e.signInWith(e.Browser(), "test"); got != "/?pending=sign-up" {
+		t.Fatalf("lands at %q", got)
+	}
+}

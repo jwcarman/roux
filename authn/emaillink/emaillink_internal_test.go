@@ -393,16 +393,31 @@ func TestSMTPBuildIsMultipartAlternativeAndSafe(t *testing.T) {
 // fakeSMTP is just enough of an SMTP server to take one message.
 func fakeSMTP(t *testing.T) (addr string, got chan string) {
 	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	return fakeSMTPOn(t, ln)
+	return fakeSMTPWith(t, fakeServer{})
 }
 
 // fakeSMTPOn is fakeSMTP on a listener of the test's, such as a TLS one.
 func fakeSMTPOn(t *testing.T, ln net.Listener) (addr string, got chan string) {
 	t.Helper()
+	return fakeSMTPWith(t, fakeServer{listener: ln})
+}
+
+// fakeServer is how the fake SMTP server behaves.
+type fakeServer struct {
+	listener net.Listener      // default: plain TCP on a free port
+	startTLS *tls.Config       // offers STARTTLS, upgrading with this
+	refuse   map[string]string // a command (by its first word) answered with this reply
+}
+
+func fakeSMTPWith(t *testing.T, f fakeServer) (addr string, got chan string) {
+	t.Helper()
+	ln := f.listener
+	if ln == nil {
+		var err error
+		if ln, err = net.Listen("tcp", "127.0.0.1:0"); err != nil {
+			t.Fatal(err)
+		}
+	}
 	t.Cleanup(func() { _ = ln.Close() })
 	got = make(chan string, 1)
 	go func() {
@@ -411,8 +426,9 @@ func fakeSMTPOn(t *testing.T, ln net.Listener) (addr string, got chan string) {
 			return
 		}
 		defer func() { _ = conn.Close() }()
-		r := bufio.NewReader(conn)
 		var log strings.Builder
+		defer func() { got <- log.String() }()
+		r := bufio.NewReader(conn)
 		reply := func(s string) { _, _ = fmt.Fprintf(conn, "%s\r\n", s) }
 		reply("220 fake ESMTP")
 		for {
@@ -421,9 +437,31 @@ func fakeSMTPOn(t *testing.T, ln net.Listener) (addr string, got chan string) {
 				return
 			}
 			line = strings.TrimRight(line, "\r\n")
-			switch cmd := strings.ToUpper(line); {
+			cmd := strings.ToUpper(line)
+			if answer, ok := f.refuse[strings.Fields(cmd + " ")[0]]; ok {
+				log.WriteString("refused " + line + "\n")
+				reply(answer)
+				continue
+			}
+			switch {
 			case strings.HasPrefix(cmd, "EHLO"), strings.HasPrefix(cmd, "HELO"):
+				if f.startTLS != nil {
+					if _, secured := conn.(*tls.Conn); !secured {
+						reply("250-fake")
+						reply("250 STARTTLS")
+						continue
+					}
+				}
 				reply("250 fake")
+			case cmd == "STARTTLS":
+				reply("220 go ahead")
+				secured := tls.Server(conn, f.startTLS)
+				if err := secured.Handshake(); err != nil {
+					log.WriteString("handshake failed\n")
+					return
+				}
+				log.WriteString("STARTTLS\n")
+				conn, r = secured, bufio.NewReader(secured)
 			case strings.HasPrefix(cmd, "AUTH"):
 				log.WriteString("AUTH\n")
 				reply("235 accepted")
@@ -442,7 +480,6 @@ func fakeSMTPOn(t *testing.T, ln net.Listener) (addr string, got chan string) {
 				reply("250 queued")
 			case cmd == "QUIT":
 				reply("221 bye")
-				got <- log.String()
 				return
 			default:
 				reply("250 ok")
@@ -586,5 +623,69 @@ func TestSMTPOnPort465RefusesACertificateItCannotTrust(t *testing.T) {
 	err = s.Send(context.Background(), Message{To: "ada@example.com", Subject: "Hi", Text: "hello"})
 	if err == nil || !strings.Contains(err.Error(), "smtp: TLS on port 465:") {
 		t.Fatalf("%v", err)
+	}
+}
+
+// toFake is a sender for host:port that reaches the fake server at addr.
+func toFake(hostPort, addr string, roots *x509.CertPool) *SMTPSender {
+	return &SMTPSender{
+		Addr: hostPort, From: "no-reply@example.com", Username: "u", Password: "p",
+		Timeout: 5 * time.Second, roots: roots,
+		dial: func(ctx context.Context, _ string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "tcp", addr)
+		},
+	}
+}
+
+func TestSMTPUpgradesWithSTARTTLSBeforeSigningIn(t *testing.T) {
+	cert, roots := selfSigned(t, "mail.example.com")
+	addr, got := fakeSMTPWith(t, fakeServer{startTLS: &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12}})
+	if err := toFake("mail.example.com:587", addr, roots).Send(context.Background(), Message{To: "ada@example.com", Subject: "Hi", Text: "hello"}); err != nil {
+		t.Fatal(err)
+	}
+	log := <-got
+	tlsAt, authAt := strings.Index(log, "STARTTLS\n"), strings.Index(log, "AUTH\n")
+	if tlsAt < 0 || authAt < tlsAt || !strings.Contains(log, "RCPT TO:<ada@example.com>") {
+		t.Errorf("the login went before the upgrade, or never:\n%s", log)
+	}
+}
+
+func TestSMTPRefusesASTARTTLSCertificateItCannotTrust(t *testing.T) {
+	cert, _ := selfSigned(t, "mail.example.com")
+	addr, _ := fakeSMTPWith(t, fakeServer{startTLS: &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12}})
+	err := toFake("mail.example.com:587", addr, nil).Send(context.Background(), Message{To: "ada@example.com", Subject: "Hi", Text: "hello"})
+	if err == nil || !strings.Contains(err.Error(), "smtp: starttls:") {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestSMTPSaysWhichStepTheServerRefused(t *testing.T) {
+	for command, want := range map[string]string{
+		"AUTH": "smtp: auth: 535 \"5.7.8 refused\"",
+		"MAIL": "smtp: MAIL FROM: 535 \"5.7.8 refused\"",
+		"RCPT": "smtp: RCPT TO: 535 \"5.7.8 refused\"",
+		"DATA": "smtp: DATA: 535 \"5.7.8 refused\"",
+	} {
+		addr, _ := fakeSMTPWith(t, fakeServer{refuse: map[string]string{command: "535 5.7.8 refused"}})
+		s := &SMTPSender{Addr: addr, From: "no-reply@example.com", Username: "u", Password: "p", Timeout: 5 * time.Second}
+		err := s.Send(context.Background(), Message{To: "ada@example.com", Subject: "Hi", Text: "hello"})
+		if err == nil || err.Error() != want {
+			t.Errorf("%s: got %v, want %q", command, err, want)
+		}
+	}
+}
+
+func TestSMTPRefusesABadAddressOrSender(t *testing.T) {
+	m := Message{To: "ada@example.com", Subject: "Hi", Text: "hello"}
+	if err := (&SMTPSender{Addr: "no-port", From: "a@b.co"}).Send(context.Background(), m); err == nil ||
+		!strings.Contains(err.Error(), `smtp: bad address "no-port"`) {
+		t.Errorf("address: %v", err)
+	}
+	if err := (&SMTPSender{Addr: "localhost:1025", From: "not an address"}).Send(context.Background(), m); err == nil ||
+		!strings.Contains(err.Error(), `smtp: bad From "not an address"`) {
+		t.Errorf("sender: %v", err)
+	}
+	if !loopback("localhost") || !loopback("127.0.0.1") {
+		t.Error("loopback")
 	}
 }
