@@ -102,12 +102,15 @@ You got this email from %[1]s.
 	return Message{To: to, Subject: fmt.Sprintf(k.subject, app), Text: text, HTML: page}
 }
 
+// signInTo is the button that signs in, and the subject of the sign-in email.
+const signInTo = "Sign in to %s"
+
 // signInMessage is the email that carries a sign-in link and code. The wording is roux's.
 var signInMessage messageBuilder = linkEmail{
-	subject:   "Sign in to %s",
+	subject:   signInTo,
 	textLead:  func(string) string { return "Sign in:" },
 	htmlLead:  "Use the button to sign in to %s.",
-	button:    "Sign in to %s",
+	button:    signInTo,
 	ignoreTip: "If you didn't ask to sign in, ignore this email.",
 }.build
 
@@ -117,7 +120,7 @@ var invitationMessage messageBuilder = linkEmail{
 	subject:   "You've been invited to %s",
 	textLead:  func(app string) string { return "You have been invited to " + app + ". Accept by signing in:" },
 	htmlLead:  "You have been invited to %s. Accept by signing in.",
-	button:    "Sign in to %s",
+	button:    signInTo,
 	ignoreTip: "If you weren't expecting this invitation, ignore this email.",
 }.build
 

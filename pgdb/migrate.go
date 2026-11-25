@@ -44,6 +44,19 @@ var namePattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 // depends only on the declarations, never on the order they were passed in.
 // Duplicate or malformed names, self-references and cycles are errors.
 func Order(migs []Migration) ([]Migration, error) {
+	byName, err := index(migs)
+	if err != nil {
+		return nil, err
+	}
+	g, err := graphOf(byName)
+	if err != nil {
+		return nil, err
+	}
+	return g.sort(byName)
+}
+
+// index is the migrations by name, refusing malformed and duplicate names.
+func index(migs []Migration) (map[string]Migration, error) {
 	byName := make(map[string]Migration, len(migs))
 	for _, m := range migs {
 		if !namePattern.MatchString(m.Name) {
@@ -54,67 +67,82 @@ func Order(migs []Migration) ([]Migration, error) {
 		}
 		byName[m.Name] = m
 	}
+	return byName, nil
+}
 
-	// edges[a] = set of migrations that must run after a.
-	edges := map[string]map[string]bool{}
-	indegree := map[string]int{}
-	for name := range byName {
-		edges[name] = map[string]bool{}
+// graph is the run-after relation: edges[a] holds the migrations that must run after a, and
+// indegree[b] counts the migrations b still waits for.
+type graph struct {
+	edges    map[string]map[string]bool
+	indegree map[string]int
+}
+
+func (g graph) add(first, second string) {
+	if !g.edges[first][second] {
+		g.edges[first][second] = true
+		g.indegree[second]++
 	}
-	addEdge := func(first, second string) {
-		if !edges[first][second] {
-			edges[first][second] = true
-			indegree[second]++
-		}
+}
+
+// graphOf builds the graph from every After and Before naming a migration that exists (others
+// are optional dependencies, ignored); a migration naming itself is an error.
+func graphOf(byName map[string]Migration) (graph, error) {
+	g := graph{edges: map[string]map[string]bool{}, indegree: map[string]int{}}
+	for name := range byName {
+		g.edges[name] = map[string]bool{}
 	}
 	for _, m := range byName {
+		if slices.Contains(m.After, m.Name) {
+			return graph{}, fmt.Errorf("pgdb: migration %q cannot run after itself", m.Name)
+		}
+		if slices.Contains(m.Before, m.Name) {
+			return graph{}, fmt.Errorf("pgdb: migration %q cannot run before itself", m.Name)
+		}
 		for _, dep := range m.After {
-			if dep == m.Name {
-				return nil, fmt.Errorf("pgdb: migration %q cannot run after itself", m.Name)
-			}
 			if _, ok := byName[dep]; ok {
-				addEdge(dep, m.Name)
+				g.add(dep, m.Name)
 			}
 		}
 		for _, dep := range m.Before {
-			if dep == m.Name {
-				return nil, fmt.Errorf("pgdb: migration %q cannot run before itself", m.Name)
-			}
 			if _, ok := byName[dep]; ok {
-				addEdge(m.Name, dep)
+				g.add(m.Name, dep)
 			}
 		}
 	}
+	return g, nil
+}
 
+// sort is a topological sort taking ready migrations in name order; what is left waiting is a cycle.
+func (g graph) sort(byName map[string]Migration) ([]Migration, error) {
 	var ready []string
 	for name := range byName {
-		if indegree[name] == 0 {
+		if g.indegree[name] == 0 {
 			ready = append(ready, name)
 		}
 	}
-	out := make([]Migration, 0, len(migs))
+	out := make([]Migration, 0, len(byName))
 	for len(ready) > 0 {
 		sort.Strings(ready) // name-ordered tie-break
 		next := ready[0]
 		ready = ready[1:]
 		out = append(out, byName[next])
-		for after := range edges[next] {
-			if indegree[after]--; indegree[after] == 0 {
+		for after := range g.edges[next] {
+			if g.indegree[after]--; g.indegree[after] == 0 {
 				ready = append(ready, after)
 			}
 		}
 	}
-	if len(out) != len(migs) {
-		var stuck []string
-		for name := range byName {
-			if indegree[name] > 0 {
-				stuck = append(stuck, name)
-			}
-		}
-		slices.Sort(stuck)
-		return nil, fmt.Errorf("pgdb: migration dependency cycle among: %s", strings.Join(stuck, ", "))
+	if len(out) == len(byName) {
+		return out, nil
 	}
-	return out, nil
+	var stuck []string
+	for name := range byName {
+		if g.indegree[name] > 0 {
+			stuck = append(stuck, name)
+		}
+	}
+	slices.Sort(stuck)
+	return nil, fmt.Errorf("pgdb: migration dependency cycle among: %s", strings.Join(stuck, ", "))
 }
 
 // Migrate applies every contributor's pending *.sql files in dependency order.

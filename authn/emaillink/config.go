@@ -1,6 +1,7 @@
 package emaillink
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"strings"
@@ -52,33 +53,28 @@ type Config struct {
 // withDefaults fills the zero values and validates, naming the fix in each error
 // so a bad setting stops startup with something actionable.
 func (c Config) withDefaults() (Config, error) {
-	if c.CodeLength == 0 {
-		c.CodeLength = defaultCodeLength
-	}
-	if c.CodeMaxAttempts == 0 {
-		c.CodeMaxAttempts = defaultCodeMaxAttempts
-	}
-	if c.TokenTTL == 0 {
-		c.TokenTTL = defaultTokenTTL
-	}
-	if c.ResendInterval == 0 {
-		c.ResendInterval = defaultResendInterval
+	c.CodeLength = cmp.Or(c.CodeLength, defaultCodeLength)
+	c.CodeMaxAttempts = cmp.Or(c.CodeMaxAttempts, defaultCodeMaxAttempts)
+	c.TokenTTL = cmp.Or(c.TokenTTL, defaultTokenTTL)
+	c.ResendInterval = cmp.Or(c.ResendInterval, defaultResendInterval)
+	c.AppName = cmp.Or(c.AppName, "App")
+	c.BrandColor = cmp.Or(c.BrandColor, "#3b82f6")
+	if c.Clock == nil {
+		c.Clock = time.Now
 	}
 	if c.AddressConfirmationURL == "" {
 		c.AddressConfirmationURL = c.LinkBaseURL
 	} else if strings.ContainsAny(c.AddressConfirmationURL, "#?") {
 		return c, fmt.Errorf("emaillink: AddressConfirmationURL %q must have no query or fragment: the token is added as a fragment", c.AddressConfirmationURL)
 	}
-	if c.AppName == "" {
-		c.AppName = "App"
+	if errs := c.problems(); len(errs) > 0 {
+		return c, fmt.Errorf("emaillink: %w", errors.Join(errs...))
 	}
-	if c.BrandColor == "" {
-		c.BrandColor = "#3b82f6"
-	}
-	if c.Clock == nil {
-		c.Clock = time.Now
-	}
+	return c, nil
+}
 
+// problems is every setting that cannot work, each naming its fix.
+func (c Config) problems() []error {
 	var errs []error
 	if strings.TrimSpace(c.LinkBaseURL) == "" {
 		errs = append(errs, errors.New("LinkBaseURL is required: the page of your app that receives sign-in links"))
@@ -105,10 +101,7 @@ func (c Config) withDefaults() (Config, error) {
 	if c.Sender == nil {
 		errs = append(errs, errors.New("Sender is required: there must be a way to deliver the emails"))
 	}
-	if len(errs) > 0 {
-		return c, fmt.Errorf("emaillink: %w", errors.Join(errs...))
-	}
-	return c, nil
+	return errs
 }
 
 // String hides the secret, so a logged Config cannot leak it.

@@ -19,9 +19,10 @@ import (
 	"time"
 )
 
-// SMTPSender delivers email over SMTP. It uses STARTTLS when the server offers
-// it, and authenticates when Username is set. For local development, Mailpit
-// listens on localhost:1025 with neither.
+// SMTPSender delivers email over SMTP, over STARTTLS, authenticating when Username
+// is set. Without STARTTLS it sends only to a server on this machine (Mailpit, on
+// localhost:1025 for local development, offers neither), unless AllowPlaintext says
+// the network between is trusted: a sign-in link sent in the clear can be read and used.
 type SMTPSender struct {
 	// Addr is host:port of the SMTP server.
 	Addr string
@@ -31,6 +32,20 @@ type SMTPSender struct {
 	Username, Password string
 	// Timeout bounds connecting and the whole conversation; default 30 seconds.
 	Timeout time.Duration
+	// AllowPlaintext sends to a server off this machine that offers no STARTTLS, for a
+	// relay on a network you trust.
+	AllowPlaintext bool
+
+	dial func(ctx context.Context, addr string) (net.Conn, error) // tests reach a fake server by another name
+}
+
+// loopback reports whether host is this machine.
+func loopback(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // Send delivers one message.
@@ -49,7 +64,11 @@ func (s *SMTPSender) Send(ctx context.Context, m Message) error {
 	}
 
 	dialer := net.Dialer{Timeout: timeout}
-	conn, err := dialer.DialContext(ctx, "tcp", s.Addr)
+	dial := s.dial
+	if dial == nil {
+		dial = func(ctx context.Context, addr string) (net.Conn, error) { return dialer.DialContext(ctx, "tcp", addr) }
+	}
+	conn, err := dial(ctx, s.Addr)
 	if err != nil {
 		return fmt.Errorf("smtp: connect: %w", err)
 	}
@@ -70,6 +89,8 @@ func (s *SMTPSender) Send(ctx context.Context, m Message) error {
 		if err := c.StartTLS(&tls.Config{ServerName: host, MinVersion: tls.VersionTLS12}); err != nil {
 			return fmt.Errorf("smtp: starttls: %w", err)
 		}
+	} else if !loopback(host) && !s.AllowPlaintext {
+		return fmt.Errorf("smtp: %s offers no STARTTLS, and is not on this machine: refusing to send a sign-in link in the clear (set AllowPlaintext for a relay on a trusted network)", s.Addr)
 	}
 	if s.Username != "" {
 		if err := c.Auth(smtp.PlainAuth("", s.Username, s.Password, host)); err != nil {

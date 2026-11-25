@@ -94,6 +94,7 @@ func (e *EmailLink) SignIn() authn.Method       { return e.Method }
 //	PUBLIC_URL    where browsers reach the app (default http://localhost:8080); sign-in links point here
 //	SMTP_ADDR     host:port of the mail server (default localhost:1025, Mailpit)
 //	MAIL_FROM     the sender's address (default no-reply@localhost)
+//	SMTP_ALLOW_PLAINTEXT  true to send without STARTTLS to a relay off this machine, on a network you trust
 //	EMAIL_RESEND_INTERVAL, EMAIL_TOKEN_TTL   durations such as 1s or 5m (defaults 60s and 5m)
 func EmailLinkFromEnv(appName string) (*EmailLink, error) {
 	secret := os.Getenv("CODE_SECRET")
@@ -116,8 +117,9 @@ func EmailLinkFromEnv(appName string) (*EmailLink, error) {
 		TokenTTL:       ttl,
 		AppName:        appName,
 		Sender: &emaillink.SMTPSender{
-			Addr: Getenv("SMTP_ADDR", "localhost:1025"),
-			From: Getenv("MAIL_FROM", "no-reply@localhost"),
+			Addr:           Getenv("SMTP_ADDR", "localhost:1025"),
+			From:           Getenv("MAIL_FROM", "no-reply@localhost"),
+			AllowPlaintext: os.Getenv("SMTP_ALLOW_PLAINTEXT") == "true",
 		},
 	})
 	if err != nil {
@@ -190,11 +192,11 @@ func APIKeysFromEnv(email *EmailLink) (*APIKeys, error) {
 		return nil, nil
 	}
 	cfg := apikey.Config{Prefix: os.Getenv("API_KEY_PREFIX"), Header: os.Getenv("API_KEY_HEADER")}
-	max, err := duration("API_KEY_MAX_LIFETIME")
+	longest, err := duration("API_KEY_MAX_LIFETIME")
 	if err != nil {
 		return nil, err
 	}
-	cfg.MaxLifetime = max
+	cfg.MaxLifetime = longest
 	m, err := apikey.New(cfg)
 	if err != nil {
 		return nil, err

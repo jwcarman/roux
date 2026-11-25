@@ -84,16 +84,17 @@ func (h *Host) csrf(next api.HandlerFunc) api.HandlerFunc {
 // would leave the browser guessing which to keep).
 func (h *Host) setCSRFCookie(w http.ResponseWriter, r *http.Request, token string) {
 	header := w.Header()
-	kept := header["Set-Cookie"][:0:0]
-	for _, v := range header["Set-Cookie"] {
+	const setCookie = "Set-Cookie"
+	kept := header[setCookie][:0:0]
+	for _, v := range header[setCookie] {
 		if !strings.HasPrefix(v, csrfCookie+"=") {
 			kept = append(kept, v)
 		}
 	}
 	if len(kept) == 0 {
-		header.Del("Set-Cookie")
+		header.Del(setCookie)
 	} else {
-		header["Set-Cookie"] = kept
+		header[setCookie] = kept
 	}
 	http.SetCookie(w, h.cookieFor(r, token))
 }

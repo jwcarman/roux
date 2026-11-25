@@ -108,7 +108,9 @@ func New(cfg Config) (*Method, error) {
 func (m *Method) now() time.Time { return m.cfg.Clock().UTC() }
 
 // Contribute adds nothing to the sign-in page: a key is for a client, not a person.
-func (m *Method) Contribute(*authn.SignInOptions) {}
+func (m *Method) Contribute(*authn.SignInOptions) {
+	// nothing to offer on the page: a key is made in the account settings, and used by a client
+}
 
 // Mount lets the header sign requests in and registers the endpoints.
 func (m *Method) Mount(h *authn.Host) error {

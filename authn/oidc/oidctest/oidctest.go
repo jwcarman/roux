@@ -58,6 +58,9 @@ type Provider struct {
 	Tokens int          // token requests answered
 }
 
+// pss is PS256's padding: RSA-PSS with SHA-256 and a salt as long as the hash (RFC 7518 3.5).
+var pss = &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}
+
 type grant struct {
 	challenge, nonce, clientID string
 	user                       map[string]any
@@ -143,7 +146,7 @@ func (p *Provider) discovery(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{
 		"issuer": base, "authorization_endpoint": base + "/authorize", "token_endpoint": base + "/token",
 		"jwks_uri": base + "/jwks", "userinfo_endpoint": base + "/user",
-		"id_token_signing_alg_values_supported": []string{"RS256"},
+		"id_token_signing_alg_values_supported": []string{"PS256"},
 		"response_types_supported":              []string{"code"}, "subject_types_supported": []string{"public"},
 	})
 }
@@ -151,7 +154,7 @@ func (p *Provider) discovery(w http.ResponseWriter, r *http.Request) {
 func (p *Provider) jwks(w http.ResponseWriter, r *http.Request) {
 	e := big.NewInt(int64(p.key.E)).Bytes()
 	writeJSON(w, map[string]any{"keys": []map[string]any{{
-		"kty": "RSA", "use": "sig", "alg": "RS256", "kid": "k1",
+		"kty": "RSA", "use": "sig", "alg": "PS256", "kid": "k1",
 		"n": b64(p.key.N.Bytes()), "e": b64(e),
 	}}})
 }
@@ -161,13 +164,12 @@ func (p *Provider) authorize(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.Seen = append(p.Seen, q)
-	redirect := q.Get("redirect_uri")
-	if q.Get("client_id") != ClientID || redirect == "" || q.Get("response_type") != "code" ||
+	back, ok := callback(q.Get("redirect_uri"))
+	if q.Get("client_id") != ClientID || !ok || q.Get("response_type") != "code" ||
 		q.Get("code_challenge_method") != "S256" || q.Get("code_challenge") == "" || q.Get("state") == "" {
 		http.Error(w, "bad authorize request", http.StatusBadRequest)
 		return
 	}
-	back, _ := url.Parse(redirect)
 	v := back.Query()
 	state := q.Get("state")
 	if p.tweaks.WrongState != "" {
@@ -183,6 +185,21 @@ func (p *Provider) authorize(w http.ResponseWriter, r *http.Request) {
 	}
 	back.RawQuery = v.Encode()
 	http.Redirect(w, r, back.String(), http.StatusFound)
+}
+
+// callback is the redirect_uri as the browser is sent back to it, if it is one the fake sends
+// browsers to. A real provider takes only the callbacks registered for the client; the app under
+// test runs on this machine (httptest), so the fake takes only a loopback address.
+func callback(redirect string) (*url.URL, bool) {
+	u, err := url.Parse(redirect)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return nil, false
+	}
+	switch u.Hostname() {
+	case "127.0.0.1", "localhost", "::1":
+		return u, true
+	}
+	return nil, false
 }
 
 func (p *Provider) token(w http.ResponseWriter, r *http.Request) {
@@ -244,11 +261,11 @@ func (p *Provider) idToken(g grant) string {
 	if t.BadSignature {
 		key = p.other
 	}
-	head, _ := json.Marshal(map[string]string{"alg": "RS256", "typ": "JWT", "kid": "k1"})
+	head, _ := json.Marshal(map[string]string{"alg": "PS256", "typ": "JWT", "kid": "k1"})
 	body, _ := json.Marshal(claims)
 	signing := b64(head) + "." + b64(body)
 	sum := sha256.Sum256([]byte(signing))
-	sig, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, sum[:])
+	sig, err := rsa.SignPSS(rand.Reader, key, crypto.SHA256, sum[:], pss)
 	if err != nil {
 		panic(err)
 	}
@@ -305,11 +322,11 @@ func randomString() string {
 // Mint signs an access token with the provider's key, for a test of bearer sign-in: the claims
 // default to iss (this provider), iat and an exp an hour away; whatever the test passes wins, and
 // a nil value removes a claim.
-func (p *Provider) Mint(claims map[string]any) string { return p.mint(p.key, "RS256", claims) }
+func (p *Provider) Mint(claims map[string]any) string { return p.mint(p.key, "PS256", claims) }
 
 // MintSignedByAnotherKey is Mint with a key the provider does not publish.
 func (p *Provider) MintSignedByAnotherKey(claims map[string]any) string {
-	return p.mint(p.other, "RS256", claims)
+	return p.mint(p.other, "PS256", claims)
 }
 
 // MintUnsigned is a token with alg none and no signature, which no verifier may accept.
@@ -332,7 +349,7 @@ func (p *Provider) mint(key *rsa.PrivateKey, alg string, over map[string]any) st
 		return signing + "."
 	}
 	sum := sha256.Sum256([]byte(signing))
-	sig, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, sum[:])
+	sig, err := rsa.SignPSS(rand.Reader, key, crypto.SHA256, sum[:], pss)
 	if err != nil {
 		panic(err)
 	}

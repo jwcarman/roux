@@ -1,6 +1,7 @@
 package oidc
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -95,43 +96,49 @@ func (p Provider) validate() (Provider, error) {
 	if p.ClientID == "" {
 		fail("the client id is required")
 	}
-	switch p.Kind {
-	case KindOIDC:
-		if p.Issuer == "" {
-			fail("an OpenID Connect provider needs its issuer")
-		}
-		if isEntraShared(p.Issuer) {
-			fail("Microsoft's shared endpoints (common, organizations, consumers) are not supported: use your tenant's issuer")
-		}
-		if len(p.Scopes) == 0 {
-			p.Scopes = []string{goidc.ScopeOpenID, "email", "profile"}
-		}
-	case KindGitHub:
-		p.Issuer = githubIssuer
-		if p.UserInfoURL == "" {
-			p.UserInfoURL = githubUserURL
-		}
-		if p.SubjectAttribute == "" {
-			p.SubjectAttribute = "id"
-		}
-		if len(p.Scopes) == 0 {
-			p.Scopes = []string{"read:user", "user:email"}
-		}
-	case KindOAuth2:
-		if p.Issuer == "" || p.SubjectAttribute == "" {
-			fail("an OAuth 2 provider needs an issuer (any stable string that names it) and a subject attribute (the user-info attribute holding the account's immutable id, never a username or an email address)")
-		}
-		if p.AuthURL == "" || p.TokenURL == "" || p.UserInfoURL == "" {
-			fail("an OAuth 2 provider needs its authorization, token and user-info URLs")
-		}
-	default:
-		fail("the kind must be %q, %q or %q", KindOIDC, KindGitHub, KindOAuth2)
+	p, problems := p.forKind()
+	for _, problem := range problems {
+		fail("%s", problem)
 	}
 	if p.TrustEmail == nil {
 		trust := p.Issuer == googleIssuer || p.Issuer == githubIssuer
 		p.TrustEmail = &trust
 	}
 	return p, errors.Join(errs...)
+}
+
+// forKind fills the kind's defaults and says what the kind needs that is missing.
+func (p Provider) forKind() (Provider, []string) {
+	var problems []string
+	switch p.Kind {
+	case KindOIDC:
+		if p.Issuer == "" {
+			problems = append(problems, "an OpenID Connect provider needs its issuer")
+		}
+		if isEntraShared(p.Issuer) {
+			problems = append(problems, "Microsoft's shared endpoints (common, organizations, consumers) are not supported: use your tenant's issuer")
+		}
+		if len(p.Scopes) == 0 {
+			p.Scopes = []string{goidc.ScopeOpenID, "email", "profile"}
+		}
+	case KindGitHub:
+		p.Issuer = githubIssuer
+		p.UserInfoURL = cmp.Or(p.UserInfoURL, githubUserURL)
+		p.SubjectAttribute = cmp.Or(p.SubjectAttribute, "id")
+		if len(p.Scopes) == 0 {
+			p.Scopes = []string{"read:user", "user:email"}
+		}
+	case KindOAuth2:
+		if p.Issuer == "" || p.SubjectAttribute == "" {
+			problems = append(problems, "an OAuth 2 provider needs an issuer (any stable string that names it) and a subject attribute (the user-info attribute holding the account's immutable id, never a username or an email address)")
+		}
+		if p.AuthURL == "" || p.TokenURL == "" || p.UserInfoURL == "" {
+			problems = append(problems, "an OAuth 2 provider needs its authorization, token and user-info URLs")
+		}
+	default:
+		problems = append(problems, fmt.Sprintf("the kind must be %q, %q or %q", KindOIDC, KindGitHub, KindOAuth2))
+	}
+	return p, problems
 }
 
 func isEntraShared(issuer string) bool {

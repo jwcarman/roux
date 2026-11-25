@@ -123,10 +123,7 @@ func (h *Host) RequireRecentSignIn(ctx context.Context) error {
 		return h.bearerRecent(p)
 	}
 	if h.now().After(p.SignedInAt.Add(h.recentSignIn)) {
-		e := problem.New(http.StatusUnauthorized, "Sign in again to continue")
-		e.Type = errorTypePrefix + "reauthentication-required"
-		e.Code = "reauthentication-required"
-		return e
+		return reauthenticationRequired()
 	}
 	return nil
 }
@@ -220,12 +217,18 @@ func (h *Host) bearerRecent(p *Principal) error {
 	}
 	// A time a little in the future, from clock skew, counts as now.
 	if h.now().After(p.SignedInAt.Add(h.recentSignIn)) {
-		e := problem.New(http.StatusUnauthorized, "Sign in again to continue")
-		e.Type = errorTypePrefix + "reauthentication-required"
-		e.Code = "reauthentication-required"
-		return e.WithHeader("WWW-Authenticate", fmt.Sprintf(
+		return reauthenticationRequired().WithHeader("WWW-Authenticate", fmt.Sprintf(
 			`Bearer error="insufficient_user_authentication", error_description="A more recent sign-in is required", max_age=%d`,
 			int(h.recentSignIn.Seconds())))
 	}
 	return nil
+}
+
+// reauthenticationRequired is the 401 for a sign-in older than the recent window.
+func reauthenticationRequired() *problem.Problem {
+	const code = "reauthentication-required"
+	e := problem.New(http.StatusUnauthorized, "Sign in again to continue")
+	e.Type = errorTypePrefix + code
+	e.Code = code
+	return e
 }

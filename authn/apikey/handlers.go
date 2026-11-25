@@ -121,7 +121,7 @@ type createRequest struct {
 	Scopes   []string `json:"scopes"`
 }
 
-func (c createRequest) validate(max time.Duration, held []string) (name string, lifetime time.Duration, scopes []string, err error) {
+func (c createRequest) validate(longest time.Duration, held []string) (name string, lifetime time.Duration, scopes []string, err error) {
 	switch {
 	case c.Name == nil || strings.TrimSpace(*c.Name) == "":
 		return "", 0, nil, invalid("name must not be blank")
@@ -135,8 +135,8 @@ func (c createRequest) validate(max time.Duration, held []string) (name string, 
 	if lifetime, err = parseDuration(*c.Lifetime); err != nil {
 		return "", 0, nil, invalid("lifetime: " + err.Error())
 	}
-	if lifetime <= 0 || lifetime > max {
-		return "", 0, nil, invalid("lifetime must be longer than zero and at most " + dayText(max))
+	if lifetime <= 0 || lifetime > longest {
+		return "", 0, nil, invalid("lifetime must be longer than zero and at most " + dayText(longest))
 	}
 	for _, s := range c.Scopes {
 		switch {

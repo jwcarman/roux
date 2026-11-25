@@ -108,7 +108,9 @@ func New(cfg Config) (*Method, error) {
 }
 
 // Contribute adds nothing to the sign-in page: a token is for a client, not a person.
-func (m *Method) Contribute(*authn.SignInOptions) {}
+func (m *Method) Contribute(*authn.SignInOptions) {
+	// nothing to offer on the page: a token comes from your authorization server, not from here
+}
 
 // Mount lets the Authorization header sign requests in.
 func (m *Method) Mount(h *authn.Host) error {

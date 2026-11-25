@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -97,44 +98,17 @@ var coreMigrations = []pgdb.Migration{authn.Migration, authz.Migration}
 // Assemble migrates the database, registers who with the modules' sign-in methods, then mounts
 // and starts the modules. A failure names the module.
 func Assemble(ctx context.Context, k *Kit, modules ...Module) error {
-	seen := map[string]bool{}
-	var mods []Module
-	for _, m := range modules {
-		if m == nil {
-			continue
-		}
-		if seen[m.Name()] {
-			return fmt.Errorf("app: module %q is listed twice", m.Name())
-		}
-		seen[m.Name()] = true
-		mods = append(mods, m)
+	mods, err := distinct(modules)
+	if err != nil {
+		return err
 	}
 	k.modules = mods
-	if k.Organization == nil {
-		k.Organization = func() organization.Context { return organization.NewContext(time.Now(), time.UTC, "en-US") }
-	}
-	if k.ShellTheme == nil {
-		name := k.AppName
-		k.ShellTheme = func(context.Context) (spa.Theme, error) { return spa.StockTheme(name), nil }
-	}
+	k.defaults()
 
-	var migrations []pgdb.Migration
-	var methods []authn.Method
-	if k.Pool != nil {
-		migrations = append(migrations, coreMigrations...)
-		for _, m := range mods {
-			if mg, ok := m.(Migrator); ok {
-				migrations = append(migrations, mg.Migrations()...)
-			}
-			if sp, ok := m.(SignInProvider); ok {
-				methods = append(methods, sp.SignIn())
-			}
-		}
-		if err := pgdb.Migrate(ctx, k.Pool, dedupe(migrations)...); err != nil {
-			return fmt.Errorf("app: migrating: %w", err)
-		}
+	methods, err := migrate(ctx, k, mods)
+	if err != nil {
+		return err
 	}
-
 	host, err := authn.Register(k.Mux, authn.Config{
 		Pool: k.Pool, Permissions: authz.Service{Pool: k.Pool}.PermissionsOf, SecureCookies: k.SecureCookies,
 	}, methods...)
@@ -143,6 +117,72 @@ func Assemble(ctx context.Context, k *Kit, modules ...Module) error {
 	}
 	k.Host = host
 
+	if err := mountAll(ctx, k, mods); err != nil {
+		return err
+	}
+	if err := startAll(ctx, k, mods); err != nil {
+		return err
+	}
+	names := make([]string, len(mods))
+	for i, m := range mods {
+		names[i] = m.Name()
+	}
+	slog.InfoContext(ctx, "application assembled", "modules", strings.Join(names, ","))
+	return nil
+}
+
+// distinct is the modules listed, without the nil ones (features turned off); a name listed
+// twice is an error.
+func distinct(modules []Module) ([]Module, error) {
+	seen := map[string]bool{}
+	var mods []Module
+	for _, m := range modules {
+		if m == nil {
+			continue
+		}
+		if seen[m.Name()] {
+			return nil, fmt.Errorf("app: module %q is listed twice", m.Name())
+		}
+		seen[m.Name()] = true
+		mods = append(mods, m)
+	}
+	return mods, nil
+}
+
+// defaults fills what the page needs until a module sets it: UTC and en-US, and the stock theme.
+func (k *Kit) defaults() {
+	if k.Organization == nil {
+		k.Organization = func() organization.Context { return organization.NewContext(time.Now(), time.UTC, "en-US") }
+	}
+	if k.ShellTheme == nil {
+		name := k.AppName
+		k.ShellTheme = func(context.Context) (spa.Theme, error) { return spa.StockTheme(name), nil }
+	}
+}
+
+// migrate applies roux's and the modules' migrations and gathers their sign-in methods; with no
+// database there are neither.
+func migrate(ctx context.Context, k *Kit, mods []Module) ([]authn.Method, error) {
+	if k.Pool == nil {
+		return nil, nil
+	}
+	migrations := slices.Clone(coreMigrations)
+	var methods []authn.Method
+	for _, m := range mods {
+		if mg, ok := m.(Migrator); ok {
+			migrations = append(migrations, mg.Migrations()...)
+		}
+		if sp, ok := m.(SignInProvider); ok {
+			methods = append(methods, sp.SignIn())
+		}
+	}
+	if err := pgdb.Migrate(ctx, k.Pool, dedupe(migrations)...); err != nil {
+		return nil, fmt.Errorf("app: migrating: %w", err)
+	}
+	return methods, nil
+}
+
+func mountAll(ctx context.Context, k *Kit, mods []Module) error {
 	for _, m := range mods {
 		if mt, ok := m.(Mounter); ok {
 			if err := mt.Mount(ctx, k); err != nil {
@@ -151,6 +191,10 @@ func Assemble(ctx context.Context, k *Kit, modules ...Module) error {
 		}
 		describe(ctx, m)
 	}
+	return nil
+}
+
+func startAll(ctx context.Context, k *Kit, mods []Module) error {
 	for _, m := range mods {
 		if st, ok := m.(Starter); ok {
 			if err := st.Start(ctx, k); err != nil {
@@ -158,11 +202,6 @@ func Assemble(ctx context.Context, k *Kit, modules ...Module) error {
 			}
 		}
 	}
-	names := make([]string, len(mods))
-	for i, m := range mods {
-		names[i] = m.Name()
-	}
-	slog.InfoContext(ctx, "application assembled", "modules", strings.Join(names, ","))
 	return nil
 }
 

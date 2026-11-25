@@ -99,6 +99,9 @@ type handler struct {
 
 // New validates the configuration and returns the handler. It returns
 // ErrNoShell (wrapped) if the frontend has not been built.
+// noResource is the 404 detail for a path nothing is served at.
+const noResource = "No resource exists at this path."
+
 func New(cfg Config) (http.Handler, error) {
 	if cfg.FS == nil {
 		return nil, ErrNoShell
@@ -176,7 +179,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case h.isPage(r, p):
 		h.shell(w, r)
 	default:
-		problem.Write(w, r, problem.NotFound("No resource exists at this path."))
+		problem.Write(w, r, problem.NotFound(noResource))
 	}
 }
 
@@ -288,12 +291,12 @@ func jsonInScript(v any) (string, error) {
 // (never the shell). If etag is set the file is revalidated by content hash.
 func (h *handler) file(w http.ResponseWriter, r *http.Request, name, cacheControl string, etag bool) {
 	if !fs.ValidPath(name) || name == shellFile {
-		problem.Write(w, r, problem.NotFound("No resource exists at this path."))
+		problem.Write(w, r, problem.NotFound(noResource))
 		return
 	}
 	data, err := fs.ReadFile(h.fsys, name)
 	if err != nil {
-		problem.Write(w, r, problem.NotFound("No resource exists at this path."))
+		problem.Write(w, r, problem.NotFound(noResource))
 		return
 	}
 	hd := w.Header()

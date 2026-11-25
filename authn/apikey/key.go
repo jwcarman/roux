@@ -21,9 +21,9 @@ const (
 
 func randomBase62(n int) (string, error) {
 	var b strings.Builder
-	max := big.NewInt(int64(len(alphabet)))
+	size := big.NewInt(int64(len(alphabet)))
 	for i := 0; i < n; i++ {
-		v, err := rand.Int(rand.Reader, max) // uniform, no modulo bias
+		v, err := rand.Int(rand.Reader, size) // uniform, no modulo bias
 		if err != nil {
 			return "", err
 		}

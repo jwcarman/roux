@@ -340,9 +340,47 @@ func TestSMTPSendSpeaksSMTP(t *testing.T) {
 		t.Fatal("the server never finished the conversation")
 	}
 
+	// A server off this machine that offers no STARTTLS is refused, unless the network is trusted.
+	if !loopback("::1") || loopback("mail.example.com") || loopback("10.0.0.5") {
+		t.Error("loopback")
+	}
+
 	// A server that is not there is an error, not a hang.
 	dead := &SMTPSender{Addr: "127.0.0.1:1", From: "a@b.co", Timeout: time.Second}
 	if err := dead.Send(context.Background(), Message{To: "a@b.co", Subject: "s", Text: "t"}); err == nil {
 		t.Error("sending to nothing must fail")
+	}
+}
+
+// A relay elsewhere: the fake server, reached as if it were mail.example.com.
+func remote(addr string, allow bool) *SMTPSender {
+	return &SMTPSender{
+		Addr: "mail.example.com:25", From: "no-reply@example.com", Timeout: 5 * time.Second, AllowPlaintext: allow,
+		dial: func(ctx context.Context, _ string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "tcp", addr)
+		},
+	}
+}
+
+func TestSMTPRefusesPlainTextToAServerElsewhere(t *testing.T) {
+	addr, _ := fakeSMTP(t)
+	err := remote(addr, false).Send(context.Background(), Message{To: "ada@example.com", Subject: "Hi", Text: "hello"})
+	if err == nil || !strings.Contains(err.Error(), "offers no STARTTLS") {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestSMTPSendsPlainTextToATrustedRelay(t *testing.T) {
+	addr, got := fakeSMTP(t)
+	if err := remote(addr, true).Send(context.Background(), Message{To: "ada@example.com", Subject: "Hi", Text: "hello"}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case log := <-got:
+		if !strings.Contains(log, "RCPT TO:<ada@example.com>") {
+			t.Errorf("%s", log)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the server never finished the conversation")
 	}
 }

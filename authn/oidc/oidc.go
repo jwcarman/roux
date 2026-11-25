@@ -18,6 +18,7 @@
 package oidc
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -109,26 +110,22 @@ type Method struct {
 
 // New validates the configuration (naming the fix in any error) and returns the method.
 func New(cfg Config) (*Method, error) {
-	var errs []error
-	u, err := url.Parse(cfg.PublicURL)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		errs = append(errs, fmt.Errorf("PublicURL %q must be the app's address, such as https://app.example.com", cfg.PublicURL))
+	cfg = cfg.withDefaults()
+	errs := cfg.addressProblems()
+	m := &Method{cfg: cfg, providers: map[string]*runtime{}}
+	errs = append(errs, m.addProviders()...)
+	if err := errors.Join(errs...); err != nil {
+		return nil, fmt.Errorf("oidc: %w", err)
 	}
+	return m, nil
+}
+
+// withDefaults fills what was left unset.
+func (cfg Config) withDefaults() Config {
 	cfg.PublicURL = strings.TrimSuffix(cfg.PublicURL, "/")
-	if cfg.SuccessURL == "" {
-		cfg.SuccessURL = "/"
-	}
-	if cfg.FailureURL == "" {
-		cfg.FailureURL = "/"
-	}
-	if cfg.LinkURL == "" {
-		cfg.LinkURL = cfg.SuccessURL
-	}
-	for name, v := range map[string]string{"SuccessURL": cfg.SuccessURL, "FailureURL": cfg.FailureURL, "LinkURL": cfg.LinkURL} {
-		if !strings.HasPrefix(v, "/") || strings.HasPrefix(v, "//") || strings.ContainsAny(v, "\\\r\n") {
-			errs = append(errs, fmt.Errorf("%s %q must be a path on this site: it starts with / (not //) and has no scheme", name, v))
-		}
-	}
+	cfg.SuccessURL = cmp.Or(cfg.SuccessURL, "/")
+	cfg.FailureURL = cmp.Or(cfg.FailureURL, "/")
+	cfg.LinkURL = cmp.Or(cfg.LinkURL, cfg.SuccessURL)
 	if cfg.SignUp == nil {
 		cfg.SignUp = func(context.Context, SignUpRequest) SignUpDecision { return SignUpDecision{} }
 	}
@@ -144,12 +141,35 @@ func New(cfg Config) (*Method, error) {
 	if cfg.HTTPClient == nil {
 		cfg.HTTPClient = &http.Client{Timeout: 10 * time.Second}
 	}
-	if len(cfg.Providers) == 0 {
-		errs = append(errs, errors.New("oidc: Providers is empty: configure at least one provider"))
+	return cfg
+}
+
+// addressProblems checks the app's address, and that every landing page is a path on this site.
+func (cfg Config) addressProblems() []error {
+	var errs []error
+	u, err := url.Parse(cfg.PublicURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		errs = append(errs, fmt.Errorf("PublicURL %q must be the app's address, such as https://app.example.com", cfg.PublicURL))
 	}
-	m := &Method{cfg: cfg, providers: map[string]*runtime{}}
+	for _, page := range []struct{ name, url string }{
+		{"SuccessURL", cfg.SuccessURL}, {"FailureURL", cfg.FailureURL}, {"LinkURL", cfg.LinkURL},
+	} {
+		v := page.url
+		if !strings.HasPrefix(v, "/") || strings.HasPrefix(v, "//") || strings.ContainsAny(v, "\\\r\n") {
+			errs = append(errs, fmt.Errorf("%s %q must be a path on this site: it starts with / (not //) and has no scheme", page.name, v))
+		}
+	}
+	return errs
+}
+
+// addProviders validates and registers each provider; an ID or issuer used twice is an error.
+func (m *Method) addProviders() []error {
+	if len(m.cfg.Providers) == 0 {
+		return []error{errors.New("oidc: Providers is empty: configure at least one provider")}
+	}
+	var errs []error
 	issuers := map[string]string{}
-	for _, p := range cfg.Providers {
+	for _, p := range m.cfg.Providers {
 		p, err := p.validate()
 		if err != nil {
 			errs = append(errs, err)
@@ -164,13 +184,10 @@ func New(cfg Config) (*Method, error) {
 			continue
 		}
 		issuers[p.Issuer] = p.ID
-		m.providers[p.ID] = &runtime{p: p, client: cfg.HTTPClient}
+		m.providers[p.ID] = &runtime{p: p, client: m.cfg.HTTPClient}
 		m.order = append(m.order, p.ID)
 	}
-	if err := errors.Join(errs...); err != nil {
-		return nil, fmt.Errorf("oidc: %w", err)
-	}
-	return m, nil
+	return errs
 }
 
 func (m *Method) now() time.Time { return m.cfg.Clock().UTC() }
