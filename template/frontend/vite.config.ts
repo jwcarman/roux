@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig, type Plugin } from "vitest/config";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 
@@ -8,12 +8,34 @@ import react from "@vitejs/plugin-react";
 // browser sent them, which passkeys need: the server is started with PUBLIC_URL set to this address.
 const backend = "http://localhost:8080";
 
+// In `make dev` the page is the server's shell: roux fills in index.html (the app's name, the owner's
+// theme, the organization), as a deployment does, so the page Vite serves is the page users get.
+// `make dev` runs the server with FRONTEND_DIR=frontend for it. Vite then adds its own scripts.
+function serverShell(): Plugin {
+  return {
+    name: "server-shell",
+    apply: "serve",
+    transformIndexHtml: {
+      order: "pre",
+      async handler() {
+        const shell = await fetch(`${backend}/`, { headers: { accept: "text/html" } }).catch(() => undefined);
+        if (!shell?.ok) {
+          throw new Error(
+            `The server at ${backend} is not answering (make dev's air may still be building it, or a Go build failed: see the terminal). Reload once it is up.`,
+          );
+        }
+        return shell.text();
+      },
+    },
+  };
+}
+
 export default defineConfig({
   // The router plugin generates src/routeTree.gen.ts from src/routes/ and splits each route into its
   // own chunk; it must come before react(). Its settings are in tsr.config.json. Under Vitest it
   // leaves out its hot-reload code, which no test can reach, so a route file's coverage is its own
   // code.
-  plugins: [tanstackRouter({ codeSplittingOptions: { addHmr: !process.env.VITEST } }), react()],
+  plugins: [tanstackRouter({ codeSplittingOptions: { addHmr: !process.env.VITEST } }), react(), serverShell()],
   // Inside roux's own repository roux-web is a link to its source. Resolving through a link rather
   // than to its real path makes its imports of React and the other peers find this app's
   // node_modules, so there is one React; from npm it changes nothing. Vitest reads this too.

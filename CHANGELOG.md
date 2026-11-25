@@ -29,6 +29,12 @@ All notable changes to this project are documented in this file. The format foll
   and `make dev` fails. Before, `make dev` served a built front end at `:8080` and Go changes needed
   a restart, with `npm run dev` run beside it for pages. Vite now fails rather than take another
   port when 5173 is busy. `make up` is unchanged, the app as deployed at `:8080`.
+  The page Vite serves is the server's shell (`serverShell` in `vite.config.ts`, with the server's
+  `FRONTEND_DIR=frontend`): the app's name, theme and organization filled in as a deployment does.
+  Before, a page from Vite had them unfilled and asked the server for the organization, which
+  needs a sign-in, so a signed-out page under `npm run dev` stopped at "Sign in to continue". The
+  inline script in `index.html` carries the nonce placeholder itself (the build is unchanged), and
+  the dev server listens on `127.0.0.1` only.
 
 - **`make e2e` rebuilds the front end whenever it is out of date** (anything under `frontend/` newer
   than the last build; `npm ci` again when the lock changed), not only when there is no build:

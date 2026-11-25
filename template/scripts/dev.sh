@@ -17,6 +17,10 @@ export OWNER_NAME="${OWNER_NAME:-Owner}"
 export CODE_SECRET="${CODE_SECRET:-development-only-code-secret-do-not-deploy}"
 export DATABASE_URL="${DATABASE_URL:-postgres://app:app@localhost:5432/app}"
 export PUBLIC_URL="${PUBLIC_URL:-http://localhost:5173}"
+# The server fills in the source index.html; Vite asks it for the page (vite.config.ts, serverShell).
+# It listens on this machine only: people use Vite's address, and the source is not for the network.
+export FRONTEND_DIR=frontend
+export ADDR="${ADDR:-127.0.0.1:8080}"
 export LOG_FORMAT="${LOG_FORMAT:-text}"
 
 # Job control gives each process its own process group, so stopping one stops everything it started
