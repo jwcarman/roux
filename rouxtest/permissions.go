@@ -79,14 +79,17 @@ func CheckGrants(t T, db page.Querier, permissions ...string) {
 	t.Helper()
 	ctx := context.Background()
 	rows, err := db.Query(ctx, `
-		select r.name, rp.permission
+		select r.name as role, rp.permission
 		  from roux_role_permission rp join roux_role r on r.id = rp.role_id
 		 order by r.name, rp.permission`)
 	if err != nil {
 		t.Fatalf("rouxtest: reading the grants: %v", err)
 	}
-	type grant struct{ Role, Permission string }
-	grants, err := pgx.CollectRows(rows, pgx.RowToStructByPos[grant])
+	type grant struct {
+		Role       string `db:"role"`
+		Permission string `db:"permission"`
+	}
+	grants, err := pgx.CollectRows(rows, pgx.RowToStructByName[grant])
 	if err != nil {
 		t.Fatalf("rouxtest: reading the grants: %v", err)
 	}

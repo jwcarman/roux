@@ -17,9 +17,9 @@ const MustBeActiveMembers = "Must be active members of the team"
 // Member is someone a feature refers to (assigns work to, lists as attending): their name, and
 // whether they are still active, for a feature that keeps people who have since left.
 type Member struct {
-	ID     uuid.UUID `json:"id"`
-	Name   string    `json:"name"`
-	Active bool      `json:"active"`
+	ID     uuid.UUID `json:"id" db:"id"`
+	Name   string    `json:"name" db:"display_name"`
+	Active bool      `json:"active" db:"active"`
 }
 
 // MustBeActive refuses ids that are not active members of the team (unknown, or deactivated) as a
@@ -48,12 +48,12 @@ func MustBeActive(ctx context.Context, db page.Querier, field string, ids []uuid
 // left out.
 func Members(ctx context.Context, db page.Querier, ids []uuid.UUID) ([]Member, error) {
 	rows, err := db.Query(ctx, `
-		select u.id, u.display_name, i.status = 'ACTIVE'
+		select u.id, u.display_name, i.status = 'ACTIVE' as active
 		  from roux_user u join roux_identity i on i.id = u.id
 		 where u.id = any($1)
 		 order by lower(u.display_name), u.id`, ids)
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByPos[Member])
+	return pgx.CollectRows(rows, pgx.RowToStructByName[Member])
 }

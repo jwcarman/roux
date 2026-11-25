@@ -248,10 +248,10 @@ const NameTaken = "Another label has this name"
 
 // Label is a label as the API answers it.
 type Label struct {
-	ID      uuid.UUID `json:"id"`
-	Name    string    `json:"name"`
-	Colour  string    `json:"colour"`
-	Version int64     `json:"version"`
+	ID      uuid.UUID `json:"id" db:"id"`
+	Name    string    `json:"name" db:"name"`
+	Colour  string    `json:"colour" db:"colour"`
+	Version int64     `json:"version" db:"version"`
 }
 
 // Service is the labels' operations.
@@ -268,7 +268,7 @@ func (s Service) List(ctx context.Context) ([]Label, error) {
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByPos[Label])
+	return pgx.CollectRows(rows, pgx.RowToStructByName[Label])
 }
 
 // Get is one label.
@@ -277,7 +277,7 @@ func (s Service) Get(ctx context.Context, id uuid.UUID) (Label, error) {
 	if err != nil {
 		return Label{}, err
 	}
-	r, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Label])
+	r, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[Label])
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Label{}, notFound()
 	}
@@ -298,7 +298,7 @@ func (s Service) Create(ctx context.Context, caller *authn.Principal, in Input) 
 		if err != nil {
 			return err
 		}
-		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Label])
+		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[Label])
 		return err
 	})
 	return out, err
@@ -330,7 +330,7 @@ func (s Service) Update(ctx context.Context, caller *authn.Principal, id uuid.UU
 		if err != nil {
 			return err
 		}
-		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Label])
+		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[Label])
 		return err
 	})
 	return out, err
@@ -379,8 +379,9 @@ func uniqueName(ctx context.Context, tx pgx.Tx, name string, self uuid.UUID) err
 - **Time comes from the service's clock**, today from the organization's zone
   ([Dates and time](dates-and-time.md)). A change worth a history is recorded with
   `activity.Append` in the same transaction ([The activity log](activity-log.md)).
-- `pgx.RowToStructByPos[Label]` reads the columns in order into the struct's fields; the `columns`
-  constant keeps every query's list in that order.
+- `pgx.RowToStructByName[Label]` fills each field from the column its `db` tag names, so the order
+  of a query's columns does not matter; the `columns` constant lists every one, and a column
+  missing from either side fails the first query, which the tests run.
 
 ## The handlers
 

@@ -234,10 +234,10 @@ const NameTaken = "Another label has this name"
 
 // Label is a label as the API answers it.
 type Label struct {
-	ID      uuid.UUID `json:"id"`
-	Name    string    `json:"name"`
-	Colour  string    `json:"colour"`
-	Version int64     `json:"version"`
+	ID      uuid.UUID `json:"id" db:"id"`
+	Name    string    `json:"name" db:"name"`
+	Colour  string    `json:"colour" db:"colour"`
+	Version int64     `json:"version" db:"version"`
 }
 
 // Service is the labels' operations.
@@ -254,7 +254,7 @@ func (s Service) List(ctx context.Context) ([]Label, error) {
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByPos[Label])
+	return pgx.CollectRows(rows, pgx.RowToStructByName[Label])
 }
 
 // Get is one label.
@@ -263,7 +263,7 @@ func (s Service) Get(ctx context.Context, id uuid.UUID) (Label, error) {
 	if err != nil {
 		return Label{}, err
 	}
-	r, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Label])
+	r, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[Label])
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Label{}, notFound()
 	}
@@ -284,7 +284,7 @@ func (s Service) Create(ctx context.Context, caller *authn.Principal, in Input) 
 		if err != nil {
 			return err
 		}
-		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Label])
+		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[Label])
 		return err
 	})
 	return out, err
@@ -316,7 +316,7 @@ func (s Service) Update(ctx context.Context, caller *authn.Principal, id uuid.UU
 		if err != nil {
 			return err
 		}
-		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Label])
+		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[Label])
 		return err
 	})
 	return out, err
@@ -353,8 +353,8 @@ func uniqueName(ctx context.Context, tx pgx.Tx, name string, self uuid.UUID) err
 - A write is one `pgx.BeginFunc` (commits on nil, rolls back otherwise); `for update` holds the row
   while the edit is checked.
 - The version is compared **first**, before anything changes, and the update raises it.
-- `pgx.RowToStructByPos[Label]` reads columns in order into the struct's fields: keep `columns` and
-  the struct in the same order.
+- `pgx.RowToStructByName[Label]` fills each field from the column its `db` tag names; `columns`
+  lists every one. Order does not matter; a column missing from either fails the first query.
 - A missing row is `problem.NotFound(...)`; a clash on what the person typed is
   `problem.InvalidField(field, message)`. Anything else returned is a `500` that logs the cause.
 
@@ -898,8 +898,8 @@ answering a page, `pageQuery(...)` in the module, and `QueryTable` with its stat
 
 1. A **new** migration file: `alter table label add column ...` (a `not null` column on a table with
    rows needs a `default`).
-2. Go: the `body` member, `Input` field and its rule in `validate`; the `Label` field, `columns`, and
-   every `insert`/`update` (same order as the struct).
+2. Go: the `body` member, `Input` field and its rule in `validate`; the `Label` field with its `db`
+   tag, `columns`, and every `insert`/`update`.
 3. The browser: the interface, the schema rule, and both `defaultValues` in the dialog; the dialog's
    `form.AppField`.
 4. Tests: the server refusal for the new rule; the request body in the dialog test; every MSW

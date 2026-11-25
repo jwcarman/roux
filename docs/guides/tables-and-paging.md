@@ -787,9 +787,9 @@ A short list whose order is the point (the labels, in the order an item shows th
 ```go
 // slot is a label's place in the order.
 type slot struct {
-	ID       uuid.UUID
-	Name     string
-	Position int
+	ID       uuid.UUID `db:"id"`
+	Name     string    `db:"name"`
+	Position int       `db:"position"`
 }
 
 // move swaps a label with its neighbour: step is -1 (up) or 1 (down).
@@ -799,7 +799,7 @@ func (s Service) move(ctx context.Context, id uuid.UUID, step int) ([]Label, err
 		if err != nil {
 			return err
 		}
-		order, err := pgx.CollectRows(rows, pgx.RowToStructByPos[slot])
+		order, err := pgx.CollectRows(rows, pgx.RowToStructByName[slot])
 		if err != nil {
 			return err
 		}

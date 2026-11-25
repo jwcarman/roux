@@ -149,6 +149,9 @@ All notable changes to this project are documented in this file. The format foll
   there is no scan code to keep in step. A field without a tag, or a tag that is not a plain column
   name, makes `page.New` panic, naming the field and the tag to write. A value in another form
   than the database keeps it (a date as `2026-11-24`) is the view's work (`to_char`).
+- **Rows are read by name everywhere:** the feature recipe's `Label`, `users.Member` and the
+  guides' examples tag each field with its column and use `pgx.RowToStructByName`; no list of
+  columns has to match a struct's field order.
 - **Breaking: `list.Check` belongs in the list's test,** not in a module's `Start`; the test reaches
   the list through an `export_test.go`. Roux The Day's items module has no `Start` any more.
 - **The users list is a `page.New` list:** its sorts are logical names mapped to their SQL, and its
