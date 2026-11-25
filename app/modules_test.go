@@ -1,7 +1,9 @@
 package app_test
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -430,4 +432,49 @@ func TestARoutesPermissionMustBeOneSomeRoleHolds(t *testing.T) {
 	if err := app.Assemble(context.Background(), k, e, app.UsersFromEnv(e), routeModule{"users.read"}); err != nil {
 		t.Fatalf("a permission OWNER holds: %v", err)
 	}
+}
+
+// logged runs fn and returns what it logged.
+func logged(t *testing.T, fn func()) string {
+	t.Helper()
+	var buf bytes.Buffer
+	old := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(old) })
+	fn()
+	return buf.String()
+}
+
+func TestAWeakCodeSecretIsWarnedAbout(t *testing.T) {
+	// One character repeated, and 32 numerals (32 x log2(10) = 106 bits).
+	for _, weak := range []string{strings.Repeat("a", 40), "01234567890123456789012345678901"} {
+		t.Setenv("CODE_SECRET", weak)
+		t.Setenv("PUBLIC_URL", "")
+		out := logged(t, func() { _, _ = app.EmailLinkFromEnv("Acme", nil) })
+		if !strings.Contains(out, "CODE_SECRET is weak") || !strings.Contains(out, "openssl rand -base64 32") {
+			t.Errorf("%q: no warning in %q", weak, out)
+		}
+	}
+}
+
+func TestAStrongOrDevelopmentCodeSecretIsNotWarnedAbout(t *testing.T) {
+	for _, ok := range []string{secret, "Qm9vZ2llIHdvb2dpZSBib29naWUgd29vZ2llIQ==", "development-only-code-secret-do-not-deploy"} {
+		t.Setenv("CODE_SECRET", ok)
+		t.Setenv("PUBLIC_URL", "http://localhost:8080")
+		out := logged(t, func() {
+			if _, err := app.EmailLinkFromEnv("Acme", nil); err != nil {
+				t.Errorf("%q: %v", ok, err)
+			}
+		})
+		if strings.Contains(out, "weak") {
+			t.Errorf("%q: warned: %s", ok, out)
+		}
+	}
+}
+
+func TestTheDevelopmentCodeSecretIsRefusedForADeployment(t *testing.T) {
+	t.Setenv("CODE_SECRET", "development-only-code-secret-do-not-deploy")
+	t.Setenv("PUBLIC_URL", "https://team.example.com")
+	_, err := app.EmailLinkFromEnv("Acme", nil)
+	wantError(t, err, "development secret", "https://team.example.com", "openssl rand -base64 32")
 }

@@ -134,7 +134,8 @@ func (e *EmailLink) SignIn() authn.Method       { return e.Method }
 // EmailLinkFromEnv is the email module: sign-in by an emailed link or typed code, which every
 // other way in (passkeys, providers, API keys, bearer tokens) builds on. CODE_SECRET is required.
 //
-//	CODE_SECRET   at least 32 random characters (openssl rand -base64 32), the same on every instance
+//	CODE_SECRET   at least 32 random characters (openssl rand -base64 32), the same on every instance;
+//	              weaker than about 128 bits logs a warning, and make dev's secret is refused behind an https:// PUBLIC_URL
 //	PUBLIC_URL    where browsers reach the app (default http://localhost:8080); sign-in links point here
 //	SMTP_ADDR     host:port of the mail server (default localhost:1025, Mailpit)
 //	MAIL_FROM     the sender's address (default no-reply@localhost)
@@ -149,6 +150,9 @@ func EmailLinkFromEnv(appName string, emails fs.FS) (*EmailLink, error) {
 	if secret == "" {
 		return nil, errors.New("CODE_SECRET is required: the key that hashes sign-in codes, at least 32 random " +
 			"characters, the same on every instance (openssl rand -base64 32; make dev sets one for development)")
+	}
+	if err := checkCodeSecret(secret, publicURL()); err != nil {
+		return nil, err
 	}
 	resend, err := duration("EMAIL_RESEND_INTERVAL")
 	if err != nil {

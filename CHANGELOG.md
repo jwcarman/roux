@@ -107,6 +107,11 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- **`CODE_SECRET` is checked at startup.** A secret weaker than about 128 bits (its length times
+  log2 of the character kinds it uses) logs a warning naming `openssl rand -base64 32`. The
+  development secret `make dev` sets is not warned about, but the server refuses to start with it
+  when `PUBLIC_URL` starts with `https://`, a real deployment.
+
 - **The startup lines for sign-in with a provider and for bearer tokens, when off, say what the
   feature is and how to turn it on** (`OIDC_PROVIDERS_FILE`; `JWT_ISSUER` and `JWT_AUDIENCES`),
   not just which setting is missing.

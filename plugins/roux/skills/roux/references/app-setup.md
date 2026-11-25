@@ -63,7 +63,7 @@ with the front end inside; `make image` the container image.
 | `DATABASE_URL` | PostgreSQL; required |
 | `ADDR`, `PUBLIC_URL`, `COOKIE_SECURE` | where it listens (`:8080`), where browsers reach it (links point here; `https://` makes cookies Secure) |
 | `APP_NAME` | the app's name, instead of `DisplayName` |
-| `CODE_SECRET` | ≥ 32 random characters, the same on every instance; required |
+| `CODE_SECRET` | ≥ 32 random characters, the same on every instance; required. Under about 128 bits (length × log2 of the character kinds used) logs a WARN: make one with `openssl rand -base64 32`. `make dev`'s secret is refused when `PUBLIC_URL` starts with `https://` |
 | `SMTP_ADDR`, `MAIL_FROM`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_ALLOW_PLAINTEXT`, `EMAIL_RESEND_INTERVAL`, `EMAIL_TOKEN_TTL` | email (`email.md`) |
 | `OWNER_EMAIL`, `OWNER_NAME` | the first owner, both or neither; required until someone can manage the team |
 | `INVITABLE_ROLES` | roles invitations may give (default `USER`); never `OWNER` |
