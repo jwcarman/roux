@@ -8,10 +8,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// MethodAPIKey is how /who/me and Principal.Method spell a request an API key signed in.
+// MethodAPIKey is how /api/roux/auth/me and Principal.Method spell a request an API key signed in.
 const MethodAPIKey = "api-key"
 
-// MethodJWT is how /who/me and Principal.Method spell a request a bearer token signed in.
+// MethodJWT is how /api/roux/auth/me and Principal.Method spell a request a bearer token signed in.
 const MethodJWT = "jwt"
 
 // headerAuthenticator signs a request in by a header, with no session.

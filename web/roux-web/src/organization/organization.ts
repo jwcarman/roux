@@ -22,7 +22,7 @@ export interface OrganizationContext {
 }
 
 /** Where the server answers the context. */
-export const ORGANIZATION_PATH = "/api/organization";
+export const ORGANIZATION_PATH = "/api/roux/organization";
 
 /** What `index.html` holds in `#app-context` until a server fills it in: Vite's dev server serves it so. */
 export const CONTEXT_PLACEHOLDER = "__APP_CONTEXT__";

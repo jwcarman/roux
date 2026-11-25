@@ -2,7 +2,7 @@ import { Link, Text } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useSignInReturn } from "./returnTo";
-import { who } from "./who";
+import { auth } from "./auth";
 
 /**
  * The page an emailed sign-in link opens (who's `email-link.link-base-url`, such as `/signin/link`):
@@ -16,7 +16,7 @@ export function EmailLinkLanding({ signInPath = "/signin" }: { signInPath?: stri
   const redemption = useQuery({
     queryKey: ["roux", "emailLink"],
     queryFn: async () => {
-      const result = await who.email.signInFromLocation();
+      const result = await auth.email.signInFromLocation();
       return result !== null && result.ok;
     },
     retry: false,

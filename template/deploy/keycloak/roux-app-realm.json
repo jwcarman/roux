@@ -14,7 +14,7 @@
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
       "redirectUris": [
-        "http://localhost:8080/who/oidc/callback/keycloak"
+        "http://localhost:8080/api/roux/auth/oidc/callback/keycloak"
       ],
       "webOrigins": [
         "http://localhost:8080"

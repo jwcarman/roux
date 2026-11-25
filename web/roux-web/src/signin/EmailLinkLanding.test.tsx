@@ -31,7 +31,7 @@ describe("EmailLinkLanding", () => {
     rememberSignInReturn("/students");
     let posted = 0;
     server.use(
-      http.post("/who/email/sign-in", async ({ request }) => {
+      http.post("/api/roux/auth/email/sign-in", async ({ request }) => {
         posted++;
         expect(await request.json()).toEqual({ token: "abc" });
         return HttpResponse.json({ identityId: "id-1" });
@@ -47,7 +47,7 @@ describe("EmailLinkLanding", () => {
   it("redeems the link once even when React runs the effect twice", async () => {
     let posted = 0;
     server.use(
-      http.post("/who/email/sign-in", () => {
+      http.post("/api/roux/auth/email/sign-in", () => {
         posted++;
         return HttpResponse.json({ identityId: "id-1" });
       }),
@@ -68,7 +68,7 @@ describe("EmailLinkLanding", () => {
   });
 
   it("says the link is no good, and where to get another", async () => {
-    server.use(http.post("/who/email/sign-in", () => new HttpResponse(null, { status: 401 })));
+    server.use(http.post("/api/roux/auth/email/sign-in", () => new HttpResponse(null, { status: 401 })));
     renderWithProviders(<EmailLinkLanding />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -79,14 +79,14 @@ describe("EmailLinkLanding", () => {
   });
 
   it("sends the visitor back to the sign-in page the app names", async () => {
-    server.use(http.post("/who/email/sign-in", () => new HttpResponse(null, { status: 401 })));
+    server.use(http.post("/api/roux/auth/email/sign-in", () => new HttpResponse(null, { status: 401 })));
     renderWithProviders(<EmailLinkLanding signInPath="/login" />);
 
     expect(await screen.findByRole("link", { name: "Request a new one" })).toHaveAttribute("href", "/login");
   });
 
-  it("says it could not sign in, and where to try again, when who cannot be reached", async () => {
-    server.use(http.post("/who/email/sign-in", () => new HttpResponse(null, { status: 500 })));
+  it("says it could not sign in, and where to try again, when the server cannot be reached", async () => {
+    server.use(http.post("/api/roux/auth/email/sign-in", () => new HttpResponse(null, { status: 500 })));
     renderWithProviders(<EmailLinkLanding signInPath="/login" />);
 
     const alert = await screen.findByRole("alert");
@@ -95,8 +95,8 @@ describe("EmailLinkLanding", () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it("asks who once, under a key of roux's own", async () => {
-    server.use(http.post("/who/email/sign-in", () => HttpResponse.json({ identityId: "id-1" })));
+  it("asks the server once, under a key of roux's own", async () => {
+    server.use(http.post("/api/roux/auth/email/sign-in", () => HttpResponse.json({ identityId: "id-1" })));
     const { client } = renderWithProviders(<EmailLinkLanding />);
 
     await vi.waitFor(() => expect(replace).toHaveBeenCalled());

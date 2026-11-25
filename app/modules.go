@@ -237,7 +237,7 @@ func (o *OIDC) SignIn() authn.Method       { return o.Method }
 // identity becomes a user through the users module, in the transaction that creates it.
 //
 //	OIDC_PROVIDERS_FILE  a JSON list of providers (see oidc.ParseProviders); ${NAME} in it is an environment variable
-//	PUBLIC_URL           where browsers reach the app: each provider's callback is PUBLIC_URL/who/oidc/callback/{id}
+//	PUBLIC_URL           where browsers reach the app: each provider's callback is PUBLIC_URL/api/roux/auth/oidc/callback/{id}
 //	OIDC_SUCCESS_URL     where a sign-in lands (default /); OIDC_FAILURE_URL where failures and a pending
 //	                     sign-up land (default /signin); OIDC_LINK_URL where a requested link lands (default success)
 //	OIDC_SIGNUP_ROLE     the role a provider sign-up gets (default: the first of INVITABLE_ROLES)

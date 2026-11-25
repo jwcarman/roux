@@ -1,14 +1,14 @@
 // Package oidc is sign-in with a provider account: Google, GitHub or any OpenID Connect
 // provider (who-oidc). Endpoints under who's base path:
 //
-//	GET    /who/oidc/authorize/{id}     starts a sign-in: redirects to the provider
-//	GET    /who/oidc/callback/{id}      the provider's answer: signs in, or redirects with ?pending= / ?error=
-//	GET    /who/oidc/pending            the account waiting for the person to confirm
-//	POST   /who/oidc/pending/sign-up    confirms: creates the identity (if the policy allows) and signs in
-//	POST   /who/oidc/pending/link       confirms linking the account to the signed-in identity
-//	GET    /who/me/accounts             [{id, provider, linkedAt}], oldest first
-//	POST   /who/me/accounts/{id}        starts linking a provider account (recent sign-in)
-//	DELETE /who/me/accounts/{id}        unlinks (recent sign-in; never the last way in)
+//	GET    /api/roux/auth/oidc/authorize/{id}     starts a sign-in: redirects to the provider
+//	GET    /api/roux/auth/oidc/callback/{id}      the provider's answer: signs in, or redirects with ?pending= / ?error=
+//	GET    /api/roux/auth/oidc/pending            the account waiting for the person to confirm
+//	POST   /api/roux/auth/oidc/pending/sign-up    confirms: creates the identity (if the policy allows) and signs in
+//	POST   /api/roux/auth/oidc/pending/link       confirms linking the account to the signed-in identity
+//	GET    /api/roux/auth/me/accounts             [{id, provider, linkedAt}], oldest first
+//	POST   /api/roux/auth/me/accounts/{id}        starts linking a provider account (recent sign-in)
+//	DELETE /api/roux/auth/me/accounts/{id}        unlinks (recent sign-in; never the last way in)
 //
 // What it will not do, and no setting changes it: sign in, link or match by email address
 // (an account is (issuer, subject)); trust the issuer a token names for itself; create an
@@ -46,7 +46,7 @@ var migrations embed.FS
 // Migration is the provider-account schema; it runs after who's.
 var Migration = pgdb.Migration{Name: "roux-authn-oidc", FS: migrations, Dir: "migrations", After: []string{"roux-authn"}}
 
-// methodName is how /who/me reports a session that signed in with a provider.
+// methodName is how /api/roux/auth/me reports a session that signed in with a provider.
 const methodName = "oidc"
 
 // SignUpRequest is an account that is not known, asking to become an identity.
@@ -175,7 +175,7 @@ func New(cfg Config) (*Method, error) {
 
 func (m *Method) now() time.Time { return m.cfg.Clock().UTC() }
 
-// Contribute adds the providers to GET /who/sign-in.
+// Contribute adds the providers to GET /api/roux/auth/sign-in.
 func (m *Method) Contribute(o *authn.SignInOptions) {
 	for _, id := range m.order {
 		o.Providers = append(o.Providers, authn.Provider{ID: id, Name: m.providers[id].p.Name})

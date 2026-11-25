@@ -68,7 +68,7 @@ func code(t *testing.T, r authntest.Reply) string { t.Helper(); return r.JSON(t)
 // make creates a key as the owner and returns its id and secret.
 func (e *env) make(name string, lifetime string, scopes ...string) (id, key string) {
 	e.t.Helper()
-	r := e.ada.Post("/who/me/api-keys", map[string]any{"name": name, "lifetime": lifetime, "scopes": scopes})
+	r := e.ada.Post("/api/roux/auth/me/api-keys", map[string]any{"name": name, "lifetime": lifetime, "scopes": scopes})
 	if r.StatusCode != 201 {
 		e.t.Fatalf("make %q: %d %s", name, r.StatusCode, r.Body)
 	}
@@ -87,7 +87,7 @@ func (e *env) count(query string, args ...any) int {
 
 func TestMakingAKey(t *testing.T) {
 	e := setup(t)
-	r := e.ada.Post("/who/me/api-keys", map[string]any{"name": "  Nightly export ", "lifetime": "P90D", "scopes": []string{"report.write", "report.read", "report.read"}})
+	r := e.ada.Post("/api/roux/auth/me/api-keys", map[string]any{"name": "  Nightly export ", "lifetime": "P90D", "scopes": []string{"report.write", "report.read", "report.read"}})
 	b := r.JSON(t)
 	if r.StatusCode != 201 || b["name"] != "Nightly export" || !keyPattern.MatchString(b["key"].(string)) ||
 		len(b) != 5 || b["id"] == nil {
@@ -110,14 +110,14 @@ func TestMakingAKey(t *testing.T) {
 
 func TestListingKeys(t *testing.T) {
 	e := setup(t)
-	r := e.ada.Get("/who/me/api-keys")
+	r := e.ada.Get("/api/roux/auth/me/api-keys")
 	if r.StatusCode != 200 || string(r.Body) != "[]\n" {
 		t.Fatalf("no keys: %d %q", r.StatusCode, r.Body)
 	}
 	id2, key2 := e.make("b-second", "P30D", "report.read")
 	e.make("a-first", "P10D", "report.read", "report.write")
 	var list []map[string]any
-	e.ada.Get("/who/me/api-keys").Decode(t, &list)
+	e.ada.Get("/api/roux/auth/me/api-keys").Decode(t, &list)
 	if len(list) != 2 || list[0]["name"] != "a-first" || list[1]["id"] != id2 {
 		t.Fatalf("by name: %v", list)
 	}
@@ -126,13 +126,13 @@ func TestListingKeys(t *testing.T) {
 		t.Fatalf("shape: %v", first)
 	}
 	for _, k := range list {
-		if strings.Contains(string(e.ada.Get("/who/me/api-keys").Body), key2) || k["key"] != nil {
+		if strings.Contains(string(e.ada.Get("/api/roux/auth/me/api-keys").Body), key2) || k["key"] != nil {
 			t.Fatal("the list shows a secret")
 		}
 	}
 	// Someone else's keys are not listed.
 	other := e.SignedIn(e.Identity("report.read"))
-	if r := other.Get("/who/me/api-keys"); string(r.Body) != "[]\n" {
+	if r := other.Get("/api/roux/auth/me/api-keys"); string(r.Body) != "[]\n" {
 		t.Fatalf("another identity's list: %s", r.Body)
 	}
 }
@@ -162,9 +162,9 @@ func TestAKeySignsARequestIn(t *testing.T) {
 	if r := e.Browser().DoWith("GET", "/api/whoami", map[string]string{"x-api-key": key}); r.StatusCode != 200 {
 		t.Fatalf("lower-case header: %d", r.StatusCode)
 	}
-	// It signs in /who/me too, as a key.
-	if r := e.call("GET", "/who/me", key); r.StatusCode != 200 || r.JSON(t)["signInMethod"] != "api-key" {
-		t.Fatalf("/who/me: %d %s", r.StatusCode, r.Body)
+	// It signs in /api/roux/auth/me too, as a key.
+	if r := e.call("GET", "/api/roux/auth/me", key); r.StatusCode != 200 || r.JSON(t)["signInMethod"] != "api-key" {
+		t.Fatalf("/api/roux/auth/me: %d %s", r.StatusCode, r.Body)
 	}
 }
 
@@ -211,7 +211,7 @@ func TestAKeyThatIsNotRightIsRefusedAtOnce(t *testing.T) {
 	}
 	// Revoked, expired and inactive-owner keys are each refused.
 	revoked, revokedKey := e.make("old", "P30D", "report.read")
-	if r := e.ada.Delete("/who/me/api-keys/" + revoked); r.StatusCode != 204 {
+	if r := e.ada.Delete("/api/roux/auth/me/api-keys/" + revoked); r.StatusCode != 204 {
 		t.Fatal(r.StatusCode)
 	}
 	_, shortKey := e.make("short", "PT1H", "report.read")
@@ -282,8 +282,8 @@ func TestAKeyNeverManagesKeys(t *testing.T) {
 	e := setup(t)
 	id, key := e.make("ci", "P30D", "report.read")
 	for _, c := range []struct{ method, path string }{
-		{"GET", "/who/me/api-keys"}, {"POST", "/who/me/api-keys"},
-		{"POST", "/who/me/api-keys/" + id + "/rotations"}, {"DELETE", "/who/me/api-keys/" + id},
+		{"GET", "/api/roux/auth/me/api-keys"}, {"POST", "/api/roux/auth/me/api-keys"},
+		{"POST", "/api/roux/auth/me/api-keys/" + id + "/rotations"}, {"DELETE", "/api/roux/auth/me/api-keys/" + id},
 	} {
 		r := e.call(c.method, c.path, key)
 		if r.StatusCode != 403 || code(t, r) != "api-key-cannot-manage-keys" {
@@ -293,36 +293,36 @@ func TestAKeyNeverManagesKeys(t *testing.T) {
 	if e.count(`select count(*) from roux_api_key`) != 1 {
 		t.Fatal("a key managed keys")
 	}
-	// Nor anything else under /who/me/* that only a person at a browser may do.
-	for _, path := range []string{"/who/me/sessions"} {
+	// Nor anything else under /api/roux/auth/me/* that only a person at a browser may do.
+	for _, path := range []string{"/api/roux/auth/me/sessions"} {
 		if r := e.call("GET", path, key); r.StatusCode != 403 || code(t, r) != "browser-session-required" {
 			t.Errorf("%s: %d %s", path, r.StatusCode, r.Body)
 		}
 	}
 	// A key beside a session cookie is refused too: send the cookie alone.
-	for _, path := range []string{"/who/me/api-keys", "/who/me/sessions"} {
+	for _, path := range []string{"/api/roux/auth/me/api-keys", "/api/roux/auth/me/sessions"} {
 		if r := e.ada.DoWith("GET", path, withKey(key)); r.StatusCode != 403 || code(t, r) != "browser-session-required" {
 			t.Errorf("%s with a key beside the cookie: %d %s", path, r.StatusCode, r.Body)
 		}
 	}
 	// The one thing a key may do is read itself.
-	r := e.call("GET", "/who/me/api-keys/current", key)
+	r := e.call("GET", "/api/roux/auth/me/api-keys/current", key)
 	b := r.JSON(t)
 	if r.StatusCode != 200 || b["id"] != id || b["name"] != "ci" || b["key"] != nil || b["lastUsedAt"] == nil {
 		t.Fatalf("current: %d %s", r.StatusCode, r.Body)
 	}
 	// Without a key it is 404, signed out 401.
-	if r := e.ada.Get("/who/me/api-keys/current"); r.StatusCode != 404 || code(t, r) != "api-key-not-found" {
+	if r := e.ada.Get("/api/roux/auth/me/api-keys/current"); r.StatusCode != 404 || code(t, r) != "api-key-not-found" {
 		t.Fatalf("a session: %d %s", r.StatusCode, r.Body)
 	}
-	if r := e.Browser().Get("/who/me/api-keys/current"); r.StatusCode != 401 || code(t, r) != "not-signed-in" {
+	if r := e.Browser().Get("/api/roux/auth/me/api-keys/current"); r.StatusCode != 401 || code(t, r) != "not-signed-in" {
 		t.Fatalf("signed out: %d", r.StatusCode)
 	}
 }
 
 func TestMakingAKeyIsChecked(t *testing.T) {
 	e := setup(t, func(c *apikey.Config) { c.MaxLifetime = 30 * 24 * time.Hour })
-	post := func(body any) authntest.Reply { return e.ada.Post("/who/me/api-keys", body) }
+	post := func(body any) authntest.Reply { return e.ada.Post("/api/roux/auth/me/api-keys", body) }
 	ok := func() map[string]any {
 		return map[string]any{"name": "ci", "lifetime": "P10D", "scopes": []string{"report.read"}}
 	}
@@ -374,22 +374,22 @@ func TestMakingOrRotatingNeedsASessionThatIsRecent(t *testing.T) {
 	e.Clock.Advance(11 * time.Minute)
 	// Checked before the body is looked at, so even garbage gets the sign-in message first.
 	for _, c := range []struct{ method, path string }{
-		{"POST", "/who/me/api-keys"}, {"POST", "/who/me/api-keys/" + id + "/rotations"},
+		{"POST", "/api/roux/auth/me/api-keys"}, {"POST", "/api/roux/auth/me/api-keys/" + id + "/rotations"},
 	} {
 		if r := e.ada.Do(c.method, c.path, "garbage", true); r.StatusCode != 401 || code(t, r) != "reauthentication-required" {
 			t.Errorf("%s %s: %d %s", c.method, c.path, r.StatusCode, r.Body)
 		}
 	}
 	// Listing and revoking need no recent sign-in; signed out is 401 everywhere.
-	if r := e.ada.Get("/who/me/api-keys"); r.StatusCode != 200 {
+	if r := e.ada.Get("/api/roux/auth/me/api-keys"); r.StatusCode != 200 {
 		t.Fatalf("list: %d", r.StatusCode)
 	}
-	if r := e.ada.Delete("/who/me/api-keys/" + id); r.StatusCode != 204 {
+	if r := e.ada.Delete("/api/roux/auth/me/api-keys/" + id); r.StatusCode != 204 {
 		t.Fatalf("revoke: %d", r.StatusCode)
 	}
 	out := e.Browser()
 	for _, c := range []struct{ method, path string }{
-		{"GET", "/who/me/api-keys"}, {"POST", "/who/me/api-keys"}, {"POST", "/who/me/api-keys/" + id + "/rotations"}, {"DELETE", "/who/me/api-keys/" + id},
+		{"GET", "/api/roux/auth/me/api-keys"}, {"POST", "/api/roux/auth/me/api-keys"}, {"POST", "/api/roux/auth/me/api-keys/" + id + "/rotations"}, {"DELETE", "/api/roux/auth/me/api-keys/" + id},
 	} {
 		if r := out.Do(c.method, c.path, nil, true); r.StatusCode != 401 || code(t, r) != "not-signed-in" {
 			t.Errorf("%s %s signed out: %d", c.method, c.path, r.StatusCode)
@@ -400,11 +400,11 @@ func TestMakingOrRotatingNeedsASessionThatIsRecent(t *testing.T) {
 func TestRotatingAKey(t *testing.T) {
 	e := setup(t)
 	oldID, oldKey := e.make("ci", "P10D", "report.read", "report.write")
-	e.Clock.Advance(2 * 24 * time.Hour) // 8 days of the old key's life are left
-	e.ada.Post("/who/sign-in", nil)     // keep the session recent: sign in again below
+	e.Clock.Advance(2 * 24 * time.Hour)       // 8 days of the old key's life are left
+	e.ada.Post("/api/roux/auth/sign-in", nil) // keep the session recent: sign in again below
 	e.ada = e.SignedIn(e.owner)
 
-	r := e.ada.Post("/who/me/api-keys/"+oldID+"/rotations", map[string]string{"overlap": "PT1H"})
+	r := e.ada.Post("/api/roux/auth/me/api-keys/"+oldID+"/rotations", map[string]string{"overlap": "PT1H"})
 	b := r.JSON(t)
 	if r.StatusCode != 201 || b["name"] != "ci" || b["id"] == oldID || !keyPattern.MatchString(b["key"].(string)) || len(b) != 5 {
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
@@ -435,7 +435,7 @@ func TestRotatingAKey(t *testing.T) {
 func TestRotationOverlapAndLimits(t *testing.T) {
 	e := setup(t, func(c *apikey.Config) { c.MaxLifetime = 20 * 24 * time.Hour })
 	rotate := func(id string, body any) authntest.Reply {
-		return e.ada.Post("/who/me/api-keys/"+id+"/rotations", body)
+		return e.ada.Post("/api/roux/auth/me/api-keys/"+id+"/rotations", body)
 	}
 	id, key := e.make("ci", "P5D", "report.read")
 
@@ -455,7 +455,7 @@ func TestRotationOverlapAndLimits(t *testing.T) {
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
 	}
 	var list []map[string]any
-	e.ada.Get("/who/me/api-keys").Decode(t, &list)
+	e.ada.Get("/api/roux/auth/me/api-keys").Decode(t, &list)
 	for _, k := range list {
 		if k["id"] == id2 && k["expiresAt"] != e.Clock.Now().Add(5*24*time.Hour).Format(time.RFC3339Nano) {
 			t.Fatalf("an overlap past the old expiry changed it: %v", k["expiresAt"])
@@ -488,7 +488,7 @@ func TestRotationOverlapAndLimits(t *testing.T) {
 	}
 	e2.Clock.Advance(time.Hour)
 	e2.ada = e2.SignedIn(e2.owner)
-	b := e2.ada.Post("/who/me/api-keys/"+long+"/rotations", map[string]string{"overlap": "PT1H"}).JSON(t)
+	b := e2.ada.Post("/api/roux/auth/me/api-keys/"+long+"/rotations", map[string]string{"overlap": "PT1H"}).JSON(t)
 	if want := e2.Clock.Now().Add(30 * 24 * time.Hour).Format(time.RFC3339Nano); b["expiresAt"] != want {
 		t.Fatalf("%v, want %v", b["expiresAt"], want)
 	}
@@ -499,10 +499,10 @@ func TestOnlyTheOwnerManagesAKey(t *testing.T) {
 	id, key := e.make("ci", "P30D", "report.read")
 	bob := e.SignedIn(e.Identity("report.read"))
 	for name, path := range map[string]string{"another identity's": id, "unknown": uuid.NewString(), "garbage": "nope"} {
-		if r := bob.Post("/who/me/api-keys/"+path+"/rotations", map[string]string{"overlap": "PT1H"}); r.StatusCode != 404 || code(t, r) != "api-key-not-found" {
+		if r := bob.Post("/api/roux/auth/me/api-keys/"+path+"/rotations", map[string]string{"overlap": "PT1H"}); r.StatusCode != 404 || code(t, r) != "api-key-not-found" {
 			t.Errorf("rotate %s: %d %s", name, r.StatusCode, r.Body)
 		}
-		if r := bob.Delete("/who/me/api-keys/" + path); r.StatusCode != 404 || code(t, r) != "api-key-not-found" {
+		if r := bob.Delete("/api/roux/auth/me/api-keys/" + path); r.StatusCode != 404 || code(t, r) != "api-key-not-found" {
 			t.Errorf("revoke %s: %d %s", name, r.StatusCode, r.Body)
 		}
 	}
@@ -518,7 +518,7 @@ func TestRevokingAKey(t *testing.T) {
 	if e.call("GET", "/api/whoami", key).StatusCode != 200 {
 		t.Fatal("the key should work first")
 	}
-	if r := e.ada.Delete("/who/me/api-keys/" + id); r.StatusCode != 204 || len(r.Body) != 0 {
+	if r := e.ada.Delete("/api/roux/auth/me/api-keys/" + id); r.StatusCode != 204 || len(r.Body) != 0 {
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
 	}
 	if e.call("GET", "/api/whoami", key).StatusCode != 401 {
@@ -527,7 +527,7 @@ func TestRevokingAKey(t *testing.T) {
 	if e.call("GET", "/api/whoami", keep).StatusCode != 200 {
 		t.Fatal("revoking one key ended another")
 	}
-	if r := e.ada.Delete("/who/me/api-keys/" + id); r.StatusCode != 404 {
+	if r := e.ada.Delete("/api/roux/auth/me/api-keys/" + id); r.StatusCode != 404 {
 		t.Fatalf("revoking twice: %d", r.StatusCode)
 	}
 }
@@ -561,7 +561,7 @@ func TestLastUsedIsWrittenOncePerInterval(t *testing.T) {
 		t.Fatalf("a use after the interval did not write: %v", got)
 	}
 	var list []map[string]any
-	e.ada.Get("/who/me/api-keys").Decode(t, &list)
+	e.ada.Get("/api/roux/auth/me/api-keys").Decode(t, &list)
 	if list[0]["lastUsedAt"] == nil {
 		t.Fatal("the list does not show the last use")
 	}
@@ -610,7 +610,7 @@ func TestTheConfigurationIsChecked(t *testing.T) {
 func (e *env) unknownKey() string {
 	e.t.Helper()
 	id, key := e.make("gone", "P1D", "report.read")
-	if r := e.ada.Delete("/who/me/api-keys/" + id); r.StatusCode != 204 {
+	if r := e.ada.Delete("/api/roux/auth/me/api-keys/" + id); r.StatusCode != 204 {
 		e.t.Fatal(r.StatusCode)
 	}
 	return key

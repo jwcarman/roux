@@ -14,12 +14,12 @@ import (
 
 // What OWNER holds in this environment: who's identity permissions and users.*
 // (the theme's migration is not part of it).
-const ownerPermissions = "users.invite users.manage users.owners users.read who.identities.manage who.identities.read"
+const ownerPermissions = "roux.admin users.invite users.manage users.owners users.read"
 
 func permissionsOf(t *testing.T, b *authntest.Browser) string {
 	t.Helper()
 	var out []string
-	for _, p := range b.Get("/who/me").JSON(t)["permissions"].([]any) {
+	for _, p := range b.Get("/api/roux/auth/me").JSON(t)["permissions"].([]any) {
 		out = append(out, p.(string))
 	}
 	return strings.Join(out, " ")
@@ -27,7 +27,7 @@ func permissionsOf(t *testing.T, b *authntest.Browser) string {
 
 func detailAt(t *testing.T, b *authntest.Browser, id uuid.UUID) map[string]any {
 	t.Helper()
-	r := b.Get("/api/users/" + id.String())
+	r := b.Get("/api/roux/users/" + id.String())
 	if r.StatusCode != 200 {
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
 	}
@@ -37,7 +37,7 @@ func detailAt(t *testing.T, b *authntest.Browser, id uuid.UUID) map[string]any {
 func descriptions(t *testing.T, b *authntest.Browser, id uuid.UUID) []string {
 	t.Helper()
 	var out []string
-	for _, e := range decodePage(t, b.Get("/api/users/"+id.String()+"/activities")).Data {
+	for _, e := range decodePage(t, b.Get("/api/roux/users/"+id.String()+"/activities")).Data {
 		out = append(out, e["description"].(string))
 	}
 	return out
@@ -47,7 +47,7 @@ func TestRenamingSomeone(t *testing.T) {
 	f := setup(t)
 	ada := f.person("Ada Lovelace", "ada@example.test", "USER")
 	owner := f.SignedIn(f.owner)
-	path := "/api/users/" + ada.String() + "/name"
+	path := "/api/roux/users/" + ada.String() + "/name"
 
 	r := owner.Put(path, map[string]any{"displayName": " Ada King ", "version": 0})
 	if d := r.JSON(t); r.StatusCode != 200 || d["displayName"] != "Ada King" || d["version"] != float64(1) || d["email"] != "ada@example.test" {
@@ -62,7 +62,7 @@ func TestRenamingSomeone(t *testing.T) {
 	if got := errorsOf(t, owner.Put(path, map[string]any{"displayName": "", "version": 1})); got["displayName"] != "Must not be blank" {
 		t.Fatalf("blank: %v", got)
 	}
-	if r := owner.Put("/api/users/"+uuid.NewString()+"/name", map[string]any{"displayName": "X", "version": 0}); r.StatusCode != 404 {
+	if r := owner.Put("/api/roux/users/"+uuid.NewString()+"/name", map[string]any{"displayName": "X", "version": 0}); r.StatusCode != 404 {
 		t.Fatalf("unknown: %d", r.StatusCode)
 	}
 }
@@ -71,8 +71,8 @@ func TestOnlyOneOfTwoRenamesFromTheSameVersionWins(t *testing.T) {
 	f := setup(t)
 	ada := f.person("Ada", "ada@example.test", "USER")
 	a, b := f.SignedIn(f.owner), f.SignedIn(f.manager("Hr", "hr@example.test"))
-	a.Get("/api/users/me")
-	b.Get("/api/users/me")
+	a.Get("/api/roux/users/me")
+	b.Get("/api/roux/users/me")
 	statuses := make(chan int, 2)
 	var wg, start sync.WaitGroup
 	start.Add(1)
@@ -81,7 +81,7 @@ func TestOnlyOneOfTwoRenamesFromTheSameVersionWins(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			start.Wait()
-			statuses <- br.Put("/api/users/"+ada.String()+"/name", map[string]any{"displayName": "Name " + string(rune('A'+i)), "version": 0}).StatusCode
+			statuses <- br.Put("/api/roux/users/"+ada.String()+"/name", map[string]any{"displayName": "Name " + string(rune('A'+i)), "version": 0}).StatusCode
 		}()
 	}
 	start.Done()
@@ -108,7 +108,7 @@ func TestChangingARole(t *testing.T) {
 	f := setup(t)
 	ada := f.person("Ada", "ada@example.test", "USER")
 	owner := f.SignedIn(f.owner)
-	path := "/api/users/" + ada.String() + "/role"
+	path := "/api/roux/users/" + ada.String() + "/role"
 
 	r := owner.Put(path, map[string]string{"role": "COACH"})
 	if d := r.JSON(t); r.StatusCode != 200 || d["role"] != "COACH" {
@@ -133,7 +133,7 @@ func TestChangingARole(t *testing.T) {
 	if got := errorsOf(t, owner.Put(path, map[string]string{})); got["role"] != "Must not be blank" {
 		t.Fatalf("blank: %v", got)
 	}
-	if r := owner.Put("/api/users/"+uuid.NewString()+"/role", map[string]string{"role": "COACH"}); r.StatusCode != 404 {
+	if r := owner.Put("/api/roux/users/"+uuid.NewString()+"/role", map[string]string{"role": "COACH"}); r.StatusCode != 404 {
 		t.Fatalf("unknown: %d", r.StatusCode)
 	}
 }
@@ -142,11 +142,11 @@ func TestMakingAnOwnerNeedsAFreshSignIn(t *testing.T) {
 	f := setup(t)
 	ada := f.person("Ada", "ada@example.test", "USER")
 	owner := f.SignedIn(f.owner)
-	path := "/api/users/" + ada.String() + "/owner"
+	path := "/api/roux/users/" + ada.String() + "/owner"
 
 	f.Clock.Advance(11 * time.Minute) // still signed in (30 minutes idle), no longer recently
 	r := owner.Post(path, nil)
-	if body := r.JSON(t); r.StatusCode != 401 || body["type"] != "urn:who:error:reauthentication-required" || body["detail"] != "Sign in again to continue" {
+	if body := r.JSON(t); r.StatusCode != 401 || body["type"] != "urn:roux:error:reauthentication-required" || body["detail"] != "Sign in again to continue" {
 		t.Fatalf("stale sign-in: %d %s", r.StatusCode, r.Body)
 	}
 	if detailAt(t, owner, ada)["role"] != "USER" {
@@ -171,13 +171,13 @@ func TestDeactivatingAndReactivating(t *testing.T) {
 	ada := f.person("Ada", "ada@example.test", "USER")
 	owner := f.SignedIn(f.owner)
 	adaBrowser := f.SignedIn(ada)
-	if adaBrowser.Get("/api/users/me").StatusCode != 200 {
+	if adaBrowser.Get("/api/roux/users/me").StatusCode != 200 {
 		t.Fatal("Ada is not signed in")
 	}
-	path := "/api/users/" + ada.String()
+	path := "/api/roux/users/" + ada.String()
 
 	// You cannot deactivate yourself.
-	r := owner.Post("/api/users/"+f.owner.String()+"/deactivate", nil)
+	r := owner.Post("/api/roux/users/"+f.owner.String()+"/deactivate", nil)
 	if r.StatusCode != 400 || r.JSON(t)["detail"] != "You cannot deactivate yourself" {
 		t.Fatalf("self: %d %s", r.StatusCode, r.Body)
 	}
@@ -190,13 +190,13 @@ func TestDeactivatingAndReactivating(t *testing.T) {
 		t.Fatalf("again: %d %s", r.StatusCode, r.Body)
 	}
 	// Her session ends with her next request, and she is out of the default list.
-	if r := adaBrowser.Get("/api/users/me"); r.StatusCode != 401 {
+	if r := adaBrowser.Get("/api/roux/users/me"); r.StatusCode != 401 {
 		t.Fatalf("a deactivated user's session still works: %d", r.StatusCode)
 	}
-	if got := decodePage(t, owner.Get("/api/users?search=ada")).names(); len(got) != 0 {
+	if got := decodePage(t, owner.Get("/api/roux/users?search=ada")).names(); len(got) != 0 {
 		t.Fatalf("still listed: %v", got)
 	}
-	if got := decodePage(t, owner.Get("/api/users?search=ada&status=DEACTIVATED")).names(); len(got) != 1 {
+	if got := decodePage(t, owner.Get("/api/roux/users?search=ada&status=DEACTIVATED")).names(); len(got) != 1 {
 		t.Fatalf("not in the deactivated list: %v", got)
 	}
 
@@ -208,7 +208,7 @@ func TestDeactivatingAndReactivating(t *testing.T) {
 		t.Fatalf("again: %d %s", r.StatusCode, r.Body)
 	}
 	// Reactivating does not revive the session that ended.
-	if adaBrowser.Get("/api/users/me").StatusCode != 401 {
+	if adaBrowser.Get("/api/roux/users/me").StatusCode != 401 {
 		t.Fatal("the dead session came back to life")
 	}
 	// The history, newest first, with who did each.
@@ -219,7 +219,7 @@ func TestDeactivatingAndReactivating(t *testing.T) {
 	if first := decodePage(t, owner.Get(path+"/activities")).Data[0]; first["actorName"] != "Olive Owner" {
 		t.Fatalf("actor: %v", first)
 	}
-	if r := owner.Post("/api/users/"+uuid.NewString()+"/deactivate", nil); r.StatusCode != 404 {
+	if r := owner.Post("/api/roux/users/"+uuid.NewString()+"/deactivate", nil); r.StatusCode != 404 {
 		t.Fatalf("unknown: %d", r.StatusCode)
 	}
 }
@@ -230,18 +230,18 @@ func TestSigningSomeoneOutEverywhere(t *testing.T) {
 	phone, laptop := f.SignedIn(ada), f.SignedIn(ada)
 	owner := f.SignedIn(f.owner)
 
-	if r := owner.Post("/api/users/"+ada.String()+"/sign-out", nil); r.StatusCode != 204 || len(r.Body) != 0 {
+	if r := owner.Post("/api/roux/users/"+ada.String()+"/sign-out", nil); r.StatusCode != 204 || len(r.Body) != 0 {
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
 	}
 	for name, b := range map[string]*authntest.Browser{"phone": phone, "laptop": laptop} {
-		if b.Get("/api/users/me").StatusCode != 401 {
+		if b.Get("/api/roux/users/me").StatusCode != 401 {
 			t.Errorf("%s is still signed in", name)
 		}
 	}
-	if owner.Get("/api/users/me").StatusCode != 200 {
+	if owner.Get("/api/roux/users/me").StatusCode != 200 {
 		t.Fatal("someone else's session ended")
 	}
-	if r := owner.Post("/api/users/"+uuid.NewString()+"/sign-out", nil); r.StatusCode != 404 {
+	if r := owner.Post("/api/roux/users/"+uuid.NewString()+"/sign-out", nil); r.StatusCode != 404 {
 		t.Fatalf("unknown: %d", r.StatusCode)
 	}
 }
@@ -249,7 +249,7 @@ func TestSigningSomeoneOutEverywhere(t *testing.T) {
 func TestTheLastAdministratorStays(t *testing.T) {
 	f := setup(t)
 	hr := f.SignedIn(f.manager("Hr", "hr@example.test")) // may manage users, is not an administrator
-	path := "/api/users/" + f.owner.String()
+	path := "/api/roux/users/" + f.owner.String()
 
 	// Deactivating the only administrator, or taking their role away, is refused with who's last-admin.
 	for name, r := range map[string]authntest.Reply{
@@ -257,7 +257,7 @@ func TestTheLastAdministratorStays(t *testing.T) {
 		"demote":     hr.Put(path+"/role", map[string]string{"role": "USER"}),
 	} {
 		body := r.JSON(t)
-		if r.StatusCode != 409 || body["type"] != "urn:who:error:last-admin" || body["code"] != "last-admin" ||
+		if r.StatusCode != 409 || body["type"] != "urn:roux:error:last-admin" || body["code"] != "last-admin" ||
 			body["detail"] != "The team needs someone active who can manage people" {
 			t.Errorf("%s: %d %s", name, r.StatusCode, r.Body)
 		}
@@ -272,7 +272,7 @@ func TestTheLastAdministratorStays(t *testing.T) {
 
 	// With a second administrator, the first can go.
 	second := f.person("Second Owner", "second@example.test", "")
-	if r := f.SignedIn(f.owner).Post("/api/users/"+second.String()+"/owner", nil); r.StatusCode != 200 {
+	if r := f.SignedIn(f.owner).Post("/api/roux/users/"+second.String()+"/owner", nil); r.StatusCode != 200 {
 		t.Fatalf("second owner: %d %s", r.StatusCode, r.Body)
 	}
 	if r := hr.Post(path+"/deactivate", nil); r.StatusCode != 200 {
@@ -283,13 +283,13 @@ func TestTheLastAdministratorStays(t *testing.T) {
 func TestTwoAtOnceCannotRemoveEveryAdministrator(t *testing.T) {
 	f := setup(t)
 	second := f.person("Second Owner", "second@example.test", "")
-	if r := f.SignedIn(f.owner).Post("/api/users/"+second.String()+"/owner", nil); r.StatusCode != 200 {
+	if r := f.SignedIn(f.owner).Post("/api/roux/users/"+second.String()+"/owner", nil); r.StatusCode != 200 {
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
 	}
 	hrOne := f.SignedIn(f.manager("Hr One", "hr1@example.test"))
 	hrTwo := f.SignedIn(f.manager("Hr Two", "hr2@example.test"))
-	hrOne.Get("/api/users/me")
-	hrTwo.Get("/api/users/me")
+	hrOne.Get("/api/roux/users/me")
+	hrTwo.Get("/api/roux/users/me")
 
 	for round := 0; round < 6; round++ {
 		var wg, start sync.WaitGroup
@@ -303,7 +303,7 @@ func TestTwoAtOnceCannotRemoveEveryAdministrator(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				start.Wait()
-				statuses <- c.b.Post("/api/users/"+c.target.String()+"/deactivate", nil).StatusCode
+				statuses <- c.b.Post("/api/roux/users/"+c.target.String()+"/deactivate", nil).StatusCode
 			}()
 		}
 		start.Done()
@@ -323,7 +323,7 @@ func TestTwoAtOnceCannotRemoveEveryAdministrator(t *testing.T) {
 		}
 		if n := f.count(`select count(*) from roux_user_directory u join roux_identity_role ir on ir.identity_id = u.id
 		                   join roux_role_permission rp on rp.role_id = ir.role_id
-		                  where u.status = 'ACTIVE' and rp.permission = 'who.identities.manage'`); n != 1 {
+		                  where u.status = 'ACTIVE' and rp.permission = 'roux.admin'`); n != 1 {
 			t.Fatalf("round %d: %d active administrators", round, n)
 		}
 		// Put them both back for the next round.
@@ -339,11 +339,11 @@ func TestAUsersHistory(t *testing.T) {
 	owner := f.SignedIn(f.owner)
 	for i, name := range []string{"One", "Two", "Three", "Four"} {
 		f.Clock.Advance(time.Minute)
-		if r := owner.Put("/api/users/"+ada.String()+"/name", map[string]any{"displayName": name, "version": i}); r.StatusCode != 200 {
+		if r := owner.Put("/api/roux/users/"+ada.String()+"/name", map[string]any{"displayName": name, "version": i}); r.StatusCode != 200 {
 			t.Fatalf("%d %s", r.StatusCode, r.Body)
 		}
 	}
-	p := decodePage(t, owner.Get("/api/users/"+ada.String()+"/activities?pageSize=3"))
+	p := decodePage(t, owner.Get("/api/roux/users/"+ada.String()+"/activities?pageSize=3"))
 	if len(p.Data) != 3 || p.Data[0]["description"] != "Renamed from Three to Four" || p.Pagination["totalElementCount"] != float64(4) || p.Pagination["hasNext"] != true {
 		t.Fatalf("%+v %v", p.Data, p.Pagination)
 	}
@@ -356,10 +356,10 @@ func TestAUsersHistory(t *testing.T) {
 		t.Fatalf("details: %v", d)
 	}
 	// The order is fixed: a sort parameter is ignored, not refused.
-	if r := owner.Get("/api/users/" + ada.String() + "/activities?sortBy=NOPE&sortDirection=DESC"); r.StatusCode != 200 {
+	if r := owner.Get("/api/roux/users/" + ada.String() + "/activities?sortBy=NOPE&sortDirection=DESC"); r.StatusCode != 200 {
 		t.Fatalf("sort ignored: %d %s", r.StatusCode, r.Body)
 	}
-	if r := owner.Get("/api/users/" + uuid.NewString() + "/activities"); r.StatusCode != 404 {
+	if r := owner.Get("/api/roux/users/" + uuid.NewString() + "/activities"); r.StatusCode != 404 {
 		t.Fatalf("unknown: %d", r.StatusCode)
 	}
 }
@@ -377,7 +377,7 @@ func TestMakingTheFirstOwner(t *testing.T) {
 	if f.count(`select count(*) from roux_user`) != 1 {
 		t.Fatal("a second owner was made")
 	}
-	d := f.SignedIn(f.owner).Get("/api/users/me").JSON(t)
+	d := f.SignedIn(f.owner).Get("/api/roux/users/me").JSON(t)
 	if d["displayName"] != "Olive Owner" || d["email"] != ownerAddress {
 		t.Fatalf("owner: %v", d)
 	}

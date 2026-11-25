@@ -2,7 +2,7 @@
 // serves: its time zone, its locale, what today is there and when it ends. A
 // business date must never depend on where the server runs, so "today" is always
 // read in the organization's zone. It travels in the page (#app-context, see
-// kit/spa) and at GET /api/organization, where the browser asks when its today ends.
+// kit/spa) and at GET /api/roux/organization, where the browser asks when its today ends.
 package organization
 
 import (
@@ -20,7 +20,7 @@ import (
 )
 
 // Path is where the context is served.
-const Path = "/api/organization"
+const Path = "/api/roux/organization"
 
 // Context is the organization as the browser sees it: roux's JSON, nulls included.
 type Context struct {
@@ -101,9 +101,9 @@ func (c *Calendar) Context() Context {
 	return ctx
 }
 
-// Register serves the context at GET /api/organization, for anyone signed in.
+// Register serves the context at GET /api/roux/organization, for anyone signed in.
 func Register(mux *api.Mux, host *authn.Host, source func() Context) {
-	mux.Handle("GET "+Path, host.Guard("", func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("GET "+Path, host.Guard("", func(w http.ResponseWriter, r *http.Request) error {
 		return api.JSON(w, http.StatusOK, source())
 	}))
 }

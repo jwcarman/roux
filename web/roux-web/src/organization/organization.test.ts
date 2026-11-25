@@ -136,14 +136,14 @@ describe("loadOrganization", () => {
   });
 
   it("asks the server when the page has none", async () => {
-    server.use(http.get("/api/organization", () => HttpResponse.json(DOJO)));
+    server.use(http.get("/api/roux/organization", () => HttpResponse.json(DOJO)));
     await expect(loadOrganization(pageWith("__APP_CONTEXT__"))).resolves.toEqual(DOJO);
     expect(organization()).toEqual(DOJO);
   });
 
   it("refuses a malformed answer from the server", async () => {
-    server.use(http.get("/api/organization", () => HttpResponse.json({ ...DOJO, today: "" })));
-    await expect(loadOrganization(pageWith(null))).rejects.toThrow("GET /api/organization's context has no today");
+    server.use(http.get("/api/roux/organization", () => HttpResponse.json({ ...DOJO, today: "" })));
+    await expect(loadOrganization(pageWith(null))).rejects.toThrow("GET /api/roux/organization's context has no today");
   });
 });
 

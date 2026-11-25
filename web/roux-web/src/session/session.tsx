@@ -1,12 +1,12 @@
 import { createContext, useContext, useState, useSyncExternalStore, type ReactNode } from "react";
-import type { Me } from "@jwcarman/who-client";
+import type { Me } from "../auth";
 import { getJson, onSessionLost } from "../api/client";
 import { useClearQueriesOnIdentityChange } from "../api/queryClient";
-import { who } from "../signin/who";
+import { auth } from "../signin/auth";
 
 export type { Me };
 
-/** The signed-in person's own profile, from roux-users' `/api/users/me`; `version` goes back with a rename. */
+/** The signed-in person's own profile, from roux-users' `/api/roux/users/me`; `version` goes back with a rename. */
 export interface Profile {
   displayName: string;
   email: string;
@@ -15,7 +15,7 @@ export interface Profile {
 
 /** The signed-in caller, or null when signed out. */
 async function fetchMe(): Promise<Me | null> {
-  const result = await who.me.get();
+  const result = await auth.me.get();
   return result.ok ? result.value : null;
 }
 
@@ -58,7 +58,7 @@ function createSession() {
 
   async function refreshProfile() {
     try {
-      update({ profile: await getJson<Profile>("/api/users/me") });
+      update({ profile: await getJson<Profile>("/api/roux/users/me") });
     } catch {
       update({ profile: null });
     }
@@ -76,7 +76,7 @@ function createSession() {
   }
 
   async function signOut() {
-    await who.signOut(); // also fetches a fresh XSRF-TOKEN cookie
+    await auth.signOut(); // also fetches a fresh XSRF-TOKEN cookie
     update({ me: null, profile: null });
   }
 

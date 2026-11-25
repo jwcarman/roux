@@ -1,5 +1,5 @@
 {
-  "csrfBootstrapPath": "/who/me",
+  "csrfBootstrapPath": "/api/roux/auth/me",
   "sessionPathPrefix": "/api/",
   "csrfCookie": "XSRF-TOKEN",
   "csrfHeader": "X-XSRF-TOKEN",

@@ -132,8 +132,8 @@ func TestATokenSignsARequestIn(t *testing.T) {
 	if r := e.Browser().DoWith("GET", "/api/whoami", map[string]string{"Authorization": "bearer " + token}); r.StatusCode != 200 {
 		t.Fatalf("lower-case scheme: %d", r.StatusCode)
 	}
-	if r := e.call("GET", "/who/me", token); r.StatusCode != 200 || r.JSON(t)["signInMethod"] != "jwt" {
-		t.Fatalf("/who/me: %d %s", r.StatusCode, r.Body)
+	if r := e.call("GET", "/api/roux/auth/me", token); r.StatusCode != 200 || r.JSON(t)["signInMethod"] != "jwt" {
+		t.Fatalf("/api/roux/auth/me: %d %s", r.StatusCode, r.Body)
 	}
 	// The audience may be a list that contains the configured one.
 	listed := e.prov.Mint(claims("user-1", map[string]any{"aud": []string{"other", audience}}))
@@ -225,7 +225,7 @@ func TestATokenIsNotABrowserSession(t *testing.T) {
 	e.link("user-1")
 	token := e.prov.Mint(claims("user-1"))
 	// The account endpoints that change how someone signs in are for a person at a browser.
-	for _, path := range []string{"/who/me/sessions"} {
+	for _, path := range []string{"/api/roux/auth/me/sessions"} {
 		if r := e.call("GET", path, token); r.StatusCode != 403 || code(t, r) != "browser-session-required" {
 			t.Errorf("%s: %d %s", path, r.StatusCode, r.Body)
 		}
@@ -233,23 +233,23 @@ func TestATokenIsNotABrowserSession(t *testing.T) {
 	// But a token may manage API keys, with no recent sign-in (its own lifetime bounds it, and its
 	// auth_time is long past here), and a key it made cannot make more keys.
 	stale := e.prov.Mint(claims("user-1", map[string]any{"auth_time": e.Clock.Now().Add(-24 * time.Hour).Unix()}))
-	r := e.Browser().DoJSONWith("POST", "/who/me/api-keys", map[string]any{"name": "ci", "lifetime": "P7D", "scopes": []string{"report.read"}}, bearer(stale))
+	r := e.Browser().DoJSONWith("POST", "/api/roux/auth/me/api-keys", map[string]any{"name": "ci", "lifetime": "P7D", "scopes": []string{"report.read"}}, bearer(stale))
 	made := r.JSON(t)
 	if r.StatusCode != 201 || made["key"] == nil {
 		t.Fatalf("a token making a key: %d %s", r.StatusCode, r.Body)
 	}
-	if r := e.call("GET", "/who/me/api-keys", stale); r.StatusCode != 200 {
+	if r := e.call("GET", "/api/roux/auth/me/api-keys", stale); r.StatusCode != 200 {
 		t.Fatalf("list keys with a token: %d %s", r.StatusCode, r.Body)
 	}
-	rot := e.Browser().DoJSONWith("POST", "/who/me/api-keys/"+made["id"].(string)+"/rotations", map[string]string{"overlap": "PT0S"}, bearer(stale))
+	rot := e.Browser().DoJSONWith("POST", "/api/roux/auth/me/api-keys/"+made["id"].(string)+"/rotations", map[string]string{"overlap": "PT0S"}, bearer(stale))
 	if rot.StatusCode != 201 {
 		t.Fatalf("a token rotating a key: %d %s", rot.StatusCode, rot.Body)
 	}
 	key := rot.JSON(t)["key"].(string)
-	if r := e.Browser().DoWith("GET", "/who/me/api-keys", map[string]string{"X-API-Key": key}); r.StatusCode != 403 || code(t, r) != "api-key-cannot-manage-keys" {
+	if r := e.Browser().DoWith("GET", "/api/roux/auth/me/api-keys", map[string]string{"X-API-Key": key}); r.StatusCode != 403 || code(t, r) != "api-key-cannot-manage-keys" {
 		t.Fatalf("a key managing keys: %d %s", r.StatusCode, r.Body)
 	}
-	if r := e.call("DELETE", "/who/me/api-keys/"+made["id"].(string), stale); r.StatusCode != 404 && r.StatusCode != 204 {
+	if r := e.call("DELETE", "/api/roux/auth/me/api-keys/"+made["id"].(string), stale); r.StatusCode != 404 && r.StatusCode != 204 {
 		t.Fatalf("revoke: %d", r.StatusCode)
 	}
 }

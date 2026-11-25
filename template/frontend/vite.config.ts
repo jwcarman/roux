@@ -2,8 +2,8 @@ import { defineConfig } from "vitest/config";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 
-// Spring Boot serves the built app from its static resources; in development Vite serves it and
-// passes the API and who's endpoints through to Spring Boot on :8080.
+// The Go server serves the built app (embedded with `make build`); in development Vite serves it and
+// passes the API, roux's own endpoints under /api/roux among it, through to the server on :8080.
 const backend = "http://localhost:8080";
 
 export default defineConfig({
@@ -21,13 +21,13 @@ export default defineConfig({
   resolve: { preserveSymlinks: true },
   build: { outDir: "dist", emptyOutDir: true },
   // Every script and style tag Vite writes carries this placeholder, and a <meta property="csp-nonce">
-  // holds it for the app's own use. Spring Boot replaces it with a fresh nonce on each response
+  // holds it for the app's own use. The server replaces it with a fresh nonce on each response
   // (roux serves the shell), matching its Content-Security-Policy header.
   html: { cspNonce: "__CSP_NONCE__" },
   server: {
     proxy: {
       "/api": backend,
-      "/who": backend,
+      "/api/roux/auth": backend,
     },
   },
   // Tests run in Node; a component or hook test opts into jsdom with a `@vitest-environment jsdom` docblock.

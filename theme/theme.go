@@ -1,11 +1,11 @@
 // Package theme is the owner's look for the app: its name, palette, brand colour,
-// corner shape and fonts, kept in one database row and served at /api/theme.
+// corner shape and fonts, kept in one database row and served at /api/roux/theme.
 // Whatever the owner has not chosen is the application's default, so the answer is
 // always a whole theme. The page itself carries the saved theme too (see kit/spa),
 // so the first paint already looks right.
 //
-//	GET /api/theme   anyone, signed out too: the page needs it before sign-in
-//	PUT /api/theme   whoever holds theme.manage, from the version they read
+//	GET /api/roux/theme   anyone, signed out too: the page needs it before sign-in
+//	PUT /api/roux/theme   whoever holds theme.manage, from the version they read
 package theme
 
 import (
@@ -35,7 +35,7 @@ var migrations embed.FS
 var Migration = pgdb.Migration{Name: "roux-theme", FS: migrations, Dir: "migrations", After: []string{"roux-authz"}}
 
 // Path is where the theme is served.
-const Path = "/api/theme"
+const Path = "/api/roux/theme"
 
 // ThemeManage lets someone change the theme. The migration grants it to OWNER.
 const ThemeManage = "theme.manage"
@@ -191,14 +191,14 @@ func (s Service) Update(ctx context.Context, req Request, actor uuid.UUID) (Resp
 
 // Register serves the theme: GET for anyone, PUT for whoever holds theme.manage.
 func Register(mux *api.Mux, host *authn.Host, svc Service) {
-	mux.Handle("GET "+Path, host.Open(func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("GET "+Path, host.Open(func(w http.ResponseWriter, r *http.Request) error {
 		c, err := svc.Current(r.Context())
 		if err != nil {
 			return err
 		}
 		return api.JSON(w, http.StatusOK, c)
 	}))
-	mux.Handle("PUT "+Path, host.Guard(ThemeManage, func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("PUT "+Path, host.Guard(ThemeManage, func(w http.ResponseWriter, r *http.Request) error {
 		var req Request
 		if err := api.DecodeLenient(r, &req); err != nil {
 			return err

@@ -1,0 +1,20 @@
+{
+  "NotBlank": "Must not be blank",
+  "NotNull": "Must not be empty",
+  "NotEmpty": "Must not be empty",
+  "Size": "Must be between {min} and {max} characters",
+  "Email": "Must be a valid email address",
+  "Min": "Must be at least {value}",
+  "Max": "Must be at most {value}",
+  "Positive": "Must be more than 0",
+  "PositiveOrZero": "Must not be negative",
+  "Past": "Must be in the past",
+  "PastOrPresent": "Must not be in the future",
+  "Future": "Must be in the future",
+  "FutureOrPresent": "Must not be in the past",
+  "Pattern": "Is not in the expected format",
+  "URL": "Must be a valid web address",
+  "Phone": "Is not in the expected format",
+  "NotInFuture": "Must not be in the future",
+  "After": "Must be after {other}"
+}

@@ -60,10 +60,10 @@ describe("api", () => {
     expect(lost).toHaveBeenCalledOnce();
   });
 
-  it("does not report a signed-out /who/me, which is how the session is checked", async () => {
+  it("does not report a 401 from sign-in itself: a signed-out /api/roux/auth/me is how the session is checked", async () => {
     respond(401);
 
-    await send("POST", "/who/me");
+    await send("POST", "/api/roux/auth/me");
 
     expect(lost).not.toHaveBeenCalled();
   });
@@ -275,7 +275,7 @@ describe("api without a CSRF cookie", () => {
   it("asks for one with the session's cookies, and sends no token when none comes", async () => {
     let token: string | null = "unread";
     server.use(
-      http.get("/who/me", () => new HttpResponse(null, { status: 401 })),
+      http.get("/api/roux/auth/me", () => new HttpResponse(null, { status: 401 })),
       http.post("/api/thing", ({ request }) => {
         token = request.headers.get("X-XSRF-TOKEN");
         return new HttpResponse(null, { status: 204 });
@@ -285,7 +285,7 @@ describe("api without a CSRF cookie", () => {
 
     await send("POST", "/api/thing");
 
-    expect(fetchSpy).toHaveBeenCalledWith("/who/me", { credentials: "same-origin" });
+    expect(fetchSpy).toHaveBeenCalledWith("/api/roux/auth/me", { credentials: "same-origin" });
     expect(token).toBeNull();
     fetchSpy.mockRestore();
   });

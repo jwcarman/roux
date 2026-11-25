@@ -21,14 +21,14 @@ describe("ProviderSignInButton", () => {
   ])("draws %s as %s, linking to who's authorize URL", (provider, label) => {
     renderWithProviders(<ProviderSignInButton provider={provider} />);
 
-    expect(link(label)).toHaveAttribute("href", `/who/oidc/authorize/${provider}`);
+    expect(link(label)).toHaveAttribute("href", `/api/roux/auth/oidc/authorize/${provider}`);
     expect(link(label).querySelector("svg")).not.toBeNull();
   });
 
   it("encodes the provider's id in the authorize URL", () => {
     renderWithProviders(<ProviderSignInButton provider="a/b?x" name="Odd" />);
 
-    expect(link("Continue with Odd")).toHaveAttribute("href", "/who/oidc/authorize/a%2Fb%3Fx");
+    expect(link("Continue with Odd")).toHaveAttribute("href", "/api/roux/auth/oidc/authorize/a%2Fb%3Fx");
   });
 
   it("knows a provider by its id in any case", () => {
@@ -62,7 +62,7 @@ describe("ProviderSignInButton", () => {
   it("gives a provider it does not know a generic icon and who's display name", () => {
     renderWithProviders(<ProviderSignInButton provider="acme-sso" name="Acme Single Sign-On" />);
 
-    expect(link("Continue with Acme Single Sign-On")).toHaveAttribute("href", "/who/oidc/authorize/acme-sso");
+    expect(link("Continue with Acme Single Sign-On")).toHaveAttribute("href", "/api/roux/auth/oidc/authorize/acme-sso");
     expect(link("Continue with Acme Single Sign-On").querySelector("svg")).not.toBeNull();
   });
 
@@ -139,9 +139,9 @@ describe("each provider's button", () => {
 });
 
 describe("ProviderSignInButtons", () => {
-  it("draws one button for each provider who reports, with who's names", async () => {
+  it("draws one button for each provider the server reports, with who's names", async () => {
     server.use(
-      http.get("/who/sign-in", () =>
+      http.get("/api/roux/auth/sign-in", () =>
         HttpResponse.json({
           email: true,
           passkey: true,
@@ -155,7 +155,7 @@ describe("ProviderSignInButtons", () => {
     const { client: queryClient } = renderWithProviders(<ProviderSignInButtons />);
 
     expect(await screen.findByRole("link", { name: "Continue with Google" })).toBeInTheDocument();
-    expect(link("Continue with Acme SSO")).toHaveAttribute("href", "/who/oidc/authorize/acme");
+    expect(link("Continue with Acme SSO")).toHaveAttribute("href", "/api/roux/auth/oidc/authorize/acme");
     expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual([
       "Continue with Google",
       "Continue with Acme SSO",
@@ -164,15 +164,17 @@ describe("ProviderSignInButtons", () => {
   });
 
   it("draws nothing when who has no providers", async () => {
-    server.use(http.get("/who/sign-in", () => HttpResponse.json({ email: true, passkey: true, providers: [] })));
+    server.use(
+      http.get("/api/roux/auth/sign-in", () => HttpResponse.json({ email: true, passkey: true, providers: [] })),
+    );
     renderWithProviders(<ProviderSignInButtons />);
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
-  it("draws nothing when who cannot be asked", async () => {
-    server.use(http.get("/who/sign-in", () => new HttpResponse(null, { status: 500 })));
+  it("draws nothing when the server cannot be asked", async () => {
+    server.use(http.get("/api/roux/auth/sign-in", () => new HttpResponse(null, { status: 500 })));
     renderWithProviders(<ProviderSignInButtons />);
 
     await new Promise((resolve) => setTimeout(resolve, 20));

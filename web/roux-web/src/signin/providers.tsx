@@ -4,7 +4,7 @@ import { FaApple, FaGithub, FaGitlab } from "react-icons/fa6";
 import { LuLogIn } from "react-icons/lu";
 import { SiOkta } from "react-icons/si";
 import { useSignInOptions } from "./options";
-import { who } from "./who";
+import { auth } from "./auth";
 
 /** A button's colors in one color mode. */
 interface Palette {
@@ -144,7 +144,7 @@ export function ProviderSignInButton({ provider, name, label, icon, ...props }: 
       _hover={{ opacity: 0.9 }}
       {...props}
     >
-      <a href={who.oidc.authorizeUrl(provider)}>
+      <a href={auth.oidc.authorizeUrl(provider)}>
         {icon ?? brand?.icon ?? <LuLogIn size={18} />}
         {label ?? `Continue with ${brand?.name ?? name ?? provider}`}
       </a>
@@ -153,7 +153,7 @@ export function ProviderSignInButton({ provider, name, label, icon, ...props }: 
 }
 
 /**
- * One `ProviderSignInButton` for each provider who reports as on (`who.signInOptions()`), in who's
+ * One `ProviderSignInButton` for each provider the server reports as on (`auth.signInOptions()`), in who's
  * order and with who's display names; nothing when there are none, or while they load.
  */
 export function ProviderSignInButtons() {

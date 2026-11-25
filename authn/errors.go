@@ -10,14 +10,14 @@ import (
 )
 
 const (
-	errorTypePrefix = "urn:who:error:"
-	errorHeader     = "Who-Error"
+	errorTypePrefix = "urn:roux:error:"
+	errorHeader     = "Roux-Error"
 )
 
-// whoProblem is who's error body: exactly these members, with detail null for
+// authProblem is who's error body: exactly these members, with detail null for
 // a 5xx (whose message may carry what a client must not see). traceId is an
 // extra member, which who's clients ignore, that ties the error to its trace.
-type whoProblem struct {
+type authProblem struct {
 	Type    string  `json:"type"`
 	Title   string  `json:"title"`
 	Status  int     `json:"status"`
@@ -55,15 +55,15 @@ func codeFor(p *problem.Problem) string {
 }
 
 // render answers every failure under who's base path as who does: RFC 9457
-// problem details with type urn:who:error:<code>, and the code again in a
-// Who-Error header so a client can tell failures apart without parsing a body.
+// problem details with type urn:roux:error:<code>, and the code again in a
+// Roux-Error header so a client can tell failures apart without parsing a body.
 func render(w http.ResponseWriter, r *http.Request, p *problem.Problem) {
 	code := codeFor(p)
 	title := p.Title
 	if title == "" {
 		title = http.StatusText(p.Status)
 	}
-	body := whoProblem{Type: errorTypePrefix + code, Title: title, Status: p.Status, Code: code}
+	body := authProblem{Type: errorTypePrefix + code, Title: title, Status: p.Status, Code: code}
 	if p.Status < 500 && p.Detail != "" {
 		detail := p.Detail
 		body.Detail = &detail
@@ -80,7 +80,7 @@ func render(w http.ResponseWriter, r *http.Request, p *problem.Problem) {
 
 // NewError is a problem with who's stable error code, for a sign-in method or an
 // account endpoint to return: under who's base path it is rendered as
-// urn:who:error:<code> with a Who-Error header.
+// urn:roux:error:<code> with a Roux-Error header.
 func NewError(status int, code, detail string) *problem.Problem {
 	p := problem.New(status, detail)
 	p.Code = code

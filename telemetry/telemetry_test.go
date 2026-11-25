@@ -140,7 +140,7 @@ func TestIgnoredPathsAreNotTraced(t *testing.T) {
 	_, rec := harness(t)
 	// Rebuild with an ignore list over the same app, as main does for probes.
 	mux := api.NewMux()
-	mux.HandleRoux("GET /healthz", func(w http.ResponseWriter, r *http.Request) error { return api.JSON(w, 200, "ok") })
+	mux.HandleRoux("GET /api/roux/healthz", func(w http.ResponseWriter, r *http.Request) error { return api.JSON(w, 200, "ok") })
 	mux.Handle("GET /api/things/{id}", func(w http.ResponseWriter, r *http.Request) error { return api.JSON(w, 200, "ok") })
 	h := telemetry.HTTP(api.Recoverer(mux), "/api/roux/healthz")
 

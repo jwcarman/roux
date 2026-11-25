@@ -79,7 +79,7 @@ type Session struct {
 	ID           uuid.UUID
 	IdentityID   uuid.UUID
 	CredentialID uuid.UUID
-	Method       string // how it signed in, spelled as /who/me spells it: "email-link", "email-code"
+	Method       string // how it signed in, spelled as /api/roux/auth/me spells it: "email-link", "email-code"
 	SignedInAt   time.Time
 }
 

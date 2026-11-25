@@ -26,7 +26,7 @@ func u32(v uint32) *uint32 { return &v }
 
 func TestTheSignInPageIsToldPasskeysAreOn(t *testing.T) {
 	f := setup(t)
-	if got := strings.TrimSpace(string(f.Browser().Get("/who/sign-in").Body)); got != `{"email":true,"passkey":true,"providers":[]}` {
+	if got := strings.TrimSpace(string(f.Browser().Get("/api/roux/auth/sign-in").Body)); got != `{"email":true,"passkey":true,"providers":[]}` {
 		t.Fatalf("%s", got)
 	}
 }
@@ -35,7 +35,7 @@ func TestOptionsAreWhatTheBrowserNeeds(t *testing.T) {
 	f := setup(t)
 	_, b := f.person("ada@example.test")
 
-	reg := b.Post("/who/me/passkeys/options", nil)
+	reg := b.Post("/api/roux/auth/me/passkeys/options", nil)
 	var o map[string]any
 	reg.Decode(t, &o)
 	rp, user := o["rp"].(map[string]any), o["user"].(map[string]any)
@@ -71,7 +71,7 @@ func TestOptionsAreWhatTheBrowserNeeds(t *testing.T) {
 	}
 
 	// Sign-in options need no session, ask for user verification, and name no one.
-	in := f.Browser().Post("/who/passkey/sign-in/options", nil)
+	in := f.Browser().Post("/api/roux/auth/passkey/sign-in/options", nil)
 	var s map[string]any
 	in.Decode(t, &s)
 	if in.StatusCode != 200 || s["rpId"] != "localhost" || s["userVerification"] != "required" || len(s["challenge"].(string)) < 20 {
@@ -82,7 +82,7 @@ func TestOptionsAreWhatTheBrowserNeeds(t *testing.T) {
 	}
 	// Each challenge is fresh.
 	var again map[string]any
-	f.Browser().Post("/who/passkey/sign-in/options", nil).Decode(t, &again)
+	f.Browser().Post("/api/roux/auth/passkey/sign-in/options", nil).Decode(t, &again)
 	if again["challenge"] == s["challenge"] {
 		t.Fatal("two sign-ins shared a challenge")
 	}
@@ -96,8 +96,8 @@ func TestRegisteringAndSigningIn(t *testing.T) {
 	if r.StatusCode != 200 || strings.TrimSpace(string(r.Body)) != `{"success":true}` {
 		t.Fatalf("register: %d %s", r.StatusCode, r.Body)
 	}
-	// /who/me counts it, beside the email address.
-	creds := b.Get("/who/me").JSON(t)["credentials"].(map[string]any)
+	// /api/roux/auth/me counts it, beside the email address.
+	creds := b.Get("/api/roux/auth/me").JSON(t)["credentials"].(map[string]any)
 	if creds["email"] != float64(1) || creds["passkey"] != float64(1) {
 		t.Fatalf("credentials: %v", creds)
 	}
@@ -109,9 +109,9 @@ func TestRegisteringAndSigningIn(t *testing.T) {
 	if r.StatusCode != 200 || r.JSON(t)["identityId"] != id.String() {
 		t.Fatalf("sign in: %d %s", r.StatusCode, r.Body)
 	}
-	me := anon.Get("/who/me").JSON(t)
+	me := anon.Get("/api/roux/auth/me").JSON(t)
 	if me["identityId"] != id.String() || me["signInMethod"] != "passkey" {
-		t.Fatalf("/who/me: %v", me)
+		t.Fatalf("/api/roux/auth/me: %v", me)
 	}
 	if after := anon.Cookie("XSRF-TOKEN"); after == csrfBefore {
 		t.Fatal("the CSRF token must rotate at sign-in")
@@ -124,7 +124,7 @@ func TestRegisteringAndSigningIn(t *testing.T) {
 	if r := f.signIn(f.Browser(), passkeytest.Tweaks{}); r.StatusCode != 200 {
 		t.Fatalf("second sign-in: %d %s", r.StatusCode, r.Body)
 	}
-	list := b.Get("/who/me/passkeys")
+	list := b.Get("/api/roux/auth/me/passkeys")
 	var passkeys []map[string]any
 	list.Decode(t, &passkeys)
 	if len(passkeys) != 1 || passkeys[0]["label"] != "Laptop" || passkeys[0]["credentialId"] != f.auth.CredentialID(0) || passkeys[0]["lastUsedAt"] == nil {
@@ -136,15 +136,15 @@ func TestRegistrationNeedsASignedInFreshSession(t *testing.T) {
 	f := setup(t)
 	_, b := f.person("ada@example.test")
 
-	for _, path := range []string{"/who/me/passkeys/options", "/who/me/passkeys"} {
+	for _, path := range []string{"/api/roux/auth/me/passkeys/options", "/api/roux/auth/me/passkeys"} {
 		r := f.Browser().Post(path, nil)
-		if body := r.JSON(t); r.StatusCode != 401 || body["code"] != "not-signed-in" || r.Header.Get("Who-Error") != "not-signed-in" {
+		if body := r.JSON(t); r.StatusCode != 401 || body["code"] != "not-signed-in" || r.Header.Get("Roux-Error") != "not-signed-in" {
 			t.Fatalf("%s signed out: %d %s", path, r.StatusCode, r.Body)
 		}
 	}
 
 	f.advance(11 * time.Minute) // a live session (30 minutes idle), but not a recent sign-in
-	for _, path := range []string{"/who/me/passkeys/options", "/who/me/passkeys"} {
+	for _, path := range []string{"/api/roux/auth/me/passkeys/options", "/api/roux/auth/me/passkeys"} {
 		r := b.Post(path, nil)
 		if body := r.JSON(t); r.StatusCode != 401 || body["code"] != "reauthentication-required" {
 			t.Fatalf("%s stale: %d %s", path, r.StatusCode, r.Body)
@@ -164,7 +164,7 @@ func TestLabelsAreChecked(t *testing.T) {
 	}
 	for name, label := range bad {
 		r := f.register(b, label, passkeytest.Tweaks{})
-		if body := r.JSON(t); r.StatusCode != 400 || body["code"] != "invalid-passkey-registration" || body["type"] != "urn:who:error:invalid-passkey-registration" {
+		if body := r.JSON(t); r.StatusCode != 400 || body["code"] != "invalid-passkey-registration" || body["type"] != "urn:roux:error:invalid-passkey-registration" {
 			t.Errorf("%s: %d %s", name, r.StatusCode, r.Body)
 		}
 	}
@@ -203,19 +203,19 @@ func TestACeremonyIsUsedOnce(t *testing.T) {
 	_, b := f.person("ada@example.test")
 
 	// No options asked for.
-	r := b.Post("/who/me/passkeys", map[string]any{"publicKey": map[string]any{"credential": map[string]any{}, "label": "x"}})
+	r := b.Post("/api/roux/auth/me/passkeys", map[string]any{"publicKey": map[string]any{"credential": map[string]any{}, "label": "x"}})
 	if body := r.JSON(t); r.StatusCode != 400 || body["code"] != "invalid-request" {
 		t.Fatalf("no ceremony: %d %s", r.StatusCode, r.Body)
 	}
 
 	// The same options cannot be answered twice.
-	opts := b.Post("/who/me/passkeys/options", nil)
+	opts := b.Post("/api/roux/auth/me/passkeys/options", nil)
 	body := map[string]any{"publicKey": map[string]any{"credential": f.auth.Create(opts.Body, passkeytest.Tweaks{}), "label": "Laptop"}}
-	if r := b.Post("/who/me/passkeys", body); r.StatusCode != 200 {
+	if r := b.Post("/api/roux/auth/me/passkeys", body); r.StatusCode != 200 {
 		t.Fatalf("first: %d %s", r.StatusCode, r.Body)
 	}
 	b.SetCookie("PASSKEY_CEREMONY", "") // the browser threw it away; replay what it had
-	if r := b.Post("/who/me/passkeys", body); r.StatusCode != 400 {
+	if r := b.Post("/api/roux/auth/me/passkeys", body); r.StatusCode != 400 {
 		t.Fatalf("replay: %d %s", r.StatusCode, r.Body)
 	}
 	if f.count(`select count(*) from roux_passkey_credential`) != 1 {
@@ -223,21 +223,21 @@ func TestACeremonyIsUsedOnce(t *testing.T) {
 	}
 
 	// A wrong answer spends the ceremony too: there is no trying again with the same challenge.
-	opts = b.Post("/who/me/passkeys/options", nil)
+	opts = b.Post("/api/roux/auth/me/passkeys/options", nil)
 	bad := map[string]any{"publicKey": map[string]any{"credential": f.auth.Create(opts.Body, tw(func(t *passkeytest.Tweaks) { t.Origin = "https://evil.example" })), "label": "x"}}
-	b.Post("/who/me/passkeys", bad)
+	b.Post("/api/roux/auth/me/passkeys", bad)
 	good := map[string]any{"publicKey": map[string]any{"credential": f.auth.Create(opts.Body, passkeytest.Tweaks{}), "label": "y"}}
-	if r := b.Post("/who/me/passkeys", good); r.StatusCode != 400 {
+	if r := b.Post("/api/roux/auth/me/passkeys", good); r.StatusCode != 400 {
 		t.Fatalf("after a refused attempt: %d %s", r.StatusCode, r.Body)
 	}
 
 	// An expired ceremony is no ceremony.
-	opts = b.Post("/who/me/passkeys/options", nil)
+	opts = b.Post("/api/roux/auth/me/passkeys/options", nil)
 	f.advance(6 * time.Minute)
 	late := map[string]any{"publicKey": map[string]any{"credential": f.auth.Create(opts.Body, passkeytest.Tweaks{}), "label": "z"}}
 	b2 := f.SignedIn(mustIdentity(t, f, "ada@example.test")) // a fresh sign-in: the old one is stale by now
 	b2.SetCookie("PASSKEY_CEREMONY", b.Cookie("PASSKEY_CEREMONY"))
-	if r := b2.Post("/who/me/passkeys", late); r.StatusCode != 400 {
+	if r := b2.Post("/api/roux/auth/me/passkeys", late); r.StatusCode != 400 {
 		t.Fatalf("expired: %d %s", r.StatusCode, r.Body)
 	}
 }
@@ -261,9 +261,9 @@ func TestARegistrationBelongsToWhoAskedForIt(t *testing.T) {
 	_, grace := f.person("grace@example.test")
 
 	// Ada asks for options; before she answers, Grace signs in on the same browser.
-	opts := ada.Post("/who/me/passkeys/options", nil)
+	opts := ada.Post("/api/roux/auth/me/passkeys/options", nil)
 	ada.SetCookie("SESSION", grace.Cookie("SESSION"))
-	r := ada.Post("/who/me/passkeys", map[string]any{"publicKey": map[string]any{"credential": f.auth.Create(opts.Body, passkeytest.Tweaks{}), "label": "Laptop"}})
+	r := ada.Post("/api/roux/auth/me/passkeys", map[string]any{"publicKey": map[string]any{"credential": f.auth.Create(opts.Body, passkeytest.Tweaks{}), "label": "Laptop"}})
 	if body := r.JSON(t); r.StatusCode != 400 || body["code"] != "invalid-passkey-registration" {
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
 	}
@@ -283,7 +283,7 @@ func TestEverySignInFailureLooksTheSame(t *testing.T) {
 
 	attempt := func(name string, run func() authntest.Reply) authntest.Reply {
 		r := run()
-		if r.StatusCode != 401 || r.Header.Get("Who-Error") != "sign-in-failed" {
+		if r.StatusCode != 401 || r.Header.Get("Roux-Error") != "sign-in-failed" {
 			t.Errorf("%s: %d %s", name, r.StatusCode, r.Body)
 		}
 		return r
@@ -291,8 +291,8 @@ func TestEverySignInFailureLooksTheSame(t *testing.T) {
 	sign := func(auth *passkeytest.Authenticator, tweaks passkeytest.Tweaks) func() authntest.Reply {
 		return func() authntest.Reply {
 			br := f.Browser()
-			opts := br.Post("/who/passkey/sign-in/options", nil)
-			return br.Post("/who/passkey/sign-in", auth.Get(opts.Body, tweaks))
+			opts := br.Post("/api/roux/auth/passkey/sign-in/options", nil)
+			return br.Post("/api/roux/auth/passkey/sign-in", auth.Get(opts.Body, tweaks))
 		}
 	}
 	first := attempt("tampered signature", sign(f.auth, tw(func(t *passkeytest.Tweaks) { t.CorruptSignature = true })))
@@ -306,19 +306,19 @@ func TestEverySignInFailureLooksTheSame(t *testing.T) {
 		"no user handle":       sign(f.auth, tw(func(t *passkeytest.Tweaks) { t.OmitUserHandle = true })),
 		"no ceremony": func() authntest.Reply {
 			br := f.Browser()
-			opts := br.Post("/who/passkey/sign-in/options", nil)
+			opts := br.Post("/api/roux/auth/passkey/sign-in/options", nil)
 			br.SetCookie("PASSKEY_CEREMONY", "")
-			return br.Post("/who/passkey/sign-in", f.auth.Get(opts.Body, passkeytest.Tweaks{}))
+			return br.Post("/api/roux/auth/passkey/sign-in", f.auth.Get(opts.Body, passkeytest.Tweaks{}))
 		},
 		"a registration's ceremony": func() authntest.Reply {
 			br := f.SignedIn(id)
-			opts := br.Post("/who/me/passkeys/options", nil) // a 'register' ceremony cookie
-			return br.Post("/who/passkey/sign-in", f.auth.Get(opts.Body, passkeytest.Tweaks{}))
+			opts := br.Post("/api/roux/auth/me/passkeys/options", nil) // a 'register' ceremony cookie
+			return br.Post("/api/roux/auth/passkey/sign-in", f.auth.Get(opts.Body, passkeytest.Tweaks{}))
 		},
 		"not JSON": func() authntest.Reply {
 			br := f.Browser()
-			br.Post("/who/passkey/sign-in/options", nil)
-			return br.Post("/who/passkey/sign-in", `{nope`)
+			br.Post("/api/roux/auth/passkey/sign-in/options", nil)
+			return br.Post("/api/roux/auth/passkey/sign-in", `{nope`)
 		},
 	} {
 		r := attempt(name, run)
@@ -326,7 +326,7 @@ func TestEverySignInFailureLooksTheSame(t *testing.T) {
 			t.Errorf("%s: the answer differs:\n  %s\n  %s", name, r.Body, first.Body)
 		}
 	}
-	want := `{"type":"urn:who:error:sign-in-failed","title":"Unauthorized","status":401,"detail":"Sign-in failed","code":"sign-in-failed"}`
+	want := `{"type":"urn:roux:error:sign-in-failed","title":"Unauthorized","status":401,"detail":"Sign-in failed","code":"sign-in-failed"}`
 	if got := strings.TrimSpace(string(first.Body)); got != want {
 		t.Errorf("body = %s", got)
 	}
@@ -342,22 +342,22 @@ func TestAnAssertionCanBeUsedOnce(t *testing.T) {
 	f.register(b, "Laptop", passkeytest.Tweaks{})
 
 	br := f.Browser()
-	opts := br.Post("/who/passkey/sign-in/options", nil)
+	opts := br.Post("/api/roux/auth/passkey/sign-in/options", nil)
 	assertion := f.auth.Get(opts.Body, passkeytest.Tweaks{})
 	cookie := br.Cookie("PASSKEY_CEREMONY")
-	if r := br.Post("/who/passkey/sign-in", assertion); r.StatusCode != 200 {
+	if r := br.Post("/api/roux/auth/passkey/sign-in", assertion); r.StatusCode != 200 {
 		t.Fatalf("first: %d", r.StatusCode)
 	}
 	replay := f.Browser()
-	replay.Post("/who/passkey/sign-in/options", nil) // gets a CSRF token
-	replay.SetCookie("PASSKEY_CEREMONY", cookie)     // an eavesdropper has the cookie and the response
-	if r := replay.Post("/who/passkey/sign-in", assertion); r.StatusCode != 401 {
+	replay.Post("/api/roux/auth/passkey/sign-in/options", nil) // gets a CSRF token
+	replay.SetCookie("PASSKEY_CEREMONY", cookie)               // an eavesdropper has the cookie and the response
+	if r := replay.Post("/api/roux/auth/passkey/sign-in", assertion); r.StatusCode != 401 {
 		t.Fatalf("replay: %d %s", r.StatusCode, r.Body)
 	}
 
 	// Many at once: still exactly one wins.
 	br = f.Browser()
-	opts = br.Post("/who/passkey/sign-in/options", nil)
+	opts = br.Post("/api/roux/auth/passkey/sign-in/options", nil)
 	assertion = f.auth.Get(opts.Body, passkeytest.Tweaks{})
 	cookie = br.Cookie("PASSKEY_CEREMONY")
 	var wg, start sync.WaitGroup
@@ -365,13 +365,13 @@ func TestAnAssertionCanBeUsedOnce(t *testing.T) {
 	statuses := make(chan int, 8)
 	for i := 0; i < 8; i++ {
 		racer := f.Browser()
-		racer.Post("/who/passkey/sign-in/options", nil)
+		racer.Post("/api/roux/auth/passkey/sign-in/options", nil)
 		racer.SetCookie("PASSKEY_CEREMONY", cookie)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			start.Wait()
-			statuses <- racer.Post("/who/passkey/sign-in", assertion).StatusCode
+			statuses <- racer.Post("/api/roux/auth/passkey/sign-in", assertion).StatusCode
 		}()
 	}
 	start.Done()
@@ -397,7 +397,7 @@ func TestACopiedAuthenticatorIsRefused(t *testing.T) {
 		t.Fatalf("count 10: %d %s", r.StatusCode, r.Body)
 	}
 	// The counter goes backwards: a copy of the authenticator is in use somewhere.
-	if r := f.signIn(f.Browser(), tw(func(t *passkeytest.Tweaks) { t.SignCount = u32(3) })); r.StatusCode != 401 || r.Header.Get("Who-Error") != "sign-in-failed" {
+	if r := f.signIn(f.Browser(), tw(func(t *passkeytest.Tweaks) { t.SignCount = u32(3) })); r.StatusCode != 401 || r.Header.Get("Roux-Error") != "sign-in-failed" {
 		t.Fatalf("regression: %d %s", r.StatusCode, r.Body)
 	}
 }
@@ -436,21 +436,21 @@ func TestListingAndRemoving(t *testing.T) {
 
 	f.register(b, "Laptop", passkeytest.Tweaks{})
 	f.advance(time.Minute)
-	opts := b.Post("/who/me/passkeys/options", nil)
+	opts := b.Post("/api/roux/auth/me/passkeys/options", nil)
 	if ex, _ := opts.JSON(t)["excludeCredentials"].([]any); len(ex) != 1 {
 		t.Fatalf("the first passkey must be excluded from the second registration: %s", opts.Body)
 	}
-	b.Post("/who/me/passkeys", map[string]any{"publicKey": map[string]any{"credential": otherAuth.Create(opts.Body, passkeytest.Tweaks{}), "label": "Phone"}})
+	b.Post("/api/roux/auth/me/passkeys", map[string]any{"publicKey": map[string]any{"credential": otherAuth.Create(opts.Body, passkeytest.Tweaks{}), "label": "Phone"}})
 
 	var list []map[string]any
-	b.Get("/who/me/passkeys").Decode(t, &list)
+	b.Get("/api/roux/auth/me/passkeys").Decode(t, &list)
 	if len(list) != 2 || list[0]["label"] != "Laptop" || list[1]["label"] != "Phone" || list[0]["lastUsedAt"] != nil {
 		t.Fatalf("oldest first, never used: %v", list)
 	}
 	if len(list[0]) != 4 || list[0]["createdAt"] == nil {
 		t.Fatalf("shape: %v", list[0])
 	}
-	if r := f.Browser().Get("/who/me/passkeys"); r.StatusCode != 401 || r.Header.Get("Who-Error") != "not-signed-in" {
+	if r := f.Browser().Get("/api/roux/auth/me/passkeys"); r.StatusCode != 401 || r.Header.Get("Roux-Error") != "not-signed-in" {
 		t.Fatalf("signed out: %d", r.StatusCode)
 	}
 
@@ -461,7 +461,7 @@ func TestListingAndRemoving(t *testing.T) {
 		if name == "another's" {
 			br = grace
 		}
-		if r := br.Delete("/who/me/passkeys/" + id); r.StatusCode != 404 || r.JSON(t)["code"] != "passkey-not-found" {
+		if r := br.Delete("/api/roux/auth/me/passkeys/" + id); r.StatusCode != 404 || r.JSON(t)["code"] != "passkey-not-found" {
 			t.Errorf("%s: %d %s", name, r.StatusCode, r.Body)
 		}
 	}
@@ -471,15 +471,15 @@ func TestListingAndRemoving(t *testing.T) {
 
 	// A stale sign-in is refused before the id is looked at.
 	f.advance(11 * time.Minute)
-	if r := b.Delete("/who/me/passkeys/" + list[0]["credentialId"].(string)); r.StatusCode != 401 || r.JSON(t)["code"] != "reauthentication-required" {
+	if r := b.Delete("/api/roux/auth/me/passkeys/" + list[0]["credentialId"].(string)); r.StatusCode != 401 || r.JSON(t)["code"] != "reauthentication-required" {
 		t.Fatalf("stale: %d %s", r.StatusCode, r.Body)
 	}
-	if r := b.Delete("/who/me/passkeys/nonsense!"); r.StatusCode != 401 {
+	if r := b.Delete("/api/roux/auth/me/passkeys/nonsense!"); r.StatusCode != 401 {
 		t.Fatalf("stale, with a bad id: %d (a stale session must learn nothing about any passkey)", r.StatusCode)
 	}
 	id, fresh := f.person("ada@example.test")
 	_ = id
-	if r := fresh.Delete("/who/me/passkeys/" + list[0]["credentialId"].(string)); r.StatusCode != 204 || len(r.Body) != 0 {
+	if r := fresh.Delete("/api/roux/auth/me/passkeys/" + list[0]["credentialId"].(string)); r.StatusCode != 204 || len(r.Body) != 0 {
 		t.Fatalf("remove: %d %s", r.StatusCode, r.Body)
 	}
 	if got := f.listFor(fresh); len(got) != 1 || got[0]["label"] != "Phone" {
@@ -494,7 +494,7 @@ func TestListingAndRemoving(t *testing.T) {
 func (f *fx) listFor(b *authntest.Browser) []map[string]any {
 	f.T.Helper()
 	var list []map[string]any
-	r := b.Get("/who/me/passkeys")
+	r := b.Get("/api/roux/auth/me/passkeys")
 	if r.StatusCode != 200 {
 		f.T.Fatalf("list: %d %s", r.StatusCode, r.Body)
 	}
@@ -518,8 +518,8 @@ func TestTheLastWayInStays(t *testing.T) {
 	if r := f.signIn(signed, passkeytest.Tweaks{}); r.StatusCode != 200 {
 		t.Fatal(r.Body)
 	}
-	r := signed.Delete("/who/me/passkeys/" + passkeyID)
-	if body := r.JSON(t); r.StatusCode != 409 || body["code"] != "last-credential" || r.Header.Get("Who-Error") != "last-credential" {
+	r := signed.Delete("/api/roux/auth/me/passkeys/" + passkeyID)
+	if body := r.JSON(t); r.StatusCode != 409 || body["code"] != "last-credential" || r.Header.Get("Roux-Error") != "last-credential" {
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
 	}
 	if len(f.listFor(signed)) != 1 {
@@ -533,8 +533,8 @@ func TestTwoRemovalsAtOnceCannotRemoveEveryWayIn(t *testing.T) {
 	_, b := f.person("ada@example.test")
 	second := passkeytest.New(t, origin, rpID)
 	f.register(b, "One", passkeytest.Tweaks{})
-	opts := b.Post("/who/me/passkeys/options", nil)
-	b.Post("/who/me/passkeys", map[string]any{"publicKey": map[string]any{"credential": second.Create(opts.Body, passkeytest.Tweaks{}), "label": "Two"}})
+	opts := b.Post("/api/roux/auth/me/passkeys/options", nil)
+	b.Post("/api/roux/auth/me/passkeys", map[string]any{"publicKey": map[string]any{"credential": second.Create(opts.Body, passkeytest.Tweaks{}), "label": "Two"}})
 	if _, err := f.Pool.Exec(context.Background(), `delete from roux_credential_identity where credential_id in (select id from roux_email_credential)`); err != nil {
 		t.Fatal(err)
 	}
@@ -542,8 +542,8 @@ func TestTwoRemovalsAtOnceCannotRemoveEveryWayIn(t *testing.T) {
 	// Two browsers signed in by passkey (one session each), each removing a different passkey.
 	signIn := func(a *passkeytest.Authenticator) *authntest.Browser {
 		br := f.Browser()
-		o := br.Post("/who/passkey/sign-in/options", nil)
-		if r := br.Post("/who/passkey/sign-in", a.Get(o.Body, passkeytest.Tweaks{})); r.StatusCode != 200 {
+		o := br.Post("/api/roux/auth/passkey/sign-in/options", nil)
+		if r := br.Post("/api/roux/auth/passkey/sign-in", a.Get(o.Body, passkeytest.Tweaks{})); r.StatusCode != 200 {
 			t.Fatalf("%d %s", r.StatusCode, r.Body)
 		}
 		return br
@@ -558,7 +558,11 @@ func TestTwoRemovalsAtOnceCannotRemoveEveryWayIn(t *testing.T) {
 		id string
 	}{{one, f.auth.CredentialID(0)}, {two, second.CredentialID(0)}} {
 		wg.Add(1)
-		go func() { defer wg.Done(); start.Wait(); statuses <- c.b.Delete("/who/me/passkeys/" + c.id).StatusCode }()
+		go func() {
+			defer wg.Done()
+			start.Wait()
+			statuses <- c.b.Delete("/api/roux/auth/me/passkeys/" + c.id).StatusCode
+		}()
 	}
 	start.Done()
 	wg.Wait()
@@ -593,13 +597,13 @@ func TestRemovingThePasskeyASessionSignedInWithEndsThatSession(t *testing.T) {
 	if r := f.signIn(viaPasskey, passkeytest.Tweaks{}); r.StatusCode != 200 {
 		t.Fatal(r.Body)
 	}
-	if r := viaPasskey.Delete("/who/me/passkeys/" + f.auth.CredentialID(0)); r.StatusCode != 204 { // her email remains
+	if r := viaPasskey.Delete("/api/roux/auth/me/passkeys/" + f.auth.CredentialID(0)); r.StatusCode != 204 { // her email remains
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
 	}
-	if viaPasskey.Get("/who/me").StatusCode != 401 {
+	if viaPasskey.Get("/api/roux/auth/me").StatusCode != 401 {
 		t.Fatal("a session outlived the passkey it signed in with")
 	}
-	if b.Get("/who/me").StatusCode != 200 {
+	if b.Get("/api/roux/auth/me").StatusCode != 200 {
 		t.Fatal("the other session (signed in another way) must be untouched")
 	}
 }
@@ -639,7 +643,7 @@ func TestThePasskeyIsNamedForItsOwner(t *testing.T) {
 	}
 
 	name := func(b *authntest.Browser) string {
-		return b.Post("/who/me/passkeys/options", nil).JSON(t)["user"].(map[string]any)["name"].(string)
+		return b.Post("/api/roux/auth/me/passkeys/options", nil).JSON(t)["user"].(map[string]any)["name"].(string)
 	}
 	// Signed in some other way, the oldest address names it.
 	if got := name(f.SignedIn(id)); got != "first@example.test" {
@@ -660,8 +664,8 @@ func TestThePasskeyIsNamedForItsOwner(t *testing.T) {
 		t.Fatalf("session's address: %q", got)
 	}
 	// The user handle is the same across registrations (a person is one WebAuthn user)...
-	h1 := b.Post("/who/me/passkeys/options", nil).JSON(t)["user"].(map[string]any)["id"]
-	h2 := b.Post("/who/me/passkeys/options", nil).JSON(t)["user"].(map[string]any)["id"]
+	h1 := b.Post("/api/roux/auth/me/passkeys/options", nil).JSON(t)["user"].(map[string]any)["id"]
+	h2 := b.Post("/api/roux/auth/me/passkeys/options", nil).JSON(t)["user"].(map[string]any)["id"]
 	if h1 != h2 {
 		t.Fatal("the user handle changed between registrations")
 	}
@@ -710,20 +714,20 @@ func TestConfiguration(t *testing.T) {
 func TestOldCeremoniesAreCleanedAsNewOnesStart(t *testing.T) {
 	f := setup(t)
 	for i := 0; i < 5; i++ {
-		f.Browser().Post("/who/passkey/sign-in/options", nil)
+		f.Browser().Post("/api/roux/auth/passkey/sign-in/options", nil)
 	}
 	if n := f.count(`select count(*) from roux_passkey_ceremony`); n != 5 {
 		t.Fatalf("%d ceremonies", n)
 	}
 	f.advance(6 * time.Minute)
-	f.Browser().Post("/who/passkey/sign-in/options", nil)
+	f.Browser().Post("/api/roux/auth/passkey/sign-in/options", nil)
 	if n := f.count(`select count(*) from roux_passkey_ceremony`); n != 1 {
 		t.Fatalf("%d ceremonies after the old ones expired, want 1", n)
 	}
 	// One browser has one ceremony: asking again replaces it.
 	br := f.Browser()
-	br.Post("/who/passkey/sign-in/options", nil)
-	br.Post("/who/passkey/sign-in/options", nil)
+	br.Post("/api/roux/auth/passkey/sign-in/options", nil)
+	br.Post("/api/roux/auth/passkey/sign-in/options", nil)
 	if n := f.count(`select count(*) from roux_passkey_ceremony`); n != 2 {
 		t.Fatalf("%d ceremonies, want 2 (one per browser)", n)
 	}
@@ -732,7 +736,7 @@ func TestOldCeremoniesAreCleanedAsNewOnesStart(t *testing.T) {
 func TestTheCeremonyCookieIsSecureWhenConfiguredEvenOverPlainHTTP(t *testing.T) {
 	for _, secure := range []bool{false, true} {
 		f := build(t, secure)
-		r := f.Browser().Post("/who/passkey/sign-in/options", nil)
+		r := f.Browser().Post("/api/roux/auth/passkey/sign-in/options", nil)
 		var found bool
 		for _, c := range r.Cookies() {
 			if c.Name == "PASSKEY_CEREMONY" {

@@ -32,8 +32,10 @@ function authenticator(get: () => Promise<unknown>) {
 
 function who(signIn: () => Response) {
   server.use(
-    http.post("/who/passkey/sign-in/options", () => HttpResponse.json({ challenge: "AAAA", allowCredentials: [] })),
-    http.post("/who/passkey/sign-in", () => signIn()),
+    http.post("/api/roux/auth/passkey/sign-in/options", () =>
+      HttpResponse.json({ challenge: "AAAA", allowCredentials: [] }),
+    ),
+    http.post("/api/roux/auth/passkey/sign-in", () => signIn()),
   );
 }
 
@@ -95,7 +97,7 @@ describe("PasskeySignInButton", () => {
   });
 
   it("says it failed when the call itself breaks", async () => {
-    server.use(http.post("/who/passkey/sign-in/options", () => HttpResponse.error()));
+    server.use(http.post("/api/roux/auth/passkey/sign-in/options", () => HttpResponse.error()));
     renderWithProviders(<PasskeySignInButton />);
 
     await userEvent.click(screen.getByRole("button", { name: "Sign in with a passkey" }));

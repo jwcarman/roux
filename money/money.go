@@ -132,8 +132,8 @@ func (m *Money) UnmarshalJSON(data []byte) error {
 
 // roux's messages, the browser's money() rule's words.
 const (
-	MustBeMoreThanZero = "Must be more than 0"
-	MustNotBeNegative  = "Must not be negative"
+	MustBeMoreThanZero = problem.MustBeMoreThan0
+	MustNotBeNegative  = problem.MustNotBeNegative
 )
 
 // MustBeIn is the message for an amount in another currency.

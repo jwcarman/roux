@@ -11,7 +11,7 @@ function messageOf(result: { success: boolean; error?: z.ZodError }): string | u
   return result.error?.issues[0]?.message;
 }
 
-// The browser's words for a mistake are the server's (ContributorValidationMessages.properties).
+// The browser's words for a mistake are the server's (contracts/messages.json).
 describe("rules say what the server says", () => {
   it.each([
     ["blank text", () => text().safeParse(" "), "NotBlank", {}],
@@ -42,9 +42,7 @@ describe("rules say what the server says", () => {
   });
 
   it("refuses a constraint the server has no message for", () => {
-    expect(() => validationMessage("Unknown")).toThrow(
-      "jakarta.validation.constraints.Unknown.message is not in runtime",
-    );
+    expect(() => validationMessage("Unknown")).toThrow("Unknown is not in contracts/messages.json");
   });
 
   it("leaves a placeholder it has no value for", () => {
@@ -52,7 +50,7 @@ describe("rules say what the server says", () => {
   });
 });
 
-// @Phone on the server and phone() here are one rule (contracts/phone.json; PhoneContractTest is the Java side).
+// @Phone on the server and phone() here are one rule (contracts/phone.json; the Go validation package is the server side).
 describe("phone() is the server's @Phone", () => {
   const fixture = contract<{ pattern: string; message: string; valid: string[]; invalid: string[] }>("phone.json");
 

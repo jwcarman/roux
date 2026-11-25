@@ -22,13 +22,13 @@ export function renderRoute(
   }: { permissions: string[] | null; browserHistory?: boolean },
 ) {
   server.use(
-    http.get("/who/me", () =>
+    http.get("/api/roux/auth/me", () =>
       permissions === null
         ? new HttpResponse(null, { status: 401 })
         : HttpResponse.json({ identityId: "id-1", permissions }),
     ),
     // The signed-in user's name, which the session loads for anyone signed in (roux's /api/users/me).
-    http.get("/api/users/me", () =>
+    http.get("/api/roux/users/me", () =>
       permissions === null
         ? new HttpResponse(null, { status: 401 })
         : HttpResponse.json({

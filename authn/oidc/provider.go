@@ -43,7 +43,7 @@ const (
 
 // Provider is one place people can sign in with.
 type Provider struct {
-	// ID names the provider in URLs (/who/oidc/authorize/{ID}) and in the callback address you
+	// ID names the provider in URLs (/api/roux/auth/oidc/authorize/{ID}) and in the callback address you
 	// register with it: lower case letters, digits and hyphens.
 	ID string
 	// Name is what the sign-in page's button says (default: the ID, capitalized).

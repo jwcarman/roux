@@ -1,5 +1,5 @@
 import { Button, Center, Flex, Heading, Separator, Stack, Text } from "@chakra-ui/react";
-import type { SignInOptions } from "@jwcarman/who-client";
+import type { SignInOptions } from "../auth";
 import { useState, type ReactNode } from "react";
 import { LuChevronLeft, LuKeyRound, LuMail } from "react-icons/lu";
 import { CodeForm, LinkRequestForm, SEND_FAILED, sendLink } from "./EmailSignIn";
@@ -7,7 +7,7 @@ import { useSignInOptions } from "./options";
 import { usePasskeySignIn } from "./PasskeySignInButton";
 import { ProviderSignInButton } from "./providers";
 
-/** The ways a card offers when who cannot be asked: the two roux apps have on. */
+/** The ways a card offers when the server cannot be asked: the two roux apps have on. */
 const FALLBACK: SignInOptions = { email: true, passkey: true, providers: [] };
 
 export interface SignInCardProps {

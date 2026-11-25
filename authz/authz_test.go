@@ -62,7 +62,7 @@ func TestOwnerIsSeededWithTheIdentityPermissions(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, err := svc.PermissionsOf(context.Background(), id)
-	if err != nil || !slices.Equal(got, []string{"who.identities.manage", "who.identities.read"}) {
+	if err != nil || !slices.Equal(got, []string{"roux.admin"}) {
 		t.Fatalf("OWNER permissions: %v %v", got, err)
 	}
 	if _, found, _ := authz.FindRole(context.Background(), pool, "NOBODY"); found {
@@ -137,7 +137,7 @@ func TestEnsureAdminKeepsSomeoneActiveWhoCanManagePeople(t *testing.T) {
 		t.Fatal(err)
 	}
 	third := identity(t, pool)
-	if err := authz.Assign(ctx, pool, third, role(t, pool, "manager", authz.IdentitiesManage).ID); err != nil {
+	if err := authz.Assign(ctx, pool, third, role(t, pool, "manager", authz.Admin).ID); err != nil {
 		t.Fatal(err)
 	}
 	if err := authz.EnsureAdmin(ctx, pool); err != nil {
@@ -145,7 +145,7 @@ func TestEnsureAdminKeepsSomeoneActiveWhoCanManagePeople(t *testing.T) {
 	}
 
 	p := authz.LastAdminProblem()
-	if p.Status != 409 || p.Code != "last-admin" || p.Type != "urn:who:error:last-admin" ||
+	if p.Status != 409 || p.Code != "last-admin" || p.Type != "urn:roux:error:last-admin" ||
 		p.Detail != "The team needs someone active who can manage people" {
 		t.Fatalf("last-admin problem: %+v", p)
 	}
@@ -183,15 +183,15 @@ func TestInvitableRolesEndpoint(t *testing.T) {
 	env.Serve()
 	empty.Serve()
 
-	if r := env.Browser().Get("/api/roles/invitable"); r.StatusCode != 401 {
+	if r := env.Browser().Get("/api/roux/roles/invitable"); r.StatusCode != 401 {
 		t.Fatalf("anonymous: %d", r.StatusCode)
 	}
 	b := env.SignedIn(env.Identity()) // signed in, no permission needed
-	r := b.Get("/api/roles/invitable")
+	r := b.Get("/api/roux/roles/invitable")
 	if r.StatusCode != 200 || strings.TrimSpace(string(r.Body)) != `["USER","COACH"]` {
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
 	}
-	if got := strings.TrimSpace(string(empty.SignedIn(empty.Identity()).Get("/api/roles/invitable").Body)); got != `[]` {
+	if got := strings.TrimSpace(string(empty.SignedIn(empty.Identity()).Get("/api/roux/roles/invitable").Body)); got != `[]` {
 		t.Fatalf("no roles must be [], not null: %s", got)
 	}
 }

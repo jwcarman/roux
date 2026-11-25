@@ -97,10 +97,10 @@ func TestOrganizationEndpoint(t *testing.T) {
 	organization.Register(env.Mux, env.Host, cal.Context)
 	env.Serve()
 
-	if r := env.Browser().Get("/api/organization"); r.StatusCode != 401 {
+	if r := env.Browser().Get("/api/roux/organization"); r.StatusCode != 401 {
 		t.Fatalf("anonymous: %d", r.StatusCode)
 	}
-	r := env.SignedIn(env.Identity()).Get("/api/organization")
+	r := env.SignedIn(env.Identity()).Get("/api/roux/organization")
 	want := `{"timeZone":"America/New_York","locale":"en-US","today":"2026-11-24","todayEndsAt":"2026-11-25T05:00:00Z","currency":null,"fractionDigits":null}`
 	if r.StatusCode != 200 || strings.TrimSpace(string(r.Body)) != want {
 		t.Fatalf("%d %s\nwant %s", r.StatusCode, r.Body, want)

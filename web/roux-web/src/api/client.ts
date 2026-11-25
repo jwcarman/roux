@@ -33,9 +33,15 @@ export function onSessionLost(listener: () => void): () => void {
   return () => sessionLostListeners.delete(listener);
 }
 
-/** `/who/me` answering 401 is how a signed-out page learns it is signed out, so only the API counts. */
+/**
+ * Sign-in's own endpoints answer 401 as an answer, not a lost session: `/api/roux/auth/me` is how a
+ * signed-out page learns it is signed out, and a wrong code is a 401 too.
+ */
+const SIGN_IN_PATHS = "/api/roux/auth/";
+
 function notice(path: string, response: Response): Response {
-  if (response.status === 401 && path.startsWith(apiSettings().sessionPathPrefix)) {
+  const settings = apiSettings();
+  if (response.status === 401 && path.startsWith(settings.sessionPathPrefix) && !path.startsWith(SIGN_IN_PATHS)) {
     sessionLostListeners.forEach((listener) => listener());
   }
   return response;

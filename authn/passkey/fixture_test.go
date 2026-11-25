@@ -94,11 +94,11 @@ func (f *fx) person(address string) (uuid.UUID, *authntest.Browser) {
 // register adds a passkey through the endpoints, as the browser does.
 func (f *fx) register(b *authntest.Browser, label string, tw passkeytest.Tweaks) authntest.Reply {
 	f.T.Helper()
-	opts := b.Post("/who/me/passkeys/options", nil)
+	opts := b.Post("/api/roux/auth/me/passkeys/options", nil)
 	if opts.StatusCode != 200 {
 		f.T.Fatalf("registration options: %d %s", opts.StatusCode, opts.Body)
 	}
-	return b.Post("/who/me/passkeys", map[string]any{"publicKey": map[string]any{
+	return b.Post("/api/roux/auth/me/passkeys", map[string]any{"publicKey": map[string]any{
 		"credential": f.auth.Create(opts.Body, tw), "label": label,
 	}})
 }
@@ -106,11 +106,11 @@ func (f *fx) register(b *authntest.Browser, label string, tw passkeytest.Tweaks)
 // signIn signs a signed-out browser in with the authenticator's passkey.
 func (f *fx) signIn(b *authntest.Browser, tw passkeytest.Tweaks) authntest.Reply {
 	f.T.Helper()
-	opts := b.Post("/who/passkey/sign-in/options", nil)
+	opts := b.Post("/api/roux/auth/passkey/sign-in/options", nil)
 	if opts.StatusCode != 200 {
 		f.T.Fatalf("sign-in options: %d %s", opts.StatusCode, opts.Body)
 	}
-	return b.Post("/who/passkey/sign-in", f.auth.Get(opts.Body, tw))
+	return b.Post("/api/roux/auth/passkey/sign-in", f.auth.Get(opts.Body, tw))
 }
 
 func (f *fx) count(sql string, args ...any) int {

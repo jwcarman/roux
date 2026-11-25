@@ -11,7 +11,7 @@ export interface ApiSettings {
   sessionPathPrefix: string;
 }
 
-let current: ApiSettings = { baseUrl: "/api", csrfBootstrapPath: "/who/me", sessionPathPrefix: "/api/" };
+let current: ApiSettings = { baseUrl: "/api", csrfBootstrapPath: "/api/roux/auth/me", sessionPathPrefix: "/api/" };
 
 /**
  * Changes the settings named in `settings`, keeping the others. Moving the API (`baseUrl`) moves
@@ -22,7 +22,7 @@ export function configureApi(settings: Partial<ApiSettings>): void {
 }
 
 /**
- * The settings in force: `baseUrl` `/api` and who's paths (`/who/me` and `/api/`) unless
+ * The settings in force: `baseUrl` `/api`, the CSRF bootstrap `/api/roux/auth/me` and `/api/` unless
  * {@link configureApi} changed them.
  */
 export function apiSettings(): ApiSettings {

@@ -14,8 +14,8 @@ function fetchCancelled(queryFn: unknown) {
 describe("the users queries", () => {
   it("fetch a user and the invitable roles", async () => {
     server.use(
-      http.get("/api/users/u-1", () => HttpResponse.json({ id: "u-1" })),
-      http.get("/api/roles/invitable", () => HttpResponse.json(["USER"])),
+      http.get("/api/roux/users/u-1", () => HttpResponse.json({ id: "u-1" })),
+      http.get("/api/roux/roles/invitable", () => HttpResponse.json(["USER"])),
     );
     const live = { signal: new AbortController().signal };
     await expect((userQuery("u-1").queryFn as (context: typeof live) => Promise<unknown>)(live)).resolves.toEqual({ id: "u-1" });
@@ -23,12 +23,12 @@ describe("the users queries", () => {
   });
 
   it("stop fetching a user once the query is cancelled (the page was left)", async () => {
-    server.use(http.get("/api/users/u-1", () => HttpResponse.json({ id: "u-1" })));
+    server.use(http.get("/api/roux/users/u-1", () => HttpResponse.json({ id: "u-1" })));
     await expect(fetchCancelled(userQuery("u-1").queryFn)).rejects.toThrow();
   });
 
   it("stop fetching the invitable roles once the query is cancelled", async () => {
-    server.use(http.get("/api/roles/invitable", () => HttpResponse.json(["USER"])));
+    server.use(http.get("/api/roux/roles/invitable", () => HttpResponse.json(["USER"])));
     await expect(fetchCancelled(invitableRolesQuery.queryFn)).rejects.toThrow();
   });
 });

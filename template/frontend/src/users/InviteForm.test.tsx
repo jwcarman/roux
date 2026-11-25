@@ -13,7 +13,7 @@ import { InviteForm } from "./InviteForm";
 function answer(response: () => Response) {
   const sent = { count: 0 };
   server.use(
-    http.post("/api/users/invitations", () => {
+    http.post("/api/roux/users/invitations", () => {
       sent.count++;
       return response();
     }),
@@ -23,7 +23,7 @@ function answer(response: () => Response) {
 
 /** The roles the server says an invitation may give, in its order. */
 function invitable(roles: string[]) {
-  server.use(http.get("/api/roles/invitable", () => HttpResponse.json(roles)));
+  server.use(http.get("/api/roux/roles/invitable", () => HttpResponse.json(roles)));
 }
 
 /** A list of users on the page: the invitation refreshes it. `load` answers each fetch. */
@@ -79,7 +79,7 @@ describe("InviteForm", () => {
   it("invites as a user unless another role is chosen", async () => {
     const bodies: unknown[] = [];
     server.use(
-      http.post("/api/users/invitations", async ({ request }) => {
+      http.post("/api/roux/users/invitations", async ({ request }) => {
         bodies.push(await request.json());
         return HttpResponse.json({ linkSent: true }, { status: 202 });
       }),
@@ -116,7 +116,7 @@ describe("InviteForm", () => {
   });
 
   it("cannot be opened until the server has said which roles may be invited", async () => {
-    server.use(http.get("/api/roles/invitable", () => new Promise<Response>(() => undefined)));
+    server.use(http.get("/api/roux/roles/invitable", () => new Promise<Response>(() => undefined)));
     renderWithProviders(<InviteForm />);
 
     expect(screen.getByRole("button", { name: "Invite user" })).toBeDisabled();
@@ -133,7 +133,7 @@ describe("InviteForm", () => {
   it("invites an instructor when Instructor is chosen", async () => {
     const bodies: unknown[] = [];
     server.use(
-      http.post("/api/users/invitations", async ({ request }) => {
+      http.post("/api/roux/users/invitations", async ({ request }) => {
         bodies.push(await request.json());
         return HttpResponse.json({ linkSent: true }, { status: 202 });
       }),

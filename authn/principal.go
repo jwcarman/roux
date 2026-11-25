@@ -147,7 +147,7 @@ func (h *Host) OnSignedIn(fn func(ctx context.Context, identityID uuid.UUID, at 
 // HandleSigned registers a route under who's base path (relative, like Handle) for a
 // person at a browser: CSRF-checked, then 401 not-signed-in in who's format, then 403
 // browser-session-required for a request an API key signed in (or one with a key beside the
-// session cookie), then fn with who is calling. It is the guard every /who/me/* endpoint
+// session cookie), then fn with who is calling. It is the guard every /api/roux/auth/me/* endpoint
 // uses, so a leaked key can never change how someone signs in.
 func (h *Host) HandleSigned(pattern string, fn func(w http.ResponseWriter, r *http.Request, p *Principal) error) {
 	h.HandleAny(pattern, func(w http.ResponseWriter, r *http.Request, p *Principal) error {

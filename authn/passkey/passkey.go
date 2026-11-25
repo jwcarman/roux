@@ -2,12 +2,12 @@
 // only factor: the device verifies the person (a PIN, a fingerprint, a face) and holds
 // a discoverable credential, so nobody types a name. Endpoints under who's base path:
 //
-//	POST   /who/passkey/sign-in/options   a challenge for the browser; no session needed
-//	POST   /who/passkey/sign-in           200 {"identityId"} and a session, or 401
-//	POST   /who/me/passkeys/options       a challenge to create a passkey   (recent sign-in)
-//	POST   /who/me/passkeys               {"publicKey":{"credential","label"}} -> {"success":true}
-//	GET    /who/me/passkeys               [{credentialId,label,createdAt,lastUsedAt}], oldest first
-//	DELETE /who/me/passkeys/{credentialId}  204 (recent sign-in; never the last way in)
+//	POST   /api/roux/auth/passkey/sign-in/options   a challenge for the browser; no session needed
+//	POST   /api/roux/auth/passkey/sign-in           200 {"identityId"} and a session, or 401
+//	POST   /api/roux/auth/me/passkeys/options       a challenge to create a passkey   (recent sign-in)
+//	POST   /api/roux/auth/me/passkeys               {"publicKey":{"credential","label"}} -> {"success":true}
+//	GET    /api/roux/auth/me/passkeys               [{credentialId,label,createdAt,lastUsedAt}], oldest first
+//	DELETE /api/roux/auth/me/passkeys/{credentialId}  204 (recent sign-in; never the last way in)
 //
 // A challenge lives in a ceremony: one database row behind a short-lived cookie, used
 // once. Registering needs a recent sign-in, so the first factor (usually the mailbox)
@@ -48,7 +48,7 @@ var migrations embed.FS
 var Migration = pgdb.Migration{Name: "roux-authn-passkey", FS: migrations, Dir: "migrations", After: []string{"roux-authn"}}
 
 const (
-	// methodName is how /who/me reports a session that signed in by passkey.
+	// methodName is how /api/roux/auth/me reports a session that signed in by passkey.
 	methodName = "passkey"
 	// maxBody caps a WebAuthn response (an attestation can run to several KB).
 	maxBody  = 64 << 10
@@ -91,7 +91,7 @@ func New(cfg Config) (*Method, error) {
 
 func (m *Method) now() time.Time { return m.cfg.Clock().UTC() }
 
-// Contribute turns passkey sign-in on in GET /who/sign-in.
+// Contribute turns passkey sign-in on in GET /api/roux/auth/sign-in.
 func (m *Method) Contribute(o *authn.SignInOptions) { o.Passkey = true }
 
 // Wait blocks until the "passkey added" notices still being sent are done.
@@ -253,7 +253,7 @@ func (m *Method) registerOptions(w http.ResponseWriter, r *http.Request, p *auth
 	return api.JSON(w, http.StatusOK, creation.Response)
 }
 
-// registration is the body of POST /who/me/passkeys.
+// registration is the body of POST /api/roux/auth/me/passkeys.
 type registration struct {
 	PublicKey struct {
 		Credential json.RawMessage `json:"credential"`

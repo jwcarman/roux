@@ -3,7 +3,7 @@ import { listPasskeys, PASSKEY_LABEL_MAX, passkeyLabelError, registerPasskey, re
 
 const calls = vi.hoisted(() => ({ register: vi.fn(), list: vi.fn(), remove: vi.fn() }));
 
-vi.mock("./who", () => ({ who: { me: { passkeys: calls } } }));
+vi.mock("./auth", () => ({ auth: { me: { passkeys: calls } } }));
 
 describe("passkeyLabelError", () => {
   it("takes a label of 1 to 64 characters", () => {
@@ -29,18 +29,18 @@ describe("passkeyLabelError", () => {
 });
 
 describe("the passkey calls", () => {
-  it("registers under the label, through who", async () => {
+  it("registers under the label, through the server", async () => {
     calls.register.mockResolvedValue("registered");
     await expect(registerPasskey("Phone")).resolves.toBe("registered");
     expect(calls.register).toHaveBeenCalledWith("Phone");
   });
 
-  it("lists the caller's passkeys, through who", async () => {
+  it("lists the caller's passkeys, through the server", async () => {
     calls.list.mockResolvedValue("listed");
     await expect(listPasskeys()).resolves.toBe("listed");
   });
 
-  it("removes a passkey by its credential id, through who", async () => {
+  it("removes a passkey by its credential id, through the server", async () => {
     calls.remove.mockResolvedValue("removed");
     await expect(removePasskey("c-1")).resolves.toBe("removed");
     expect(calls.remove).toHaveBeenCalledWith("c-1");

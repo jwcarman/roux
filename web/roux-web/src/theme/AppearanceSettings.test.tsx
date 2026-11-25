@@ -60,8 +60,8 @@ function serve(answer?: (body: Saved) => Response) {
   const saves: Saved[] = [];
   let current: Saved = SAVED;
   server.use(
-    http.get("/api/theme", () => HttpResponse.json(current)),
-    http.put("/api/theme", async ({ request }) => {
+    http.get("/api/roux/theme", () => HttpResponse.json(current)),
+    http.put("/api/roux/theme", async ({ request }) => {
       const body = (await request.json()) as Saved;
       saves.push(body);
       if (answer) {
@@ -124,14 +124,16 @@ describe("AppearanceSettings", () => {
   });
 
   it("shows every shape when the one in use is not among the first three", async () => {
-    server.use(http.get("/api/theme", () => HttpResponse.json({ ...SAVED, shape: "slight" })));
+    server.use(http.get("/api/roux/theme", () => HttpResponse.json({ ...SAVED, shape: "slight" })));
     show();
 
     expect(await screen.findByRole("button", { name: "Slightly rounded" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("opens More options when the owner's own color is in use", async () => {
-    server.use(http.get("/api/theme", () => HttpResponse.json({ ...SAVED, palette: "brand", brandColor: "#c2410c" })));
+    server.use(
+      http.get("/api/roux/theme", () => HttpResponse.json({ ...SAVED, palette: "brand", brandColor: "#c2410c" })),
+    );
     show();
 
     expect(await screen.findByRole("textbox", { name: "Color code" })).toHaveValue("#c2410c");
@@ -284,7 +286,7 @@ describe("AppearanceSettings", () => {
   });
 
   it("shows a spinner while the look loads", async () => {
-    server.use(http.get("/api/theme", () => HttpResponse.json(SAVED)));
+    server.use(http.get("/api/roux/theme", () => HttpResponse.json(SAVED)));
     show();
 
     expect(screen.getByLabelText("Loading")).toBeInTheDocument();
@@ -292,7 +294,7 @@ describe("AppearanceSettings", () => {
   });
 
   it("says so when the look cannot be loaded", async () => {
-    server.use(http.get("/api/theme", () => new HttpResponse(null, { status: 403 })));
+    server.use(http.get("/api/roux/theme", () => new HttpResponse(null, { status: 403 })));
     show();
 
     expect(await screen.findByText("The app's look could not be loaded. Try again in a moment.")).toBeInTheDocument();
@@ -525,7 +527,7 @@ describe("AppearanceSettings", () => {
   });
 
   it("does not offer the buttons' shade note for a color the owner has not chosen", async () => {
-    server.use(http.get("/api/theme", () => HttpResponse.json({ ...SAVED, brandColor: "#fff59d" })));
+    server.use(http.get("/api/roux/theme", () => HttpResponse.json({ ...SAVED, brandColor: "#fff59d" })));
     const { user } = show();
     await user.click(await screen.findByRole("button", { name: "More options" }));
 

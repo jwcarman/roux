@@ -26,7 +26,7 @@ describe("EmailSignIn", () => {
   async function askForALink(address = "ada@example.org") {
     const sent: unknown[] = [];
     server.use(
-      http.post("/who/email/send", async ({ request }) => {
+      http.post("/api/roux/auth/email/send", async ({ request }) => {
         sent.push(await request.json());
         return new HttpResponse(null, { status: 202 });
       }),
@@ -57,7 +57,7 @@ describe("EmailSignIn", () => {
 
   it("does not let the code form reload the page", async () => {
     await askForALink();
-    server.use(http.post("/who/email/sign-in", () => HttpResponse.json({ identityId: "id-1" })));
+    server.use(http.post("/api/roux/auth/email/sign-in", () => HttpResponse.json({ identityId: "id-1" })));
     const code = await screen.findByLabelText("Code from the email");
 
     const proceeded = fireEvent.submit(code.closest("form")!);
@@ -84,7 +84,7 @@ describe("EmailSignIn", () => {
     expect(sent).toEqual([{ email: "ada@example.org" }]);
   });
 
-  it("refuses an address that is not one, in roux's words, without asking who", async () => {
+  it("refuses an address that is not one, in roux's words, without asking the server", async () => {
     renderWithProviders(<EmailSignIn />);
 
     await userEvent.type(screen.getByRole("textbox", { name: "Email" }), "ada");
@@ -95,7 +95,7 @@ describe("EmailSignIn", () => {
   });
 
   it("says so when the link could not be sent", async () => {
-    server.use(http.post("/who/email/send", () => new HttpResponse(null, { status: 500 })));
+    server.use(http.post("/api/roux/auth/email/send", () => new HttpResponse(null, { status: 500 })));
     renderWithProviders(<EmailSignIn />);
     await userEvent.type(screen.getByRole("textbox", { name: "Email" }), "ada@example.org");
 
@@ -105,11 +105,11 @@ describe("EmailSignIn", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
-  it("says so when who refuses the send (a failed human check)", async () => {
+  it("says so when the server refuses the send (a failed human check)", async () => {
     server.use(
       http.post(
-        "/who/email/send",
-        () => new HttpResponse(null, { status: 403, headers: { "Who-Error": "human-check-failed" } }),
+        "/api/roux/auth/email/send",
+        () => new HttpResponse(null, { status: 403, headers: { "Roux-Error": "human-check-failed" } }),
       ),
     );
     renderWithProviders(<EmailSignIn />);
@@ -123,7 +123,7 @@ describe("EmailSignIn", () => {
   it("clears that refusal when the next try works", async () => {
     let calls = 0;
     server.use(
-      http.post("/who/email/send", () =>
+      http.post("/api/roux/auth/email/send", () =>
         calls++ === 0 ? new HttpResponse(null, { status: 500 }) : new HttpResponse(null, { status: 202 }),
       ),
     );
@@ -144,7 +144,7 @@ describe("EmailSignIn", () => {
     await askForALink();
     const bodies: unknown[] = [];
     server.use(
-      http.post("/who/email/sign-in", async ({ request }) => {
+      http.post("/api/roux/auth/email/sign-in", async ({ request }) => {
         bodies.push(await request.json());
         return HttpResponse.json({ identityId: "id-1" });
       }),
@@ -159,7 +159,7 @@ describe("EmailSignIn", () => {
 
   it("signs in with the Enter key in the code field", async () => {
     await askForALink();
-    server.use(http.post("/who/email/sign-in", () => HttpResponse.json({ identityId: "id-1" })));
+    server.use(http.post("/api/roux/auth/email/sign-in", () => HttpResponse.json({ identityId: "id-1" })));
 
     await userEvent.type(await screen.findByLabelText("Code from the email"), "K7F-2QM{Enter}");
 
@@ -168,7 +168,7 @@ describe("EmailSignIn", () => {
 
   it("tells a code that could not be checked under the field too", async () => {
     await askForALink();
-    server.use(http.post("/who/email/sign-in", () => new HttpResponse(null, { status: 500 })));
+    server.use(http.post("/api/roux/auth/email/sign-in", () => new HttpResponse(null, { status: 500 })));
     await userEvent.type(await screen.findByLabelText("Code from the email"), "K7F-2QM{Enter}");
 
     expect(await screen.findByText("That code did not work. Check it, or ask for a new email.")).toBeInTheDocument();
@@ -179,7 +179,7 @@ describe("EmailSignIn", () => {
     await askForALink();
     let answers = 0;
     server.use(
-      http.post("/who/email/sign-in", () =>
+      http.post("/api/roux/auth/email/sign-in", () =>
         answers++ === 0 ? new HttpResponse(null, { status: 401 }) : HttpResponse.json({ identityId: "id-1" }),
       ),
     );

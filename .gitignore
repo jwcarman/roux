@@ -16,3 +16,7 @@ logs/
 
 # incremental mutation-testing history (Stryker); cached in CI, never committed
 .mutation-history/
+
+# Local tool state
+/.claude/worktrees/
+/.playwright-mcp/

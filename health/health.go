@@ -59,8 +59,8 @@ func (h *Health) Draining() { h.draining.Store(true) }
 
 // Register mounts the probes (LivePath and ReadyPath) on mux.
 func (h *Health) Register(mux *api.Mux) {
-	mux.HandleRoux("GET /healthz", h.live)
-	mux.HandleRoux("GET /readyz", h.ready)
+	mux.HandleRoux("GET /api/roux/healthz", h.live)
+	mux.HandleRoux("GET /api/roux/readyz", h.ready)
 }
 
 type report struct {

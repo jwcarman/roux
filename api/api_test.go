@@ -109,7 +109,7 @@ func TestRouxPrefixIsReservedForTheKit(t *testing.T) {
 
 func TestHandleRouxMountsUnderAPIRoux(t *testing.T) {
 	m := api.NewMux()
-	m.HandleRoux("GET /thing", okHandler)
+	m.HandleRoux("GET /api/roux/thing", okHandler)
 	get := func(path string) int {
 		rec := httptest.NewRecorder()
 		m.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
@@ -191,10 +191,29 @@ func TestKitPrefixRules(t *testing.T) {
 	for _, bad := range []string{"kit", "/", "/kit/", "/api/mine"} {
 		mustPanic(t, "kit base", func() { m.Kit(bad, render) })
 	}
-	m.Kit("/who", render)
-	mustPanic(t, "overlaps", func() { m.Kit("/who", render) })
-	mustPanic(t, "overlaps", func() { m.Kit("/who/sub", render) })
-	m.Kit("/whoever", render) // a different segment, not an overlap
+	m.Kit("/kit", render)
+	mustPanic(t, "overlaps", func() { m.Kit("/kit", render) })
+	mustPanic(t, "overlaps", func() { m.Kit("/kit/sub", render) })
+	m.Kit("/kitten", render) // a different segment, not an overlap
+	// Inside roux's own paths a kit may take a base of its own, once.
+	m.Kit("/api/roux/auth", render)
+	mustPanic(t, "overlaps", func() { m.Kit("/api/roux/auth/sub", render) })
+	mustPanic(t, "roux route", func() { m.HandleRoux("GET /api/mine", okHandler) })
+}
+
+func TestTheMostSpecificKitRendersItsErrors(t *testing.T) {
+	m := api.NewMux()
+	m.Kit("/api/roux/auth", func(w http.ResponseWriter, _ *http.Request, p *problem.Problem) {
+		w.Header().Set("X-Kit", "auth")
+		w.WriteHeader(p.Status)
+	})
+	for path, want := range map[string]string{"/api/roux/auth/nope": "auth", "/api/roux/nope": "", "/api/roux/authx": ""} {
+		rec := httptest.NewRecorder()
+		m.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
+		if rec.Code != 404 || rec.Header().Get("X-Kit") != want {
+			t.Errorf("%s: %d, rendered by %q, want %q", path, rec.Code, rec.Header().Get("X-Kit"), want)
+		}
+	}
 }
 
 func TestUnexpectedErrorsAreOpaqueWithAnErrorID(t *testing.T) {

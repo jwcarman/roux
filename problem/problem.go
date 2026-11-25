@@ -77,20 +77,38 @@ func NotFound(detail string) *Problem         { return New(http.StatusNotFound, 
 func MethodNotAllowed(detail string) *Problem { return New(http.StatusMethodNotAllowed, detail) }
 func Internal() *Problem                      { return New(http.StatusInternalServerError, "") }
 
-// The words roux's forms show for the common constraints, so every endpoint
-// speaks to the person filling in a form the same way.
+// The words roux's forms show for the common rules, so every endpoint speaks to the
+// person filling in a form the same way, and in the browser's words
+// (contracts/messages.json is the list both sides test against).
 const (
-	MustNotBeBlank = "Must not be blank"
-	MustNotBeEmpty = "Must not be empty"
-	InvalidValue   = "Invalid value"
-	ValidEmail     = "Must be a valid email address"
-	BadFormat      = "Is not in the expected format"
+	MustNotBeBlank    = "Must not be blank"
+	MustNotBeEmpty    = "Must not be empty"
+	InvalidValue      = "Invalid value"
+	ValidEmail        = "Must be a valid email address"
+	ValidURL          = "Must be a valid web address"
+	BadFormat         = "Is not in the expected format"
+	MustBeMoreThan0   = "Must be more than 0"
+	MustNotBeNegative = "Must not be negative"
+	MustBeInThePast   = "Must be in the past"
+	MustBeInTheFuture = "Must be in the future"
+	MustNotBeInFuture = "Must not be in the future"
+	MustNotBeInPast   = "Must not be in the past"
 )
 
 // MustBeBetween is the message for a length out of range: "Must be between 1 and 80 characters".
-func MustBeBetween(min, max int) string {
-	return fmt.Sprintf("Must be between %d and %d characters", min, max)
+func MustBeBetween(least, most int) string {
+	return fmt.Sprintf("Must be between %d and %d characters", least, most)
 }
+
+// MustBeAtLeast is the message for a number under its minimum: "Must be at least 5".
+func MustBeAtLeast(n int64) string { return fmt.Sprintf("Must be at least %d", n) }
+
+// MustBeAtMost is the message for a number over its maximum: "Must be at most 5".
+func MustBeAtMost(n int64) string { return fmt.Sprintf("Must be at most %d", n) }
+
+// MustBeAfter is the message for a value not after another, named as the form labels it:
+// "Must be after starts at".
+func MustBeAfter(other string) string { return "Must be after " + other }
 
 // MustBeOneOf is the message for a value outside a fixed set: "Must be one of A, B".
 func MustBeOneOf(values ...string) string { return "Must be one of " + strings.Join(values, ", ") }

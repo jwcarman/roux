@@ -22,10 +22,10 @@ import (
 // its mailbox (else anyone could claim another person's address, or get someone to sign in
 // to an identity that is not theirs).
 //
-//	GET    /who/me/email-addresses                    [{id, address, createdAt}], oldest first
-//	POST   /who/me/email-addresses                    {address, replaces?} -> 202, whatever becomes of it
-//	POST   /who/me/email-addresses/confirmations      {token} or {code} -> {"credentialId"}
-//	DELETE /who/me/email-addresses/{id}               204; never the last way in
+//	GET    /api/roux/auth/me/email-addresses                    [{id, address, createdAt}], oldest first
+//	POST   /api/roux/auth/me/email-addresses                    {address, replaces?} -> 202, whatever becomes of it
+//	POST   /api/roux/auth/me/email-addresses/confirmations      {token} or {code} -> {"credentialId"}
+//	DELETE /api/roux/auth/me/email-addresses/{id}               204; never the last way in
 //
 // Asking, confirming and removing need a recent sign-in (checked before the body or the id is
 // looked at, so a stale session learns nothing).

@@ -14,9 +14,9 @@ function serveProfile() {
   let current: Profile = { displayName: "Ada Lovelace", email: "ada@example.com", version: 2 };
   const renames: unknown[] = [];
   server.use(
-    http.get("/who/me", () => HttpResponse.json({ identityId: "id-1", permissions: [] })),
-    http.get("/api/users/me", () => HttpResponse.json(current)),
-    http.put("/api/users/me", async ({ request }) => {
+    http.get("/api/roux/auth/me", () => HttpResponse.json({ identityId: "id-1", permissions: [] })),
+    http.get("/api/roux/users/me", () => HttpResponse.json(current)),
+    http.put("/api/roux/users/me", async ({ request }) => {
       const body = (await request.json()) as { displayName: string; version: number };
       renames.push(body);
       if (body.version !== current.version) {
@@ -91,7 +91,7 @@ describe("ProfileForm", () => {
 
   it("says the profile could not be saved when the server fails", async () => {
     serveProfile();
-    server.use(http.put("/api/users/me", () => serverError()));
+    server.use(http.put("/api/roux/users/me", () => serverError()));
     const { user, name } = await show();
 
     await user.type(name, " King");

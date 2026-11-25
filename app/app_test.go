@@ -160,7 +160,7 @@ func TestMigrationsAndSignInMethodsAreCollectedFromEveryModule(t *testing.T) {
 		}
 	}
 	// Both sign-in methods are on the sign-in page.
-	rec := serve(k, "GET", "/who/sign-in")
+	rec := serve(k, "GET", "/api/roux/auth/sign-in")
 	if !strings.Contains(rec, `"id":"first"`) || !strings.Contains(rec, `"id":"second"`) {
 		t.Fatalf("sign-in options: %s", rec)
 	}

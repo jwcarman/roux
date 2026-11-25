@@ -24,12 +24,12 @@ function Probe() {
 function signedIn() {
   let signedInNow = true;
   server.use(
-    http.get("/who/me", () =>
+    http.get("/api/roux/auth/me", () =>
       signedInNow
         ? HttpResponse.json({ identityId: "id-1", permissions: [] })
         : new HttpResponse(null, { status: 401 }),
     ),
-    http.get("/api/users/me", () =>
+    http.get("/api/roux/users/me", () =>
       HttpResponse.json({ id: "id-1", displayName: "Test User", email: "test@example.org", version: 0 }),
     ),
   );
@@ -57,7 +57,7 @@ describe("SessionProvider", () => {
 
   it("has no profile when it cannot be loaded", async () => {
     signedIn();
-    server.use(http.get("/api/users/me", () => new HttpResponse(null, { status: 500 })));
+    server.use(http.get("/api/roux/users/me", () => new HttpResponse(null, { status: 500 })));
     renderSession();
 
     expect(await screen.findByText("me: id-1")).toBeInTheDocument();
@@ -65,18 +65,18 @@ describe("SessionProvider", () => {
   });
 
   it("has no profile for a signed-out caller", async () => {
-    server.use(http.get("/who/me", () => new HttpResponse(null, { status: 401 })));
+    server.use(http.get("/api/roux/auth/me", () => new HttpResponse(null, { status: 401 })));
     renderSession();
 
     expect(await screen.findByText("me: signed out")).toBeInTheDocument();
     expect(await screen.findByText("profile: none")).toBeInTheDocument();
   });
 
-  it("signs out through who", async () => {
+  it("signs out through the server", async () => {
     signedIn();
     let signedOut = false;
     server.use(
-      http.post("/who/logout", () => {
+      http.post("/api/roux/auth/logout", () => {
         signedOut = true;
         return new HttpResponse(null, { status: 204 });
       }),
@@ -106,7 +106,7 @@ describe("SessionProvider", () => {
 describe("SessionProvider and the query cache", () => {
   it("keeps what was cached before the session loaded, and empties it on signing out", async () => {
     signedIn();
-    server.use(http.post("/who/logout", () => new HttpResponse(null, { status: 204 })));
+    server.use(http.post("/api/roux/auth/logout", () => new HttpResponse(null, { status: 204 })));
     const { client } = renderWithProviders(
       <SessionProvider>
         <Probe />
@@ -133,7 +133,7 @@ describe("SessionProvider and the query cache", () => {
     await screen.findByText("me: id-1");
     unmount();
     server.use(
-      http.get("/who/me", () => {
+      http.get("/api/roux/auth/me", () => {
         asked++;
         return new HttpResponse(null, { status: 401 });
       }),
@@ -184,7 +184,7 @@ describe("the session's calls", () => {
     );
     await screen.findByText("profile: Test User");
     server.use(
-      http.get("/api/users/me", () =>
+      http.get("/api/roux/users/me", () =>
         HttpResponse.json({ id: "id-1", displayName: "Renamed", email: "test@example.org", version: 1 }),
       ),
     );

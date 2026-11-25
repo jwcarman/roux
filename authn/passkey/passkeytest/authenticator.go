@@ -117,7 +117,7 @@ func (a *Authenticator) clientData(typ, challenge string, t Tweaks) []byte {
 }
 
 // Create answers a server's creation options (the JSON body of
-// POST /who/me/passkeys/options) with a new credential, in the shape a browser sends:
+// POST /api/roux/auth/me/passkeys/options) with a new credential, in the shape a browser sends:
 // the "credential" of a registration.
 func (a *Authenticator) Create(optionsJSON []byte, tw Tweaks) map[string]any {
 	a.t.Helper()
@@ -180,7 +180,7 @@ func (a *Authenticator) Create(optionsJSON []byte, tw Tweaks) map[string]any {
 	}
 }
 
-// Get answers a server's request options (the JSON body of POST /who/passkey/sign-in/options)
+// Get answers a server's request options (the JSON body of POST /api/roux/auth/passkey/sign-in/options)
 // with an assertion, in the shape a browser sends.
 func (a *Authenticator) Get(optionsJSON []byte, tw Tweaks) map[string]any {
 	a.t.Helper()

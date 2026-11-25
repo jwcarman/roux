@@ -130,7 +130,7 @@ describe("PasskeySettings", () => {
     expect(within(again).getByRole("textbox", { name: /Passkey label/ })).toHaveValue("");
   });
 
-  it("offers a label of at most who's length, with an example", async () => {
+  it("offers a label of at most the server's length, with an example", async () => {
     show();
     await userEvent.click(await screen.findByRole("button", { name: "Add a passkey" }));
     const label = within(await screen.findByRole("dialog", { name: "Add a passkey" })).getByRole("textbox", {

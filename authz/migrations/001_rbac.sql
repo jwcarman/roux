@@ -20,12 +20,12 @@ create table roux_identity_role (
 create index roux_identity_role_role_idx on roux_identity_role (role_id);
 
 -- OWNER holds every permission there is: roux makes the first holder at startup, and
--- only owners may manage people, so the last active one cannot be removed. Its
--- identity permissions are who-admin's; each module grants OWNER its own in its migration.
+-- only owners may manage people, so the last active one cannot be removed (roux.admin
+-- marks them). Each module grants OWNER its own permissions in its migration.
 insert into roux_role (id, name) values (gen_random_uuid(), 'OWNER') on conflict (name) do nothing;
 insert into roux_role_permission (role_id, permission)
 select r.id, p.permission
   from roux_role r
- cross join (values ('who.identities.read'), ('who.identities.manage')) as p(permission)
+ cross join (values ('roux.admin')) as p(permission)
  where r.name = 'OWNER'
 on conflict do nothing;

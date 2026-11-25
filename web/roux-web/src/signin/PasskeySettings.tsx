@@ -1,6 +1,6 @@
 import { Box, Button, Flex, List, Stack, Text } from "@chakra-ui/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import type { Passkey } from "@jwcarman/who-client";
+import type { Passkey } from "../auth";
 import { useState } from "react";
 import { formatInstantDate } from "../dates/format";
 import { notify } from "../feedback/notify";

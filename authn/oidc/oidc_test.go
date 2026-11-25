@@ -112,11 +112,11 @@ func (e *env) through(b *authntest.Browser, first func() authntest.Reply) string
 }
 
 func (e *env) signInWith(b *authntest.Browser, provider string) string {
-	return e.through(b, func() authntest.Reply { return b.Get("/who/oidc/authorize/" + provider) })
+	return e.through(b, func() authntest.Reply { return b.Get("/api/roux/auth/oidc/authorize/" + provider) })
 }
 
 func (e *env) linkWith(b *authntest.Browser, provider string) string {
-	return e.through(b, func() authntest.Reply { return b.Post("/who/me/accounts/"+provider, nil) })
+	return e.through(b, func() authntest.Reply { return b.Post("/api/roux/auth/me/accounts/"+provider, nil) })
 }
 
 // user says who the provider signs in next.
@@ -132,7 +132,7 @@ func (e *env) signUp(provider, sub string, claims map[string]any) (uuid.UUID, *a
 	if got := e.signInWith(b, provider); got != "/?pending=sign-up" {
 		e.t.Fatalf("an unknown account lands at %q", got)
 	}
-	r := b.Post("/who/oidc/pending/sign-up", nil)
+	r := b.Post("/api/roux/auth/oidc/pending/sign-up", nil)
 	if r.StatusCode != 200 {
 		e.t.Fatalf("sign-up: %d %s", r.StatusCode, r.Body)
 	}
@@ -159,7 +159,7 @@ func problemCode(t *testing.T, r authntest.Reply) string {
 
 func TestTheSignInPageListsTheProviders(t *testing.T) {
 	e := setup(t)
-	r := e.Browser().Get("/who/sign-in")
+	r := e.Browser().Get("/api/roux/auth/sign-in")
 	var body struct {
 		Providers []struct{ ID, Name string }
 	}
@@ -171,7 +171,7 @@ func TestTheSignInPageListsTheProviders(t *testing.T) {
 
 func TestAnUnknownProviderIsNotFound(t *testing.T) {
 	e := setup(t)
-	for _, path := range []string{"/who/oidc/authorize/nope", "/who/oidc/callback/nope"} {
+	for _, path := range []string{"/api/roux/auth/oidc/authorize/nope", "/api/roux/auth/oidc/callback/nope"} {
 		if r := e.Browser().Get(path); r.StatusCode != 404 || problemCode(t, r) != "unknown-provider" {
 			t.Errorf("%s: %d %s", path, r.StatusCode, r.Body)
 		}
@@ -184,7 +184,7 @@ func TestTheAuthorizeRequestCarriesTheProtections(t *testing.T) {
 	b := e.Browser()
 	e.signInWith(b, "test")
 	q := e.prov.Seen[0]
-	redirect := e.Server.URL + "/who/oidc/callback/test"
+	redirect := e.Server.URL + "/api/roux/auth/oidc/callback/test"
 	if q.Get("redirect_uri") != redirect || q.Get("client_id") != oidctest.ClientID || q.Get("response_type") != "code" ||
 		q.Get("code_challenge_method") != "S256" || len(q.Get("code_challenge")) < 43 ||
 		len(q.Get("state")) < 40 || len(q.Get("nonce")) < 40 || q.Get("prompt") != "" ||
@@ -208,20 +208,20 @@ func TestSignUpIsClosedByDefault(t *testing.T) {
 	if got := e.signInWith(b, "test"); got != "/?pending=sign-up" {
 		t.Fatalf("lands at %q", got)
 	}
-	r := b.Get("/who/oidc/pending")
+	r := b.Get("/api/roux/auth/oidc/pending")
 	body := r.JSON(t)
 	if r.StatusCode != 200 || body["provider"] != "test" || body["displayName"] != "ada@example.test" ||
 		body["canSignUp"] != true || body["canLink"] != false {
 		t.Fatalf("pending: %d %s", r.StatusCode, r.Body)
 	}
-	r = b.Post("/who/oidc/pending/sign-up", nil)
+	r = b.Post("/api/roux/auth/oidc/pending/sign-up", nil)
 	if r.StatusCode != 403 || problemCode(t, r) != "sign-up-refused" {
 		t.Fatalf("closed policy: %d %s", r.StatusCode, r.Body)
 	}
 	if e.count(`select count(*) from roux_identity`) != 0 || e.count(`select count(*) from roux_federated_credential`) != 0 {
 		t.Fatal("a refused sign-up created something")
 	}
-	if b.Get("/who/me").StatusCode != 401 {
+	if b.Get("/api/roux/auth/me").StatusCode != 401 {
 		t.Fatal("a refused sign-up signed in")
 	}
 }
@@ -229,15 +229,15 @@ func TestSignUpIsClosedByDefault(t *testing.T) {
 func TestSigningUpAndSigningInAgain(t *testing.T) {
 	e := setup(t)
 	id, b := e.signUp("test", "u1", map[string]any{"email": "ada@example.test", "name": "Ada"})
-	me := b.Get("/who/me").JSON(t)
+	me := b.Get("/api/roux/auth/me").JSON(t)
 	if me["identityId"] != id.String() || me["signInMethod"] != "oidc" {
-		t.Fatalf("/who/me: %v", me)
+		t.Fatalf("/api/roux/auth/me: %v", me)
 	}
 	if e.policy.setups != 1 {
 		t.Fatalf("setup ran %d times", e.policy.setups)
 	}
 	// The pending account is spent.
-	if r := b.Post("/who/oidc/pending/sign-up", nil); r.StatusCode != 404 && r.StatusCode != 403 {
+	if r := b.Post("/api/roux/auth/oidc/pending/sign-up", nil); r.StatusCode != 404 && r.StatusCode != 403 {
 		t.Fatalf("a spent sign-up: %d", r.StatusCode)
 	}
 	// Signing in again, from another browser, is the same identity, straight in.
@@ -246,7 +246,7 @@ func TestSigningUpAndSigningInAgain(t *testing.T) {
 	if got := e.signInWith(other, "test"); got != "/" {
 		t.Fatalf("a known account lands at %q", got)
 	}
-	if got := other.Get("/who/me").JSON(t)["identityId"]; got != id.String() {
+	if got := other.Get("/api/roux/auth/me").JSON(t)["identityId"]; got != id.String() {
 		t.Fatalf("signed in as %v", got)
 	}
 	if e.count(`select count(*) from roux_identity`) != 1 {
@@ -269,7 +269,7 @@ func TestAccountsAreNeverMatchedByEmail(t *testing.T) {
 	if got := e.signInWith(b, "test"); got != "/?pending=sign-up" {
 		t.Fatalf("lands at %q: an address is not who someone is", got)
 	}
-	if b.Get("/who/me").StatusCode != 401 {
+	if b.Get("/api/roux/auth/me").StatusCode != 401 {
 		t.Fatal("signed in by email address")
 	}
 	_ = id
@@ -326,7 +326,7 @@ func TestAProviderThatMisbehavesSignsNoOneIn(t *testing.T) {
 			if got := e.signInWith(b, "test"); got != "/?error=signin-failed" {
 				t.Fatalf("lands at %q", got)
 			}
-			if b.Get("/who/me").StatusCode != 401 || b.Get("/who/oidc/pending").StatusCode != 404 ||
+			if b.Get("/api/roux/auth/me").StatusCode != 401 || b.Get("/api/roux/auth/oidc/pending").StatusCode != 404 ||
 				e.count(`select count(*) from roux_identity`) != 0 || e.count(`select count(*) from roux_oidc_pending`) != 0 {
 				t.Fatal("a failed sign-in left something behind")
 			}
@@ -338,7 +338,7 @@ func TestACallbackIsAnsweredOnceAndOnlyForTheBrowserThatStarted(t *testing.T) {
 	e := setup(t)
 	e.user("u1", nil)
 	b := e.Browser()
-	r := b.Get("/who/oidc/authorize/test")
+	r := b.Get("/api/roux/auth/oidc/authorize/test")
 	callback := e.prov.Authorize(t, r.Header.Get("Location"))
 	u, _ := url.Parse(callback)
 
@@ -354,13 +354,13 @@ func TestACallbackIsAnsweredOnceAndOnlyForTheBrowserThatStarted(t *testing.T) {
 		t.Fatalf("a replayed callback lands at %q", got)
 	}
 	// A callback with no flow at all.
-	if got := e.Browser().Get("/who/oidc/callback/test?code=x&state=y").Header.Get("Location"); got != "/?error=signin-failed" {
+	if got := e.Browser().Get("/api/roux/auth/oidc/callback/test?code=x&state=y").Header.Get("Location"); got != "/?error=signin-failed" {
 		t.Fatalf("no flow lands at %q", got)
 	}
 	// A flow that waited too long.
 	e.user("u2", nil)
 	b2 := e.Browser()
-	r = b2.Get("/who/oidc/authorize/test")
+	r = b2.Get("/api/roux/auth/oidc/authorize/test")
 	callback = e.prov.Authorize(t, r.Header.Get("Location"))
 	u, _ = url.Parse(callback)
 	e.clock.Advance(11 * time.Minute)
@@ -376,10 +376,10 @@ func TestAPendingSignUpExpires(t *testing.T) {
 	b := e.Browser()
 	e.signInWith(b, "test")
 	e.clock.Advance(10*time.Minute + time.Second)
-	if r := b.Get("/who/oidc/pending"); r.StatusCode != 404 || problemCode(t, r) != "no-pending-sign-up" {
+	if r := b.Get("/api/roux/auth/oidc/pending"); r.StatusCode != 404 || problemCode(t, r) != "no-pending-sign-up" {
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
 	}
-	if r := b.Post("/who/oidc/pending/sign-up", nil); r.StatusCode != 404 {
+	if r := b.Post("/api/roux/auth/oidc/pending/sign-up", nil); r.StatusCode != 404 {
 		t.Fatalf("an expired sign-up: %d", r.StatusCode)
 	}
 	if e.count(`select count(*) from roux_identity`) != 0 {
@@ -396,7 +396,7 @@ func TestSomeoneSignedInCannotSignUpAndAPlainSignInNeverLinks(t *testing.T) {
 	if got := e.signInWith(ada, "test"); got != "/?error=signed-in" {
 		t.Fatalf("lands at %q", got)
 	}
-	if ada.Get("/who/oidc/pending").StatusCode != 404 {
+	if ada.Get("/api/roux/auth/oidc/pending").StatusCode != 404 {
 		t.Fatal("a pending account was kept")
 	}
 	if e.count(`select count(*) from roux_federated_credential`) != 1 {
@@ -406,7 +406,7 @@ func TestSomeoneSignedInCannotSignUpAndAPlainSignInNeverLinks(t *testing.T) {
 	other := e.Browser()
 	e.signInWith(other, "test")
 	other.SetCookie("SESSION", ada.Cookie("SESSION"))
-	if r := other.Post("/who/oidc/pending/sign-up", nil); r.StatusCode != 403 || problemCode(t, r) != "sign-up-refused" {
+	if r := other.Post("/api/roux/auth/oidc/pending/sign-up", nil); r.StatusCode != 403 || problemCode(t, r) != "sign-up-refused" {
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
 	}
 }
@@ -416,14 +416,14 @@ func TestLinkingAnAccount(t *testing.T) {
 	id, ada := e.signUp("test", "u1", nil)
 
 	// Starting needs a browser signed in, in a recent sign-in, and a provider that exists.
-	if r := e.Browser().Post("/who/me/accounts/gh", nil); r.StatusCode != 401 || problemCode(t, r) != "not-signed-in" {
+	if r := e.Browser().Post("/api/roux/auth/me/accounts/gh", nil); r.StatusCode != 401 || problemCode(t, r) != "not-signed-in" {
 		t.Fatalf("signed out: %d", r.StatusCode)
 	}
-	if r := ada.Post("/who/me/accounts/nope", nil); r.StatusCode != 404 || problemCode(t, r) != "unknown-provider" {
+	if r := ada.Post("/api/roux/auth/me/accounts/nope", nil); r.StatusCode != 404 || problemCode(t, r) != "unknown-provider" {
 		t.Fatalf("unknown provider: %d", r.StatusCode)
 	}
 	// A page that calls with fetch gets the address, not a redirect it cannot follow.
-	r := ada.DoWith("POST", "/who/me/accounts/gh", map[string]string{"Accept": "application/json", "X-XSRF-TOKEN": ada.Cookie("XSRF-TOKEN")})
+	r := ada.DoWith("POST", "/api/roux/auth/me/accounts/gh", map[string]string{"Accept": "application/json", "X-XSRF-TOKEN": ada.Cookie("XSRF-TOKEN")})
 	if target, _ := r.JSON(t)["redirectUrl"].(string); r.StatusCode != 200 || !strings.HasPrefix(target, e.prov.Issuer()+"/authorize?") {
 		t.Fatalf("json start: %d %s", r.StatusCode, r.Body)
 	}
@@ -433,34 +433,34 @@ func TestLinkingAnAccount(t *testing.T) {
 	if got := e.linkWith(ada, "gh"); got != "/?pending=link" {
 		t.Fatalf("lands at %q", got)
 	}
-	body := ada.Get("/who/oidc/pending").JSON(t)
+	body := ada.Get("/api/roux/auth/oidc/pending").JSON(t)
 	if body["provider"] != "gh" || body["displayName"] != "octocat" || body["canLink"] != true || body["canSignUp"] != false {
 		t.Fatalf("pending: %v", body)
 	}
 	if e.count(`select count(*) from roux_federated_credential`) != 1 {
 		t.Fatal("the account was linked before the person confirmed")
 	}
-	r = ada.Post("/who/oidc/pending/link", nil)
+	r = ada.Post("/api/roux/auth/oidc/pending/link", nil)
 	credID, _ := r.JSON(t)["credentialId"].(string)
 	if r.StatusCode != 200 || credID == "" {
 		t.Fatalf("confirm: %d %s", r.StatusCode, r.Body)
 	}
 	// It is listed, counted and signs in as the same identity.
 	var list []map[string]any
-	ada.Get("/who/me/accounts").Decode(t, &list)
+	ada.Get("/api/roux/auth/me/accounts").Decode(t, &list)
 	if len(list) != 2 || list[1]["id"] != credID || list[1]["provider"] != "gh" || list[0]["provider"] != "test" || list[1]["linkedAt"] == nil {
 		t.Fatalf("accounts: %v", list)
 	}
-	if got := ada.Get("/who/me").JSON(t)["credentials"].(map[string]any)["account"]; got != float64(2) {
+	if got := ada.Get("/api/roux/auth/me").JSON(t)["credentials"].(map[string]any)["account"]; got != float64(2) {
 		t.Fatalf("credentials: %v", got)
 	}
 	other := e.Browser()
 	e.user("4242", map[string]any{"login": "renamed-octocat"}) // the login changes; the id does not
-	if got := e.signInWith(other, "gh"); got != "/" || other.Get("/who/me").JSON(t)["identityId"] != id.String() {
+	if got := e.signInWith(other, "gh"); got != "/" || other.Get("/api/roux/auth/me").JSON(t)["identityId"] != id.String() {
 		t.Fatalf("signing in with the linked account lands at %q", got)
 	}
 	// The spent pending cannot be used again.
-	if r := ada.Post("/who/oidc/pending/link", nil); r.StatusCode != 404 {
+	if r := ada.Post("/api/roux/auth/oidc/pending/link", nil); r.StatusCode != 404 {
 		t.Fatalf("a spent link: %d", r.StatusCode)
 	}
 	// Linking an account the identity already has changes nothing and is not a sign-in.
@@ -496,7 +496,7 @@ func TestLinkingNeedsARecentSignIn(t *testing.T) {
 	e := setup(t)
 	_, ada := e.signUp("test", "u1", nil)
 	e.clock.Advance(11 * time.Minute)
-	if r := ada.Post("/who/me/accounts/gh", nil); r.StatusCode != 401 || problemCode(t, r) != "reauthentication-required" {
+	if r := ada.Post("/api/roux/auth/me/accounts/gh", nil); r.StatusCode != 401 || problemCode(t, r) != "reauthentication-required" {
 		t.Fatalf("start: %d %s", r.StatusCode, r.Body)
 	}
 	// Confirming needs one too: a link started in time, confirmed too late.
@@ -504,7 +504,7 @@ func TestLinkingNeedsARecentSignIn(t *testing.T) {
 	e.user("4242", nil)
 	e.linkWith(ada, "gh")
 	e.clock.Advance(11 * time.Minute)
-	if r := ada.Post("/who/oidc/pending/link", nil); r.StatusCode != 401 || problemCode(t, r) != "reauthentication-required" {
+	if r := ada.Post("/api/roux/auth/oidc/pending/link", nil); r.StatusCode != 401 || problemCode(t, r) != "reauthentication-required" {
 		t.Fatalf("confirm: %d %s", r.StatusCode, r.Body)
 	}
 	if e.count(`select count(*) from roux_federated_credential`) != 1 {
@@ -517,9 +517,9 @@ func TestALinkAnswersOnlyTheIdentityThatStartedIt(t *testing.T) {
 		e := setup(t)
 		_, ada := e.signUp("test", "u1", nil)
 		e.user("4242", nil)
-		r := ada.Post("/who/me/accounts/gh", nil)
+		r := ada.Post("/api/roux/auth/me/accounts/gh", nil)
 		callback := e.prov.Authorize(t, r.Header.Get("Location"))
-		ada.Post("/who/logout", nil)
+		ada.Post("/api/roux/auth/logout", nil)
 		u, _ := url.Parse(callback)
 		if got := ada.Get(u.RequestURI()).Header.Get("Location"); got != "/?error=signin-failed" {
 			t.Fatalf("lands at %q", got)
@@ -532,7 +532,7 @@ func TestALinkAnswersOnlyTheIdentityThatStartedIt(t *testing.T) {
 		e := setup(t)
 		_, ada := e.signUp("test", "u1", nil)
 		e.user("4242", nil)
-		r := ada.Post("/who/me/accounts/gh", nil)
+		r := ada.Post("/api/roux/auth/me/accounts/gh", nil)
 		callback := e.prov.Authorize(t, r.Header.Get("Location"))
 		bob, bobBrowser := e.signUp("test", "u2", nil)
 		_ = bob
@@ -549,7 +549,7 @@ func TestALinkAnswersOnlyTheIdentityThatStartedIt(t *testing.T) {
 		e := setup(t)
 		_, ada := e.signUp("test", "u1", nil)
 		e.user("4242", nil)
-		r := ada.Post("/who/me/accounts/gh", nil)
+		r := ada.Post("/api/roux/auth/me/accounts/gh", nil)
 		callback := e.prov.Authorize(t, r.Header.Get("Location"))
 		e.clock.Advance(10*time.Minute + time.Second)
 		u, _ := url.Parse(callback)
@@ -566,13 +566,13 @@ func TestAPendingLinkIsSeenOnlyByTheIdentityThatAsked(t *testing.T) {
 	e.user("4242", nil)
 	e.linkWith(ada, "gh")
 	bob.SetCookie("OIDC_PENDING", ada.Cookie("OIDC_PENDING"))
-	if r := bob.Get("/who/oidc/pending"); r.StatusCode != 404 {
+	if r := bob.Get("/api/roux/auth/oidc/pending"); r.StatusCode != 404 {
 		t.Fatalf("bob saw ada's pending link: %d %s", r.StatusCode, r.Body)
 	}
-	if r := bob.Post("/who/oidc/pending/link", nil); r.StatusCode != 404 {
+	if r := bob.Post("/api/roux/auth/oidc/pending/link", nil); r.StatusCode != 404 {
 		t.Fatalf("bob confirmed ada's link: %d", r.StatusCode)
 	}
-	if r := e.Browser().Post("/who/oidc/pending/link", nil); r.StatusCode != 401 || problemCode(t, r) != "not-signed-in" {
+	if r := e.Browser().Post("/api/roux/auth/oidc/pending/link", nil); r.StatusCode != 401 || problemCode(t, r) != "not-signed-in" {
 		t.Fatalf("signed out: %d", r.StatusCode)
 	}
 	// A pending sign-up cannot be used to link.
@@ -580,7 +580,7 @@ func TestAPendingLinkIsSeenOnlyByTheIdentityThatAsked(t *testing.T) {
 	other := e.Browser()
 	e.signInWith(other, "test")
 	other.SetCookie("SESSION", ada.Cookie("SESSION"))
-	if r := other.Post("/who/oidc/pending/link", nil); r.StatusCode != 404 {
+	if r := other.Post("/api/roux/auth/oidc/pending/link", nil); r.StatusCode != 404 {
 		t.Fatalf("a sign-up used to link: %d", r.StatusCode)
 	}
 }
@@ -594,7 +594,7 @@ func TestAnAccountOfAnotherIdentityCannotBeLinked(t *testing.T) {
 	if got := e.linkWith(ada, "test"); got != "/?error=already-linked" {
 		t.Fatalf("lands at %q", got)
 	}
-	if ada.Get("/who/oidc/pending").StatusCode != 404 {
+	if ada.Get("/api/roux/auth/oidc/pending").StatusCode != 404 {
 		t.Fatal("a pending account was kept")
 	}
 	// A plain sign-in by someone signed in with another identity's account is the same.
@@ -610,10 +610,10 @@ func TestAnAccountOfAnotherIdentityCannotBeLinked(t *testing.T) {
 	_ = carlID
 	e.user("u3", nil)
 	e.linkWith(carl, "gh")
-	if r := ada.Post("/who/oidc/pending/link", nil); r.StatusCode != 200 {
+	if r := ada.Post("/api/roux/auth/oidc/pending/link", nil); r.StatusCode != 200 {
 		t.Fatalf("first: %d %s", r.StatusCode, r.Body)
 	}
-	if r := carl.Post("/who/oidc/pending/link", nil); r.StatusCode != 409 || problemCode(t, r) != "already-linked" {
+	if r := carl.Post("/api/roux/auth/oidc/pending/link", nil); r.StatusCode != 409 || problemCode(t, r) != "already-linked" {
 		t.Fatalf("second: %d %s", r.StatusCode, r.Body)
 	}
 }
@@ -626,7 +626,7 @@ func TestAnInactiveIdentityCannotSignIn(t *testing.T) {
 	}
 	e.user("u1", nil)
 	b := e.Browser()
-	if got := e.signInWith(b, "test"); got != "/?error=signin-failed" || b.Get("/who/me").StatusCode != 401 {
+	if got := e.signInWith(b, "test"); got != "/?error=signin-failed" || b.Get("/api/roux/auth/me").StatusCode != 401 {
 		t.Fatalf("lands at %q", got)
 	}
 	// Someone else cannot take the account for themselves by linking it.
@@ -642,25 +642,25 @@ func TestUnlinkingAnAccount(t *testing.T) {
 	_, ada := e.signUp("test", "u1", nil)
 	e.user("4242", nil)
 	e.linkWith(ada, "gh")
-	ada.Post("/who/oidc/pending/link", nil)
+	ada.Post("/api/roux/auth/oidc/pending/link", nil)
 	var list []map[string]any
-	ada.Get("/who/me/accounts").Decode(t, &list)
+	ada.Get("/api/roux/auth/me/accounts").Decode(t, &list)
 	testID, ghID := list[0]["id"].(string), list[1]["id"].(string)
 
 	_, bob := e.signUp("test", "u2", nil)
 	for name, id := range map[string]string{"another identity's": ghID, "unknown": uuid.NewString(), "garbage": "nope"} {
-		if r := bob.Delete("/who/me/accounts/" + id); r.StatusCode != 404 || problemCode(t, r) != "linked-account-not-found" {
+		if r := bob.Delete("/api/roux/auth/me/accounts/" + id); r.StatusCode != 404 || problemCode(t, r) != "linked-account-not-found" {
 			t.Errorf("%s: %d %s", name, r.StatusCode, r.Body)
 		}
 	}
-	if r := e.Browser().Delete("/who/me/accounts/" + ghID); r.StatusCode != 401 {
+	if r := e.Browser().Delete("/api/roux/auth/me/accounts/" + ghID); r.StatusCode != 401 {
 		t.Errorf("signed out: %d", r.StatusCode)
 	}
-	if r := ada.Delete("/who/me/accounts/" + ghID); r.StatusCode != 204 || len(r.Body) != 0 {
+	if r := ada.Delete("/api/roux/auth/me/accounts/" + ghID); r.StatusCode != 204 || len(r.Body) != 0 {
 		t.Fatalf("unlink: %d %s", r.StatusCode, r.Body)
 	}
 	// The last way in stays, and the account the session signed in with ends that session on removal.
-	if r := ada.Delete("/who/me/accounts/" + testID); r.StatusCode != 409 || problemCode(t, r) != "last-credential" {
+	if r := ada.Delete("/api/roux/auth/me/accounts/" + testID); r.StatusCode != 409 || problemCode(t, r) != "last-credential" {
 		t.Fatalf("last way in: %d %s", r.StatusCode, r.Body)
 	}
 	if e.count(`select count(*) from roux_federated_credential`) != 2 { // ada's remaining one and bob's
@@ -678,30 +678,30 @@ func TestUnlinkingNeedsARecentSignInAndEndsSessionsSignedInWithIt(t *testing.T) 
 	_, ada := e.signUp("test", "u1", nil)
 	e.user("4242", nil)
 	e.linkWith(ada, "gh")
-	ada.Post("/who/oidc/pending/link", nil)
+	ada.Post("/api/roux/auth/oidc/pending/link", nil)
 	var list []map[string]any
-	ada.Get("/who/me/accounts").Decode(t, &list)
+	ada.Get("/api/roux/auth/me/accounts").Decode(t, &list)
 	testID, ghID := list[0]["id"].(string), list[1]["id"].(string)
 
 	// A session signed in with the gh account, elsewhere.
 	e.user("4242", nil)
 	viaGH := e.Browser()
 	e.signInWith(viaGH, "gh")
-	if viaGH.Get("/who/me").StatusCode != 200 {
+	if viaGH.Get("/api/roux/auth/me").StatusCode != 200 {
 		t.Fatal("not signed in")
 	}
 	e.clock.Advance(5 * time.Minute)
-	if r := ada.Delete("/who/me/accounts/" + ghID); r.StatusCode != 204 {
+	if r := ada.Delete("/api/roux/auth/me/accounts/" + ghID); r.StatusCode != 204 {
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
 	}
-	if viaGH.Get("/who/me").StatusCode != 401 {
+	if viaGH.Get("/api/roux/auth/me").StatusCode != 401 {
 		t.Fatal("a session signed in with the unlinked account lives on")
 	}
-	if ada.Get("/who/me").StatusCode != 200 {
+	if ada.Get("/api/roux/auth/me").StatusCode != 200 {
 		t.Fatal("ada's own session ended")
 	}
 	e.clock.Advance(6 * time.Minute) // the sign-in is no longer recent
-	if r := ada.Delete("/who/me/accounts/" + testID); r.StatusCode != 401 || problemCode(t, r) != "reauthentication-required" {
+	if r := ada.Delete("/api/roux/auth/me/accounts/" + testID); r.StatusCode != 401 || problemCode(t, r) != "reauthentication-required" {
 		t.Fatalf("stale: %d %s", r.StatusCode, r.Body)
 	}
 }
@@ -723,7 +723,7 @@ func TestTwoBrowsersConfirmingTheSameAccountEndInOneIdentity(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			start.Wait()
-			r := br.Post("/who/oidc/pending/sign-up", nil)
+			r := br.Post("/api/roux/auth/oidc/pending/sign-up", nil)
 			statuses[i] = r.StatusCode
 			if r.StatusCode == 200 {
 				ids[i] = r.JSON(t)["identityId"]
@@ -830,7 +830,7 @@ func TestWithNoPolicyConfiguredNoOneSignsUp(t *testing.T) {
 	e.user("u1", nil)
 	b := e.Browser()
 	e.signInWith(b, "test")
-	if r := b.Post("/who/oidc/pending/sign-up", nil); r.StatusCode != 403 || problemCode(t, r) != "sign-up-refused" {
+	if r := b.Post("/api/roux/auth/oidc/pending/sign-up", nil); r.StatusCode != 403 || problemCode(t, r) != "sign-up-refused" {
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
 	}
 	if e.count(`select count(*) from roux_identity`) != 0 {
@@ -842,7 +842,7 @@ func TestALinkWindowShorterThanTheFlowIsHonored(t *testing.T) {
 	e := setup(t, func(c *oidc.Config) { c.LinkWindow = 2 * time.Minute })
 	_, ada := e.signUp("test", "u1", nil)
 	e.user("4242", nil)
-	r := ada.Post("/who/me/accounts/gh", nil)
+	r := ada.Post("/api/roux/auth/me/accounts/gh", nil)
 	callback := e.prov.Authorize(t, r.Header.Get("Location"))
 	e.clock.Advance(3 * time.Minute)
 	u, _ := url.Parse(callback)
@@ -868,11 +868,11 @@ func TestEveryCookieIsSecureWhenConfiguredEvenOverPlainHTTP(t *testing.T) {
 				}
 			}
 		}
-		start := b.Get("/who/oidc/authorize/test")
+		start := b.Get("/api/roux/auth/oidc/authorize/test")
 		note(start)
 		callback, _ := url.Parse(e.prov.Authorize(t, start.Header.Get("Location")))
-		note(b.Get(callback.RequestURI()))             // sets OIDC_PENDING
-		note(b.Post("/who/oidc/pending/sign-up", nil)) // sets SESSION and a new XSRF-TOKEN
+		note(b.Get(callback.RequestURI()))                       // sets OIDC_PENDING
+		note(b.Post("/api/roux/auth/oidc/pending/sign-up", nil)) // sets SESSION and a new XSRF-TOKEN
 		for _, name := range []string{"OIDC_FLOW", "OIDC_PENDING", "SESSION", "XSRF-TOKEN"} {
 			got, ok := seen[name]
 			if !ok {

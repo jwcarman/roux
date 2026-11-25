@@ -35,10 +35,8 @@ const (
 	// RoleOwner holds every permission there is.
 	RoleOwner = "OWNER"
 
-	// IdentitiesRead and IdentitiesManage are who-admin's permissions. Whoever holds
-	// IdentitiesManage is an administrator: the last active one cannot be removed.
-	IdentitiesRead   = "who.identities.read"
-	IdentitiesManage = "who.identities.manage"
+	// Admin makes its holder an administrator: the last active one cannot be removed.
+	Admin = "roux.admin"
 )
 
 // Role is a named set of permissions.
@@ -113,13 +111,13 @@ var ErrLastAdmin = errors.New("authz: the change would leave no active administr
 // LastAdminProblem is how the API answers ErrLastAdmin: who's last-admin problem.
 func LastAdminProblem() *problem.Problem {
 	p := problem.Conflict("The team needs someone active who can manage people")
-	p.Type = "urn:who:error:last-admin"
+	p.Type = "urn:roux:error:last-admin"
 	p.Code = "last-admin"
 	return p
 }
 
 // EnsureAdmin returns ErrLastAdmin unless some active identity holds
-// IdentitiesManage. Call it inside the transaction that deactivates someone or
+// Admin. Call it inside the transaction that deactivates someone or
 // takes a role away, after the change, while holding a lock that serializes such
 // changes: when it fails, roll the transaction back.
 func EnsureAdmin(ctx context.Context, db authn.DBTX) error {
@@ -131,7 +129,7 @@ func EnsureAdmin(ctx context.Context, db authn.DBTX) error {
 		     and exists (select 1 from roux_identity_role ir
 		                   join roux_role_permission rp on rp.role_id = ir.role_id
 		                  where ir.identity_id = i.id and rp.permission = $2))`,
-		authn.StatusActive, IdentitiesManage).Scan(&exists)
+		authn.StatusActive, Admin).Scan(&exists)
 	if err != nil {
 		return err
 	}
@@ -171,12 +169,12 @@ func (i Invitable) Names() []string {
 func (i Invitable) Contains(role string) bool { return slices.Contains(i.names, role) }
 
 // InvitablePath is where the invitable roles are served.
-const InvitablePath = "/api/roles/invitable"
+const InvitablePath = "/api/roux/roles/invitable"
 
 // RegisterInvitable serves the roles an invite form offers, in the order configured,
 // to anyone signed in. Roles are data, so the form asks rather than listing them itself.
 func RegisterInvitable(mux *api.Mux, host *authn.Host, inv Invitable) {
-	mux.Handle("GET "+InvitablePath, host.Guard("", func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("GET "+InvitablePath, host.Guard("", func(w http.ResponseWriter, r *http.Request) error {
 		return api.JSON(w, http.StatusOK, inv.Names())
 	}))
 }

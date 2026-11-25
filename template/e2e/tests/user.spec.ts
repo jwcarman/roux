@@ -62,7 +62,7 @@ test("an invited user signs in by link, sees the directory, and cannot invite", 
       ).status;
     return {
       token: token !== undefined && token.length > 0,
-      invitation: await post("/api/users/invitations", {
+      invitation: await post("/api/roux/users/invitations", {
         name: "Someone Else",
         email: "someone-else@example.test",
         role: "USER",

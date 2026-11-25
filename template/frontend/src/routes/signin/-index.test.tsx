@@ -7,7 +7,7 @@ import { renderRoute } from "../../testing/route";
 
 describe("/signin", () => {
   it("offers sign-in by email and by passkey on a card named for the app, with the mode switch", async () => {
-    server.use(http.get("/who/sign-in", () => HttpResponse.json({ email: true, passkey: true, providers: [] })));
+    server.use(http.get("/api/roux/auth/sign-in", () => HttpResponse.json({ email: true, passkey: true, providers: [] })));
     renderRoute("/signin", { permissions: null });
 
     expect(await screen.findByRole("heading", { level: 1, name: /^Sign in to \S/ })).toBeInTheDocument();
@@ -20,7 +20,7 @@ describe("/signin", () => {
 
   it("offers each provider who has on, on the same card", async () => {
     server.use(
-      http.get("/who/sign-in", () =>
+      http.get("/api/roux/auth/sign-in", () =>
         HttpResponse.json({ email: true, passkey: true, providers: [{ id: "google", name: "Google" }] }),
       ),
     );

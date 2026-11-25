@@ -46,7 +46,7 @@ test("an owner invites, deactivates and reactivates a user, with the history to 
   await expect(status).toHaveText("Deactivated");
 
   // Her open session ends at her next request.
-  expect((await gracePage.request.get("/api/users/me")).status()).toBe(401);
+  expect((await gracePage.request.get("/api/roux/users/me")).status()).toBe(401);
 
   // The directory shows her only under Deactivated.
   await page.getByRole("link", { name: "All users" }).click();

@@ -32,7 +32,7 @@ describe("themeSchema", () => {
 
 describe("themeApi", () => {
   it("can be abandoned: the read takes an abort signal", async () => {
-    server.use(http.get("/api/theme", () => HttpResponse.json({ ...THEME, version: 1 })));
+    server.use(http.get("/api/roux/theme", () => HttpResponse.json({ ...THEME, version: 1 })));
     const controller = new AbortController();
     controller.abort();
 

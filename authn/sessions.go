@@ -13,10 +13,10 @@ import (
 // The caller's own sessions, so a person can see every browser they are signed in on and
 // sign any of them out (after losing a phone, or using a shared computer):
 //
-//	GET    /who/me/sessions              the live sessions, newest sign-in first
-//	DELETE /who/me/sessions/{id}         ends one; the caller's own signs out at once, any other
+//	GET    /api/roux/auth/me/sessions              the live sessions, newest sign-in first
+//	DELETE /api/roux/auth/me/sessions/{id}         ends one; the caller's own signs out at once, any other
 //	                                     needs a recent sign-in
-//	DELETE /who/me/sessions?others=true  ends every other session: {"ended": n}; needs a recent sign-in
+//	DELETE /api/roux/auth/me/sessions?others=true  ends every other session: {"ended": n}; needs a recent sign-in
 //
 // The id shown is not the session cookie, so showing it exposes nothing that could take a
 // session over. userAgent (and the device label read from it) is whatever the browser

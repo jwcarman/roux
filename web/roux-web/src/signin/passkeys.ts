@@ -1,4 +1,4 @@
-import { who } from "./who";
+import { auth } from "./auth";
 
 /** The longest passkey label who takes. */
 export const PASSKEY_LABEL_MAX = 64;
@@ -19,15 +19,15 @@ export function passkeyLabelError(label: string): string | undefined {
 
 /** Registers a passkey for the signed-in caller under `label`. */
 export function registerPasskey(label: string) {
-  return who.me.passkeys.register(label);
+  return auth.me.passkeys.register(label);
 }
 
 /** The signed-in caller's passkeys, oldest first. */
 export function listPasskeys() {
-  return who.me.passkeys.list();
+  return auth.me.passkeys.list();
 }
 
 /** Removes one of the caller's passkeys by its credential id. */
 export function removePasskey(credentialId: string) {
-  return who.me.passkeys.remove(credentialId);
+  return auth.me.passkeys.remove(credentialId);
 }

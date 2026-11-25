@@ -10,14 +10,14 @@ import { SignInCard } from "./SignInCard";
 
 /** The ways of signing in who reports as on. */
 function options(email: boolean, passkey: boolean, providers: { id: string; name: string }[] = []) {
-  server.use(http.get("/who/sign-in", () => HttpResponse.json({ email, passkey, providers })));
+  server.use(http.get("/api/roux/auth/sign-in", () => HttpResponse.json({ email, passkey, providers })));
 }
 
 /** who emails the link (202), or refuses with `status`; every address asked for is kept. */
 function sends(...statuses: number[]) {
   const sent: unknown[] = [];
   server.use(
-    http.post("/who/email/send", async ({ request }) => {
+    http.post("/api/roux/auth/email/send", async ({ request }) => {
       sent.push(await request.json());
       return new HttpResponse(null, { status: statuses[sent.length - 1] ?? 202 });
     }),
@@ -70,7 +70,7 @@ describe("SignInCard", () => {
     expect(screen.queryByText("Other ways to sign in")).not.toBeInTheDocument();
   });
 
-  it("lists the passkey and each provider who reports under 'Other ways to sign in'", async () => {
+  it("lists the passkey and each provider the server reports under 'Other ways to sign in'", async () => {
     options(true, true, [
       { id: "google", name: "Google" },
       { id: "acme-sso", name: "Acme SSO" },
@@ -81,7 +81,7 @@ describe("SignInCard", () => {
     expect(screen.getByRole("button", { name: "Use a passkey" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Continue with Google" })).toHaveAttribute(
       "href",
-      "/who/oidc/authorize/google",
+      "/api/roux/auth/oidc/authorize/google",
     );
     expect(screen.getByRole("link", { name: "Continue with Acme SSO" })).toBeInTheDocument();
     expect(screen.queryByText("Have a passkey?")).not.toBeInTheDocument();
@@ -119,17 +119,17 @@ describe("SignInCard", () => {
     expect(screen.queryByText("Have a passkey?")).not.toBeInTheDocument();
   });
 
-  it("offers the email link and a passkey when who cannot be asked", async () => {
-    server.use(http.get("/who/sign-in", () => new HttpResponse(null, { status: 500 })));
+  it("offers the email link and a passkey when the server cannot be asked", async () => {
+    server.use(http.get("/api/roux/auth/sign-in", () => new HttpResponse(null, { status: 500 })));
     card();
 
     expect(await screen.findByRole("textbox", { name: "Email" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Use a passkey" })).toBeInTheDocument();
   });
 
-  it("offers nothing to choose until who answers", async () => {
+  it("offers nothing to choose until the server answers", async () => {
     server.use(
-      http.get("/who/sign-in", async () => {
+      http.get("/api/roux/auth/sign-in", async () => {
         await delay("infinite");
         return HttpResponse.json({});
       }),
@@ -176,7 +176,7 @@ describe("SignInCard", () => {
   it("signs in with the emailed code and goes where the visitor was going", async () => {
     options(true, true);
     sends();
-    server.use(http.post("/who/email/sign-in", () => HttpResponse.json({ identityId: "id-1" })));
+    server.use(http.post("/api/roux/auth/email/sign-in", () => HttpResponse.json({ identityId: "id-1" })));
     card();
     await askForALink();
 
@@ -230,14 +230,14 @@ describe("SignInCard", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("says so when who refuses to send it again (a failed human check)", async () => {
+  it("says so when the server refuses to send it again (a failed human check)", async () => {
     options(true, true);
     let sends = 0;
     server.use(
-      http.post("/who/email/send", () =>
+      http.post("/api/roux/auth/email/send", () =>
         sends++ === 0
           ? new HttpResponse(null, { status: 202 })
-          : new HttpResponse(null, { status: 403, headers: { "Who-Error": "human-check-failed" } }),
+          : new HttpResponse(null, { status: 403, headers: { "Roux-Error": "human-check-failed" } }),
       ),
     );
     card();
@@ -253,7 +253,7 @@ describe("SignInCard", () => {
     let release = () => {};
     let sends = 0;
     server.use(
-      http.post("/who/email/send", async () => {
+      http.post("/api/roux/auth/email/send", async () => {
         sends++;
         if (sends === 2) {
           return new HttpResponse(null, { status: 500 });
@@ -283,7 +283,9 @@ describe("SignInCard", () => {
   it("tells a refused passkey on the card", async () => {
     options(true, true);
     server.use(
-      http.post("/who/passkey/sign-in/options", () => HttpResponse.json({ challenge: "AAAA", allowCredentials: [] })),
+      http.post("/api/roux/auth/passkey/sign-in/options", () =>
+        HttpResponse.json({ challenge: "AAAA", allowCredentials: [] }),
+      ),
     );
     vi.stubGlobal("navigator", {
       ...navigator,

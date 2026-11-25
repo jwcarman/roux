@@ -5,7 +5,7 @@ import { z } from "zod";
 import { FONTS } from "./fonts";
 import { PALETTES, SHAPES, type ShellTheme } from "./theme";
 
-/** The theme as `/api/theme` answers it: the settings and the version to save them at. */
+/** The theme as `/api/roux/theme` answers it: the settings and the version to save them at. */
 export type SavedTheme = ShellTheme & { version: number };
 
 /** The key the saved theme is cached under, and what a save refreshes. */
@@ -24,10 +24,10 @@ export const themeSchema = z.object({
   appName: text().max(60),
 });
 
-/** `/api/theme`: the app's look and the version to save it at. */
+/** `/api/roux/theme`: the app's look and the version to save it at. */
 export const themeApi = {
-  get: (signal?: AbortSignal) => getJson<SavedTheme>("theme", { signal }),
-  update: (theme: SavedTheme) => sendJson<SavedTheme>("PUT", "theme", theme),
+  get: (signal?: AbortSignal) => getJson<SavedTheme>("roux/theme", { signal }),
+  update: (theme: SavedTheme) => sendJson<SavedTheme>("PUT", "roux/theme", theme),
 };
 
 /** The saved theme. */

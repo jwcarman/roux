@@ -33,7 +33,7 @@ func (e *env) ask(b *browser, address string, replaces any) emaillink.Message {
 	if replaces != nil {
 		body["replaces"] = replaces
 	}
-	if r := b.post("/who/me/email-addresses", body); r.StatusCode != 202 {
+	if r := b.post("/api/roux/auth/me/email-addresses", body); r.StatusCode != 202 {
 		e.t.Fatalf("ask: %d %s", r.StatusCode, r.body)
 	}
 	return e.waitForMail(before + 1)[before]
@@ -41,7 +41,7 @@ func (e *env) ask(b *browser, address string, replaces any) emaillink.Message {
 
 func addressList(t *testing.T, b *browser) []map[string]any {
 	t.Helper()
-	r := b.get("/who/me/email-addresses")
+	r := b.get("/api/roux/auth/me/email-addresses")
 	if r.StatusCode != 200 {
 		t.Fatalf("%d %s", r.StatusCode, r.body)
 	}
@@ -74,7 +74,7 @@ func TestListingMyAddresses(t *testing.T) {
 	if len(list[0]) != 3 || list[0]["id"] != e.idOfAddress(owner) || list[0]["createdAt"] == nil {
 		t.Fatalf("shape: %v", list[0])
 	}
-	if r := e.browser().get("/who/me/email-addresses"); r.StatusCode != 401 || r.header("Who-Error") != "not-signed-in" {
+	if r := e.browser().get("/api/roux/auth/me/email-addresses"); r.StatusCode != 401 || r.header("Roux-Error") != "not-signed-in" {
 		t.Fatalf("signed out: %d", r.StatusCode)
 	}
 }
@@ -95,7 +95,7 @@ func TestAddingAnAddress(t *testing.T) {
 		t.Fatal("asking must not add the address: only confirming does")
 	}
 
-	r := b.post("/who/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, msg)})
+	r := b.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, msg)})
 	if body := r.json(t); r.StatusCode != 200 || body["credentialId"] != e.idOfAddress("new@example.test") {
 		t.Fatalf("confirm: %d %s", r.StatusCode, r.body)
 	}
@@ -103,7 +103,7 @@ func TestAddingAnAddress(t *testing.T) {
 	if len(list) != 2 || list[1]["address"] != "new@example.test" {
 		t.Fatalf("after confirming: %v", list)
 	}
-	if got := b.get("/who/me").json(t)["credentials"].(map[string]any)["email"]; got != float64(2) {
+	if got := b.get("/api/roux/auth/me").json(t)["credentials"].(map[string]any)["email"]; got != float64(2) {
 		t.Fatalf("credentials: %v", got)
 	}
 	// The new address signs in, like any other.
@@ -113,7 +113,7 @@ func TestAddingAnAddress(t *testing.T) {
 		t.Fatalf("signing in with the new address: %d %s", r.StatusCode, r.body)
 	}
 	// The link works once.
-	if r := b.post("/who/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, msg)}); r.StatusCode != 400 {
+	if r := b.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, msg)}); r.StatusCode != 400 {
 		t.Fatalf("a spent link: %d", r.StatusCode)
 	}
 }
@@ -133,7 +133,7 @@ func TestAskingIsAlwaysAccepted(t *testing.T) {
 		map[string]string{},
 		`{"address": 7}`, `{nope`, `[1]`,
 	} {
-		if r := b.post("/who/me/email-addresses", body); r.StatusCode != 202 || len(r.body) != 0 {
+		if r := b.post("/api/roux/auth/me/email-addresses", body); r.StatusCode != 202 || len(r.body) != 0 {
 			t.Errorf("body %d: %d %q (the answer must not tell whether the address is taken)", i, r.StatusCode, r.body)
 		}
 	}
@@ -152,7 +152,7 @@ func TestAskingNeedsAFreshSignInAndChecksReplaces(t *testing.T) {
 	otherID, _, _ := e.method.EnsureIdentity(context.Background(), "other@example.test")
 	_ = otherID
 	for name, replaces := range map[string]string{"someone else's": e.idOfAddress("other@example.test"), "unknown": uuid.NewString(), "malformed": "nope"} {
-		r := b.post("/who/me/email-addresses", map[string]any{"address": "x@example.test", "replaces": replaces})
+		r := b.post("/api/roux/auth/me/email-addresses", map[string]any{"address": "x@example.test", "replaces": replaces})
 		if body := r.json(t); r.StatusCode != 404 || body["code"] != "email-address-not-found" {
 			t.Errorf("%s: %d %s", name, r.StatusCode, r.body)
 		}
@@ -164,7 +164,7 @@ func TestAskingNeedsAFreshSignInAndChecksReplaces(t *testing.T) {
 	// A stale sign-in is refused before the body is looked at.
 	e.clock.advance(11 * time.Minute)
 	for _, c := range []struct{ method, path string }{
-		{"POST", "/who/me/email-addresses"}, {"POST", "/who/me/email-addresses/confirmations"}, {"DELETE", "/who/me/email-addresses/" + ownID},
+		{"POST", "/api/roux/auth/me/email-addresses"}, {"POST", "/api/roux/auth/me/email-addresses/confirmations"}, {"DELETE", "/api/roux/auth/me/email-addresses/" + ownID},
 	} {
 		r := b.do(c.method, c.path, nil, true)
 		if body := r.json(t); r.StatusCode != 401 || body["code"] != "reauthentication-required" {
@@ -173,7 +173,7 @@ func TestAskingNeedsAFreshSignInAndChecksReplaces(t *testing.T) {
 	}
 	// Signed out is 401 not-signed-in, everywhere.
 	for _, c := range []struct{ method, path string }{
-		{"POST", "/who/me/email-addresses"}, {"POST", "/who/me/email-addresses/confirmations"}, {"DELETE", "/who/me/email-addresses/" + ownID},
+		{"POST", "/api/roux/auth/me/email-addresses"}, {"POST", "/api/roux/auth/me/email-addresses/confirmations"}, {"DELETE", "/api/roux/auth/me/email-addresses/" + ownID},
 	} {
 		if r := e.browser().do(c.method, c.path, nil, true); r.StatusCode != 401 || r.json(t)["code"] != "not-signed-in" {
 			t.Errorf("%s %s signed out: %d", c.method, c.path, r.StatusCode)
@@ -192,14 +192,14 @@ func TestOnlyTheOneWhoAskedCanConfirm(t *testing.T) {
 
 	msg := e.ask(ada, "new@example.test", nil)
 	token, code := confirmTokenOf(t, msg), codeOf(t, msg)
-	if r := grace.post("/who/me/email-addresses/confirmations", map[string]string{"token": token}); r.StatusCode != 400 || r.json(t)["code"] != "invalid-confirmation" {
+	if r := grace.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"token": token}); r.StatusCode != 400 || r.json(t)["code"] != "invalid-confirmation" {
 		t.Fatalf("someone else's token: %d %s", r.StatusCode, r.body)
 	}
-	if r := grace.post("/who/me/email-addresses/confirmations", map[string]string{"code": code}); r.StatusCode != 400 {
+	if r := grace.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"code": code}); r.StatusCode != 400 {
 		t.Fatalf("someone else's code: %d", r.StatusCode)
 	}
 	// Ada's request was not spent by Grace's attempts.
-	if r := ada.post("/who/me/email-addresses/confirmations", map[string]string{"token": token}); r.StatusCode != 200 {
+	if r := ada.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"token": token}); r.StatusCode != 200 {
 		t.Fatalf("Ada: %d %s", r.StatusCode, r.body)
 	}
 }
@@ -215,7 +215,7 @@ func TestConfirmingWithATypedCode(t *testing.T) {
 		"neither": map[string]string{}, "both": map[string]string{"token": confirmTokenOf(t, msg), "code": code},
 		"blank code": map[string]string{"code": ""}, "malformed code": map[string]string{"code": "!!"},
 	} {
-		r := b.post("/who/me/email-addresses/confirmations", body)
+		r := b.post("/api/roux/auth/me/email-addresses/confirmations", body)
 		if name == "blank code" || name == "malformed code" {
 			if r.StatusCode != 400 {
 				t.Errorf("%s: %d", name, r.StatusCode)
@@ -229,12 +229,12 @@ func TestConfirmingWithATypedCode(t *testing.T) {
 
 	// A few wrong guesses, then the right one, typed the way people type it.
 	for i := 0; i < 4; i++ {
-		if r := b.post("/who/me/email-addresses/confirmations", map[string]string{"code": wrongCode(code)}); r.StatusCode != 400 {
+		if r := b.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"code": wrongCode(code)}); r.StatusCode != 400 {
 			t.Fatalf("wrong code: %d", r.StatusCode)
 		}
 	}
 	typed := strings.ToLower(strings.Replace(code, "-", " ", 1))
-	if r := b.post("/who/me/email-addresses/confirmations", map[string]string{"code": typed}); r.StatusCode != 200 {
+	if r := b.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"code": typed}); r.StatusCode != 200 {
 		t.Fatalf("right code after 4 wrong: %d %s", r.StatusCode, r.body)
 	}
 }
@@ -245,13 +245,13 @@ func TestACodeForAnAddressBurnsAfterTooManyGuesses(t *testing.T) {
 	msg := e.ask(b, "new@example.test", nil)
 	code := codeOf(t, msg)
 	for i := 0; i < 5; i++ {
-		b.post("/who/me/email-addresses/confirmations", map[string]string{"code": wrongCode(code)})
+		b.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"code": wrongCode(code)})
 	}
-	if r := b.post("/who/me/email-addresses/confirmations", map[string]string{"code": code}); r.StatusCode != 400 {
+	if r := b.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"code": code}); r.StatusCode != 400 {
 		t.Fatalf("a burnt code worked: %d", r.StatusCode)
 	}
 	// The link in the same email still works.
-	if r := b.post("/who/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, msg)}); r.StatusCode != 200 {
+	if r := b.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, msg)}); r.StatusCode != 200 {
 		t.Fatalf("the link should still work: %d %s", r.StatusCode, r.body)
 	}
 }
@@ -262,7 +262,7 @@ func TestARequestExpiresAndIsReplacedByTheNext(t *testing.T) {
 
 	old := e.ask(b, "first@example.test", nil)
 	e.clock.advance(5*time.Minute + time.Second)
-	if r := b.post("/who/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, old)}); r.StatusCode != 400 {
+	if r := b.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, old)}); r.StatusCode != 400 {
 		t.Fatalf("expired: %d", r.StatusCode)
 	}
 
@@ -270,10 +270,10 @@ func TestARequestExpiresAndIsReplacedByTheNext(t *testing.T) {
 	older := e.ask(b, "second@example.test", nil)
 	e.clock.advance(61 * time.Second)
 	newer := e.ask(b, "third@example.test", nil)
-	if r := b.post("/who/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, older)}); r.StatusCode != 400 {
+	if r := b.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, older)}); r.StatusCode != 400 {
 		t.Fatalf("a replaced request still worked: %d", r.StatusCode)
 	}
-	if r := b.post("/who/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, newer)}); r.StatusCode != 200 {
+	if r := b.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, newer)}); r.StatusCode != 200 {
 		t.Fatalf("the newest: %d %s", r.StatusCode, r.body)
 	}
 }
@@ -292,9 +292,9 @@ func TestTheResendIntervalProtectsInboxes(t *testing.T) {
 	base := e.settle()
 	e.ask(ada, "victim@example.test", nil)
 	// The same identity, for any address, within the interval: accepted, nothing sent.
-	ada.post("/who/me/email-addresses", map[string]string{"address": "another@example.test"})
+	ada.post("/api/roux/auth/me/email-addresses", map[string]string{"address": "another@example.test"})
 	// Someone else, for the same address, within the interval: accepted, nothing sent.
-	grace.post("/who/me/email-addresses", map[string]string{"address": "victim@example.test"})
+	grace.post("/api/roux/auth/me/email-addresses", map[string]string{"address": "victim@example.test"})
 	if n := e.settle() - base; n != 1 {
 		t.Fatalf("%d emails, want 1: nobody may email an address over and over", n)
 	}
@@ -308,7 +308,7 @@ func TestAFailedSendLeavesNoRequestBehind(t *testing.T) {
 	e.out.mu.Lock()
 	e.out.fail = true
 	e.out.mu.Unlock()
-	if r := b.post("/who/me/email-addresses", map[string]string{"address": "new@example.test"}); r.StatusCode != 202 {
+	if r := b.post("/api/roux/auth/me/email-addresses", map[string]string{"address": "new@example.test"}); r.StatusCode != 202 {
 		t.Fatalf("%d", r.StatusCode)
 	}
 	e.method.Wait()
@@ -356,7 +356,7 @@ func TestChangingAnAddress(t *testing.T) {
 	}
 	viaOld.setCookie("SESSION", cookie)
 
-	r := b.post("/who/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, msg)})
+	r := b.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, msg)})
 	if r.StatusCode != 200 || r.json(t)["credentialId"] != e.idOfAddress("better@example.test") {
 		t.Fatalf("confirm: %d %s", r.StatusCode, r.body)
 	}
@@ -364,7 +364,7 @@ func TestChangingAnAddress(t *testing.T) {
 	if len(list) != 2 || list[0]["address"] != "keeper@example.test" || list[1]["address"] != "better@example.test" {
 		t.Fatalf("the old address must be replaced, not kept: %v", list)
 	}
-	if viaOld.get("/who/me").StatusCode != 401 {
+	if viaOld.get("/api/roux/auth/me").StatusCode != 401 {
 		t.Fatal("a session signed in with the replaced address must end")
 	}
 	// The old address hears about it, with the new one masked.
@@ -393,7 +393,7 @@ func TestAFailedNoticeDoesNotUndoAChange(t *testing.T) {
 	e.out.mu.Lock()
 	e.out.fail = true
 	e.out.mu.Unlock()
-	if r := b.post("/who/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, msg)}); r.StatusCode != 200 {
+	if r := b.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, msg)}); r.StatusCode != 200 {
 		t.Fatalf("a failing mail server undid the change: %d %s", r.StatusCode, r.body)
 	}
 	if list := addressList(t, b); len(list) != 2 || list[1]["address"] != "better@example.test" {
@@ -409,7 +409,7 @@ func TestAnAddressTakenInTheMeantimeIsAConflict(t *testing.T) {
 	if _, _, err := e.method.EnsureIdentity(context.Background(), "contested@example.test"); err != nil {
 		t.Fatal(err)
 	}
-	r := b.post("/who/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, msg)})
+	r := b.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, msg)})
 	if body := r.json(t); r.StatusCode != 409 || body["code"] != "email-address-taken" {
 		t.Fatalf("%d %s", r.StatusCode, r.body)
 	}
@@ -427,7 +427,7 @@ func TestOnlyOneOfManyConfirmationsWins(t *testing.T) {
 	for i := range racers {
 		racers[i] = e.browser()
 		racers[i].setCookie("SESSION", b.cookie("SESSION"))
-		racers[i].get("/who/sign-in")
+		racers[i].get("/api/roux/auth/sign-in")
 	}
 	var wg, start sync.WaitGroup
 	start.Add(1)
@@ -437,7 +437,7 @@ func TestOnlyOneOfManyConfirmationsWins(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			start.Wait()
-			statuses <- br.post("/who/me/email-addresses/confirmations", map[string]string{"token": token}).StatusCode
+			statuses <- br.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"token": token}).StatusCode
 		}()
 	}
 	start.Done()
@@ -467,19 +467,19 @@ func TestRemovingAnAddress(t *testing.T) {
 	otherID := e.idOfAddress("other@example.test")
 
 	for name, id := range map[string]string{"someone else's": otherID, "unknown": uuid.NewString(), "garbage": "nope"} {
-		r := b.del("/who/me/email-addresses/" + id)
+		r := b.del("/api/roux/auth/me/email-addresses/" + id)
 		if body := r.json(t); r.StatusCode != 404 || body["code"] != "email-address-not-found" {
 			t.Errorf("%s: %d %s", name, r.StatusCode, r.body)
 		}
 	}
-	if r := b.del("/who/me/email-addresses/" + secondID); r.StatusCode != 204 || len(r.body) != 0 {
+	if r := b.del("/api/roux/auth/me/email-addresses/" + secondID); r.StatusCode != 204 || len(r.body) != 0 {
 		t.Fatalf("remove: %d %s", r.StatusCode, r.body)
 	}
 	if list := addressList(t, b); len(list) != 1 || list[0]["address"] != owner {
 		t.Fatalf("%v", list)
 	}
 	// The last way in stays.
-	r := b.del("/who/me/email-addresses/" + e.idOfAddress(owner))
+	r := b.del("/api/roux/auth/me/email-addresses/" + e.idOfAddress(owner))
 	if body := r.json(t); r.StatusCode != 409 || body["code"] != "last-credential" {
 		t.Fatalf("last way in: %d %s", r.StatusCode, r.body)
 	}
@@ -498,7 +498,7 @@ func TestTwoRemovalsAtOnceCannotRemoveEveryAddress(t *testing.T) {
 	a, c := e.browser(), e.browser()
 	for _, br := range []*browser{a, c} {
 		br.setCookie("SESSION", b.cookie("SESSION"))
-		br.get("/who/sign-in")
+		br.get("/api/roux/auth/sign-in")
 	}
 	var wg, start sync.WaitGroup
 	start.Add(1)
@@ -508,7 +508,7 @@ func TestTwoRemovalsAtOnceCannotRemoveEveryAddress(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			start.Wait()
-			statuses <- br.del("/who/me/email-addresses/" + ids[i]).StatusCode
+			statuses <- br.del("/api/roux/auth/me/email-addresses/" + ids[i]).StatusCode
 		}()
 	}
 	start.Done()

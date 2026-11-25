@@ -22,8 +22,8 @@ const GRACE: UserDetail = {
 function answer(response: () => Response) {
   const changes: string[] = [];
   server.use(
-    http.get("/api/users/:id/activities", () => HttpResponse.json(pageOf([], {}))),
-    http.post("/api/users/:id/:action", ({ params }) => {
+    http.get("/api/roux/users/:id/activities", () => HttpResponse.json(pageOf([], {}))),
+    http.post("/api/roux/users/:id/:action", ({ params }) => {
       changes.push(String(params.action));
       return response();
     }),

@@ -47,7 +47,7 @@ func TestGuardedRoutesAnswerAsRouxDoes(t *testing.T) {
 	anon := e.browser().get("/api/me-only")
 	body := anon.json(t)
 	if anon.StatusCode != 401 || body["detail"] != "Sign in to continue" || body["title"] != "Unauthorized" ||
-		anon.Header.Get("Who-Error") != "" || body["instance"] != "/api/me-only" {
+		anon.Header.Get("Roux-Error") != "" || body["instance"] != "/api/me-only" {
 		t.Fatalf("anonymous: %d %s %v", anon.StatusCode, anon.body, anon.Header)
 	}
 
@@ -65,7 +65,7 @@ func TestGuardedRoutesAnswerAsRouxDoes(t *testing.T) {
 func TestPermissionsFollowRolesOnTheNextRequest(t *testing.T) {
 	e := setup(t)
 	b := e.signedIn()
-	perms := func() []any { return b.get("/who/me").json(t)["permissions"].([]any) }
+	perms := func() []any { return b.get("/api/roux/auth/me").json(t)["permissions"].([]any) }
 
 	if got := perms(); len(got) != 0 {
 		t.Fatalf("a new identity holds nothing: %v", got)
@@ -148,11 +148,11 @@ func TestRecentSignInIsRequiredForSensitiveActions(t *testing.T) {
 	e.clock.advance(10*time.Minute + time.Second) // still a live session (30 minutes idle), no longer recent
 	stale := b.post("/api/fresh", nil)
 	body := stale.json(t)
-	if stale.StatusCode != 401 || body["type"] != "urn:who:error:reauthentication-required" ||
+	if stale.StatusCode != 401 || body["type"] != "urn:roux:error:reauthentication-required" ||
 		body["code"] != "reauthentication-required" || body["detail"] != "Sign in again to continue" {
 		t.Fatalf("stale sign-in: %d %s", stale.StatusCode, stale.body)
 	}
-	if b.get("/who/me").StatusCode != 200 {
+	if b.get("/api/roux/auth/me").StatusCode != 200 {
 		t.Fatal("being asked to sign in again must not end the session")
 	}
 
@@ -182,11 +182,11 @@ func TestEndAllSessions(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, br := range map[string]*browser{"first device": a, "second device": b} {
-		if br.get("/who/me").StatusCode != 401 {
+		if br.get("/api/roux/auth/me").StatusCode != 401 {
 			t.Errorf("%s is still signed in", name)
 		}
 	}
-	if r := c.get("/who/me"); r.StatusCode != 200 || r.json(t)["identityId"] != otherID.String() {
+	if r := c.get("/api/roux/auth/me"); r.StatusCode != 200 || r.json(t)["identityId"] != otherID.String() {
 		t.Fatalf("someone else's session must be untouched: %d", r.StatusCode)
 	}
 }

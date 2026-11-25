@@ -19,8 +19,8 @@ describe("main", () => {
     // A day that has not ended, so the day watch asks for no new one.
     page(JSON.stringify(testOrganization({ todayEndsAt: "2999-01-01T00:00:00Z" })));
     server.use(
-      http.get("/who/me", () => new HttpResponse(null, { status: 401 })),
-      http.get("/who/sign-in", () => HttpResponse.json({ providers: [] })),
+      http.get("/api/roux/auth/me", () => new HttpResponse(null, { status: 401 })),
+      http.get("/api/roux/auth/sign-in", () => HttpResponse.json({ providers: [] })),
     );
 
     await import("./main");
@@ -38,7 +38,7 @@ describe("main", () => {
 
   it("shows a spinner until the session has loaded", async () => {
     page(JSON.stringify(testOrganization({ todayEndsAt: "2999-01-01T00:00:00Z" })));
-    server.use(http.get("/who/me", () => new Promise<Response>(() => undefined)));
+    server.use(http.get("/api/roux/auth/me", () => new Promise<Response>(() => undefined)));
 
     await import("./main");
 
@@ -49,9 +49,9 @@ describe("main", () => {
     page(JSON.stringify(testOrganization({ todayEndsAt: "2000-01-01T00:00:00Z" })));
     let asked = 0;
     server.use(
-      http.get("/who/me", () => new HttpResponse(null, { status: 401 })),
-      http.get("/who/sign-in", () => HttpResponse.json({ providers: [] })),
-      http.get("/api/organization", () => {
+      http.get("/api/roux/auth/me", () => new HttpResponse(null, { status: 401 })),
+      http.get("/api/roux/auth/sign-in", () => HttpResponse.json({ providers: [] })),
+      http.get("/api/roux/organization", () => {
         asked++;
         return HttpResponse.json(testOrganization({ todayEndsAt: "2999-01-01T00:00:00Z" }));
       }),

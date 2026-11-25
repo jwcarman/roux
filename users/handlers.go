@@ -14,7 +14,7 @@ import (
 )
 
 // BasePath is where the users' endpoints live.
-const BasePath = "/api/users"
+const BasePath = "/api/roux/users"
 
 type nameChange struct {
 	DisplayName *string `json:"displayName"`
@@ -97,31 +97,31 @@ func me(r *http.Request) uuid.UUID { return authn.PrincipalFrom(r.Context()).Ide
 
 // Register serves the users' endpoints, and records each user's first sign-in.
 //
-//	GET  /api/users/me                 the signed-in user                      (signed in)
-//	PUT  /api/users/me                 rename themselves                       (signed in)
-//	GET  /api/users                    a page of users, filtered              users.read
-//	GET  /api/users/{id}               one user                                users.read
-//	GET  /api/users/{id}/activities    their history, newest first             users.read
-//	POST /api/users/invitations        invite someone                          users.invite
-//	POST /api/users/{id}/invitation    send their invitation again             users.invite
-//	PUT  /api/users/{id}/name          rename                                  users.manage
-//	PUT  /api/users/{id}/role          change their role                       users.manage
-//	POST /api/users/{id}/owner         make an owner (recent sign-in)          users.owners
-//	POST /api/users/{id}/deactivate    deactivate                              users.manage
-//	POST /api/users/{id}/reactivate    reactivate                              users.manage
-//	POST /api/users/{id}/sign-out      end all their sessions                  users.manage
+//	GET  /api/roux/users/me                 the signed-in user                      (signed in)
+//	PUT  /api/roux/users/me                 rename themselves                       (signed in)
+//	GET  /api/roux/users                    a page of users, filtered              users.read
+//	GET  /api/roux/users/{id}               one user                                users.read
+//	GET  /api/roux/users/{id}/activities    their history, newest first             users.read
+//	POST /api/roux/users/invitations        invite someone                          users.invite
+//	POST /api/roux/users/{id}/invitation    send their invitation again             users.invite
+//	PUT  /api/roux/users/{id}/name          rename                                  users.manage
+//	PUT  /api/roux/users/{id}/role          change their role                       users.manage
+//	POST /api/roux/users/{id}/owner         make an owner (recent sign-in)          users.owners
+//	POST /api/roux/users/{id}/deactivate    deactivate                              users.manage
+//	POST /api/roux/users/{id}/reactivate    reactivate                              users.manage
+//	POST /api/roux/users/{id}/sign-out      end all their sessions                  users.manage
 func Register(mux *api.Mux, host *authn.Host, svc Service) {
 	host.OnSignedIn(svc.FirstSignIn)
 
 	// the signed-in user's own name
-	mux.Handle("GET "+BasePath+"/me", host.Guard("", func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("GET "+BasePath+"/me", host.Guard("", func(w http.ResponseWriter, r *http.Request) error {
 		m, err := svc.Me(r.Context(), me(r))
 		if err != nil {
 			return err
 		}
 		return api.JSON(w, http.StatusOK, m)
 	}))
-	mux.Handle("PUT "+BasePath+"/me", host.Guard("", func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("PUT "+BasePath+"/me", host.Guard("", func(w http.ResponseWriter, r *http.Request) error {
 		var req nameChange
 		if err := api.DecodeLenient(r, &req); err != nil {
 			return err
@@ -138,7 +138,7 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 	}))
 
 	// reading
-	mux.Handle("GET "+BasePath, host.Guard(UsersRead, func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("GET "+BasePath, host.Guard(UsersRead, func(w http.ResponseWriter, r *http.Request) error {
 		req, err := api.PageRequest(r, ListConfig)
 		if err != nil {
 			return err
@@ -154,7 +154,7 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 		}
 		return api.JSON(w, http.StatusOK, out)
 	}))
-	mux.Handle("GET "+BasePath+"/{id}", host.Guard(UsersRead, func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("GET "+BasePath+"/{id}", host.Guard(UsersRead, func(w http.ResponseWriter, r *http.Request) error {
 		id, err := userID(r)
 		if err != nil {
 			return err
@@ -165,7 +165,7 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 		}
 		return api.JSON(w, http.StatusOK, d)
 	}))
-	mux.Handle("GET "+BasePath+"/{id}/activities", host.Guard(UsersRead, func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("GET "+BasePath+"/{id}/activities", host.Guard(UsersRead, func(w http.ResponseWriter, r *http.Request) error {
 		id, err := userID(r)
 		if err != nil {
 			return err
@@ -182,7 +182,7 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 	}))
 
 	// invitations
-	mux.Handle("POST "+BasePath+"/invitations", host.Guard(UsersInvite, func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("POST "+BasePath+"/invitations", host.Guard(UsersInvite, func(w http.ResponseWriter, r *http.Request) error {
 		var req invitationRequest
 		if err := api.DecodeLenient(r, &req); err != nil {
 			return err
@@ -197,7 +197,7 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 		}
 		return api.JSON(w, http.StatusAccepted, invitationResult{LinkSent: sent})
 	}))
-	mux.Handle("POST "+BasePath+"/{id}/invitation", host.Guard(UsersInvite, func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("POST "+BasePath+"/{id}/invitation", host.Guard(UsersInvite, func(w http.ResponseWriter, r *http.Request) error {
 		id, err := userID(r)
 		if err != nil {
 			return err
@@ -210,7 +210,7 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 	}))
 
 	// managing
-	mux.Handle("PUT "+BasePath+"/{id}/name", host.Guard(UsersManage, func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("PUT "+BasePath+"/{id}/name", host.Guard(UsersManage, func(w http.ResponseWriter, r *http.Request) error {
 		id, err := userID(r)
 		if err != nil {
 			return err
@@ -229,7 +229,7 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 		}
 		return api.JSON(w, http.StatusOK, d)
 	}))
-	mux.Handle("PUT "+BasePath+"/{id}/role", host.Guard(UsersManage, func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("PUT "+BasePath+"/{id}/role", host.Guard(UsersManage, func(w http.ResponseWriter, r *http.Request) error {
 		id, err := userID(r)
 		if err != nil {
 			return err
@@ -248,7 +248,7 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 		}
 		return api.JSON(w, http.StatusOK, d)
 	}))
-	mux.Handle("POST "+BasePath+"/{id}/owner", host.Guard(UsersOwners, func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("POST "+BasePath+"/{id}/owner", host.Guard(UsersOwners, func(w http.ResponseWriter, r *http.Request) error {
 		id, err := userID(r)
 		if err != nil {
 			return err
@@ -262,7 +262,7 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 		}
 		return api.JSON(w, http.StatusOK, d)
 	}))
-	mux.Handle("POST "+BasePath+"/{id}/deactivate", host.Guard(UsersManage, func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("POST "+BasePath+"/{id}/deactivate", host.Guard(UsersManage, func(w http.ResponseWriter, r *http.Request) error {
 		id, err := userID(r)
 		if err != nil {
 			return err
@@ -273,7 +273,7 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 		}
 		return api.JSON(w, http.StatusOK, d)
 	}))
-	mux.Handle("POST "+BasePath+"/{id}/reactivate", host.Guard(UsersManage, func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("POST "+BasePath+"/{id}/reactivate", host.Guard(UsersManage, func(w http.ResponseWriter, r *http.Request) error {
 		id, err := userID(r)
 		if err != nil {
 			return err
@@ -284,7 +284,7 @@ func Register(mux *api.Mux, host *authn.Host, svc Service) {
 		}
 		return api.JSON(w, http.StatusOK, d)
 	}))
-	mux.Handle("POST "+BasePath+"/{id}/sign-out", host.Guard(UsersManage, func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleRoux("POST "+BasePath+"/{id}/sign-out", host.Guard(UsersManage, func(w http.ResponseWriter, r *http.Request) error {
 		id, err := userID(r)
 		if err != nil {
 			return err

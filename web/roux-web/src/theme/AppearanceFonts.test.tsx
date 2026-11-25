@@ -26,7 +26,7 @@ vi.mock("@fontsource-variable/lora", () => {
 // Alone in its file: a font's stylesheet is imported once per module registry, so only the first
 // test to render the page can see which fonts the page asks for.
 it("loads every font, so the looks and lettering samples show in them", async () => {
-  server.use(http.get("/api/theme", () => HttpResponse.json({ ...DEFAULT_THEME, version: 0 })));
+  server.use(http.get("/api/roux/theme", () => HttpResponse.json({ ...DEFAULT_THEME, version: 0 })));
   renderWithProviders(
     <ThemeProvider theme={DEFAULT_THEME}>
       <AppearanceSettings />

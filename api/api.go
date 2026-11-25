@@ -55,7 +55,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ErrorRenderer writes a problem as the response. problem.Write is the default;
 // a kit package that must answer in another format under its own base path
-// (who's urn:who:error problems, say) supplies its own via Mux.Kit.
+// (sign-in's urn:roux:error problems, say) supplies its own via Mux.Kit.
 type ErrorRenderer func(w http.ResponseWriter, r *http.Request, p *problem.Problem)
 
 // kitBase is a base path reserved for one kit package.
@@ -205,27 +205,38 @@ func (m *Mux) Handle(pattern string, h HandlerFunc) {
 	m.sm.Handle(method+" "+path, handler{fn: h, mux: m, render: problem.Write})
 }
 
-// HandleRoux registers a kit-provided endpoint. The pattern is relative to
-// /api/roux: HandleRoux("GET /healthz", h) serves GET /api/roux/healthz.
-// Only kit packages should call this; applications use Handle.
-func (m *Mux) HandleRoux(pattern string, h HandlerFunc) { m.roux.Handle(pattern, h) }
+// HandleRoux registers an endpoint roux itself provides. The pattern names the whole
+// path, which must be under /api/roux/: HandleRoux("GET /api/roux/healthz", h). Only
+// roux's packages call this; applications use Handle.
+func (m *Mux) HandleRoux(pattern string, h HandlerFunc) {
+	method, path := splitPattern(pattern)
+	if !strings.HasPrefix(path, RouxPrefix) {
+		panic(fmt.Sprintf("api: roux route %q must be under %s", pattern, RouxPrefix))
+	}
+	m.roux.Handle(method+" "+strings.TrimPrefix(path, m.roux.base.prefix), h)
+}
 
-// Kit reserves a base path for one kit package and returns its registrar. Routes
-// registered through it live under prefix, and every error there (including the
-// router's own 404 and 405) is written by render. The front-end fallback never
-// serves paths under a kit base. Reserving is for kit packages (who mounts at
-// /who, for instance); applications use Handle. Panics at startup if prefix is
-// not an absolute path without a trailing slash, is under /api/ (other than
-// /api/roux itself), or overlaps a base already reserved.
+// Kit reserves a base path for one of roux's packages and returns its registrar.
+// Routes registered through it live under prefix, and every error there (including
+// the router's own 404 and 405) is written by render. The front-end fallback never
+// serves paths under a kit base. Reserving is for roux's packages (sign-in reserves
+// /api/roux/auth, for instance); applications use Handle. Panics at startup if prefix
+// is not an absolute path without a trailing slash, is under /api/ but not under
+// /api/roux/, or overlaps a base already reserved (other than /api/roux itself, which
+// the more specific base takes over beneath it).
 func (m *Mux) Kit(prefix string, render ErrorRenderer) *Kit {
 	if !strings.HasPrefix(prefix, "/") || len(prefix) < 2 || strings.HasSuffix(prefix, "/") {
 		panic(fmt.Sprintf("api: kit base %q must be an absolute path without a trailing slash", prefix))
 	}
-	if isAPIPath(prefix) && prefix != strings.TrimSuffix(RouxPrefix, "/") {
+	rouxBase := strings.TrimSuffix(RouxPrefix, "/")
+	if isAPIPath(prefix) && prefix != rouxBase && !strings.HasPrefix(prefix, RouxPrefix) {
 		panic(fmt.Sprintf("api: kit base %q is under %s, which belongs to the application", prefix, Prefix))
 	}
 	b := &kitBase{prefix: prefix, render: render}
 	for _, other := range m.kits {
+		if other.prefix == rouxBase || prefix == rouxBase {
+			continue // a base inside /api/roux takes over its own paths
+		}
 		if other.covers(prefix) || b.covers(other.prefix) {
 			panic(fmt.Sprintf("api: kit base %q overlaps %q", prefix, other.prefix))
 		}
@@ -241,20 +252,21 @@ type Kit struct {
 }
 
 // Handle registers "METHOD /path", with the path relative to the kit's base:
-// on a kit at /who, Handle("GET /me", h) serves GET /who/me.
+// on a kit at /api/roux/auth, Handle("GET /me", h) serves GET /api/roux/auth/me.
 func (k *Kit) Handle(pattern string, h HandlerFunc) {
 	method, path := splitPattern(pattern)
 	k.m.sm.Handle(method+" "+k.base.prefix+path, handler{fn: h, mux: k.m, render: k.base.render})
 }
 
-// kitFor returns the kit base that owns path, if any.
+// kitFor returns the kit base that owns path, if any: the most specific one.
 func (m *Mux) kitFor(path string) *kitBase {
+	var owner *kitBase
 	for _, b := range m.kits {
-		if b.covers(path) {
-			return b
+		if b.covers(path) && (owner == nil || len(b.prefix) > len(owner.prefix)) {
+			owner = b
 		}
 	}
-	return nil
+	return owner
 }
 
 // Fallback sets the handler for every request outside /api/ and outside the

@@ -1,7 +1,7 @@
 import { Button, Stack, Text, type ButtonProps } from "@chakra-ui/react";
 import { useState } from "react";
 import { useSignInReturn } from "./returnTo";
-import { who } from "./who";
+import { auth } from "./auth";
 
 /**
  * Signing in with a passkey the browser holds: `signIn` asks for one, then goes where the visitor was
@@ -14,7 +14,7 @@ export function usePasskeySignIn() {
   async function signIn() {
     setError(null);
     try {
-      const result = await who.passkeys.signIn();
+      const result = await auth.passkeys.signIn();
       if (result.ok) {
         finish();
       } else {

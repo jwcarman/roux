@@ -6,11 +6,11 @@
 // Endpoints under who's base path, for the caller's own keys (a person at a browser; a key never
 // lists, makes, rotates or revokes keys, so a leaked key cannot make itself permanent):
 //
-//	GET    /who/me/api-keys                  [{id, name, scopes, createdAt, expiresAt, lastUsedAt}], by name
-//	POST   /who/me/api-keys                  {"name","lifetime":"P90D","scopes":[...]} -> 201 {id,name,scopes,expiresAt,key}
-//	POST   /who/me/api-keys/{id}/rotations   {"overlap":"PT1H"} -> 201, the new key; the old one lives on for the overlap
-//	DELETE /who/me/api-keys/{id}             204: the next request with the key is refused
-//	GET    /who/me/api-keys/current          the key that signed this request in (404 when none did)
+//	GET    /api/roux/auth/me/api-keys                  [{id, name, scopes, createdAt, expiresAt, lastUsedAt}], by name
+//	POST   /api/roux/auth/me/api-keys                  {"name","lifetime":"P90D","scopes":[...]} -> 201 {id,name,scopes,expiresAt,key}
+//	POST   /api/roux/auth/me/api-keys/{id}/rotations   {"overlap":"PT1H"} -> 201, the new key; the old one lives on for the overlap
+//	DELETE /api/roux/auth/me/api-keys/{id}             204: the next request with the key is refused
+//	GET    /api/roux/auth/me/api-keys/current          the key that signed this request in (404 when none did)
 //
 // A key's scopes are permissions its owner held when it was made. At each request the key gets its
 // scopes intersected with its owner's permissions at that moment, so taking a role from the owner

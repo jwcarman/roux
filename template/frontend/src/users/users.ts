@@ -37,27 +37,27 @@ export const renameSchema = z.object({
 /** A rename as it is sent, before the version is added. */
 export type Rename = z.output<typeof renameSchema>;
 
-/** The directory's filters, as `/api/users` takes them. */
+/** The directory's filters, as `/api/roux/users` takes them. */
 export type UserFilters = { search?: string; role?: string; status?: string };
 
-/** What a manager can do to a user's status: the endpoint under `/api/users/{id}/`. */
+/** What a manager can do to a user's status: the endpoint under `/api/roux/users/{id}/`. */
 export type UserStatusAction = "deactivate" | "reactivate";
 
-/** `/api/users`: one function per endpoint. */
+/** `/api/roux/users`: one function per endpoint. */
 export const usersApi = {
   list: (params: PageParams & UserFilters, signal?: AbortSignal) =>
-    getJson<PageDto<User>>("users", { params, signal }),
-  get: (id: string, signal?: AbortSignal) => getJson<UserDetail>(path`users/${id}`, { signal }),
-  invite: (invitation: Invitation) => sendJson<InvitationResult>("POST", "users/invitations", invitation),
+    getJson<PageDto<User>>("roux/users", { params, signal }),
+  get: (id: string, signal?: AbortSignal) => getJson<UserDetail>(path`roux/users/${id}`, { signal }),
+  invite: (invitation: Invitation) => sendJson<InvitationResult>("POST", "roux/users/invitations", invitation),
   changeStatus: (id: string, action: UserStatusAction) =>
-    sendJson<UserDetail>("POST", path`users/${id}/${action}`),
-  rename: (rename: Rename & { version: number }) => sendJson<Profile>("PUT", "users/me", rename),
+    sendJson<UserDetail>("POST", path`roux/users/${id}/${action}`),
+  rename: (rename: Rename & { version: number }) => sendJson<Profile>("PUT", "roux/users/me", rename),
 };
 
 /** The roles an invitation may give, in the order the server lists them (`roux.roles.invitable`). */
 export const invitableRolesQuery = queryOptions({
   queryKey: queryKeys.roles.invitable(),
-  queryFn: ({ signal }) => getJson<string[]>("roles/invitable", { signal }),
+  queryFn: ({ signal }) => getJson<string[]>("roux/roles/invitable", { signal }),
 });
 
 /** A user, for a detail page's loader (`ensureQueryData`) and the page (`useSuspenseQuery`). */
@@ -77,7 +77,7 @@ export function usersPage(filters: UserFilters) {
 
 /** A user's history, newest first, as an ActivityList takes it. */
 export function activitiesPage(id: string) {
-  return historyQuery(queryKeys.users.activities(id), path`users/${id}/activities`);
+  return historyQuery(queryKeys.users.activities(id), path`roux/users/${id}/activities`);
 }
 
 /** Invites a user; the directory refreshes. */

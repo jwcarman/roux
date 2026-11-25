@@ -30,7 +30,7 @@ func TestCodesFromStatus(t *testing.T) {
 
 func TestServerErrorsHaveNullDetailAndNeverLeak(t *testing.T) {
 	mux := api.NewMux()
-	kit := mux.Kit("/who", render)
+	kit := mux.Kit("/api/roux/auth", render)
 	kit.Handle("GET /boom", func(http.ResponseWriter, *http.Request) error {
 		return errors.New("password=hunter2 refused by db")
 	})
@@ -49,10 +49,10 @@ func TestServerErrorsHaveNullDetailAndNeverLeak(t *testing.T) {
 		return rec, m
 	}
 
-	for _, path := range []string{"/who/boom", "/who/teapot"} {
+	for _, path := range []string{"/api/roux/auth/boom", "/api/roux/auth/teapot"} {
 		rec, body := get(path)
 		detail, present := body["detail"]
-		if rec.Code != 500 || rec.Header().Get("Who-Error") != "server-error" || !present || detail != nil {
+		if rec.Code != 500 || rec.Header().Get("Roux-Error") != "server-error" || !present || detail != nil {
 			t.Fatalf("%s: %d %v (detail must be present and null)", path, rec.Code, body)
 		}
 		if bytes := rec.Body.String(); contains(bytes, "hunter2") || contains(bytes, "secret detail") {
@@ -60,9 +60,9 @@ func TestServerErrorsHaveNullDetailAndNeverLeak(t *testing.T) {
 		}
 	}
 
-	rec, body := get("/who/conflict")
-	if rec.Code != 409 || body["code"] != "last-credential" || body["type"] != "urn:who:error:last-credential" ||
-		body["detail"] != "That is your last way to sign in" || rec.Header().Get("Who-Error") != "last-credential" {
+	rec, body := get("/api/roux/auth/conflict")
+	if rec.Code != 409 || body["code"] != "last-credential" || body["type"] != "urn:roux:error:last-credential" ||
+		body["detail"] != "That is your last way to sign in" || rec.Header().Get("Roux-Error") != "last-credential" {
 		t.Fatalf("own-code problem: %d %v", rec.Code, body)
 	}
 }

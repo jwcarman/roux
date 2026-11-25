@@ -9,7 +9,7 @@ import { renderRoute } from "../../testing/route";
 describe("/appearance", () => {
   it("shows the appearance settings to someone who may change them", async () => {
     server.use(
-      http.get("/api/theme", () =>
+      http.get("/api/roux/theme", () =>
         HttpResponse.json({
           appName: "Test App",
           palette: "gray",

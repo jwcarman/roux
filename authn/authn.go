@@ -5,9 +5,9 @@
 //
 // The core serves
 //
-//	GET  /who/sign-in   which sign-in methods are on (public), merged from the Methods
-//	GET  /who/me        the signed-in identity, or 401 not-signed-in
-//	POST /who/logout    ends the session, clears the cookies, 204
+//	GET  /api/roux/auth/sign-in   which sign-in methods are on (public), merged from the Methods
+//	GET  /api/roux/auth/me        the signed-in identity, or 401 not-signed-in
+//	POST /api/roux/auth/logout    ends the session, clears the cookies, 204
 //
 // plus the sessions behind them (roux_session, one cookie per browser, checked
 // against the database on every request). Sign-in methods plug in as Methods:
@@ -21,9 +21,7 @@ package authn
 import (
 	"context"
 	"embed"
-	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,8 +31,8 @@ import (
 	"github.com/jwcarman/roux/pgdb"
 )
 
-// DefaultBasePath is where who mounts its endpoints (who.base-path).
-const DefaultBasePath = "/who"
+// BasePath is where sign-in and the account endpoints live.
+const BasePath = "/api/roux/auth"
 
 //go:embed migrations/*.sql
 var migrations embed.FS
@@ -45,16 +43,13 @@ var Migration = pgdb.Migration{Name: "roux-authn", FS: migrations, Dir: "migrati
 
 // Config configures the endpoints.
 type Config struct {
-	// BasePath is where the endpoints live; default "/who". It must be an absolute
-	// path with no trailing slash, outside /api/ (which belongs to the application).
-	BasePath string
 	// Pool stores identities and sessions. Without it nobody can sign in.
 	Pool *pgxpool.Pool
 	// SessionTimeout is how long a session may sit unused before it ends
 	// (who's server session timeout); default 30 minutes.
 	SessionTimeout time.Duration
 	// RecentSignIn is how long a sign-in stays recent enough for sensitive
-	// actions (who.security.recent-sign-in); default 10 minutes. /who/me reports
+	// actions (who.security.recent-sign-in); default 10 minutes. /api/roux/auth/me reports
 	// when it ends.
 	RecentSignIn time.Duration
 	// Clock is the time source; default time.Now.
@@ -78,7 +73,7 @@ type Provider struct {
 	Name string `json:"name"`
 }
 
-// SignInOptions is the body of GET /who/sign-in: which ways of signing in are on.
+// SignInOptions is the body of GET /api/roux/auth/sign-in: which ways of signing in are on.
 type SignInOptions struct {
 	Email     bool       `json:"email"`
 	Passkey   bool       `json:"passkey"`
@@ -118,7 +113,7 @@ func (h *Host) Handle(pattern string, fn api.HandlerFunc) { h.kit.Handle(pattern
 // TLS. Every sign-in method sets its cookies through this, so they cannot disagree.
 func (h *Host) SecureCookie(r *http.Request) bool { return h.secureCookies || r.TLS != nil }
 
-// BasePath is where who's endpoints are mounted ("/who" by default).
+// BasePath is where sign-in's endpoints are mounted (BasePath).
 func (h *Host) BasePath() string { return h.basePath }
 
 // PrincipalOf is whoever the request's session belongs to, or nil when the request is not
@@ -133,20 +128,13 @@ func (h *Host) Now() time.Time { return h.now() }
 
 func (h *Host) now() time.Time { return h.clock().UTC() }
 
-// AddCounter registers a credential counter for /who/me's "credentials".
+// AddCounter registers a credential counter for /api/roux/auth/me's "credentials".
 func (h *Host) AddCounter(c Counter) { h.counters = append(h.counters, c) }
 
 // Register mounts who's endpoints on mux under cfg.BasePath and mounts methods.
 // The returned Host guards the application's own routes (see Host.Guard).
 func Register(mux *api.Mux, cfg Config, methods ...Method) (*Host, error) {
-	base := cfg.BasePath
-	if base == "" {
-		base = DefaultBasePath
-	}
-	if !strings.HasPrefix(base, "/") || len(base) < 2 || strings.HasSuffix(base, "/") ||
-		base == "/api" || strings.HasPrefix(base, api.Prefix) {
-		return nil, fmt.Errorf("authn: base path %q must be an absolute path with no trailing slash, outside %s", base, api.Prefix)
-	}
+	base := BasePath
 	h := &Host{
 		kit:            mux.Kit(base, render),
 		basePath:       base,

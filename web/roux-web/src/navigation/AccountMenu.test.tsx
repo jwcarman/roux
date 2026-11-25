@@ -18,20 +18,20 @@ function DarkMode() {
 }
 
 interface Shown {
-  who?: { name?: string; email?: string };
+  person?: { name?: string; email?: string };
   compact?: boolean;
   onNavigate?: () => void;
   signOut?: () => void;
 }
 
 function menu({
-  who = { name: "Ada Lovelace", email: "ada@example.org" },
+  person = { name: "Ada Lovelace", email: "ada@example.org" },
   compact = true,
   onNavigate = () => {},
   signOut = () => {},
 }: Shown = {}) {
   return renderInRouter(
-    <AccountMenu name={who.name} email={who.email} compact={compact}>
+    <AccountMenu name={person.name} email={person.email} compact={compact}>
       <AccountMenuLink to="/settings" icon={LuSettings} onNavigate={onNavigate}>
         Settings
       </AccountMenuLink>
@@ -62,7 +62,7 @@ describe("AccountMenu", () => {
   });
 
   it("still offers the menu before the name has loaded", async () => {
-    menu({ who: {} });
+    menu({ person: {} });
 
     const button = await screen.findByRole("button", { name: "Account" });
     expect(button).not.toHaveTextContent("Ada");

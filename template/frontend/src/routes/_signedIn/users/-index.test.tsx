@@ -21,14 +21,14 @@ let requests: URLSearchParams[];
 beforeEach(() => {
   requests = [];
   server.use(
-    http.get("/api/users", ({ request }) => {
+    http.get("/api/roux/users", ({ request }) => {
       const params = new URL(request.url).searchParams;
       requests.push(params);
       const pageIndex = Number(params.get("pageIndex") ?? 0);
       const pageSize = Number(params.get("pageSize") ?? 20);
       return HttpResponse.json(pageOf(pageIndex === 0 ? USERS : MANY, { pageIndex, pageSize }));
     }),
-    http.get("/api/roles/invitable", () => HttpResponse.json(["USER"])),
+    http.get("/api/roux/roles/invitable", () => HttpResponse.json(["USER"])),
   );
 });
 

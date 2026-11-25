@@ -19,8 +19,8 @@ const GRACE = {
 describe("/users/$userId", () => {
   it("shows the user", async () => {
     server.use(
-      http.get("/api/users/u-1", () => HttpResponse.json(GRACE)),
-      http.get("/api/users/u-1/activities", () => HttpResponse.json({ data: [], next: null })),
+      http.get("/api/roux/users/u-1", () => HttpResponse.json(GRACE)),
+      http.get("/api/roux/users/u-1/activities", () => HttpResponse.json({ data: [], next: null })),
     );
     renderRoute("/users/u-1", { permissions: [USERS_READ] });
 
@@ -29,7 +29,7 @@ describe("/users/$userId", () => {
   });
 
   it("says a user who does not exist was not found", async () => {
-    server.use(http.get("/api/users/nobody", () => notFound("No such user")));
+    server.use(http.get("/api/roux/users/nobody", () => notFound("No such user")));
     renderRoute("/users/nobody", { permissions: [USERS_READ] });
 
     expect(await screen.findByRole("heading", { name: "User not found" })).toBeInTheDocument();
@@ -38,8 +38,8 @@ describe("/users/$userId", () => {
   /** Opens `user`'s page as the caller "id-1" holding `permissions`. */
   async function open(user: typeof GRACE, permissions: string[]) {
     server.use(
-      http.get(`/api/users/${user.id}`, () => HttpResponse.json(user)),
-      http.get(`/api/users/${user.id}/activities`, () => HttpResponse.json(pageOf([], {}))),
+      http.get(`/api/roux/users/${user.id}`, () => HttpResponse.json(user)),
+      http.get(`/api/roux/users/${user.id}/activities`, () => HttpResponse.json(pageOf([], {}))),
     );
     renderRoute(`/users/${user.id}`, { permissions });
     await screen.findByRole("heading", { name: user.displayName });

@@ -125,7 +125,7 @@ func (h *Host) endSession(w http.ResponseWriter, r *http.Request) error {
 }
 
 // Counter counts one kind of sign-in credential an identity holds, for
-// /who/me's "credentials". Each sign-in method contributes its own.
+// /api/roux/auth/me's "credentials". Each sign-in method contributes its own.
 type Counter struct {
 	Kind string
 	// Count says how many of this kind the identity holds; db is a pool, or the
@@ -145,7 +145,7 @@ func (h *Host) credentialCounts(ctx context.Context, db DBTX, identityID uuid.UU
 	return counts, nil
 }
 
-// meResponse is who's GET /who/me answer, with who's names and its nulls kept.
+// meResponse is who's GET /api/roux/auth/me answer, with who's names and its nulls kept.
 type meResponse struct {
 	IdentityID        string           `json:"identityId"`
 	Permissions       []string         `json:"permissions"`

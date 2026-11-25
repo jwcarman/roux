@@ -223,7 +223,7 @@ describe("startDayWatch", () => {
   it("asks the server by default", async () => {
     const { server } = await import("../testing/server");
     const { http, HttpResponse } = await import("msw");
-    server.use(http.get("/api/organization", () => HttpResponse.json(NEXT)));
+    server.use(http.get("/api/roux/organization", () => HttpResponse.json(NEXT)));
     vi.useRealTimers();
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"], shouldAdvanceTime: true });
     vi.setSystemTime(END + 1000);

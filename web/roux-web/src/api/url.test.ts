@@ -27,7 +27,7 @@ describe("resolveUrl", () => {
   });
 
   it("uses a path with a leading slash as it is", () => {
-    expect(resolveUrl("/who/me")).toBe("/who/me");
+    expect(resolveUrl("/api/roux/auth/me")).toBe("/api/roux/auth/me");
   });
 
   it("builds the query string, leaving out null and undefined and repeating array keys", () => {

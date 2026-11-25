@@ -18,7 +18,7 @@ describe("Home", () => {
     // After renderRoute's own answer, which this replaces; the session asks once it knows the caller.
     let asked = false;
     server.use(
-      http.get("/api/users/me", () => {
+      http.get("/api/roux/users/me", () => {
         asked = true;
         return new HttpResponse(null, { status: 404 });
       }),

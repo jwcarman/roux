@@ -27,9 +27,9 @@ async function fromAccount(scope: HTMLElement, item: string) {
 describe("the root route", () => {
   it("signs out from the account area and lands on sign-in", async () => {
     server.use(
-      http.post("/who/logout", () => new HttpResponse(null, { status: 204 })),
-      http.get("/who/sign-in", () => HttpResponse.json({ providers: [] })),
-      http.get("/who/me/passkeys", () => HttpResponse.json([])),
+      http.post("/api/roux/auth/logout", () => new HttpResponse(null, { status: 204 })),
+      http.get("/api/roux/auth/sign-in", () => HttpResponse.json({ providers: [] })),
+      http.get("/api/roux/auth/me/passkeys", () => HttpResponse.json([])),
     );
     const { router } = renderRoute("/settings", { permissions: [] });
     await screen.findByRole("heading", { name: "Settings" });
@@ -42,7 +42,7 @@ describe("the root route", () => {
   });
 
   it("remembers nothing as a signed-in caller moves between pages", async () => {
-    server.use(http.get("/who/me/passkeys", () => HttpResponse.json([])));
+    server.use(http.get("/api/roux/auth/me/passkeys", () => HttpResponse.json([])));
     renderRoute("/settings", { permissions: [] });
     await screen.findByRole("heading", { name: "Settings" });
 
@@ -50,7 +50,7 @@ describe("the root route", () => {
   });
 
   it("remembers a page a signed-out visitor opens, for after signing in", async () => {
-    server.use(http.get("/who/sign-in", () => HttpResponse.json({ providers: [] })));
+    server.use(http.get("/api/roux/auth/sign-in", () => HttpResponse.json({ providers: [] })));
     const { router } = renderRoute("/settings", { permissions: null });
 
     await waitFor(() => expect(router.state.location.pathname).toBe("/signin"));
@@ -59,8 +59,8 @@ describe("the root route", () => {
 
   it("signs out from the phone's navigation drawer, closing it", async () => {
     server.use(
-      http.post("/who/logout", () => new HttpResponse(null, { status: 204 })),
-      http.get("/who/sign-in", () => HttpResponse.json({ providers: [] })),
+      http.post("/api/roux/auth/logout", () => new HttpResponse(null, { status: 204 })),
+      http.get("/api/roux/auth/sign-in", () => HttpResponse.json({ providers: [] })),
     );
     const { router } = renderRoute("/", { permissions: [] });
     // The menu button shows only on a phone's width, which jsdom does not have.
@@ -83,8 +83,8 @@ describe("the root route", () => {
   it("shows the error page when a page fails to load, and retrying loads it again", async () => {
     let failing = true;
     server.use(
-      http.get("/api/users/u-1", () => (failing ? serverError() : HttpResponse.json(GRACE))),
-      http.get("/api/users/u-1/activities", () => HttpResponse.json({ data: [], next: null })),
+      http.get("/api/roux/users/u-1", () => (failing ? serverError() : HttpResponse.json(GRACE))),
+      http.get("/api/roux/users/u-1/activities", () => HttpResponse.json({ data: [], next: null })),
     );
     renderRoute("/users/u-1", { permissions: [USERS_READ] });
 
@@ -96,11 +96,11 @@ describe("the root route", () => {
   });
 
   it("sends the caller to sign in when the session ends on the server", async () => {
-    server.use(http.get("/who/sign-in", () => HttpResponse.json({ providers: [] })));
+    server.use(http.get("/api/roux/auth/sign-in", () => HttpResponse.json({ providers: [] })));
     const { router } = renderRoute("/", { permissions: [] });
     await screen.findByRole("heading", { name: /^Welcome/ });
     server.use(
-      http.get("/who/me", () => new HttpResponse(null, { status: 401 })),
+      http.get("/api/roux/auth/me", () => new HttpResponse(null, { status: 401 })),
       http.get("/api/anything", () => new HttpResponse(null, { status: 401 })),
     );
 
@@ -120,7 +120,7 @@ describe("the root route", () => {
   });
 
   it("keeps the person's settings in the account menu, not the navigation", async () => {
-    server.use(http.get("/who/me/passkeys", () => HttpResponse.json([])));
+    server.use(http.get("/api/roux/auth/me/passkeys", () => HttpResponse.json([])));
     const { router } = renderRoute("/", { permissions: [] });
     const sidebar = await screen.findByRole("complementary");
     expect(within(sidebar).queryByRole("link", { name: "Settings" })).toBeNull();
@@ -132,7 +132,7 @@ describe("the root route", () => {
   });
 
   it("closes the phone's drawer on the way to settings", async () => {
-    server.use(http.get("/who/me/passkeys", () => HttpResponse.json([])));
+    server.use(http.get("/api/roux/auth/me/passkeys", () => HttpResponse.json([])));
     renderRoute("/", { permissions: [] });
     await userEvent.click(await screen.findByRole("button", { name: "Open navigation", hidden: true }));
     const drawer = await screen.findByRole("dialog", { name: "Navigation" });

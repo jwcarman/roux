@@ -236,7 +236,7 @@ func (b *browser) do(method, path string, body any, csrf bool) reply {
 	}
 	if csrf {
 		if b.cookie("XSRF-TOKEN") == "" { // the cookie exists after the first response
-			b.do("GET", "/who/sign-in", nil, false)
+			b.do("GET", "/api/roux/auth/sign-in", nil, false)
 		}
 		req.Header.Set("X-XSRF-TOKEN", b.cookie("XSRF-TOKEN"))
 	}
@@ -258,13 +258,13 @@ func (b *browser) del(path string) reply            { return b.do("DELETE", path
 func (b *browser) get(path string) reply            { return b.do("GET", path, nil, false) }
 func (b *browser) post(path string, body any) reply { return b.do("POST", path, body, true) }
 func (b *browser) send(address string) reply {
-	return b.post("/who/email/send", map[string]string{"email": address})
+	return b.post("/api/roux/auth/email/send", map[string]string{"email": address})
 }
 func (b *browser) signInWithToken(tok string) reply {
-	return b.post("/who/email/sign-in", map[string]string{"token": tok})
+	return b.post("/api/roux/auth/email/sign-in", map[string]string{"token": tok})
 }
 func (b *browser) signInWithCode(addr, code string) reply {
-	return b.post("/who/email/sign-in", map[string]string{"email": addr, "code": code})
+	return b.post("/api/roux/auth/email/sign-in", map[string]string{"email": addr, "code": code})
 }
 
 func (r reply) json(t *testing.T) map[string]any {
@@ -278,8 +278,8 @@ func (r reply) json(t *testing.T) map[string]any {
 
 func (r reply) failedSignIn(t *testing.T) {
 	t.Helper()
-	if r.StatusCode != 401 || r.Header.Get("Who-Error") != "sign-in-failed" {
-		t.Fatalf("want 401 sign-in-failed, got %d %s %s", r.StatusCode, r.Header.Get("Who-Error"), r.body)
+	if r.StatusCode != 401 || r.Header.Get("Roux-Error") != "sign-in-failed" {
+		t.Fatalf("want 401 sign-in-failed, got %d %s %s", r.StatusCode, r.Header.Get("Roux-Error"), r.body)
 	}
 }
 
@@ -295,7 +295,7 @@ func (e *env) issueFor(b *browser, address string) emaillink.Message {
 
 func TestSignInOptionsAdvertiseEmail(t *testing.T) {
 	e := setup(t)
-	got := strings.TrimSpace(string(e.browser().get("/who/sign-in").body))
+	got := strings.TrimSpace(string(e.browser().get("/api/roux/auth/sign-in").body))
 	if got != `{"email":true,"passkey":false,"providers":[]}` {
 		t.Fatalf("sign-in options: %s", got)
 	}
@@ -316,7 +316,7 @@ func TestSendIsAlwaysAccepted(t *testing.T) {
 		`{"email":"` + strings.Repeat("a", 9000) + `"}`,   // over the body cap
 	}
 	for i, body := range bodies {
-		r := b.post("/who/email/send", body)
+		r := b.post("/api/roux/auth/email/send", body)
 		if r.StatusCode != 202 || len(r.body) != 0 {
 			t.Errorf("body %d: %d %q, want 202 and nothing", i, r.StatusCode, r.body)
 		}
@@ -338,8 +338,8 @@ func tokenLink(t *testing.T, m emaillink.Message) string {
 func TestSendNeedsACSRFToken(t *testing.T) {
 	e := setup(t)
 	b := e.browser()
-	r := b.do("POST", "/who/email/send", map[string]string{"email": owner}, false)
-	if r.StatusCode != 403 || r.Header.Get("Who-Error") != "invalid-csrf-token" {
+	r := b.do("POST", "/api/roux/auth/email/send", map[string]string{"email": owner}, false)
+	if r.StatusCode != 403 || r.Header.Get("Roux-Error") != "invalid-csrf-token" {
 		t.Fatalf("%d %s", r.StatusCode, r.body)
 	}
 	if e.settle() != 0 {
@@ -374,14 +374,14 @@ func TestSignInByLink(t *testing.T) {
 		t.Fatalf("the response set the XSRF-TOKEN cookie %d times, want once", n)
 	}
 
-	me := b.get("/who/me")
+	me := b.get("/api/roux/auth/me")
 	if me.StatusCode != 200 {
-		t.Fatalf("/who/me: %d %s", me.StatusCode, me.body)
+		t.Fatalf("/api/roux/auth/me: %d %s", me.StatusCode, me.body)
 	}
 	body := me.json(t)
 	wantUntil := e.clock.Now().Add(10 * time.Minute).Format(time.RFC3339Nano)
 	if body["identityId"] != e.ownerID.String() || body["signInMethod"] != "email-link" || body["recentSignInUntil"] != wantUntil {
-		t.Fatalf("/who/me: %s", me.body)
+		t.Fatalf("/api/roux/auth/me: %s", me.body)
 	}
 	if perms, ok := body["permissions"].([]any); !ok || len(perms) != 0 {
 		t.Fatalf("permissions must be an empty array: %s", me.body)
@@ -410,7 +410,7 @@ func TestSignInByTypedCode(t *testing.T) {
 	if r.StatusCode != 200 || r.json(t)["identityId"] != e.ownerID.String() {
 		t.Fatalf("sign-in by code: %d %s", r.StatusCode, r.body)
 	}
-	if got := b.get("/who/me").json(t)["signInMethod"]; got != "email-code" {
+	if got := b.get("/api/roux/auth/me").json(t)["signInMethod"]; got != "email-code" {
 		t.Fatalf("signInMethod = %v", got)
 	}
 	// Using the code ended the link.
@@ -520,11 +520,11 @@ func TestEveryFailureLooksTheSame(t *testing.T) {
 		{"malformed code", func() reply { return e.browser().signInWithCode(owner, "!!") }},
 		{"not an address", func() reply { return e.browser().signInWithCode("nope", "K7F-2QM") }},
 		{"token and code together", func() reply {
-			return e.browser().post("/who/email/sign-in", map[string]string{"token": "x", "email": owner, "code": "K7F-2QM"})
+			return e.browser().post("/api/roux/auth/email/sign-in", map[string]string{"token": "x", "email": owner, "code": "K7F-2QM"})
 		}},
-		{"neither", func() reply { return e.browser().post("/who/email/sign-in", map[string]string{}) }},
-		{"not JSON", func() reply { return e.browser().post("/who/email/sign-in", `{nope`) }},
-		{"non-string members", func() reply { return e.browser().post("/who/email/sign-in", `{"token": 7}`) }},
+		{"neither", func() reply { return e.browser().post("/api/roux/auth/email/sign-in", map[string]string{}) }},
+		{"not JSON", func() reply { return e.browser().post("/api/roux/auth/email/sign-in", `{nope`) }},
+		{"non-string members", func() reply { return e.browser().post("/api/roux/auth/email/sign-in", `{"token": 7}`) }},
 	}
 	// An inactive identity's link: issue it while active, then disable them.
 	var disabledMsg emaillink.Message
@@ -552,7 +552,7 @@ func TestEveryFailureLooksTheSame(t *testing.T) {
 			t.Errorf("%s: the answer differs from the first:\n  %s\n  %s", a.name, r.body, first.body)
 		}
 	}
-	want := `{"type":"urn:who:error:sign-in-failed","title":"Unauthorized","status":401,"detail":"Sign-in failed","code":"sign-in-failed"}`
+	want := `{"type":"urn:roux:error:sign-in-failed","title":"Unauthorized","status":401,"detail":"Sign-in failed","code":"sign-in-failed"}`
 	if got := strings.TrimSpace(string(first.body)); got != want {
 		t.Errorf("body = %s\nwant   %s", got, want)
 	}
@@ -600,24 +600,24 @@ func TestLogoutEndsTheSession(t *testing.T) {
 	b := e.browser()
 	b.signInWithToken(tokenOf(t, e.issueFor(b, owner)))
 	cookie := b.cookie("SESSION")
-	if b.get("/who/me").StatusCode != 200 {
+	if b.get("/api/roux/auth/me").StatusCode != 200 {
 		t.Fatal("not signed in")
 	}
 
-	out := b.post("/who/logout", nil)
+	out := b.post("/api/roux/auth/logout", nil)
 	if out.StatusCode != 204 {
 		t.Fatalf("logout: %d %s", out.StatusCode, out.body)
 	}
 	if b.cookie("SESSION") != "" || b.cookie("XSRF-TOKEN") != "" {
 		t.Fatal("logout must clear both cookies")
 	}
-	if me := b.get("/who/me"); me.StatusCode != 401 || me.Header.Get("Who-Error") != "not-signed-in" {
-		t.Fatalf("/who/me after logout: %d", me.StatusCode)
+	if me := b.get("/api/roux/auth/me"); me.StatusCode != 401 || me.Header.Get("Roux-Error") != "not-signed-in" {
+		t.Fatalf("/api/roux/auth/me after logout: %d", me.StatusCode)
 	}
 	// The old cookie is dead server-side, not just removed from the browser.
 	replay := e.browser()
 	replay.setCookie("SESSION", cookie)
-	if replay.get("/who/me").StatusCode != 401 {
+	if replay.get("/api/roux/auth/me").StatusCode != 401 {
 		t.Fatal("a logged-out session cookie must not work again")
 	}
 	var ended *time.Time
@@ -630,7 +630,7 @@ func TestSessionsAreCheckedAgainstTheDatabaseOnEveryRequest(t *testing.T) {
 	signedIn := func(e *env) *browser {
 		b := e.browser()
 		b.signInWithToken(tokenOf(t, e.issueFor(b, owner)))
-		if b.get("/who/me").StatusCode != 200 {
+		if b.get("/api/roux/auth/me").StatusCode != 200 {
 			t.Fatal("not signed in")
 		}
 		return b
@@ -643,13 +643,13 @@ func TestSessionsAreCheckedAgainstTheDatabaseOnEveryRequest(t *testing.T) {
 		if _, err := e.pool.Exec(ctx, `update roux_identity set status = 'DISABLED' where id = $1`, e.ownerID); err != nil {
 			t.Fatal(err)
 		}
-		if b.get("/who/me").StatusCode != 401 {
+		if b.get("/api/roux/auth/me").StatusCode != 401 {
 			t.Fatal("a disabled identity kept its session")
 		}
 		if _, err := e.pool.Exec(ctx, `update roux_identity set status = 'ACTIVE' where id = $1`, e.ownerID); err != nil {
 			t.Fatal(err)
 		}
-		if b.get("/who/me").StatusCode != 401 {
+		if b.get("/api/roux/auth/me").StatusCode != 401 {
 			t.Fatal("re-enabling the identity must not revive the dead session")
 		}
 	})
@@ -660,7 +660,7 @@ func TestSessionsAreCheckedAgainstTheDatabaseOnEveryRequest(t *testing.T) {
 		if _, err := e.pool.Exec(ctx, `delete from roux_credential_identity`); err != nil {
 			t.Fatal(err)
 		}
-		if b.get("/who/me").StatusCode != 401 {
+		if b.get("/api/roux/auth/me").StatusCode != 401 {
 			t.Fatal("a session outlived its credential")
 		}
 	})
@@ -670,12 +670,12 @@ func TestSessionsAreCheckedAgainstTheDatabaseOnEveryRequest(t *testing.T) {
 		b := signedIn(e)
 		for i := 0; i < 3; i++ { // each request is 20 minutes after the last: never idle for 30
 			e.clock.advance(20 * time.Minute)
-			if b.get("/who/me").StatusCode != 200 {
+			if b.get("/api/roux/auth/me").StatusCode != 200 {
 				t.Fatalf("session ended after %d active steps", i)
 			}
 		}
 		e.clock.advance(31 * time.Minute)
-		if b.get("/who/me").StatusCode != 401 {
+		if b.get("/api/roux/auth/me").StatusCode != 401 {
 			t.Fatal("an idle session should have ended")
 		}
 	})
@@ -691,7 +691,7 @@ func TestSessionsAreCheckedAgainstTheDatabaseOnEveryRequest(t *testing.T) {
 		}
 		planted := e.browser()
 		planted.setCookie("SESSION", "planted-by-an-attacker")
-		if planted.get("/who/me").StatusCode != 401 {
+		if planted.get("/api/roux/auth/me").StatusCode != 401 {
 			t.Fatal("a planted cookie authenticated")
 		}
 
@@ -702,7 +702,7 @@ func TestSessionsAreCheckedAgainstTheDatabaseOnEveryRequest(t *testing.T) {
 		}
 		old := e.browser()
 		old.setCookie("SESSION", first)
-		if old.get("/who/me").StatusCode != 401 {
+		if old.get("/api/roux/auth/me").StatusCode != 401 {
 			t.Fatal("the session this browser had before signing in again must be ended")
 		}
 	})
@@ -750,7 +750,7 @@ func TestOnlyOneOfManyConcurrentCorrectCodesWins(t *testing.T) {
 	browsers := make([]*browser, racers)
 	for i := range browsers {
 		browsers[i] = e.browser()
-		browsers[i].get("/who/sign-in") // get a CSRF cookie before the race
+		browsers[i].get("/api/roux/auth/sign-in") // get a CSRF cookie before the race
 	}
 	statuses := make(chan int, racers)
 	var start sync.WaitGroup
@@ -789,7 +789,7 @@ func TestConcurrentGuessesCannotExceedTheAttemptLimit(t *testing.T) {
 	start.Add(1)
 	for i := 0; i < guesses; i++ {
 		b := e.browser()
-		b.get("/who/sign-in")
+		b.get("/api/roux/auth/sign-in")
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -837,9 +837,9 @@ func TestRegisteringAddresses(t *testing.T) {
 	}
 	b := e.browser()
 	b.signInWithToken(tokenOf(t, e.issueFor(b, "owner+alias@example.test")))
-	me := b.get("/who/me").json(t)
+	me := b.get("/api/roux/auth/me").json(t)
 	if creds := me["credentials"].(map[string]any); creds["email"] != float64(2) || me["identityId"] != e.ownerID.String() {
-		t.Fatalf("/who/me: %v", me)
+		t.Fatalf("/api/roux/auth/me: %v", me)
 	}
 	for _, bad := range []string{"", "nope", "a b@c.d"} {
 		if err := e.method.Register(ctx, e.ownerID, bad); err == nil {

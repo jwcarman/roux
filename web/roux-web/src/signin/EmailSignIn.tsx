@@ -4,7 +4,7 @@ import { z } from "zod";
 import { useAppForm } from "../form/form";
 import { email } from "../form/rules";
 import { useSignInReturn } from "./returnTo";
-import { who } from "./who";
+import { auth } from "./auth";
 
 /** The address to email a sign-in link to, in roux's words. */
 const linkRequestSchema = z.object({ email: email() });
@@ -15,7 +15,7 @@ export const SEND_FAILED = "Could not send the link. Try again.";
 /** Asks who to email a sign-in link and code to `address`: "sent" when it did, else "failed". */
 export async function sendLink(address: string): Promise<"sent" | "failed"> {
   try {
-    return (await who.email.send(address)).ok ? "sent" : "failed";
+    return (await auth.email.send(address)).ok ? "sent" : "failed";
   } catch {
     // who answers a server error by throwing.
     return "failed";
@@ -105,7 +105,7 @@ export function CodeForm({ email }: { email: string }) {
     event.preventDefault();
     setError(null);
     try {
-      const result = await who.email.signIn({ email, code });
+      const result = await auth.email.signIn({ email, code });
       if (result.ok) {
         finish();
       } else {

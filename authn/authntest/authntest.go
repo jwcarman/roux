@@ -215,7 +215,7 @@ func (b *Browser) Do(method, path string, body any, csrf bool) Reply {
 	}
 	if csrf {
 		if b.Cookie("XSRF-TOKEN") == "" {
-			b.Do("GET", "/who/sign-in", nil, false)
+			b.Do("GET", "/api/roux/auth/sign-in", nil, false)
 		}
 		req.Header.Set("X-XSRF-TOKEN", b.Cookie("XSRF-TOKEN"))
 	}

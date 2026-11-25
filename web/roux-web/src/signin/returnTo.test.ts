@@ -42,7 +42,7 @@ describe("returnTo", () => {
     expect(isReturnable("/members/api/x")).toBe(true);
     expect(isReturnable("/signin")).toBe(false);
     expect(isReturnable("/api")).toBe(false);
-    expect(isReturnable("/who")).toBe(false);
+    expect(isReturnable("/api/roux/auth")).toBe(false);
   });
 
   it("remembers only the last place", () => {
@@ -60,7 +60,7 @@ describe("returnTo", () => {
     "/signin",
     "/signin/link#token=x",
     "/api/students",
-    "/who/me",
+    "/api/roux/auth/me",
     "/\\evil.example",
     "/students\\..\\evil",
     "/\t/evil.example",

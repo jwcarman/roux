@@ -3,8 +3,8 @@
 // short code; opening the link or typing the code signs them in. It mounts two
 // endpoints under who's base path:
 //
-//	POST /who/email/send     {"email"}                      always 202, whoever is asked about
-//	POST /who/email/sign-in  {"token"} or {"email","code"}  200 {"identityId"} + session, or 401
+//	POST /api/roux/auth/email/send     {"email"}                      always 202, whoever is asked about
+//	POST /api/roux/auth/email/sign-in  {"token"} or {"email","code"}  200 {"identityId"} + session, or 401
 //
 // Only registered addresses can sign in. Every failed sign-in is the same 401 and
 // a request for a link is always answered 202, so neither reveals which addresses
@@ -43,7 +43,7 @@ var Migration = pgdb.Migration{Name: "roux-authn-emaillink", FS: migrations, Dir
 // maxBodyBytes caps the JSON a sign-in or send request may carry.
 const maxBodyBytes = 8192
 
-// Sign-in methods as /who/me reports them.
+// Sign-in methods as /api/roux/auth/me reports them.
 const (
 	methodLink = "email-link"
 	methodCode = "email-code"
@@ -79,7 +79,7 @@ func New(cfg Config) (*Method, error) {
 
 func (m *Method) now() time.Time { return m.cfg.Clock().UTC() }
 
-// Contribute turns email sign-in on in GET /who/sign-in.
+// Contribute turns email sign-in on in GET /api/roux/auth/sign-in.
 func (m *Method) Contribute(o *authn.SignInOptions) { o.Email = true }
 
 // Mount registers the endpoints and the credential counter.
