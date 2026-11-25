@@ -7,11 +7,8 @@ import {
 
 export const mailpit = process.env.E2E_MAILPIT_URL ?? "http://localhost:8025";
 export const ownerEmail = process.env.E2E_OWNER_EMAIL ?? "owner@example.test";
-/**
- * What the app is called until the owner renames it: application.yml's `roux.theme.app-name`, which
- * E2eIT reads and passes on.
- */
-export const appName = required("E2E_APP_NAME");
+/** What the app is called until the owner renames it: cmd/server/main.go's DisplayName. */
+export const appName = process.env.E2E_APP_NAME ?? "Roux The Day";
 export const ownerName = process.env.E2E_OWNER_NAME ?? "Olive Owner";
 
 interface MailpitSummary {
@@ -171,7 +168,7 @@ export async function signInByLink(
   try {
     link = await nextSignInLink(request, address, seen, 5_000);
   } catch {
-    // who sends one email per address per resend interval (1s in E2eIT); a request inside it
+    // roux sends one email per address per resend interval (1s under run.sh); a request inside it
     // still answers 202 but sends nothing. Ask once more.
     await ask.click();
     link = await nextSignInLink(request, address, seen);
@@ -241,14 +238,4 @@ export async function invite(
   ).toBeVisible();
   await expect(dialog).toBeHidden();
   return nextSignInLink(request, email, seen);
-}
-
-function required(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(
-      `${name} is not set: run the suite through E2eIT (./mvnw verify)`,
-    );
-  }
-  return value;
 }

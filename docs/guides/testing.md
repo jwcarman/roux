@@ -435,12 +435,13 @@ string the endpoint received.
 
 ## Playwright
 
-The end-to-end suite (`e2e/`) drives the built app in Chromium against a real database and a real
-mail catcher. It is given the app's and Mailpit's addresses in the environment (`E2E_BASE_URL`,
-`E2E_MAILPIT_URL`) and needs the app started first: the binary from `make build` (or `go run
-./cmd/server` with `FRONTEND_DIR=frontend/dist`), on a fresh database, with `SMTP_ADDR` at
-Mailpit, `PASSKEY_RP_ID=localhost` and `PASSKEY_ORIGINS` and `PUBLIC_URL` at the app's address.
-Then, in `e2e/`, `npx playwright test`.
+The end-to-end suite (`e2e/`) drives the app in Chromium against a real database and a real mail
+catcher. `make e2e` runs it: `e2e/run.sh` starts PostgreSQL and Mailpit, makes the database
+`app_e2e` afresh, builds the server and starts it on <http://localhost:8099>, and runs the suite
+there, so `make dev`'s server and data are left alone. Pass Playwright arguments with
+`make e2e ARGS="tests/user.spec.ts"`. The suite takes the addresses it is given
+(`E2E_BASE_URL`, `E2E_MAILPIT_URL`) and the owner run.sh makes (`E2E_OWNER_EMAIL`,
+`E2E_OWNER_NAME`).
 
 The suite signs in as a user does: it asks for a link on the sign-in page, reads the link from
 Mailpit's API, and opens it. Passkeys use Chrome's virtual authenticator (the DevTools `WebAuthn`

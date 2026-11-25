@@ -3,9 +3,22 @@
 
 GOLANGCI_LINT ?= golangci-lint
 
-.PHONY: check fmt lint build web build-dev image test vet clean
+.PHONY: check dev e2e fmt lint build web build-dev image test vet clean
 
 check: fmt vet lint test
+
+# dev's settings are for this machine, and each gives way to the environment: OWNER_EMAIL=you@...
+# make dev signs you in as yourself. A deployment makes its own CODE_SECRET (openssl rand -base64 32).
+dev: ## run the app at http://localhost:8080: Postgres and Mailpit (http://localhost:8025), the front end built once, the server
+	docker compose up -d --wait postgres mailpit
+	@test -f frontend/dist/index.html || $(MAKE) web
+	CODE_SECRET="$${CODE_SECRET:-development-only-code-secret-do-not-deploy}" \
+	DATABASE_URL="$${DATABASE_URL:-postgres://app:app@localhost:5432/app}" \
+	OWNER_EMAIL="$${OWNER_EMAIL:-owner@example.com}" OWNER_NAME="$${OWNER_NAME:-Owner}" \
+	FRONTEND_DIR=frontend/dist LOG_FORMAT=text go run ./cmd/server
+
+e2e: ## the Playwright suite against a fresh copy of the app on port 8099 (its own database); ARGS go to Playwright
+	e2e/run.sh $(ARGS)
 
 fmt:
 	@out="$$(gofmt -l $$(go list -f '{{.Dir}}' ./...))"; if [ -n "$$out" ]; then echo "gofmt needed:"; echo "$$out"; exit 1; fi

@@ -18,10 +18,10 @@ Then, with Docker running, Go 1.27 and Node 20 or later:
 
 ```bash
 cd team-planner
-docker compose up -d
-make web
-CODE_SECRET=$(openssl rand -base64 32) DATABASE_URL=postgres://app:app@localhost:5432/app \
-  OWNER_EMAIL=you@example.com OWNER_NAME=You FRONTEND_DIR=frontend/dist go run ./cmd/server
+make dev
 ```
+
+and sign in at <http://localhost:8080> as `owner@example.com` (the link is in Mailpit,
+<http://localhost:8025>).
 
 [Getting started](https://jwcarman.github.io/roux/guides/getting-started/) goes on from there.

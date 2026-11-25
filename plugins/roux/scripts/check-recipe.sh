@@ -69,7 +69,7 @@ for kind, target, indent, body in blocks:
     elif target == "modules-append":
         replace_once(modules, "mods = append(mods, email, members)", body.strip())
     elif target == "permissions":
-        replace_once(modules, "return app.RouxPermissions()", body.strip())
+        replace_once(modules, "return slices.Concat(app.RouxPermissions())", body.strip())
     elif target == "query-keys":
         replace_once(app / "frontend/src/queryKeys.ts", "export const queryKeys = {};",
                      "export const queryKeys = {\n" + body + "};")

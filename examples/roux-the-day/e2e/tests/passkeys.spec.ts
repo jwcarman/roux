@@ -5,7 +5,7 @@ import { openSettings, ownerEmail, signInByLink } from "./helpers";
 // (what Chromium offers instead of a physical key), so passkeys are tried end to end:
 // register from Settings, sign out, sign in with the passkey, remove it.
 //
-// The server must run with PASSKEY_RP_ID=localhost and PASSKEY_ORIGINS=http://localhost:8080.
+// Passkeys follow PUBLIC_URL, which run.sh sets to the address the suite uses.
 
 async function virtualAuthenticator(page: Page): Promise<CDPSession> {
   const cdp = await page.context().newCDPSession(page);

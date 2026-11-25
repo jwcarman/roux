@@ -184,4 +184,16 @@ func TestRunRefusesSettingsItCannotUse(t *testing.T) {
 	if err := app.Run(context.Background(), cfg); err == nil || !strings.Contains(err.Error(), "COOKIE_SECURE") {
 		t.Fatalf("a bad COOKIE_SECURE: %v", err)
 	}
+
+	t.Setenv("COOKIE_SECURE", "")
+	t.Setenv("SHUTDOWN_DELAY", "30")
+	if err := app.Run(context.Background(), cfg); err == nil || !strings.Contains(err.Error(), "SHUTDOWN_DELAY") {
+		t.Fatalf("a SHUTDOWN_DELAY without a unit: %v", err)
+	}
+
+	t.Setenv("SHUTDOWN_DELAY", "")
+	t.Setenv("TRACE_TRUST_INBOUND", "1")
+	if err := app.Run(context.Background(), cfg); err == nil || !strings.Contains(err.Error(), "TRACE_TRUST_INBOUND must be true or false") {
+		t.Fatalf("a TRACE_TRUST_INBOUND of 1: %v", err)
+	}
 }

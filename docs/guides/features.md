@@ -140,7 +140,7 @@ mods = append(mods, email, members, labels.Module{})
 
 ```go
 func permissions() []string {
-	return append(app.RouxPermissions(), labels.Permissions...)
+	return slices.Concat(app.RouxPermissions(), labels.Permissions)
 }
 ```
 

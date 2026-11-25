@@ -24,7 +24,8 @@ permission is `feature.md` steps 1, 2 and 6; this card covers the rest.
   app grants `OWNER` its own.
 - A feature's permissions: constants in its package (`LabelsRead = "labels.read"`) and
   `var Permissions = []string{...}`. `permissions()` in `cmd/server/modules.go` is
-  `append(app.RouxPermissions(), labels.Permissions...)`, one more `...` per feature.
+  `slices.Concat(app.RouxPermissions(), labels.Permissions)`, one more argument per feature
+  (`slices.Concat(app.RouxPermissions(), labels.Permissions, items.Permissions)`).
 - The app's roles: `cmd/server/migrations/` (the `app-roles` migration, after `roux-users`). The
   template makes `USER` there. Tables: `roux_role` (`id`, `name`), `roux_role_permission`
   (`role_id`, `permission`), `roux_identity_role` (`identity_id`, `role_id`).

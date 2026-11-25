@@ -1,11 +1,10 @@
 import { defineConfig } from "@playwright/test";
 
-// Run by E2eIT, which starts Postgres, Mailpit and the app first. The suite only knows the URLs
-// it is given, so it runs unchanged against the JVM build or the native binary.
-// The school's zone (roux.organization.time-zone in application.yml): "today" in a test is the school's
-// today, in the browser and in the test's own code, whatever zone the machine (UTC on CI) is in.
-const schoolZone = "America/New_York";
-process.env.TZ = schoolZone;
+// Run by run.sh (make e2e), which starts Postgres, Mailpit and the app first. The suite only knows
+// the URLs it is given. The organization's zone (ORG_TIME_ZONE, which run.sh sets): "today" in a test
+// is the organization's today, in the browser and in the test's own code, whatever zone the machine is in.
+const organizationZone = "America/New_York";
+process.env.TZ = organizationZone;
 
 export default defineConfig({
   testDir: "tests",
@@ -17,7 +16,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:8080",
     browserName: "chromium",
-    timezoneId: schoolZone,
+    timezoneId: organizationZone,
     trace: "retain-on-failure",
   },
   reporter: [["list"]],

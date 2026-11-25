@@ -2,6 +2,7 @@ package pgdb_test
 
 import (
 	"context"
+	"net/url"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -82,10 +83,25 @@ func TestOrder(t *testing.T) {
 	}
 }
 
+// schemaURL is the test database's URL in a schema of the test's own, made afresh: migrations
+// write schema_history, which other packages' tests write too when they share public.
+func schemaURL(t *testing.T, schema string) string {
+	t.Helper()
+	pgtest.Pool(t, schema) // makes the schema, empty
+	u, err := url.Parse(pgtest.URL(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := u.Query()
+	q.Set("search_path", schema)
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
 func TestMigrate(t *testing.T) {
-	url := pgtest.URL(t)
+	dsn := schemaURL(t, "pgdb_migrate")
 	ctx := context.Background()
-	pool, err := pgdb.Connect(ctx, url)
+	pool, err := pgdb.Connect(ctx, dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,9 +155,9 @@ func TestMigrate(t *testing.T) {
 // Several "instances" (each with its own pool) migrate at once. The SQL is not
 // idempotent, so any failure of mutual exclusion shows up as "already exists".
 func TestMigrateConcurrentInstances(t *testing.T) {
-	url := pgtest.URL(t)
+	dsn := schemaURL(t, "pgdb_migrate_concurrent")
 	ctx := context.Background()
-	admin, err := pgdb.Connect(ctx, url)
+	admin, err := pgdb.Connect(ctx, dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +176,7 @@ func TestMigrateConcurrentInstances(t *testing.T) {
 	errs := make(chan error, instances)
 	for range instances {
 		go func() {
-			pool, err := pgdb.Connect(ctx, url)
+			pool, err := pgdb.Connect(ctx, dsn)
 			if err != nil {
 				errs <- err
 				return
@@ -184,9 +200,9 @@ func TestMigrateConcurrentInstances(t *testing.T) {
 // lock-table designs). The lock belongs to the database session, so when that
 // session dies, waiting instances proceed with no manual cleanup.
 func TestMigrateLockReleasedWhenHolderDies(t *testing.T) {
-	url := pgtest.URL(t)
+	dsn := schemaURL(t, "pgdb_migrate_lock")
 	ctx := context.Background()
-	pool, err := pgdb.Connect(ctx, url)
+	pool, err := pgdb.Connect(ctx, dsn)
 	if err != nil {
 		t.Fatal(err)
 	}

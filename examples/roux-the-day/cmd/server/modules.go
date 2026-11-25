@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"io/fs"
+	"slices"
 
 	"github.com/jwcarman/roux/app"
 	"github.com/jwcarman/roux/pgdb"
@@ -12,19 +13,17 @@ import (
 
 // modules is the list of what this application is made of: the features it turns on, and its
 // own. Add a line to turn a feature on. Each stock module reads its settings from the
-// environment and is nil when its feature is off; one that needs another takes it.
+// environment; the optional ones (passkeys, API keys, providers, bearer tokens) are nil when
+// their setting is not there, and one that needs another takes it.
 func modules(k *app.Kit) ([]app.Module, error) {
 	mods := []app.Module{&appRoles{}}
-	if k.Pool == nil {
-		return mods, nil // no database, nobody signs in
-	}
 	emails, err := fs.Sub(emailFiles, "emails")
 	if err != nil {
 		return nil, err
 	}
 	email, err := app.EmailLinkFromEnv(k.AppName, emails)
-	if err != nil || email == nil {
-		return mods, err // no CODE_SECRET: signing in is off, and so is everything that needs it
+	if err != nil {
+		return nil, err
 	}
 	members := app.UsersFromEnv(email)
 	passkeys, err := app.PasskeysFromEnv(k.AppName, email)
@@ -79,5 +78,5 @@ func (*appRoles) Migrations() []pgdb.Migration {
 // permissions is every permission the application checks: roux's, then its own. Its permissions
 // test writes them into the front end (frontend/src/permissions.gen.ts) and checks the grants.
 func permissions() []string {
-	return append(app.RouxPermissions(), items.Permissions...)
+	return slices.Concat(app.RouxPermissions(), items.Permissions)
 }

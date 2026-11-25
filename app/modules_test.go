@@ -8,6 +8,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/jwcarman/roux/api"
 	"github.com/jwcarman/roux/app"
 	"github.com/jwcarman/roux/pgtest"
 )
@@ -92,11 +93,10 @@ func TestPlainHTTPForARealHostMustBeOnPurpose(t *testing.T) {
 	}
 }
 
-func TestEmailLinkIsOffWithoutACodeSecret(t *testing.T) {
+func TestEmailLinkNeedsACodeSecret(t *testing.T) {
 	t.Setenv("CODE_SECRET", "")
-	if e, err := app.EmailLinkFromEnv("Acme", nil); e != nil || err != nil {
-		t.Fatalf("%v %v", e, err)
-	}
+	_, err := app.EmailLinkFromEnv("Acme", nil)
+	wantError(t, err, "CODE_SECRET is required", "openssl rand -base64 32")
 }
 
 func TestEmailLinkIsAModuleOfItsOwn(t *testing.T) {
@@ -127,25 +127,66 @@ func TestEmailLinkRefusesWhatItCannotUse(t *testing.T) {
 	t.Setenv("CODE_SECRET", secret)
 	_, err = app.EmailLinkFromEnv("Acme", fstest.MapFS{"signin.txt": {Data: []byte("Hi")}})
 	wantError(t, err, "signin.txt", "sign-in")
-}
 
-func TestPasskeysAreOffWithoutARelyingParty(t *testing.T) {
-	t.Setenv("PASSKEY_RP_ID", "")
-	if p, err := app.PasskeysFromEnv("Acme", nil); p != nil || err != nil {
-		t.Fatalf("%v %v", p, err)
+	t.Setenv("SMTP_ALLOW_PLAINTEXT", "TRUE")
+	_, err = app.EmailLinkFromEnv("Acme", nil)
+	wantError(t, err, "SMTP_ALLOW_PLAINTEXT must be true or false", `"TRUE"`)
+
+	t.Setenv("SMTP_ALLOW_PLAINTEXT", "true")
+	t.Setenv("SMTP_USERNAME", "apikey")
+	_, err = app.EmailLinkFromEnv("Acme", nil)
+	wantError(t, err, "SMTP_USERNAME and SMTP_PASSWORD go together")
+
+	t.Setenv("SMTP_PASSWORD", "s3cret")
+	if e, err := app.EmailLinkFromEnv("Acme", nil); e == nil || err != nil {
+		t.Fatalf("a mail server's login: %v %v", e, err)
 	}
 }
 
+func TestAPIKeysAreTrueOrFalse(t *testing.T) {
+	e := emailLink(t)
+	t.Setenv("API_KEYS", "false")
+	if k, err := app.APIKeysFromEnv(e); k != nil || err != nil {
+		t.Fatalf("API_KEYS=false: %v %v", k, err)
+	}
+	t.Setenv("API_KEYS", "off")
+	_, err := app.APIKeysFromEnv(e)
+	wantError(t, err, "API_KEYS must be true or false", `"off"`)
+}
+
+func TestPasskeysAreOnUnlessTurnedOff(t *testing.T) {
+	e := emailLink(t)
+	if p, err := app.PasskeysFromEnv("Acme", e); p == nil || err != nil {
+		t.Fatalf("by default, from PUBLIC_URL's default: %v %v", p, err)
+	}
+	t.Setenv("PASSKEYS", "false")
+	if p, err := app.PasskeysFromEnv("Acme", e); p != nil || err != nil {
+		t.Fatalf("PASSKEYS=false: %v %v", p, err)
+	}
+	t.Setenv("PASSKEYS", "no")
+	_, err := app.PasskeysFromEnv("Acme", e)
+	wantError(t, err, "PASSKEYS must be true or false")
+}
+
+func TestPasskeysFollowPublicURL(t *testing.T) {
+	e := emailLink(t)
+	t.Setenv("PUBLIC_URL", "https://app.example.com")
+	if p, err := app.PasskeysFromEnv("Acme", e); p == nil || err != nil {
+		t.Fatalf("%v %v", p, err)
+	}
+	t.Setenv("PUBLIC_URL", "app.example.com")
+	_, err := app.PasskeysFromEnv("Acme", e)
+	wantError(t, err, "PUBLIC_URL must be the address people use")
+}
+
 func TestPasskeysNeedEmailSignIn(t *testing.T) {
-	t.Setenv("PASSKEY_RP_ID", "localhost")
 	_, err := app.PasskeysFromEnv("Acme", nil)
 	wantError(t, err, "CODE_SECRET")
 }
 
 func TestPasskeysTakeTheirOrigins(t *testing.T) {
 	e := emailLink(t)
-	t.Setenv("PASSKEY_RP_ID", "localhost")
-	t.Setenv("PASSKEY_ORIGINS", "http://localhost:8080, http://localhost:5173")
+	t.Setenv("PASSKEY_ORIGINS", "http://localhost:5173")
 	p, err := app.PasskeysFromEnv("Acme", e)
 	if err != nil || p == nil {
 		t.Fatalf("%v %v", p, err)
@@ -165,7 +206,7 @@ func TestAPIKeysNeedSignInAndCanBeTurnedOff(t *testing.T) {
 		t.Fatalf("without sign-in: %v %v", k, err)
 	}
 	e := emailLink(t)
-	t.Setenv("API_KEYS", "off")
+	t.Setenv("API_KEYS", "false")
 	if k, err := app.APIKeysFromEnv(e); k != nil || err != nil {
 		t.Fatalf("off: %v %v", k, err)
 	}
@@ -315,6 +356,33 @@ func TestTheUsersModuleSetsUpTheOrganizationAndTheFirstOwner(t *testing.T) {
 	}
 }
 
+func TestTheUsersModuleRefusesToStartWithNobodyToManageIt(t *testing.T) {
+	t.Setenv("OWNER_EMAIL", "")
+	t.Setenv("OWNER_NAME", "")
+	_, err := assembled(t, "app_users_no_owner")
+	wantError(t, err, "OWNER_EMAIL", "OWNER_NAME")
+}
+
+func TestTheUsersModuleKeepsTheOwnerItHasWithoutOwnerSettings(t *testing.T) {
+	t.Setenv("OWNER_EMAIL", "owner@example.test")
+	t.Setenv("OWNER_NAME", "Olive Owner")
+	k, err := assembled(t, "app_users_owner_kept")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("OWNER_EMAIL", "")
+	t.Setenv("OWNER_NAME", "")
+	e := emailLink(t)
+	if err := app.Assemble(context.Background(), &app.Kit{Mux: api.NewMux(), AppName: "Acme", Pool: k.Pool}, e, app.UsersFromEnv(e)); err != nil {
+		t.Fatalf("a restart once the owner exists: %v", err)
+	}
+}
+
+func TestTheUsersModuleNeedsEmailSignIn(t *testing.T) {
+	err := app.UsersFromEnv(nil).Mount(context.Background(), kit())
+	wantError(t, err, "EmailLinkFromEnv")
+}
+
 func TestTheUsersModuleRefusesWhatItCannotUse(t *testing.T) {
 	for _, c := range []struct{ name, key, value, words string }{
 		{"app_users_blank_role", "INVITABLE_ROLES", " , ", "blank"},
@@ -330,4 +398,9 @@ func TestTheUsersModuleRefusesWhatItCannotUse(t *testing.T) {
 			wantError(t, err, c.words)
 		})
 	}
+}
+
+func TestAModuleWithMigrationsNeedsADatabase(t *testing.T) {
+	err := app.Assemble(context.Background(), kit(), emailLink(t))
+	wantError(t, err, "DATABASE_URL is required", "email-link")
 }

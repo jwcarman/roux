@@ -113,9 +113,9 @@ it("filters by status and keeps it in the URL", async () => {
 
 ## Playwright
 
-`e2e/` holds the template's Playwright suite (`E2E_BASE_URL`, `E2E_MAILPIT_URL`); it signs in by the
-email link read from Mailpit. It runs against an app you start yourself; the skill's check script
-does not run it.
+`e2e/` holds the template's Playwright suite; it signs in by the email link read from Mailpit.
+`make e2e` runs it against a fresh copy of the app on port 8099 (`make e2e ARGS="tests/x.spec.ts"`
+for one file). The skill's check script does not run it.
 
 ## Check
 

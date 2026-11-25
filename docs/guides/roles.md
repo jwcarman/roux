@@ -46,7 +46,7 @@ the owner" is a permission granted to `OWNER` alone.
 
 ```go
 func permissions() []string {
-	return append(app.RouxPermissions(), labels.Permissions...)
+	return slices.Concat(app.RouxPermissions(), labels.Permissions)
 }
 ```
 

@@ -15,7 +15,8 @@
 #             the frontend lock, which links roux's own roux-web, is left out, and go.sum lacks roux.
 #
 # It fails when the copy still points into roux's repository (a replace of the Go module, a link to
-# web/roux-web), or ships node_modules, dist, test-results or coverage.out.
+# web/roux-web), ships node_modules, dist, test-results or coverage.out, or has a file whose name
+# says roux-app (the starter renames what files say, not what they are called).
 
 set -euo pipefail
 
@@ -108,5 +109,12 @@ for path in node_modules dist test-results coverage.out; do
     status=1
   fi
 done
+# The starter puts the app's name in place of roux-app inside files, never in their names.
+named="$(find "$OUT" -name '*roux-app*' -not -path "$OUT/.git/*" | sed "s:^$OUT/:  :")"
+if [[ -n "$named" ]]; then
+  echo "error: these names keep roux-app after the starter renames the app (give them a fixed name):" >&2
+  echo "$named" >&2
+  status=1
+fi
 [[ $status -eq 0 ]] && echo "exported roux $VERSION's app template to $OUT"
 exit $status

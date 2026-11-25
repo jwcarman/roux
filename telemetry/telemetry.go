@@ -17,6 +17,7 @@ package telemetry
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -51,6 +52,13 @@ func Setup(ctx context.Context, cfg Config) (shutdown func(context.Context) erro
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{}, propagation.Baggage{}))
 
+	// HTTP reads TRACE_TRUST_INBOUND as it wraps the server; a value it would read as false
+	// (TRUE, 1, yes) stops startup here instead.
+	switch v := os.Getenv("TRACE_TRUST_INBOUND"); v {
+	case "", "true", "false":
+	default:
+		return nil, fmt.Errorf("TRACE_TRUST_INBOUND must be true or false, not %q", v)
+	}
 	if !enabled() {
 		slog.Info("telemetry disabled (set OTEL_EXPORTER_OTLP_ENDPOINT to enable)")
 		return func(context.Context) error { return nil }, nil

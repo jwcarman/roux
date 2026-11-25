@@ -93,6 +93,16 @@ for path in node_modules dist test-results; do
   fi
 done
 
+src="$(source_copy named)"
+echo '{}' >"$src/deploy/roux-app-thing.json"
+git -C "$src" add deploy/roux-app-thing.json
+git -C "$src" -c user.name=t -c user.email=t@example.test commit -qm planted
+if export_from "$src" 9.8.7 "$WORK/out-$RANDOM" >"$WORK/named.log" 2>&1; then
+  fail "a file named for roux-app is refused"
+else
+  grep -q "roux-app-thing.json" "$WORK/named.log" && pass "a file named for roux-app is refused" || { fail "the refusal names the file"; cat "$WORK/named.log"; }
+fi
+
 # 4. The output directory must not hold anything already, so nothing stale survives.
 mkdir -p "$WORK/full" && echo x >"$WORK/full/old.txt"
 export_from "$ROOT/template" 9.8.7 "$WORK/full" >"$WORK/full.log" \

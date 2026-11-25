@@ -132,7 +132,7 @@ func (m *Method) askForAddress(h *authn.Host, w http.ResponseWriter, r *http.Req
 	m.wg.Add(1)
 	go func() {
 		defer m.wg.Done()
-		slog.DebugContext(ctx, "email address requested", "outcome", m.requestAddress(ctx, p.IdentityID, f["address"], replaces))
+		slog.InfoContext(ctx, "email address requested", "outcome", m.requestAddress(ctx, p.IdentityID, f["address"], replaces))
 	}()
 	return nil
 }

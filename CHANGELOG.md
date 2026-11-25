@@ -16,6 +16,16 @@ All notable changes to this project are documented in this file. The format foll
   subject or body, or an unknown value stops the server naming the file. roux's own emails read and
   look exactly as before.
 
+- **`make dev` runs an app**, in the template and Roux The Day: PostgreSQL and Mailpit, the front
+  end built once, and the server at `http://localhost:8080` with development settings (a
+  development `CODE_SECRET`, the compose database, `owner@example.com` as the first owner), each of
+  which gives way to the environment. `create-roux-app`, the guides and the skill all say `make dev`.
+- **`make e2e` runs the Playwright suite** (`e2e/run.sh`) against a fresh copy of the app on port
+  8099 with its own database, leaving `make dev`'s data alone. The template's suite was still
+  written for the Java build and failed at once; both apps' suites pass against the Go server.
+- **`SMTP_USERNAME` and `SMTP_PASSWORD`,** the mail server's login (both or neither), so SendGrid,
+  SES and the like work.
+- **`PASSKEYS`** (`true` or `false`, default `true`) turns passkeys off.
 - **The template's front end has Prettier and ESLint** (`npm run format`, `format:check`, `lint`),
   with roux-web's settings, in `frontend/lint-tools/`; CI checks both. The skill's `check.sh` runs
   them, writing Prettier's fixes as it does gofmt's.
@@ -90,6 +100,32 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- **Breaking: a setting roux cannot use stops startup.** Before, each of these started an app in
+  which nobody could sign in, with at most a line in the log:
+  - without `CODE_SECRET`, sign-in and everything built on it were off; it is now required;
+  - without `DATABASE_URL`, the pages were served alone; a module with tables now refuses to start
+    without it;
+  - with no one able to manage the team and no `OWNER_EMAIL`, nobody could ever get in; that now
+    stops startup, saying to set `OWNER_EMAIL` and `OWNER_NAME`.
+  `app.EmailLinkFromEnv` no longer returns nil, and the template's `modules()` lost its two early
+  returns.
+- **Breaking: booleans are `true` or `false`, and durations have a unit.** `API_KEYS=false` turns
+  API keys off (`off` was the only word that did, so `API_KEYS=false` left them on);
+  `SMTP_ALLOW_PLAINTEXT` and `TRACE_TRUST_INBOUND` refuse `TRUE`, `1` or `yes` instead of reading
+  them as false; and `SHUTDOWN_DELAY=30` is refused instead of meaning no delay.
+- **Breaking: passkeys follow `PUBLIC_URL`** and are on by default. The relying party is
+  `PUBLIC_URL`'s host and its address is allowed, so `http://localhost:8080` works in development
+  with no setting; before, the default origin was `https://<rp id>`, which development never
+  matched. `PASSKEY_RP_ID` now only names a parent domain, and `PASSKEY_ORIGINS` adds origins.
+- **Breaking: `permissions()` is `slices.Concat(app.RouxPermissions(), labels.Permissions, ...)`.**
+  The guides showed `append(..., labels.Permissions...)` with "one more `...` per feature", which
+  does not compile for a second feature: Go takes one spread per `append`.
+- **Sign-in refusals are logged at Info:** an unknown address, a wrong or used code, a deactivated
+  person. They were at Debug, so a sign-in that silently did nothing left no trace at the default
+  level.
+- **The Keycloak realm file is `deploy/keycloak/realm.json`.** `create-roux-app` renamed `roux-app`
+  inside `compose.yaml` but not the file's name, so the `oidc` profile mounted a missing file. The
+  template export now refuses a file whose name says `roux-app`.
 - **Releases are tagged `v0.4.0`**, as the Go module proxy requires (npm still gets `0.4.0`). The
   release workflow no longer deploys to Maven Central: it checks the tag and the changelog, builds
   the module, asks the Go module proxy for the release, publishes roux-web, then bundles the starter

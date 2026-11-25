@@ -52,6 +52,21 @@ func list(key, fallback string) []string {
 	return entries
 }
 
+// boolean reads a true-or-false setting: unset is def, and anything but true or false is refused,
+// so a TRUE, a 1 or an off never quietly means the default.
+func boolean(key string, def bool) (bool, error) {
+	switch v := os.Getenv(key); v {
+	case "":
+		return def, nil
+	case "true":
+		return true, nil
+	case "false":
+		return false, nil
+	default:
+		return false, fmt.Errorf("%s must be true or false, not %q", key, v)
+	}
+}
+
 func duration(key string) (time.Duration, error) {
 	v := os.Getenv(key)
 	if v == "" {
@@ -116,13 +131,14 @@ func (*EmailLink) Name() string                 { return "email-link" }
 func (*EmailLink) Migrations() []pgdb.Migration { return []pgdb.Migration{emaillink.Migration} }
 func (e *EmailLink) SignIn() authn.Method       { return e.Method }
 
-// EmailLinkFromEnv is the email module, or nil (with a note in the log) when CODE_SECRET is not
-// set: signing in is opt-in.
+// EmailLinkFromEnv is the email module: sign-in by an emailed link or typed code, which every
+// other way in (passkeys, providers, API keys, bearer tokens) builds on. CODE_SECRET is required.
 //
-//	CODE_SECRET   at least 32 random characters (openssl rand -base64 32); required to turn it on
+//	CODE_SECRET   at least 32 random characters (openssl rand -base64 32), the same on every instance
 //	PUBLIC_URL    where browsers reach the app (default http://localhost:8080); sign-in links point here
 //	SMTP_ADDR     host:port of the mail server (default localhost:1025, Mailpit)
 //	MAIL_FROM     the sender's address (default no-reply@localhost)
+//	SMTP_USERNAME, SMTP_PASSWORD  the mail server's login, if it asks for one (both, or neither)
 //	SMTP_ALLOW_PLAINTEXT  true to send without STARTTLS to a relay off this machine, on a network you trust
 //	EMAIL_RESEND_INTERVAL, EMAIL_TOKEN_TTL   durations such as 1s or 5m (defaults 60s and 5m)
 //
@@ -131,8 +147,8 @@ func (e *EmailLink) SignIn() authn.Method       { return e.Method }
 func EmailLinkFromEnv(appName string, emails fs.FS) (*EmailLink, error) {
 	secret := os.Getenv("CODE_SECRET")
 	if secret == "" {
-		slog.Info("signing in is off: set CODE_SECRET to turn it on")
-		return nil, nil
+		return nil, errors.New("CODE_SECRET is required: the key that hashes sign-in codes, at least 32 random " +
+			"characters, the same on every instance (openssl rand -base64 32; make dev sets one for development)")
 	}
 	resend, err := duration("EMAIL_RESEND_INTERVAL")
 	if err != nil {
@@ -141,6 +157,14 @@ func EmailLinkFromEnv(appName string, emails fs.FS) (*EmailLink, error) {
 	ttl, err := duration("EMAIL_TOKEN_TTL")
 	if err != nil {
 		return nil, err
+	}
+	plaintext, err := boolean("SMTP_ALLOW_PLAINTEXT", false)
+	if err != nil {
+		return nil, err
+	}
+	user, password := os.Getenv("SMTP_USERNAME"), os.Getenv("SMTP_PASSWORD")
+	if (user == "") != (password == "") {
+		return nil, errors.New("SMTP_USERNAME and SMTP_PASSWORD go together: set both to sign in to the mail server, or neither")
 	}
 	m, err := emaillink.New(emaillink.Config{
 		LinkBaseURL:    strings.TrimRight(Getenv("PUBLIC_URL", "http://localhost:8080"), "/") + "/signin/link",
@@ -152,7 +176,9 @@ func EmailLinkFromEnv(appName string, emails fs.FS) (*EmailLink, error) {
 		Sender: &emaillink.SMTPSender{
 			Addr:           Getenv("SMTP_ADDR", "localhost:1025"),
 			From:           Getenv("MAIL_FROM", "no-reply@localhost"),
-			AllowPlaintext: os.Getenv("SMTP_ALLOW_PLAINTEXT") == "true",
+			Username:       user,
+			Password:       password,
+			AllowPlaintext: plaintext,
 		},
 	})
 	if err != nil {
@@ -171,23 +197,33 @@ func (p *Passkeys) SignIn() authn.Method       { return p.Method }
 // Drain waits for notices accepted a moment ago to go out.
 func (p *Passkeys) Drain() { p.Method.Wait() }
 
-// PasskeysFromEnv is the passkey module, or nil when PASSKEY_RP_ID is not set. It needs email
-// sign-in too: a passkey is registered from a recent session, and email is what makes the first
-// one, and what names the passkey and announces it.
+// PasskeysFromEnv is the passkey module, or nil when PASSKEYS=false. It follows PUBLIC_URL: the
+// relying party is its host and its origin is allowed, so the address people use is the one that
+// works. It needs email sign-in too: a passkey is registered from a recent session, and email is
+// what makes the first one, and what names the passkey and announces it.
 //
-//	PASSKEY_RP_ID    the host of the app: app.example.com, or localhost for development
-//	PASSKEY_ORIGINS  allowed origins, comma separated (default https://<rp id>); for local
-//	                 development use http://localhost:8080
+//	PASSKEYS         true or false (default true)
+//	PASSKEY_RP_ID    the relying party, when it is not PUBLIC_URL's host: a parent domain
+//	                 (example.com for app.example.com), so passkeys work across its subdomains
+//	PASSKEY_ORIGINS  more allowed origins, comma separated, beside PUBLIC_URL's (the Vite dev
+//	                 server's, http://localhost:5173, say)
 func PasskeysFromEnv(appName string, email *EmailLink) (*Passkeys, error) {
-	rp := os.Getenv("PASSKEY_RP_ID")
-	if rp == "" {
-		slog.Info("passkeys are off: set PASSKEY_RP_ID to turn them on")
-		return nil, nil
+	on, err := boolean("PASSKEYS", true)
+	if err != nil || !on {
+		if err == nil {
+			slog.Info("passkeys are off (PASSKEYS=false)")
+		}
+		return nil, err
 	}
 	if email == nil {
 		return nil, errors.New("passkeys need email sign-in (set CODE_SECRET): a passkey is registered from a recent session, which email makes")
 	}
-	var origins []string
+	public, err := url.Parse(Getenv("PUBLIC_URL", "http://localhost:8080"))
+	if err != nil || public.Scheme == "" || public.Host == "" {
+		return nil, fmt.Errorf("PUBLIC_URL must be the address people use, such as https://app.example.com, not %q", os.Getenv("PUBLIC_URL"))
+	}
+	rp := Getenv("PASSKEY_RP_ID", public.Hostname())
+	origins := []string{public.Scheme + "://" + public.Host}
 	if v := os.Getenv("PASSKEY_ORIGINS"); v != "" {
 		for _, o := range strings.Split(v, ",") {
 			origins = append(origins, strings.TrimSpace(o))
@@ -213,18 +249,22 @@ func (k *APIKeys) SignIn() authn.Method       { return k.Method }
 // Drain waits for "API key made" notices accepted a moment ago to go out.
 func (k *APIKeys) Drain() { k.Method.Wait() }
 
-// APIKeysFromEnv is the API key module, or nil when API_KEYS=off. Keys are made by a signed-in
+// APIKeysFromEnv is the API key module, or nil when API_KEYS=false. Keys are made by a signed-in
 // person, so it needs sign-in to be on.
 //
-//	API_KEYS              off to turn API keys off (default on)
+//	API_KEYS              true or false (default true)
 //	API_KEY_PREFIX        what every key starts with (default roux_); API_KEY_HEADER (default X-API-Key)
 //	API_KEY_MAX_LIFETIME  the longest a key may last, such as 2160h (default 365 days)
 func APIKeysFromEnv(email *EmailLink) (*APIKeys, error) {
 	if email == nil {
 		return nil, nil
 	}
-	if os.Getenv("API_KEYS") == "off" {
-		slog.Info("API keys are off")
+	on, err := boolean("API_KEYS", true)
+	if err != nil {
+		return nil, err
+	}
+	if !on {
+		slog.Info("API keys are off (API_KEYS=false)")
 		return nil, nil
 	}
 	cfg := apikey.Config{Prefix: os.Getenv("API_KEY_PREFIX"), Header: os.Getenv("API_KEY_HEADER"), Notify: email.Method.APIKeyMade}
@@ -353,6 +393,9 @@ func (u *Users) SignUp(ctx context.Context, tx pgx.Tx, id uuid.UUID, name, role 
 
 // Mount registers roux's endpoints.
 func (u *Users) Mount(_ context.Context, k *Kit) error {
+	if u.email == nil {
+		return errors.New("the users module needs email sign-in: pass UsersFromEnv the module EmailLinkFromEnv made")
+	}
 	invitable, err := authz.NewInvitable(list("INVITABLE_ROLES", "USER"))
 	if err != nil {
 		return err
@@ -380,13 +423,21 @@ func (u *Users) Mount(_ context.Context, k *Kit) error {
 	return nil
 }
 
-// Start makes the first owner, when there is none.
-func (u *Users) Start(ctx context.Context, _ *Kit) error {
+// Start makes the first owner, when there is none. With no one active who can manage the team
+// and no OWNER_EMAIL, it refuses: nobody could ever sign in to change that.
+func (u *Users) Start(ctx context.Context, k *Kit) error {
 	owner, name := os.Getenv("OWNER_EMAIL"), os.Getenv("OWNER_NAME")
 	switch {
 	case owner != "" && name == "", owner == "" && name != "":
 		return errors.New("OWNER_EMAIL and OWNER_NAME go together: set both, or neither")
-	case owner != "":
+	case owner == "":
+		err := authz.EnsureAdmin(ctx, k.Pool)
+		if errors.Is(err, authz.ErrLastAdmin) {
+			return errors.New("nobody can sign in to manage this app: set OWNER_EMAIL and OWNER_NAME to make " +
+				"the first owner (make dev sets yours)")
+		}
+		return err
+	default:
 		created, err := u.svc.BootstrapOwner(ctx, owner, name)
 		if err != nil {
 			return fmt.Errorf("the first owner: %w", err)

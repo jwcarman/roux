@@ -58,6 +58,7 @@ one language: the app's templates choose it.
 | --- | --- |
 | `SMTP_ADDR` | The mail server, `host:port` (default `localhost:1025`: Mailpit, from `compose.yaml`). |
 | `MAIL_FROM` | The address every email is sent from (default `no-reply@localhost`). |
+| `SMTP_USERNAME`, `SMTP_PASSWORD` | The mail server's login (SendGrid, SES, Postmark and the like give one), both or neither. It is sent only over TLS, or to this machine. |
 | `SMTP_ALLOW_PLAINTEXT` | `true` to send without STARTTLS to a server off this machine, on a network you trust. Without it, such a server must offer STARTTLS. |
 | `EMAIL_RESEND_INTERVAL` | The least time between two emails to one address (default `60s`). |
 | `EMAIL_TOKEN_TTL` | How long a link and code stay valid (default `5m`). |

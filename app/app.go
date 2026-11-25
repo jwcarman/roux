@@ -188,10 +188,16 @@ func (k *Kit) defaults() {
 	}
 }
 
-// migrate applies roux's and the modules' migrations and gathers their sign-in methods; with no
-// database there are neither.
+// migrate applies roux's and the modules' migrations and gathers their sign-in methods. With no
+// database there are neither, and a module with migrations is refused: its data has nowhere to go.
 func migrate(ctx context.Context, k *Kit, mods []Module) ([]authn.Method, error) {
 	if k.Pool == nil {
+		for _, m := range mods {
+			if _, ok := m.(Migrator); ok {
+				return nil, fmt.Errorf("DATABASE_URL is required: the %s module keeps its data in PostgreSQL "+
+					"(postgres://app:app@localhost:5432/app from compose.yaml; make dev sets it)", m.Name())
+			}
+		}
 		return nil, nil
 	}
 	migrations := slices.Clone(coreMigrations)

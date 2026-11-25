@@ -24,7 +24,8 @@ Delivery is SMTP, set by the environment.
 | Notices | a passkey or API key added, a provider's account linked | a notice naming it |
 
 - Settings: `SMTP_ADDR` (default `localhost:1025`, Mailpit), `MAIL_FROM` (default
-  `no-reply@localhost`), `SMTP_ALLOW_PLAINTEXT` (`true` to send without STARTTLS to a server off
+  `no-reply@localhost`), `SMTP_USERNAME` and `SMTP_PASSWORD` (the server's login, both or neither),
+  `SMTP_ALLOW_PLAINTEXT` (`true` to send without STARTTLS to a server off
   this machine), `EMAIL_RESEND_INTERVAL` (`60s`), `EMAIL_TOKEN_TTL` (`5m`), `PUBLIC_URL` (links
   point to `PUBLIC_URL/signin/link#token=...`).
 - The app's name is `APP_NAME`, or the owner's saved theme's; the colour is the theme's brand

@@ -24,14 +24,14 @@ app already has all of it; read this when changing it.
 
 1. `npm create @jwcarman/roux-app team-planner` (Node 20+): the directory, the Go module and the npm
    name.
-2. `docker compose up -d` (PostgreSQL on 5432, Mailpit on <http://localhost:8025>).
-3. `make web`, then
-   `CODE_SECRET=$(openssl rand -base64 32) DATABASE_URL=postgres://app:app@localhost:5432/app OWNER_EMAIL=you@example.com OWNER_NAME=You PASSKEY_RP_ID=localhost PASSKEY_ORIGINS=http://localhost:8080 FRONTEND_DIR=frontend/dist LOG_FORMAT=text go run ./cmd/server`.
-   For pages, `npm run dev` in `frontend/` too (Vite on 5173, `/api` passed to the server).
-4. Sign in as `OWNER_EMAIL` with the link from Mailpit.
-5. Add features with `feature.md`.
+2. `make dev`: PostgreSQL and Mailpit (<http://localhost:8025>), the front end built once, and the
+   server at <http://localhost:8080> with development settings (owner `owner@example.com`; each
+   setting gives way to the environment). For pages, `npm run dev` in `frontend/` too (Vite on
+   5173, `/api` passed to the server).
+3. Sign in as the owner with the link from Mailpit.
+4. Add features with `feature.md`.
 
-`make check` runs gofmt, `go vet`, golangci-lint and the Go tests; `make build` the one-file binary
+`make check` runs gofmt, `go vet`, golangci-lint and the Go tests; `make e2e` the Playwright suite; `make build` the one-file binary
 with the front end inside; `make image` the container image.
 
 ## Names: the server
@@ -39,9 +39,9 @@ with the front end inside; `make image` the container image.
 - `cmd/server/main.go`: `app.Main(app.Config{Name, DisplayName, Frontend: frontend.Dist, Modules: modules})`.
 - `cmd/server/modules.go`: `modules(k *app.Kit) ([]app.Module, error)`, roux's modules then the
   app's; and `permissions()` (`permissions.md`).
-- Stock modules (nil when their setting is missing): `app.EmailLinkFromEnv(appName, emails)` (needs
+- Stock modules (the optional ones nil when turned off): `app.EmailLinkFromEnv(appName, emails)` (needs
   `CODE_SECRET`; `emails` is `cmd/server/emails`, `email.md`), `app.UsersFromEnv(email)`, `app.PasskeysFromEnv(appName, email)`
-  (`PASSKEY_RP_ID`), `app.APIKeysFromEnv(email)`, `app.OIDCFromEnv(email, members)`
+  (on unless `PASSKEYS=false`), `app.APIKeysFromEnv(email)`, `app.OIDCFromEnv(email, members)`
   (`OIDC_PROVIDERS_FILE`), `app.JWTFromEnv(email)` (`JWT_ISSUER`).
 - A module is any type with `Name() string`, plus what it needs:
   - `app.Migrator`: `Migrations() []pgdb.Migration`;
@@ -60,17 +60,17 @@ with the front end inside; `make image` the container image.
 
 | Variable | Notes |
 | --- | --- |
-| `DATABASE_URL` | PostgreSQL; without it nobody can sign in |
+| `DATABASE_URL` | PostgreSQL; required |
 | `ADDR`, `PUBLIC_URL`, `COOKIE_SECURE` | where it listens (`:8080`), where browsers reach it (links point here; `https://` makes cookies Secure) |
 | `APP_NAME` | the app's name, instead of `DisplayName` |
-| `CODE_SECRET` | ≥ 32 random characters, the same on every instance; signing in is off without it |
-| `SMTP_ADDR`, `MAIL_FROM`, `SMTP_ALLOW_PLAINTEXT`, `EMAIL_RESEND_INTERVAL`, `EMAIL_TOKEN_TTL` | email (`email.md`) |
-| `OWNER_EMAIL`, `OWNER_NAME` | the first owner, both or neither |
+| `CODE_SECRET` | ≥ 32 random characters, the same on every instance; required |
+| `SMTP_ADDR`, `MAIL_FROM`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_ALLOW_PLAINTEXT`, `EMAIL_RESEND_INTERVAL`, `EMAIL_TOKEN_TTL` | email (`email.md`) |
+| `OWNER_EMAIL`, `OWNER_NAME` | the first owner, both or neither; required until someone can manage the team |
 | `INVITABLE_ROLES` | roles invitations may give (default `USER`); never `OWNER` |
 | `ORG_TIME_ZONE`, `ORG_LOCALE` | the organization's zone and locale (`dates.md`) |
 | `ORG_CURRENCY` | once the app has money (`money.md`) |
-| `PASSKEY_RP_ID`, `PASSKEY_ORIGINS` | passkeys; set origins to `http://localhost:8080` in development |
-| `API_KEYS`, `API_KEY_PREFIX`, `API_KEY_HEADER`, `API_KEY_MAX_LIFETIME` | API keys (`off` to turn off) |
+| `PASSKEYS`, `PASSKEY_RP_ID`, `PASSKEY_ORIGINS` | passkeys follow `PUBLIC_URL`; `false` turns them off; a parent domain; more origins |
+| `API_KEYS`, `API_KEY_PREFIX`, `API_KEY_HEADER`, `API_KEY_MAX_LIFETIME` | API keys (`false` to turn off) |
 | `OIDC_PROVIDERS_FILE` | OpenID Connect providers, a JSON list |
 | `JWT_ISSUER`, `JWT_AUDIENCES`, `JWT_JWKS_URL` | bearer tokens for API-only callers |
 | `FRONTEND_DIR`, `LOG_FORMAT`, `SHUTDOWN_DELAY`, `OTEL_*` | development and operations |
@@ -154,12 +154,13 @@ createRoot(document.getElementById("root")!).render(
 
 ## Check
 
-The app starts (`go run ./cmd/server`): a bad setting stops startup naming it, and so does an edited
+The app starts (`make dev`): a bad setting stops startup naming it, and so does an edited
 migration.
 
 ## Pitfalls
 
-- `PASSKEY_ORIGINS` defaults to `https://<rp id>`: set it for `http://localhost:8080`.
+- A boolean setting other than `true` or `false`, or a duration without a unit (`30`): startup
+  stops naming it.
 - A module that reads `k.Organization()` at mount, listed before the users module: it gets UTC
   and `en-US`, not the `ORG_*` settings.
 - A `PUBLIC_URL` of `http://` for another host is refused unless `COOKIE_SECURE=false` says so.

@@ -500,7 +500,7 @@ Its permissions, in `permissions()`:
 
 <!-- fragment: permissions -->
 ```go
-return append(app.RouxPermissions(), labels.Permissions...)
+return slices.Concat(app.RouxPermissions(), labels.Permissions)
 ```
 
 Then run `go test ./cmd/server` **twice**: the first run rewrites

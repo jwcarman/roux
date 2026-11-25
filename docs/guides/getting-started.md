@@ -21,32 +21,22 @@ Either way, features use roux by importing from it; no plumbing is written in th
    pass another name with `npm create @jwcarman/roux-app team-planner -- --name "Acme Planner"`. It is
    roux's app template at the latest release (sign-in, the first owner, the sidebar frame, Users,
    Settings and Appearance), with roux from the Go module proxy and npm, and a first commit.
-2. **Start its database and mail catcher.** With Docker running:
+2. **Run it.** With Docker running and Go 1.27, in the app's directory:
 
    ```bash
-   docker compose up -d
+   make dev
    ```
 
-   PostgreSQL listens on `localhost:5432` (user, password and database `app`), and Mailpit catches
-   every email the app sends, readable at <http://localhost:8025>.
-3. **Build the front end and run the server.** With Go 1.27:
-
-   ```bash
-   make web
-   CODE_SECRET=$(openssl rand -base64 32) \
-   DATABASE_URL=postgres://app:app@localhost:5432/app \
-   OWNER_EMAIL=you@example.com OWNER_NAME=You \
-   PASSKEY_RP_ID=localhost PASSKEY_ORIGINS=http://localhost:8080 \
-   FRONTEND_DIR=frontend/dist LOG_FORMAT=text \
-   go run ./cmd/server
-   ```
-
-   The app is at <http://localhost:8080>. While working on pages, run `npm run dev` in `frontend/`
-   as well: Vite serves the pages at <http://localhost:5173>, reloading as you edit, and passes
-   `/api` to the server.
-4. **Sign in as the owner.** On the sign-in page, ask for a link for the `OWNER_EMAIL` address and
-   open it from Mailpit. roux made that address the `OWNER` on the first start.
-5. **Add a first page.** Ask your agent for it: roux's Claude Code plugin (the `roux` skill) says
+   That starts PostgreSQL (`localhost:5432`, user, password and database `app`) and Mailpit, which
+   catches every email the app sends and shows it at <http://localhost:8025>; builds the front end
+   the first time; and runs the server at <http://localhost:8080> with development settings: a
+   development `CODE_SECRET`, the compose database, and `owner@example.com` as the first owner.
+   Each gives way to the environment: `OWNER_EMAIL=you@example.com make dev` makes you the owner
+   instead. While working on pages, run `npm run dev` in `frontend/` as well: Vite serves the pages
+   at <http://localhost:5173>, reloading as you edit, and passes `/api` to the server.
+3. **Sign in as the owner.** On the sign-in page, ask for a link for the owner's address and open
+   it from Mailpit. roux made that address the `OWNER` on the first start.
+4. **Add a first page.** Ask your agent for it: roux's Claude Code plugin (the `roux` skill) says
    where each piece goes, and the app's `.claude/settings.json` names it, so in Claude Code trust
    the folder and run `/plugin install roux@roux` once. By hand, a feature is a Go package in
    `internal/<feature>/` listed in `cmd/server/modules.go` ([A feature's server side](features.md)),
@@ -112,16 +102,13 @@ and what it does at startup. `modules.go` lists them, so turning a feature on is
 ```go
 func modules(k *app.Kit) ([]app.Module, error) {
 	mods := []app.Module{&appRoles{}}
-	if k.Pool == nil {
-		return mods, nil // no database, nobody signs in
-	}
 	emails, err := fs.Sub(emailFiles, "emails") // cmd/server/emails: your wording for roux's emails
 	if err != nil {
 		return nil, err
 	}
 	email, err := app.EmailLinkFromEnv(k.AppName, emails)
-	if err != nil || email == nil {
-		return mods, err // no CODE_SECRET: signing in is off, and so is everything that needs it
+	if err != nil {
+		return nil, err
 	}
 	members := app.UsersFromEnv(email)
 	passkeys, err := app.PasskeysFromEnv(k.AppName, email)
@@ -136,16 +123,17 @@ func modules(k *app.Kit) ([]app.Module, error) {
 }
 ```
 
-Each stock module reads its settings from the environment and is nil when its feature is off. One
+Each stock module reads its settings from the environment. Email sign-in and users are always on;
+the others are nil when their feature is off. One
 that needs another takes it as an argument (passkeys take the email module), so a missing
 dependency does not compile. roux's stock modules:
 
 | Constructor | The feature |
 | --- | --- |
-| `app.EmailLinkFromEnv(appName, emails)` | Sign-in by an emailed link or typed code; `emails` is the app's wording for any of roux's emails ([Email](email.md)). Nil without `CODE_SECRET`. |
+| `app.EmailLinkFromEnv(appName, emails)` | Sign-in by an emailed link or typed code; `emails` is the app's wording for any of roux's emails ([Email](email.md)). Needs `CODE_SECRET`. |
 | `app.UsersFromEnv(email)` | The users directory, roles and invitations, the owner's theme, the organization, and the first owner ([Users](users.md), [Roles and permissions](roles.md)). |
-| `app.PasskeysFromEnv(appName, email)` | Passkeys. Nil without `PASSKEY_RP_ID`. |
-| `app.APIKeysFromEnv(email)` | API keys, made by a signed-in person. On unless `API_KEYS=off`. |
+| `app.PasskeysFromEnv(appName, email)` | Passkeys, for the address in `PUBLIC_URL`. On unless `PASSKEYS=false`. |
+| `app.APIKeysFromEnv(email)` | API keys, made by a signed-in person. On unless `API_KEYS=false`. |
 | `app.OIDCFromEnv(email, members)` | Sign-in with Google, GitHub or any OpenID Connect provider. Nil without `OIDC_PROVIDERS_FILE`. |
 | `app.JWTFromEnv(email)` | Bearer tokens from an authorization server, for API-only callers. Nil without `JWT_ISSUER`. |
 
@@ -166,29 +154,31 @@ in the order listed. A failure names the module.
 
 ### Settings
 
-Everything else comes from the environment. A missing required setting stops startup, naming it.
+Everything else comes from the environment. A missing required setting stops startup, naming it,
+and so does a value roux cannot read: `true` and `false` are the only booleans, and a duration
+has a unit (`30s`).
 
 | Variable | What it is |
 | --- | --- |
-| `DATABASE_URL` | PostgreSQL. Without it the pages are served and nobody can sign in. |
+| `DATABASE_URL` | PostgreSQL. Required: a module with tables stops startup without it. |
 | `ADDR` | Where the server listens (default `:8080`). |
 | `PUBLIC_URL` | Where browsers reach the app (default `http://localhost:8080`): sign-in links point here, and `https://` marks every cookie Secure. Behind a load balancer that ends TLS, set it to the `https` address. |
 | `COOKIE_SECURE` | `true` or `false`, overriding what `PUBLIC_URL` says. A `PUBLIC_URL` of `http://` for a host other than this machine is refused unless this is `false`. |
 | `APP_NAME` | The app's name, instead of `DisplayName`. |
-| `CODE_SECRET` | At least 32 random characters (`openssl rand -base64 32`), the same on every instance: keys the typed sign-in codes. Signing in is off without it. |
-| `SMTP_ADDR`, `MAIL_FROM` | The mail server, `host:port` (default `localhost:1025`, Mailpit), and the sender (default `no-reply@localhost`). Mail to a server off this machine goes over STARTTLS unless `SMTP_ALLOW_PLAINTEXT=true`. |
+| `CODE_SECRET` | At least 32 random characters (`openssl rand -base64 32`), the same on every instance: keys the typed sign-in codes. Required. |
+| `SMTP_ADDR`, `MAIL_FROM` | The mail server, `host:port` (default `localhost:1025`, Mailpit), and the sender (default `no-reply@localhost`). `SMTP_USERNAME` and `SMTP_PASSWORD` are the server's login, both or neither. Mail to a server off this machine goes over STARTTLS unless `SMTP_ALLOW_PLAINTEXT=true`. |
 | `EMAIL_RESEND_INTERVAL`, `EMAIL_TOKEN_TTL` | How soon another sign-in email may be asked for, and how long a link or code lasts (defaults `60s` and `5m`). |
-| `OWNER_EMAIL`, `OWNER_NAME` | The first owner: while no active user holds `OWNER`, roux creates one at startup, who signs in with that address. Both or neither; once an active owner exists they change nothing, and an address that belongs to someone else stops startup. |
+| `OWNER_EMAIL`, `OWNER_NAME` | The first owner: while no active user holds `OWNER`, roux creates one at startup, who signs in with that address. Both or neither; once an active owner exists they change nothing, and an address that belongs to someone else stops startup. With neither and nobody able to manage the team, startup stops. |
 | `INVITABLE_ROLES` | The roles an invitation may give, comma separated, in the order an invite form offers them (default `USER`). Each must be a role a migration creates; `OWNER` is refused. See [Roles and permissions](roles.md). |
 | `ORG_TIME_ZONE`, `ORG_LOCALE` | The organization's IANA time zone (default `UTC`) and BCP 47 locale (default `en-US`): where its day starts and ends, and how dates, numbers and amounts are written. See [Dates and time](dates-and-time.md). |
 | `ORG_CURRENCY` | The organization's one currency, an ISO 4217 code (`USD`), once the app has money. See [Money](money.md). |
-| `PASSKEY_RP_ID`, `PASSKEY_ORIGINS` | Passkeys: the app's host (`localhost` in development) and the origins sign-in may come from (default `https://<rp id>`, so set `http://localhost:8080` in development). |
-| `API_KEYS`, `API_KEY_PREFIX`, `API_KEY_HEADER`, `API_KEY_MAX_LIFETIME` | API keys: `off` to turn them off; what every key starts with (default `roux_`); the header (default `X-API-Key`); the longest a key may last (default a year). |
+| `PASSKEYS`, `PASSKEY_RP_ID`, `PASSKEY_ORIGINS` | Passkeys follow `PUBLIC_URL`: its host is the relying party and its address is allowed. `PASSKEYS=false` turns them off; `PASSKEY_RP_ID` names a parent domain instead (`example.com` for `app.example.com`); `PASSKEY_ORIGINS` adds addresses, comma separated. |
+| `API_KEYS`, `API_KEY_PREFIX`, `API_KEY_HEADER`, `API_KEY_MAX_LIFETIME` | API keys: `false` to turn them off; what every key starts with (default `roux_`); the header (default `X-API-Key`); the longest a key may last (default a year). |
 | `OIDC_PROVIDERS_FILE` | A JSON list of OpenID Connect providers; `${NAME}` in it is an environment variable. Each provider's callback is `PUBLIC_URL/api/roux/auth/oidc/callback/{id}`. `OIDC_SUCCESS_URL`, `OIDC_FAILURE_URL`, `OIDC_LINK_URL` and `OIDC_SIGNUP_ROLE` tune where people land and the role a sign-up gets. |
 | `JWT_ISSUER`, `JWT_AUDIENCES`, `JWT_JWKS_URL` | Bearer tokens: the authorization server's issuer, the audiences a token must name one of, and the keys' address for a server without discovery. |
 | `FRONTEND_DIR` | Serve the front end from this directory (`frontend/dist`) instead of the one in the binary. The page is read once, at startup: restart the server after rebuilding the front end. |
 | `LOG_FORMAT` | `json` (the default) or `text`. |
-| `SHUTDOWN_DELAY` | How long to keep serving after readiness fails, such as `5s`. |
+| `SHUTDOWN_DELAY` | How long to keep serving after readiness fails, with a unit: `5s`. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` and the other `OTEL_*` | Where traces, metrics and logs go (`compose.yaml`'s `otel` profile runs a collector and Grafana). |
 
 roux's tables and the app's are made by the migrations the modules declare (see

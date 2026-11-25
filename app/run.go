@@ -51,7 +51,7 @@ func Main(cfg Config) {
 }
 
 // Run serves the application until ctx ends: logging and telemetry, the health probes, the
-// database (DATABASE_URL; without it the pages are served and nobody can sign in), the modules
+// database (DATABASE_URL; a module with migrations needs it), the modules
 // assembled, the front end, and a bounded server on ADDR (":8080"). When ctx ends it fails
 // readiness, waits SHUTDOWN_DELAY so load balancers notice, stops taking requests, and lets the
 // modules finish their work in flight.
@@ -96,6 +96,10 @@ func Run(ctx context.Context, cfg Config) error {
 		return err
 	}
 
+	delay, err := duration("SHUTDOWN_DELAY")
+	if err != nil {
+		return err
+	}
 	addr := Getenv("ADDR", ":8080")
 	srv := Server(addr, telemetry.HTTP(api.Recoverer(mux), health.LivePath, health.ReadyPath), secure)
 	errc := make(chan error, 1)
@@ -108,9 +112,7 @@ func Run(ctx context.Context, cfg Config) error {
 	case <-ctx.Done():
 		slog.Info("shutting down")
 		probes.Draining()
-		if d, err := time.ParseDuration(os.Getenv("SHUTDOWN_DELAY")); err == nil {
-			time.Sleep(d)
-		}
+		time.Sleep(delay) // load balancers notice the failed readiness before requests stop
 		// ctx is already cancelled; the shutdown keeps its values but gets ten seconds of its own.
 		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 		defer cancel()
@@ -122,12 +124,11 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 }
 
-// connect opens DATABASE_URL, adds it to the readiness probe and answers its errors; with no
-// DATABASE_URL there is no pool, and nobody can sign in.
+// connect opens DATABASE_URL, adds it to the readiness probe and answers its errors. With no
+// DATABASE_URL there is no pool, and a module with migrations stops startup (Assemble).
 func connect(ctx context.Context, mux *api.Mux, probes *health.Health) (*pgxpool.Pool, error) {
 	url := os.Getenv("DATABASE_URL")
 	if url == "" {
-		slog.Warn("DATABASE_URL not set: nobody can sign in")
 		return nil, nil
 	}
 	pool, err := pgdb.Connect(ctx, url)

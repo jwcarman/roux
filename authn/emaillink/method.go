@@ -154,7 +154,7 @@ func (m *Method) send(h *authn.Host) api.HandlerFunc {
 // invitation sent by the owner), never for the person asking.
 func (m *Method) Issue(ctx context.Context, address string) Outcome {
 	outcome := m.issue(ctx, address, emailSignIn)
-	slog.DebugContext(ctx, "sign-in email requested", "outcome", outcome)
+	slog.InfoContext(ctx, "sign-in email requested", "outcome", outcome)
 	return outcome
 }
 
@@ -164,7 +164,7 @@ func (m *Method) Issue(ctx context.Context, address string) Outcome {
 // stands either way.
 func (m *Method) Invite(ctx context.Context, address string) Outcome {
 	outcome := m.issue(ctx, address, emailInvitation)
-	slog.DebugContext(ctx, "invitation email requested", "outcome", outcome)
+	slog.InfoContext(ctx, "invitation email requested", "outcome", outcome)
 	return outcome
 }
 
@@ -337,7 +337,7 @@ func (m *Method) signIn(h *authn.Host) api.HandlerFunc {
 			return err
 		}
 		if reason != "" {
-			slog.DebugContext(ctx, "email sign-in failed", "reason", reason)
+			slog.InfoContext(ctx, "email sign-in failed", "reason", reason)
 			return authn.SignInFailed()
 		}
 
@@ -346,7 +346,7 @@ func (m *Method) signIn(h *authn.Host) api.HandlerFunc {
 			return err
 		}
 		if res != authn.Resolved {
-			slog.DebugContext(ctx, "email sign-in failed", "reason", "identity-not-active")
+			slog.InfoContext(ctx, "email sign-in failed", "reason", "identity-not-active")
 			return authn.SignInFailed()
 		}
 		if err := h.StartSession(w, r, identityID, credentialID, method); err != nil {
