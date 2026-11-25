@@ -292,3 +292,18 @@ func TestAnAPIAnswerIsNeitherSniffedNorStored(t *testing.T) {
 		t.Errorf("the page's answers are the front end's to set: %v", h)
 	}
 }
+
+func TestTheMuxKnowsWhichRoutesNoGuardWraps(t *testing.T) {
+	m := api.NewMux()
+	m.Handle("GET /api/open", okHandler)
+	m.HandleGuarded("POST /api/notes", okHandler)
+	m.HandleRoux("GET /api/roux/healthz", okHandler)
+	if got := m.Unguarded(); len(got) != 1 || got[0] != "GET /api/open" {
+		t.Fatalf("unguarded %v, want only the plain Handle route", got)
+	}
+	rec := httptest.NewRecorder()
+	m.ServeHTTP(rec, httptest.NewRequest("POST", "/api/notes", nil))
+	if rec.Code != 200 {
+		t.Fatalf("a guarded route is served like any other: %d", rec.Code)
+	}
+}

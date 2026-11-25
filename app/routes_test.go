@@ -1,7 +1,11 @@
 package app_test
 
 import (
+	"bytes"
+	"context"
+	"log/slog"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/jwcarman/roux/api"
@@ -62,4 +66,32 @@ func TestAKitRouteMustNameAPermission(t *testing.T) {
 	}()
 	k := &app.Kit{Mux: api.NewMux()}
 	k.Handle("GET /api/notes", "", func(http.ResponseWriter, *http.Request) error { return nil })
+}
+
+func TestAssemblyWarnsOfARouteNoGuardWraps(t *testing.T) {
+	var buf bytes.Buffer
+	old := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(old) })
+	k := &app.Kit{Mux: api.NewMux(), AppName: "Acme"}
+	err := app.Assemble(context.Background(), k, &mounts{fn: func(k *app.Kit) {
+		k.Mux.Handle("POST /api/open", func(http.ResponseWriter, *http.Request) error { return nil })
+		k.Handle("POST /api/notes", "notes.write", func(http.ResponseWriter, *http.Request) error { return nil })
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "route has no guard") || !strings.Contains(out, `route="POST /api/open"`) || strings.Contains(out, "/api/notes") {
+		t.Fatalf("log:\n%s", out)
+	}
+}
+
+// mounts is a module whose Mount runs fn.
+type mounts struct{ fn func(*app.Kit) }
+
+func (*mounts) Name() string { return "mounts" }
+func (m *mounts) Mount(_ context.Context, k *app.Kit) error {
+	m.fn(k)
+	return nil
 }

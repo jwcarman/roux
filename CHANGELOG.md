@@ -11,7 +11,9 @@ All notable changes to this project are documented in this file. The format foll
 - **Guarded routes in one call.** `kit.Handle(pattern, permission, fn)` mounts an application
   route behind the CSRF check, a sign-in and the permission, so no route is mounted half
   guarded; an empty permission panics at startup. `kit.HandleSignedIn` is for anyone signed in,
-  `kit.HandlePublic` for anybody. `Mux.Handle` with `Host.Guard` still works.
+  `kit.HandlePublic` for anybody. `Mux.Handle` still mounts a route as it is, but startup logs
+  a warning naming each one (`Mux.Unguarded`); `Mux.HandleGuarded` is for a handler that guards
+  itself.
 - **Sessions have a lifetime.** `authn.Config.SessionLifetime` (default 12 hours) ends a session
   however busy it is, so a stolen cookie kept warm still dies. `authn.EndSessions` ends an
   identity's sessions inside a transaction.

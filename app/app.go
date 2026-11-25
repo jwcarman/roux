@@ -92,19 +92,19 @@ func (k *Kit) Handle(pattern, permission string, fn api.HandlerFunc) {
 	if permission == "" {
 		panic(fmt.Sprintf("app: route %q names no permission: use HandleSignedIn or HandlePublic", pattern))
 	}
-	k.Mux.Handle(pattern, k.Host.Guard(permission, fn))
+	k.Mux.HandleGuarded(pattern, k.Host.Guard(permission, fn))
 }
 
 // HandleSignedIn registers a route for anyone signed in, whatever they may do (their own
 // settings, say). CSRF-checked like every route.
 func (k *Kit) HandleSignedIn(pattern string, fn api.HandlerFunc) {
-	k.Mux.Handle(pattern, k.Host.Guard("", fn))
+	k.Mux.HandleGuarded(pattern, k.Host.Guard("", fn))
 }
 
 // HandlePublic registers a route anybody may call, signed in or not. CSRF-checked like every
 // route; authn.PrincipalFrom finds a signed-in caller and is nil for anyone else.
 func (k *Kit) HandlePublic(pattern string, fn api.HandlerFunc) {
-	k.Mux.Handle(pattern, k.Host.Open(fn))
+	k.Mux.HandleGuarded(pattern, k.Host.Open(fn))
 }
 
 // Drain waits for the modules' work in flight. Call it after the server has stopped taking requests.
@@ -143,6 +143,10 @@ func Assemble(ctx context.Context, k *Kit, modules ...Module) error {
 
 	if err := mountAll(ctx, k, mods); err != nil {
 		return err
+	}
+	// Mux.Handle mounts a route as it is; one an app meant to guard is open to anybody.
+	for _, route := range k.Mux.Unguarded() {
+		slog.WarnContext(ctx, "route has no guard: anyone may call it, with no CSRF check; mount it with kit.Handle, kit.HandleSignedIn or kit.HandlePublic", "route", route)
 	}
 	if err := startAll(ctx, k, mods); err != nil {
 		return err

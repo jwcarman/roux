@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -180,6 +181,8 @@ type Mux struct {
 	fallback http.Handler // serves everything outside /api/ that no route matched (the SPA)
 	kits     []*kitBase
 	roux     *Kit
+	// unguarded is the application routes mounted with Handle, not HandleGuarded.
+	unguarded []string
 }
 
 // NewMux returns a Mux with default mappings for the apperr sentinels.
@@ -217,10 +220,25 @@ func splitPattern(pattern string) (method, path string) {
 	return method, path
 }
 
-// Handle registers an application endpoint. The pattern must be "METHOD /api/..."
-// (Go 1.22 syntax, e.g. "GET /api/items/{id}") and must not be under /api/roux/,
-// which is reserved for the kit. Violations panic at startup.
+// Handle registers an application endpoint as it is: no sign-in, no permission, no CSRF check.
+// An application route almost always wants those, so mount it with app.Kit.Handle (or
+// HandleSignedIn, HandlePublic) instead, which guards it; a route mounted here is named in a
+// warning at startup (see Unguarded). The pattern must be "METHOD /api/..." (Go 1.22 syntax,
+// e.g. "GET /api/items/{id}") and must not be under /api/roux/, which is reserved for the kit.
+// Violations panic at startup.
 func (m *Mux) Handle(pattern string, h HandlerFunc) {
+	m.handle(pattern, h)
+	m.unguarded = append(m.unguarded, pattern)
+}
+
+// HandleGuarded is Handle for a handler that guards itself (app.Kit.Handle wraps one in
+// authn.Host.Guard and mounts it here): it is left out of Unguarded.
+func (m *Mux) HandleGuarded(pattern string, h HandlerFunc) { m.handle(pattern, h) }
+
+// Unguarded is every route mounted with Handle, in order: those no guard is known to wrap.
+func (m *Mux) Unguarded() []string { return slices.Clone(m.unguarded) }
+
+func (m *Mux) handle(pattern string, h HandlerFunc) {
 	method, path := splitPattern(pattern)
 	if !strings.HasPrefix(path, Prefix) {
 		panic(fmt.Sprintf("api: route %q must be under %s", pattern, Prefix))
@@ -233,7 +251,7 @@ func (m *Mux) Handle(pattern string, h HandlerFunc) {
 
 // HandleRoux registers an endpoint roux itself provides. The pattern names the whole
 // path, which must be under /api/roux/: HandleRoux("GET /api/roux/healthz", h). Only
-// roux's packages call this; applications use Handle.
+// roux's packages call this; applications use app.Kit.Handle.
 func (m *Mux) HandleRoux(pattern string, h HandlerFunc) {
 	method, path := splitPattern(pattern)
 	if !strings.HasPrefix(path, RouxPrefix) {
