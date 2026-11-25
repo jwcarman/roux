@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **A container image for every app.** The template has a `Dockerfile` (the front end built, then
+  embedded in a static server on distroless `nonroot`: no shell, not root, about 46 MB), a
+  `.dockerignore` and `make image`; a test keeps the build stages on pinned releases and the server
+  on distroless as nonroot.
 - **`pgdb.Rollback(ctx, tx)`,** to defer after `Begin`: it undoes a transaction that was not
   committed and logs a rollback that fails, so a deferred rollback needs no ignored error.
 - **Light and dark mode in roux-web.** `ColorModeProvider`, `ColorModeButton` and

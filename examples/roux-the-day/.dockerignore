@@ -1,0 +1,11 @@
+# What the image is not built from: installs, builds and reports, made afresh inside it.
+**/node_modules
+frontend/dist
+frontend/coverage
+frontend/reports
+frontend/.stryker-tmp
+bin
+*.out
+e2e/test-results
+e2e/playwright-report
+.env*

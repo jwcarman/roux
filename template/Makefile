@@ -3,7 +3,7 @@
 
 GOLANGCI_LINT ?= golangci-lint
 
-.PHONY: check fmt lint build web build-dev test vet clean
+.PHONY: check fmt lint build web build-dev image test vet clean
 
 check: fmt vet lint test
 
@@ -21,6 +21,9 @@ web: ## build the front end into frontend/dist
 
 build-dev: ## the server alone (bin/roux-app-dev); serves FRONTEND_DIR or a stand-in page; needs no Node
 	go build -o bin/roux-app-dev ./cmd/server
+
+image: ## the container image (Dockerfile): roux-app, from a clean build of the front end and server
+	docker build -t roux-app .
 
 test: ## the Go tests; database tests use TEST_DATABASE_URL, or a Postgres container each (Docker)
 	go test -coverpkg=./... -coverprofile=coverage.out ./...
