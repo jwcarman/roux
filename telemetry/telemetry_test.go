@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -116,20 +117,14 @@ func TestServerFaultsAreRecordedOnTheSpan(t *testing.T) {
 			if w.Code != 500 {
 				t.Fatalf("status %d", w.Code)
 			}
-			if strings.Contains(w.Body.String(), "exploded") || strings.Contains(w.Body.String(), "kaboom") {
+			if body := w.Body.String(); strings.Contains(body, "exploded") || strings.Contains(body, "kaboom") {
 				t.Fatalf("leaked: %s", w.Body)
 			}
 			span := only(t, rec)
 			if span.Status().Code != codes.Error {
 				t.Fatalf("status = %v", span.Status())
 			}
-			var recorded bool
-			for _, e := range span.Events() {
-				if e.Name == "exception" {
-					recorded = true
-				}
-			}
-			if !recorded {
+			if !slices.ContainsFunc(span.Events(), func(e sdktrace.Event) bool { return e.Name == "exception" }) {
 				t.Fatal("error not recorded as an exception event")
 			}
 		})

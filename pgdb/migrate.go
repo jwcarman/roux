@@ -77,7 +77,12 @@ type graph struct {
 	indegree map[string]int
 }
 
+// add records that second runs after first, when both are migrations that exist.
 func (g graph) add(first, second string) {
+	_, known := g.edges[first]
+	if _, alsoKnown := g.edges[second]; !known || !alsoKnown {
+		return // an optional dependency, on a migration that is not there
+	}
 	if !g.edges[first][second] {
 		g.edges[first][second] = true
 		g.indegree[second]++
@@ -99,14 +104,10 @@ func graphOf(byName map[string]Migration) (graph, error) {
 			return graph{}, fmt.Errorf("pgdb: migration %q cannot run before itself", m.Name)
 		}
 		for _, dep := range m.After {
-			if _, ok := byName[dep]; ok {
-				g.add(dep, m.Name)
-			}
+			g.add(dep, m.Name)
 		}
 		for _, dep := range m.Before {
-			if _, ok := byName[dep]; ok {
-				g.add(m.Name, dep)
-			}
+			g.add(m.Name, dep)
 		}
 	}
 	return g, nil

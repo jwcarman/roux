@@ -5,12 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -267,6 +269,15 @@ func (b *browser) signInWithCode(addr, code string) reply {
 	return b.post("/api/roux/auth/email/sign-in", map[string]string{"email": addr, "code": code})
 }
 
+// Want fails the test unless the status is the one wanted, as authntest.Reply's Want does.
+func (r reply) Want(t *testing.T, status int, what string) reply {
+	t.Helper()
+	if r.StatusCode != status {
+		t.Fatalf("%s: want %d, got %d %s", what, status, r.StatusCode, r.body)
+	}
+	return r
+}
+
 func (r reply) json(t *testing.T) map[string]any {
 	t.Helper()
 	var m map[string]any
@@ -347,6 +358,15 @@ func TestSendNeedsACSRFToken(t *testing.T) {
 	}
 }
 
+// cookieNamed is the cookie the reply sets under that name, or nil.
+func cookieNamed(r reply, name string) *http.Cookie {
+	cookies := r.Cookies()
+	if i := slices.IndexFunc(cookies, func(c *http.Cookie) bool { return c.Name == name }); i >= 0 {
+		return cookies[i]
+	}
+	return nil
+}
+
 func TestSignInByLink(t *testing.T) {
 	e := setup(t)
 	b := e.browser()
@@ -358,12 +378,7 @@ func TestSignInByLink(t *testing.T) {
 	if r.StatusCode != 200 || r.json(t)["identityId"] != e.ownerID.String() {
 		t.Fatalf("sign-in: %d %s", r.StatusCode, r.body)
 	}
-	var session *http.Cookie
-	for _, c := range r.Cookies() {
-		if c.Name == "SESSION" {
-			session = c
-		}
-	}
+	session := cookieNamed(r, "SESSION")
 	if session == nil || !session.HttpOnly || session.SameSite != http.SameSiteLaxMode || session.Path != "/" || len(session.Value) < 40 {
 		t.Fatalf("session cookie: %+v", session)
 	}
@@ -374,10 +389,7 @@ func TestSignInByLink(t *testing.T) {
 		t.Fatalf("the response set the XSRF-TOKEN cookie %d times, want once", n)
 	}
 
-	me := b.get("/api/roux/auth/me")
-	if me.StatusCode != 200 {
-		t.Fatalf("/api/roux/auth/me: %d %s", me.StatusCode, me.body)
-	}
+	me := b.get("/api/roux/auth/me").Want(t, 200, "/api/roux/auth/me")
 	body := me.json(t)
 	wantUntil := e.clock.Now().Add(10 * time.Minute).Format(time.RFC3339Nano)
 	if body["identityId"] != e.ownerID.String() || body["signInMethod"] != "email-link" || body["recentSignInUntil"] != wantUntil {
@@ -430,16 +442,12 @@ func TestACodeAllowsAFewGuessesThenBurns(t *testing.T) {
 	// The code is burnt: even the right one fails now...
 	e.browser().signInWithCode(owner, code).failedSignIn(t)
 	// ...but the link in the same email still works.
-	if r := e.browser().signInWithToken(tokenOf(t, msg)); r.StatusCode != 200 {
-		t.Fatalf("the link should still work: %d %s", r.StatusCode, r.body)
-	}
+	e.browser().signInWithToken(tokenOf(t, msg)).Want(t, 200, "the link should still work")
 
 	// A new request, after the resend interval, brings a fresh code with a fresh count.
 	e.clock.advance(61 * time.Second)
 	fresh := e.issueFor(b, owner)
-	if r := e.browser().signInWithCode(owner, codeOf(t, fresh)); r.StatusCode != 200 {
-		t.Fatalf("a fresh code should work: %d %s", r.StatusCode, r.body)
-	}
+	e.browser().signInWithCode(owner, codeOf(t, fresh)).Want(t, 200, "a fresh code should work")
 }
 
 // wrongCode returns a valid-looking code that is not the given one.
@@ -464,9 +472,7 @@ func TestResendIntervalAndReplacement(t *testing.T) {
 	first := e.issueFor(b, owner)
 
 	// Asked again inside the interval: still 202, but no new email.
-	if r := b.send(owner); r.StatusCode != 202 {
-		t.Fatalf("%d", r.StatusCode)
-	}
+	b.send(owner).Want(t, 202, "asking for a link")
 	if n := e.settle(); n != 1 {
 		t.Fatalf("%d emails sent within the resend interval, want 1", n)
 	}
@@ -476,9 +482,7 @@ func TestResendIntervalAndReplacement(t *testing.T) {
 	second := e.issueFor(b, owner)
 	e.browser().signInWithToken(tokenOf(t, first)).failedSignIn(t)
 	e.browser().signInWithCode(owner, codeOf(t, first)).failedSignIn(t)
-	if r := e.browser().signInWithToken(tokenOf(t, second)); r.StatusCode != 200 {
-		t.Fatalf("the newest link should work: %d", r.StatusCode)
-	}
+	e.browser().signInWithToken(tokenOf(t, second)).Want(t, 200, "the newest link should work")
 }
 
 func TestLinkAndCodeExpireTogether(t *testing.T) {
@@ -493,9 +497,7 @@ func TestLinkAndCodeExpireTogether(t *testing.T) {
 	e.clock.advance(time.Minute) // let the resend interval pass
 	fresh := e.issueFor(b, owner)
 	e.clock.advance(5*time.Minute - time.Second)
-	if r := e.browser().signInWithToken(tokenOf(t, fresh)); r.StatusCode != 200 {
-		t.Fatalf("a link just inside its lifetime should work: %d", r.StatusCode)
-	}
+	e.browser().signInWithToken(tokenOf(t, fresh)).Want(t, 200, "a link just inside its lifetime should work")
 }
 
 func TestEveryFailureLooksTheSame(t *testing.T) {
@@ -530,9 +532,7 @@ func TestEveryFailureLooksTheSame(t *testing.T) {
 	var disabledMsg emaillink.Message
 	{
 		before := e.settle()
-		if r := e.browser().send("disabled@example.test"); r.StatusCode != 202 {
-			t.Fatal(r.StatusCode)
-		}
+		e.browser().send("disabled@example.test").Want(t, 202, "send disabled@example.test")
 		disabledMsg = e.waitForMail(before + 1)[before]
 		if _, err := e.pool.Exec(context.Background(), `update roux_identity set status = 'DISABLED' where id = $1`, disabledID); err != nil {
 			t.Fatal(err)
@@ -563,9 +563,7 @@ func TestInactiveIdentitiesGetNoEmail(t *testing.T) {
 	if _, err := e.pool.Exec(context.Background(), `update roux_identity set status = 'DISABLED' where id = $1`, e.ownerID); err != nil {
 		t.Fatal(err)
 	}
-	if r := e.browser().send(owner); r.StatusCode != 202 {
-		t.Fatalf("%d", r.StatusCode)
-	}
+	e.browser().send(owner).Want(t, 202, "asking for a link")
 	if n := e.settle(); n != 0 {
 		t.Fatalf("an inactive identity was sent %d emails", n)
 	}
@@ -626,104 +624,94 @@ func TestLogoutEndsTheSession(t *testing.T) {
 	}
 }
 
-func TestSessionsAreCheckedAgainstTheDatabaseOnEveryRequest(t *testing.T) {
-	signedIn := func(e *env) *browser {
-		b := e.browser()
-		b.signInWithToken(tokenOf(t, e.issueFor(b, owner)))
-		if b.get("/api/roux/auth/me").StatusCode != 200 {
-			t.Fatal("not signed in")
-		}
-		return b
+// Sessions are checked against the database on every request.
+
+// signedIn is a browser the owner signed in with a link.
+func signedIn(t *testing.T, e *env) *browser {
+	t.Helper()
+	b := e.browser()
+	b.signInWithToken(tokenOf(t, e.issueFor(b, owner)))
+	b.get("/api/roux/auth/me").Want(t, 200, "signing in")
+	return b
+}
+
+// exec runs a statement against the test database.
+func (e *env) exec(t *testing.T, sql string, args ...any) {
+	t.Helper()
+	if _, err := e.pool.Exec(context.Background(), sql, args...); err != nil {
+		t.Fatal(err)
 	}
-	ctx := context.Background()
+}
 
-	t.Run("a disabled identity is out on the next request, for good", func(t *testing.T) {
-		e := setup(t)
-		b := signedIn(e)
-		if _, err := e.pool.Exec(ctx, `update roux_identity set status = 'DISABLED' where id = $1`, e.ownerID); err != nil {
-			t.Fatal(err)
-		}
-		if b.get("/api/roux/auth/me").StatusCode != 401 {
-			t.Fatal("a disabled identity kept its session")
-		}
-		if _, err := e.pool.Exec(ctx, `update roux_identity set status = 'ACTIVE' where id = $1`, e.ownerID); err != nil {
-			t.Fatal(err)
-		}
-		if b.get("/api/roux/auth/me").StatusCode != 401 {
-			t.Fatal("re-enabling the identity must not revive the dead session")
-		}
-	})
+// count runs a count(*) query against the test database.
+func (e *env) count(t *testing.T, sql string, args ...any) int {
+	t.Helper()
+	var n int
+	if err := e.pool.QueryRow(context.Background(), sql, args...).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
 
-	t.Run("a revoked credential ends the sessions it signed in", func(t *testing.T) {
-		e := setup(t)
-		b := signedIn(e)
-		if _, err := e.pool.Exec(ctx, `delete from roux_credential_identity`); err != nil {
-			t.Fatal(err)
-		}
-		if b.get("/api/roux/auth/me").StatusCode != 401 {
-			t.Fatal("a session outlived its credential")
-		}
-	})
+func TestADisabledIdentityIsOutOnTheNextRequestForGood(t *testing.T) {
+	e := setup(t)
+	b := signedIn(t, e)
+	e.exec(t, `update roux_identity set status = 'DISABLED' where id = $1`, e.ownerID)
+	b.get("/api/roux/auth/me").Want(t, 401, "a disabled identity kept its session")
+	e.exec(t, `update roux_identity set status = 'ACTIVE' where id = $1`, e.ownerID)
+	b.get("/api/roux/auth/me").Want(t, 401, "re-enabling the identity must not revive the dead session")
+}
 
-	t.Run("sessions expire when idle, and use keeps them alive", func(t *testing.T) {
-		e := setup(t)
-		b := signedIn(e)
-		for i := 0; i < 3; i++ { // each request is 20 minutes after the last: never idle for 30
-			e.clock.advance(20 * time.Minute)
-			if b.get("/api/roux/auth/me").StatusCode != 200 {
-				t.Fatalf("session ended after %d active steps", i)
-			}
-		}
-		e.clock.advance(31 * time.Minute)
-		if b.get("/api/roux/auth/me").StatusCode != 401 {
-			t.Fatal("an idle session should have ended")
-		}
-	})
+func TestARevokedCredentialEndsTheSessionsItSignedIn(t *testing.T) {
+	e := setup(t)
+	b := signedIn(t, e)
+	e.exec(t, `delete from roux_credential_identity`)
+	b.get("/api/roux/auth/me").Want(t, 401, "a session outlived its credential")
+}
 
-	t.Run("signing in again replaces this browser's session, and a planted cookie is worthless", func(t *testing.T) {
-		e := setup(t)
-		b := e.browser()
-		b.setCookie("SESSION", "planted-by-an-attacker")
-		b.signInWithToken(tokenOf(t, e.issueFor(b, owner)))
-		first := b.cookie("SESSION")
-		if first == "planted-by-an-attacker" || first == "" {
-			t.Fatalf("sign-in must issue a fresh session cookie, got %q", first)
-		}
-		planted := e.browser()
-		planted.setCookie("SESSION", "planted-by-an-attacker")
-		if planted.get("/api/roux/auth/me").StatusCode != 401 {
-			t.Fatal("a planted cookie authenticated")
-		}
+func TestSessionsExpireWhenIdleAndUseKeepsThemAlive(t *testing.T) {
+	e := setup(t)
+	b := signedIn(t, e)
+	for i := range 3 { // each request is 20 minutes after the last: never idle for 30
+		e.clock.advance(20 * time.Minute)
+		b.get("/api/roux/auth/me").Want(t, 200, fmt.Sprintf("after %d active steps", i))
+	}
+	e.clock.advance(31 * time.Minute)
+	b.get("/api/roux/auth/me").Want(t, 401, "an idle session should have ended")
+}
 
-		e.clock.advance(61 * time.Second)
-		b.signInWithToken(tokenOf(t, e.issueFor(b, owner)))
-		if b.cookie("SESSION") == first {
-			t.Fatal("a second sign-in must rotate the session cookie")
-		}
-		old := e.browser()
-		old.setCookie("SESSION", first)
-		if old.get("/api/roux/auth/me").StatusCode != 401 {
-			t.Fatal("the session this browser had before signing in again must be ended")
-		}
-	})
+func TestSigningInAgainReplacesThisBrowsersSessionAndAPlantedCookieIsWorthless(t *testing.T) {
+	e := setup(t)
+	b := e.browser()
+	b.setCookie("SESSION", "planted-by-an-attacker")
+	b.signInWithToken(tokenOf(t, e.issueFor(b, owner)))
+	first := b.cookie("SESSION")
+	if first == "planted-by-an-attacker" || first == "" {
+		t.Fatalf("sign-in must issue a fresh session cookie, got %q", first)
+	}
+	planted := e.browser()
+	planted.setCookie("SESSION", "planted-by-an-attacker")
+	planted.get("/api/roux/auth/me").Want(t, 401, "a planted cookie authenticated")
 
-	t.Run("the cookie is never stored", func(t *testing.T) {
-		e := setup(t)
-		b := signedIn(e)
-		var n int
-		if err := e.pool.QueryRow(ctx, `select count(*) from roux_session where token_hash = $1`, b.cookie("SESSION")).Scan(&n); err != nil {
-			t.Fatal(err)
-		}
-		if n != 0 {
-			t.Fatal("the raw cookie value is in the database")
-		}
-		if err := e.pool.QueryRow(ctx, `select count(*) from roux_session where length(token_hash) = 64`).Scan(&n); err != nil {
-			t.Fatal(err)
-		}
-		if n != 1 {
-			t.Fatal("only its SHA-256 should be stored")
-		}
-	})
+	e.clock.advance(61 * time.Second)
+	b.signInWithToken(tokenOf(t, e.issueFor(b, owner)))
+	if b.cookie("SESSION") == first {
+		t.Fatal("a second sign-in must rotate the session cookie")
+	}
+	old := e.browser()
+	old.setCookie("SESSION", first)
+	old.get("/api/roux/auth/me").Want(t, 401, "the session this browser had before signing in again must be ended")
+}
+
+func TestTheSessionCookieIsNeverStored(t *testing.T) {
+	e := setup(t)
+	b := signedIn(t, e)
+	if e.count(t, `select count(*) from roux_session where token_hash = $1`, b.cookie("SESSION")) != 0 {
+		t.Fatal("the raw cookie value is in the database")
+	}
+	if e.count(t, `select count(*) from roux_session where length(token_hash) = 64`) != 1 {
+		t.Fatal("only its SHA-256 should be stored")
+	}
 }
 
 func TestNothingSecretIsStoredInTheClear(t *testing.T) {

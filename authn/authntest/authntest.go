@@ -177,6 +177,16 @@ type Reply struct {
 	Body []byte
 }
 
+// Want fails the test, naming what was asked and showing the answer, unless the status is the
+// one wanted; it returns the reply for the checks that follow.
+func (r Reply) Want(t *testing.T, status int, what string) Reply {
+	t.Helper()
+	if r.StatusCode != status {
+		t.Fatalf("%s: want %d, got %d %s", what, status, r.StatusCode, r.Body)
+	}
+	return r
+}
+
 // JSON decodes the body into a map.
 func (r Reply) JSON(t *testing.T) map[string]any {
 	t.Helper()

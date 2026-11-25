@@ -2,6 +2,7 @@ package oidc_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -379,9 +380,7 @@ func TestAPendingSignUpExpires(t *testing.T) {
 	if r := b.Get("/api/roux/auth/oidc/pending"); r.StatusCode != 404 || problemCode(t, r) != "no-pending-sign-up" {
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
 	}
-	if r := b.Post("/api/roux/auth/oidc/pending/sign-up", nil); r.StatusCode != 404 {
-		t.Fatalf("an expired sign-up: %d", r.StatusCode)
-	}
+	b.Post("/api/roux/auth/oidc/pending/sign-up", nil).Want(t, 404, "an expired sign-up")
 	if e.count(`select count(*) from roux_identity`) != 0 {
 		t.Fatal("an expired sign-up created an identity")
 	}
@@ -411,11 +410,10 @@ func TestSomeoneSignedInCannotSignUpAndAPlainSignInNeverLinks(t *testing.T) {
 	}
 }
 
-func TestLinkingAnAccount(t *testing.T) {
+func TestStartingALinkNeedsASignedInBrowserAndAProviderThatExists(t *testing.T) {
 	e := setup(t)
-	id, ada := e.signUp("test", "u1", nil)
+	_, ada := e.signUp("test", "u1", nil)
 
-	// Starting needs a browser signed in, in a recent sign-in, and a provider that exists.
 	if r := e.Browser().Post("/api/roux/auth/me/accounts/gh", nil); r.StatusCode != 401 || problemCode(t, r) != "not-signed-in" {
 		t.Fatalf("signed out: %d", r.StatusCode)
 	}
@@ -427,24 +425,35 @@ func TestLinkingAnAccount(t *testing.T) {
 	if target, _ := r.JSON(t)["redirectUrl"].(string); r.StatusCode != 200 || !strings.HasPrefix(target, e.prov.Issuer()+"/authorize?") {
 		t.Fatalf("json start: %d %s", r.StatusCode, r.Body)
 	}
+}
 
-	// The flow: provider, callback, then the page confirms.
+// linkOctocat takes the browser through linking GitHub's octocat account: the provider, the
+// callback, then the page confirming. It returns the new credential's id.
+func (e *env) linkOctocat(t *testing.T, b *authntest.Browser) string {
+	t.Helper()
 	e.user("4242", map[string]any{"login": "octocat"})
-	if got := e.linkWith(ada, "gh"); got != "/?pending=link" {
+	if got := e.linkWith(b, "gh"); got != "/?pending=link" {
 		t.Fatalf("lands at %q", got)
 	}
-	body := ada.Get("/api/roux/auth/oidc/pending").JSON(t)
+	body := b.Get("/api/roux/auth/oidc/pending").JSON(t)
 	if body["provider"] != "gh" || body["displayName"] != "octocat" || body["canLink"] != true || body["canSignUp"] != false {
 		t.Fatalf("pending: %v", body)
 	}
 	if e.count(`select count(*) from roux_federated_credential`) != 1 {
 		t.Fatal("the account was linked before the person confirmed")
 	}
-	r = ada.Post("/api/roux/auth/oidc/pending/link", nil)
-	credID, _ := r.JSON(t)["credentialId"].(string)
-	if r.StatusCode != 200 || credID == "" {
-		t.Fatalf("confirm: %d %s", r.StatusCode, r.Body)
+	credID, _ := b.Post("/api/roux/auth/oidc/pending/link", nil).Want(t, 200, "confirm").JSON(t)["credentialId"].(string)
+	if credID == "" {
+		t.Fatal("confirming named no credential")
 	}
+	return credID
+}
+
+func TestLinkingAnAccount(t *testing.T) {
+	e := setup(t)
+	id, ada := e.signUp("test", "u1", nil)
+	credID := e.linkOctocat(t, ada)
+
 	// It is listed, counted and signs in as the same identity.
 	var list []map[string]any
 	ada.Get("/api/roux/auth/me/accounts").Decode(t, &list)
@@ -460,16 +469,24 @@ func TestLinkingAnAccount(t *testing.T) {
 		t.Fatalf("signing in with the linked account lands at %q", got)
 	}
 	// The spent pending cannot be used again.
-	if r := ada.Post("/api/roux/auth/oidc/pending/link", nil); r.StatusCode != 404 {
-		t.Fatalf("a spent link: %d", r.StatusCode)
+	ada.Post("/api/roux/auth/oidc/pending/link", nil).Want(t, 404, "a spent link")
+}
+
+func TestLinkingAnAccountYouAlreadyHaveChangesNothing(t *testing.T) {
+	e := setup(t)
+	_, ada := e.signUp("test", "u1", nil)
+	e.linkOctocat(t, ada)
+	e.user("4242", map[string]any{"login": "octocat"})
+	if got := e.signInWith(e.Browser(), "gh"); got != "/" {
+		t.Fatalf("signing in with the linked account lands at %q", got)
 	}
-	// Linking an account the identity already has changes nothing and is not a sign-in.
+
 	before := ada.Cookie("SESSION")
 	if got := e.linkWith(ada, "gh"); got != "/" {
 		t.Fatalf("already yours lands at %q", got)
 	}
 	if ada.Cookie("SESSION") != before || e.count(`select count(*) from roux_federated_credential`) != 2 {
-		t.Fatal("linking an account you have changed something")
+		t.Fatal("linking an account you have changed something, or was a sign-in")
 	}
 	// A link asks the provider to show which account it is linking; a plain sign-in does not.
 	last := e.prov.Seen[len(e.prov.Seen)-1]
@@ -566,12 +583,8 @@ func TestAPendingLinkIsSeenOnlyByTheIdentityThatAsked(t *testing.T) {
 	e.user("4242", nil)
 	e.linkWith(ada, "gh")
 	bob.SetCookie("OIDC_PENDING", ada.Cookie("OIDC_PENDING"))
-	if r := bob.Get("/api/roux/auth/oidc/pending"); r.StatusCode != 404 {
-		t.Fatalf("bob saw ada's pending link: %d %s", r.StatusCode, r.Body)
-	}
-	if r := bob.Post("/api/roux/auth/oidc/pending/link", nil); r.StatusCode != 404 {
-		t.Fatalf("bob confirmed ada's link: %d", r.StatusCode)
-	}
+	bob.Get("/api/roux/auth/oidc/pending").Want(t, 404, "bob saw ada's pending link")
+	bob.Post("/api/roux/auth/oidc/pending/link", nil).Want(t, 404, "bob confirmed ada's link")
 	if r := e.Browser().Post("/api/roux/auth/oidc/pending/link", nil); r.StatusCode != 401 || problemCode(t, r) != "not-signed-in" {
 		t.Fatalf("signed out: %d", r.StatusCode)
 	}
@@ -580,9 +593,7 @@ func TestAPendingLinkIsSeenOnlyByTheIdentityThatAsked(t *testing.T) {
 	other := e.Browser()
 	e.signInWith(other, "test")
 	other.SetCookie("SESSION", ada.Cookie("SESSION"))
-	if r := other.Post("/api/roux/auth/oidc/pending/link", nil); r.StatusCode != 404 {
-		t.Fatalf("a sign-up used to link: %d", r.StatusCode)
-	}
+	other.Post("/api/roux/auth/oidc/pending/link", nil).Want(t, 404, "a sign-up used to link")
 }
 
 func TestAnAccountOfAnotherIdentityCannotBeLinked(t *testing.T) {
@@ -610,9 +621,7 @@ func TestAnAccountOfAnotherIdentityCannotBeLinked(t *testing.T) {
 	_ = carlID
 	e.user("u3", nil)
 	e.linkWith(carl, "gh")
-	if r := ada.Post("/api/roux/auth/oidc/pending/link", nil); r.StatusCode != 200 {
-		t.Fatalf("first: %d %s", r.StatusCode, r.Body)
-	}
+	ada.Post("/api/roux/auth/oidc/pending/link", nil).Want(t, 200, "first")
 	if r := carl.Post("/api/roux/auth/oidc/pending/link", nil); r.StatusCode != 409 || problemCode(t, r) != "already-linked" {
 		t.Fatalf("second: %d %s", r.StatusCode, r.Body)
 	}
@@ -691,9 +700,7 @@ func TestUnlinkingNeedsARecentSignInAndEndsSessionsSignedInWithIt(t *testing.T) 
 		t.Fatal("not signed in")
 	}
 	e.clock.Advance(5 * time.Minute)
-	if r := ada.Delete("/api/roux/auth/me/accounts/" + ghID); r.StatusCode != 204 {
-		t.Fatalf("%d %s", r.StatusCode, r.Body)
-	}
+	ada.Delete("/api/roux/auth/me/accounts/"+ghID).Want(t, 204, "DELETE /api/roux/auth/me/accounts/")
 	if viaGH.Get("/api/roux/auth/me").StatusCode != 401 {
 		t.Fatal("a session signed in with the unlinked account lives on")
 	}
@@ -851,35 +858,38 @@ func TestALinkWindowShorterThanTheFlowIsHonored(t *testing.T) {
 	}
 }
 
+// cookiesSet records, by name, whether each cookie a reply sets is Secure, and fails the test for
+// one that script could read (only XSRF-TOKEN is meant to be).
+func cookiesSet(t *testing.T, seen map[string]bool, r authntest.Reply) {
+	t.Helper()
+	for _, c := range r.Cookies() {
+		if c.MaxAge >= 0 || c.Value != "" { // a cookie being set, not cleared
+			seen[c.Name] = c.Secure
+		}
+		if !c.HttpOnly && c.Name != "XSRF-TOKEN" {
+			t.Errorf("%s is readable by script", c.Name)
+		}
+	}
+}
+
 func TestEveryCookieIsSecureWhenConfiguredEvenOverPlainHTTP(t *testing.T) {
 	for _, secure := range []bool{false, true} {
-		e := build(t, secure)
-		e.policy.open()
-		e.user("u1", nil)
-		b := e.Browser()
-		seen := map[string]bool{}
-		note := func(r authntest.Reply) {
-			for _, c := range r.Cookies() {
-				if c.MaxAge >= 0 || c.Value != "" { // a cookie being set, not cleared
-					seen[c.Name] = c.Secure
-				}
-				if !c.HttpOnly && c.Name != "XSRF-TOKEN" {
-					t.Errorf("secure=%v: %s is readable by script", secure, c.Name)
+		t.Run(fmt.Sprintf("secure=%v", secure), func(t *testing.T) {
+			e := build(t, secure)
+			e.policy.open()
+			e.user("u1", nil)
+			b := e.Browser()
+			seen := map[string]bool{}
+			start := b.Get("/api/roux/auth/oidc/authorize/test")
+			cookiesSet(t, seen, start)
+			callback, _ := url.Parse(e.prov.Authorize(t, start.Header.Get("Location")))
+			cookiesSet(t, seen, b.Get(callback.RequestURI()))                       // sets OIDC_PENDING
+			cookiesSet(t, seen, b.Post("/api/roux/auth/oidc/pending/sign-up", nil)) // sets SESSION and a new XSRF-TOKEN
+			for _, name := range []string{"OIDC_FLOW", "OIDC_PENDING", "SESSION", "XSRF-TOKEN"} {
+				if got, ok := seen[name]; !ok || got != secure {
+					t.Errorf("%s: set %v, Secure=%v", name, ok, got)
 				}
 			}
-		}
-		start := b.Get("/api/roux/auth/oidc/authorize/test")
-		note(start)
-		callback, _ := url.Parse(e.prov.Authorize(t, start.Header.Get("Location")))
-		note(b.Get(callback.RequestURI()))                       // sets OIDC_PENDING
-		note(b.Post("/api/roux/auth/oidc/pending/sign-up", nil)) // sets SESSION and a new XSRF-TOKEN
-		for _, name := range []string{"OIDC_FLOW", "OIDC_PENDING", "SESSION", "XSRF-TOKEN"} {
-			got, ok := seen[name]
-			if !ok {
-				t.Errorf("secure=%v: %s was never set", secure, name)
-			} else if got != secure {
-				t.Errorf("configured secure=%v, but %s has Secure=%v", secure, name, got)
-			}
-		}
+		})
 	}
 }

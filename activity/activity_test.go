@@ -172,8 +172,8 @@ func TestActorsAreNamedFromTheirPrincipalAndTheirNames(t *testing.T) {
 	pool := setup(t)
 	ctx, id := context.Background(), uuid.New()
 	known, nameless := uuid.New(), uuid.New()
-	as := func(who_ uuid.UUID) context.Context {
-		return authn.WithPrincipal(ctx, &authn.Principal{IdentityID: who_})
+	as := func(actor uuid.UUID) context.Context {
+		return authn.WithPrincipal(ctx, &authn.Principal{IdentityID: actor})
 	}
 
 	if err := activity.Append(as(known), pool, t0, id, created{}); err != nil {

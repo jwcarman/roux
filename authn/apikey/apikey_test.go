@@ -66,7 +66,7 @@ func (e *env) call(method, path, key string) authntest.Reply {
 func code(t *testing.T, r authntest.Reply) string { t.Helper(); return r.JSON(t)["code"].(string) }
 
 // make creates a key as the owner and returns its id and secret.
-func (e *env) make(name string, lifetime string, scopes ...string) (id, key string) {
+func (e *env) make(name, lifetime string, scopes ...string) (id, key string) {
 	e.t.Helper()
 	r := e.ada.Post("/api/roux/auth/me/api-keys", map[string]any{"name": name, "lifetime": lifetime, "scopes": scopes})
 	if r.StatusCode != 201 {
@@ -159,9 +159,7 @@ func TestAKeySignsARequestIn(t *testing.T) {
 		t.Fatal("a key's sign-in made a session or a cookie")
 	}
 	// The header name is the configured one, case-insensitively as HTTP says.
-	if r := e.Browser().DoWith("GET", "/api/whoami", map[string]string{"x-api-key": key}); r.StatusCode != 200 {
-		t.Fatalf("lower-case header: %d", r.StatusCode)
-	}
+	e.Browser().DoWith("GET", "/api/whoami", map[string]string{"x-api-key": key}).Want(t, 200, "lower-case header")
 	// It signs in /api/roux/auth/me too, as a key.
 	if r := e.call("GET", "/api/roux/auth/me", key); r.StatusCode != 200 || r.JSON(t)["signInMethod"] != "api-key" {
 		t.Fatalf("/api/roux/auth/me: %d %s", r.StatusCode, r.Body)
@@ -179,9 +177,7 @@ func TestAKeyOnlyHoldsWhatItsOwnerHoldsNow(t *testing.T) {
 		`delete from roux_role_permission where permission = 'report.read' and role_id in (select role_id from roux_identity_role where identity_id = $1)`, e.owner); err != nil {
 		t.Fatal(err)
 	}
-	if r := e.call("GET", "/api/report", key); r.StatusCode != 403 {
-		t.Fatalf("a permission the owner lost: %d %s", r.StatusCode, r.Body)
-	}
+	e.call("GET", "/api/report", key).Want(t, 403, "a permission the owner lost")
 	// It still signs in, with what is left.
 	r := e.call("GET", "/api/whoami", key)
 	if perms := r.JSON(t)["permissions"].([]any); r.StatusCode != 200 || len(perms) != 1 || perms[0] != "report.write" {
@@ -197,23 +193,23 @@ func TestAKeyOnlyHoldsWhatItsOwnerHoldsNow(t *testing.T) {
 	}
 }
 
+// flip changes the character at a position, to another the key alphabet holds.
+func flip(s string, at int) string {
+	b := []byte(s)
+	if b[at] == 'a' {
+		b[at] = 'b'
+	} else {
+		b[at] = 'a'
+	}
+	return string(b)
+}
+
 func TestAKeyThatIsNotRightIsRefusedAtOnce(t *testing.T) {
 	e := setup(t)
-	id, key := e.make("ci", "P30D", "report.read")
-	flip := func(s string, at int) string {
-		b := []byte(s)
-		if b[at] == 'a' {
-			b[at] = 'b'
-		} else {
-			b[at] = 'a'
-		}
-		return string(b)
-	}
+	_, key := e.make("ci", "P30D", "report.read")
 	// Revoked, expired and inactive-owner keys are each refused.
 	revoked, revokedKey := e.make("old", "P30D", "report.read")
-	if r := e.ada.Delete("/api/roux/auth/me/api-keys/" + revoked); r.StatusCode != 204 {
-		t.Fatal(r.StatusCode)
-	}
+	e.ada.Delete("/api/roux/auth/me/api-keys/"+revoked).Want(t, 204, "revoking")
 	_, shortKey := e.make("short", "PT1H", "report.read")
 
 	for name, k := range map[string]string{
@@ -240,19 +236,12 @@ func TestAKeyThatIsNotRightIsRefusedAtOnce(t *testing.T) {
 	}
 
 	e.Clock.Advance(61 * time.Minute)
-	if r := e.call("GET", "/api/whoami", shortKey); r.StatusCode != 401 {
-		t.Fatalf("an expired key: %d", r.StatusCode)
-	}
-	if r := e.call("GET", "/api/whoami", key); r.StatusCode != 200 {
-		t.Fatalf("a key that has not expired: %d", r.StatusCode)
-	}
+	e.call("GET", "/api/whoami", shortKey).Want(t, 401, "an expired key")
+	e.call("GET", "/api/whoami", key).Want(t, 200, "a key that has not expired")
 	if _, err := e.Pool.Exec(context.Background(), `update roux_identity set status = 'DEACTIVATED' where id = $1`, e.owner); err != nil {
 		t.Fatal(err)
 	}
-	if r := e.call("GET", "/api/whoami", key); r.StatusCode != 401 {
-		t.Fatalf("a key of an inactive identity: %d", r.StatusCode)
-	}
-	_ = id
+	e.call("GET", "/api/whoami", key).Want(t, 401, "a key of an inactive identity")
 
 	// A blank header is not a key: the request goes on as it was.
 	r := e.Browser().DoWith("GET", "/api/open", map[string]string{"X-API-Key": ""})
@@ -273,8 +262,14 @@ func TestASessionIgnoresAKeyBesideIt(t *testing.T) {
 		t.Fatalf("a session with a key beside it keeps its CSRF check: %d %s", r.StatusCode, r.Body)
 	}
 	// Even a wrong key beside a good session is ignored: the session decided.
-	if r := e.ada.DoWith("GET", "/api/whoami", withKey("garbage")); r.StatusCode != 200 {
-		t.Fatalf("%d", r.StatusCode)
+	e.ada.DoWith("GET", "/api/whoami", withKey("garbage")).Want(t, 200, "GET /api/whoami")
+}
+
+// wantProblem reports, and goes on, unless the reply is the status and the problem code wanted.
+func wantProblem(t *testing.T, r authntest.Reply, status int, problem, what string) {
+	t.Helper()
+	if r.StatusCode != status || code(t, r) != problem {
+		t.Errorf("%s: want %d %s, got %d %s", what, status, problem, r.StatusCode, r.Body)
 	}
 }
 
@@ -285,39 +280,30 @@ func TestAKeyNeverManagesKeys(t *testing.T) {
 		{"GET", "/api/roux/auth/me/api-keys"}, {"POST", "/api/roux/auth/me/api-keys"},
 		{"POST", "/api/roux/auth/me/api-keys/" + id + "/rotations"}, {"DELETE", "/api/roux/auth/me/api-keys/" + id},
 	} {
-		r := e.call(c.method, c.path, key)
-		if r.StatusCode != 403 || code(t, r) != "api-key-cannot-manage-keys" {
-			t.Errorf("%s %s: %d %s", c.method, c.path, r.StatusCode, r.Body)
-		}
+		wantProblem(t, e.call(c.method, c.path, key), 403, "api-key-cannot-manage-keys", c.method+" "+c.path)
 	}
 	if e.count(`select count(*) from roux_api_key`) != 1 {
 		t.Fatal("a key managed keys")
 	}
 	// Nor anything else under /api/roux/auth/me/* that only a person at a browser may do.
-	for _, path := range []string{"/api/roux/auth/me/sessions"} {
-		if r := e.call("GET", path, key); r.StatusCode != 403 || code(t, r) != "browser-session-required" {
-			t.Errorf("%s: %d %s", path, r.StatusCode, r.Body)
-		}
-	}
+	wantProblem(t, e.call("GET", "/api/roux/auth/me/sessions", key), 403, "browser-session-required", "sessions")
 	// A key beside a session cookie is refused too: send the cookie alone.
 	for _, path := range []string{"/api/roux/auth/me/api-keys", "/api/roux/auth/me/sessions"} {
-		if r := e.ada.DoWith("GET", path, withKey(key)); r.StatusCode != 403 || code(t, r) != "browser-session-required" {
-			t.Errorf("%s with a key beside the cookie: %d %s", path, r.StatusCode, r.Body)
-		}
+		wantProblem(t, e.ada.DoWith("GET", path, withKey(key)), 403, "browser-session-required", path+" with a key beside the cookie")
 	}
-	// The one thing a key may do is read itself.
+}
+
+func TestTheOneThingAKeyMayDoIsReadItself(t *testing.T) {
+	e := setup(t)
+	id, key := e.make("ci", "P30D", "report.read")
 	r := e.call("GET", "/api/roux/auth/me/api-keys/current", key)
 	b := r.JSON(t)
 	if r.StatusCode != 200 || b["id"] != id || b["name"] != "ci" || b["key"] != nil || b["lastUsedAt"] == nil {
 		t.Fatalf("current: %d %s", r.StatusCode, r.Body)
 	}
 	// Without a key it is 404, signed out 401.
-	if r := e.ada.Get("/api/roux/auth/me/api-keys/current"); r.StatusCode != 404 || code(t, r) != "api-key-not-found" {
-		t.Fatalf("a session: %d %s", r.StatusCode, r.Body)
-	}
-	if r := e.Browser().Get("/api/roux/auth/me/api-keys/current"); r.StatusCode != 401 || code(t, r) != "not-signed-in" {
-		t.Fatalf("signed out: %d", r.StatusCode)
-	}
+	wantProblem(t, e.ada.Get("/api/roux/auth/me/api-keys/current"), 404, "api-key-not-found", "a session")
+	wantProblem(t, e.Browser().Get("/api/roux/auth/me/api-keys/current"), 401, "not-signed-in", "signed out")
 }
 
 func TestMakingAKeyIsChecked(t *testing.T) {
@@ -363,9 +349,7 @@ func TestMakingAKeyIsChecked(t *testing.T) {
 		}
 	}
 	// Unknown members are ignored, as roux's endpoints do.
-	if r := post(with("extra", true)); r.StatusCode != 201 {
-		t.Fatalf("%d %s", r.StatusCode, r.Body)
-	}
+	post(with("extra", true)).Want(t, 201, "an unknown field is ignored")
 }
 
 func TestMakingOrRotatingNeedsASessionThatIsRecent(t *testing.T) {
@@ -381,12 +365,8 @@ func TestMakingOrRotatingNeedsASessionThatIsRecent(t *testing.T) {
 		}
 	}
 	// Listing and revoking need no recent sign-in; signed out is 401 everywhere.
-	if r := e.ada.Get("/api/roux/auth/me/api-keys"); r.StatusCode != 200 {
-		t.Fatalf("list: %d", r.StatusCode)
-	}
-	if r := e.ada.Delete("/api/roux/auth/me/api-keys/" + id); r.StatusCode != 204 {
-		t.Fatalf("revoke: %d", r.StatusCode)
-	}
+	e.ada.Get("/api/roux/auth/me/api-keys").Want(t, 200, "list")
+	e.ada.Delete("/api/roux/auth/me/api-keys/"+id).Want(t, 204, "revoke")
 	out := e.Browser()
 	for _, c := range []struct{ method, path string }{
 		{"GET", "/api/roux/auth/me/api-keys"}, {"POST", "/api/roux/auth/me/api-keys"}, {"POST", "/api/roux/auth/me/api-keys/" + id + "/rotations"}, {"DELETE", "/api/roux/auth/me/api-keys/" + id},
@@ -527,9 +507,7 @@ func TestRevokingAKey(t *testing.T) {
 	if e.call("GET", "/api/whoami", keep).StatusCode != 200 {
 		t.Fatal("revoking one key ended another")
 	}
-	if r := e.ada.Delete("/api/roux/auth/me/api-keys/" + id); r.StatusCode != 404 {
-		t.Fatalf("revoking twice: %d", r.StatusCode)
-	}
+	e.ada.Delete("/api/roux/auth/me/api-keys/"+id).Want(t, 404, "revoking twice")
 }
 
 func TestLastUsedIsWrittenOncePerInterval(t *testing.T) {
@@ -598,12 +576,8 @@ func TestTheConfigurationIsChecked(t *testing.T) {
 	if !strings.HasPrefix(key, "acme_") {
 		t.Fatal(key)
 	}
-	if r := e.Browser().DoWith("GET", "/api/whoami", map[string]string{"X-Token": key}); r.StatusCode != 200 {
-		t.Fatalf("%d", r.StatusCode)
-	}
-	if r := e.call("GET", "/api/whoami", key); r.StatusCode != 401 {
-		t.Fatalf("the default header should carry no key when another is configured: %d", r.StatusCode)
-	}
+	e.Browser().DoWith("GET", "/api/whoami", map[string]string{"X-Token": key}).Want(t, 200, "GET /api/whoami")
+	e.call("GET", "/api/whoami", key).Want(t, 401, "the default header should carry no key when another is configured")
 }
 
 // unknownKey is a key with the right shape and checksum that nobody made: make one, then delete it.

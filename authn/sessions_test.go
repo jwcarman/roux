@@ -113,6 +113,18 @@ func TestListingMySessions(t *testing.T) {
 	}
 }
 
+// otherSession is the id of a session of the browser's identity other than its own.
+func otherSession(t *testing.T, b *authntest.Browser) string {
+	t.Helper()
+	for _, s := range sessionList(t, b) {
+		if s["current"] == false {
+			return s["id"].(string)
+		}
+	}
+	t.Fatal("no other session")
+	return ""
+}
+
 func TestEndingASession(t *testing.T) {
 	env := authntest.New(t, "authn_sessions_end")
 	env.Serve()
@@ -120,15 +132,7 @@ func TestEndingASession(t *testing.T) {
 	laptop := signedInAs(t, env, id, firefoxMac)
 	phone := signedInAs(t, env, id, edgeWin)
 	stranger := signedInAs(t, env, other, "x")
-	phoneID := func() string {
-		for _, s := range sessionList(t, laptop) {
-			if s["current"] == false {
-				return s["id"].(string)
-			}
-		}
-		t.Fatal("no other session")
-		return ""
-	}()
+	phoneID := otherSession(t, laptop)
 	strangerID := sessionList(t, stranger)[0]["id"].(string)
 
 	// Ending a session that is not mine: the same 404 for someone else's, unknown and malformed.
@@ -138,9 +142,7 @@ func TestEndingASession(t *testing.T) {
 			t.Errorf("%s: %d %s", name, r.StatusCode, r.Body)
 		}
 	}
-	if stranger.Get("/api/roux/auth/me").StatusCode != 200 {
-		t.Fatal("someone else's session was ended")
-	}
+	stranger.Get("/api/roux/auth/me").Want(t, 200, "someone else's session was ended")
 
 	// Ending another of my sessions needs a recent sign-in; the id is checked first, so a
 	// stale session learns nothing from the error: an id that is not mine is still a 404.
@@ -148,21 +150,15 @@ func TestEndingASession(t *testing.T) {
 	if r := laptop.Delete("/api/roux/auth/me/sessions/" + phoneID); r.StatusCode != 401 || r.JSON(t)["code"] != "reauthentication-required" {
 		t.Fatalf("stale, mine: %d %s", r.StatusCode, r.Body)
 	}
-	if r := laptop.Delete("/api/roux/auth/me/sessions/" + strangerID); r.StatusCode != 404 {
-		t.Fatalf("stale, not mine: %d (the id is checked before the age of the sign-in)", r.StatusCode)
-	}
-	if phone.Get("/api/roux/auth/me").StatusCode != 200 {
-		t.Fatal("a refused request ended a session")
-	}
+	laptop.Delete("/api/roux/auth/me/sessions/"+strangerID).Want(t, 404, "stale, not mine")
+	phone.Get("/api/roux/auth/me").Want(t, 200, "a refused request ended a session")
 
 	// Signed in again, it works, and the phone is out.
 	fresh := signedInAs(t, env, id, firefoxMac)
-	if r := fresh.Delete("/api/roux/auth/me/sessions/" + phoneID); r.StatusCode != 204 || len(r.Body) != 0 {
-		t.Fatalf("%d %s", r.StatusCode, r.Body)
+	if r := fresh.Delete("/api/roux/auth/me/sessions/"+phoneID).Want(t, 204, "ending the phone's session"); len(r.Body) != 0 {
+		t.Fatalf("ending a session answered %s", r.Body)
 	}
-	if phone.Get("/api/roux/auth/me").StatusCode != 401 {
-		t.Fatal("the phone is still signed in")
-	}
+	phone.Get("/api/roux/auth/me").Want(t, 401, "the phone is still signed in")
 }
 
 func TestSigningOutThisBrowserThroughTheSessionList(t *testing.T) {

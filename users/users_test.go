@@ -38,42 +38,54 @@ func errorsOf(t *testing.T, r authntest.Reply) map[string]string {
 	return out
 }
 
+// wantDetail fails the test unless the reply is the status and the problem detail wanted.
+func wantDetail(t *testing.T, r authntest.Reply, status int, detail, what string) {
+	t.Helper()
+	if r.StatusCode != status || r.JSON(t)["detail"] != detail {
+		t.Fatalf("%s: want %d %q, got %d %s", what, status, detail, r.StatusCode, r.Body)
+	}
+}
+
 func TestMe(t *testing.T) {
 	f := setup(t)
-	b := f.SignedIn(f.owner)
-
-	r := b.Get("/api/roux/users/me")
+	r := f.SignedIn(f.owner).Get("/api/roux/users/me").Want(t, 200, "me")
 	want := `{"id":"` + f.owner.String() + `","displayName":"Olive Owner","email":"owner@example.test","version":0}`
-	if r.StatusCode != 200 || strings.TrimSpace(string(r.Body)) != want {
-		t.Fatalf("%d %s\nwant %s", r.StatusCode, r.Body, want)
+	if got := strings.TrimSpace(string(r.Body)); got != want {
+		t.Fatalf("%s\nwant %s", got, want)
 	}
+}
+
+func TestRenamingYourself(t *testing.T) {
+	f := setup(t)
+	b := f.SignedIn(f.owner)
+	activities := "/api/roux/users/" + f.owner.String() + "/activities"
 
 	// Renaming trims, bumps the version and is recorded.
-	r = b.Put("/api/roux/users/me", map[string]any{"displayName": "  Olive O  ", "version": 0})
-	if m := r.JSON(t); r.StatusCode != 200 || m["displayName"] != "Olive O" || m["version"] != float64(1) {
-		t.Fatalf("rename: %d %s", r.StatusCode, r.Body)
+	r := b.Put("/api/roux/users/me", map[string]any{"displayName": "  Olive O  ", "version": 0}).Want(t, 200, "rename")
+	if m := r.JSON(t); m["displayName"] != "Olive O" || m["version"] != float64(1) {
+		t.Fatalf("rename: %s", r.Body)
 	}
-	hist := decodePage(t, b.Get("/api/roux/users/"+f.owner.String()+"/activities"))
+	hist := decodePage(t, b.Get(activities))
 	if len(hist.Data) != 1 || hist.Data[0]["description"] != "Renamed from Olive Owner to Olive O" || hist.Data[0]["actorName"] != "Olive O" {
 		t.Fatalf("history: %+v", hist.Data)
 	}
 
 	// The same name again changes nothing: no new version, no new record.
 	r = b.Put("/api/roux/users/me", map[string]any{"displayName": "Olive O", "version": 1})
-	if r.JSON(t)["version"] != float64(1) || len(decodePage(t, b.Get("/api/roux/users/"+f.owner.String()+"/activities")).Data) != 1 {
+	if r.JSON(t)["version"] != float64(1) || len(decodePage(t, b.Get(activities)).Data) != 1 {
 		t.Fatalf("same name: %s", r.Body)
 	}
 
 	// From a stale version it is a conflict, and nothing changes.
-	r = b.Put("/api/roux/users/me", map[string]any{"displayName": "Someone", "version": 0})
-	if r.StatusCode != 409 || r.JSON(t)["detail"] != "This record changed since you loaded it" {
-		t.Fatalf("stale: %d %s", r.StatusCode, r.Body)
-	}
+	wantDetail(t, b.Put("/api/roux/users/me", map[string]any{"displayName": "Someone", "version": 0}), 409, "This record changed since you loaded it", "stale")
 	if b.Get("/api/roux/users/me").JSON(t)["displayName"] != "Olive O" {
 		t.Fatal("a refused rename changed the name")
 	}
+}
 
-	// Invalid input, in roux's words.
+func TestYourNewNameIsChecked(t *testing.T) {
+	f := setup(t)
+	b := f.SignedIn(f.owner)
 	got := errorsOf(t, b.Put("/api/roux/users/me", map[string]any{}))
 	if got["displayName"] != "Must not be blank" || got["version"] != "Must not be empty" || len(got) != 2 {
 		t.Fatalf("empty: %v", got)
@@ -85,15 +97,12 @@ func TestMe(t *testing.T) {
 	if errorsOf(t, b.Put("/api/roux/users/me", map[string]any{"displayName": "   ", "version": 1}))["displayName"] != "Must not be blank" {
 		t.Fatal("a name of spaces is blank")
 	}
+}
 
-	// An identity that is not a user has no page of its own.
-	stranger := f.SignedIn(f.Identity())
-	if r := stranger.Get("/api/roux/users/me"); r.StatusCode != 404 || r.JSON(t)["detail"] != "No such user" {
-		t.Fatalf("not a user: %d %s", r.StatusCode, r.Body)
-	}
-	if r := f.Browser().Get("/api/roux/users/me"); r.StatusCode != 401 {
-		t.Fatalf("anonymous: %d", r.StatusCode)
-	}
+func TestOnlyAUserHasAPageOfTheirOwn(t *testing.T) {
+	f := setup(t)
+	wantDetail(t, f.SignedIn(f.Identity()).Get("/api/roux/users/me"), 404, "No such user", "not a user")
+	f.Browser().Get("/api/roux/users/me").Want(t, 401, "anonymous")
 }
 
 func TestTheDirectory(t *testing.T) {
@@ -272,12 +281,8 @@ func TestInvitingSomeone(t *testing.T) {
 		t.Fatal("a user who has signed in is still shown as invited")
 	}
 	// A USER may see the team but not invite.
-	if r := adaBrowser.Get("/api/roux/users"); r.StatusCode != 200 {
-		t.Fatalf("USER lists: %d", r.StatusCode)
-	}
-	if r := adaBrowser.Post("/api/roux/users/invitations", map[string]string{"name": "X", "email": "x@example.test", "role": "USER"}); r.StatusCode != 403 {
-		t.Fatalf("USER invites: %d", r.StatusCode)
-	}
+	adaBrowser.Get("/api/roux/users").Want(t, 200, "USER lists")
+	adaBrowser.Post("/api/roux/users/invitations", map[string]string{"name": "X", "email": "x@example.test", "role": "USER"}).Want(t, 403, "USER invites")
 }
 
 func TestInvitationsThatAreRefused(t *testing.T) {
@@ -347,9 +352,7 @@ func TestResendingAnInvitation(t *testing.T) {
 		t.Fatalf("%d emails to Ada, want 2", n)
 	}
 
-	if r := owner.Post("/api/roux/users/"+uuid.NewString()+"/invitation", nil); r.StatusCode != 404 {
-		t.Fatalf("unknown: %d", r.StatusCode)
-	}
+	owner.Post("/api/roux/users/"+uuid.NewString()+"/invitation", nil).Want(t, 404, "unknown")
 	// Once she has signed in there is nothing to resend.
 	if _, err := f.Pool.Exec(context.Background(), `update roux_user set first_signed_in_at = now() where id = $1`, ada); err != nil {
 		t.Fatal(err)
