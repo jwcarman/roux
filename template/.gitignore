@@ -1,0 +1,23 @@
+.idea/
+.DS_Store
+*.log
+
+# Go: built binaries, compiled test binaries, coverage profiles
+/bin/
+*.test
+*.out
+
+# Env / secrets
+.env
+.env.*
+
+# Front end and end-to-end tests
+node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+playwright-report/
+test-results/
+.mutation-history/
+reports/
+coverage/
+.stryker-tmp/

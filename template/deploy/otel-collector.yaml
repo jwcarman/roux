@@ -1,0 +1,38 @@
+# OpenTelemetry Collector for local development. The app sends all signals
+# (traces, metrics, logs) here over OTLP; the collector batches them and forwards
+# to the LGTM backend. This mirrors a production topology: add processors here
+# (redaction, sampling, attribute enrichment) without touching application code.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+  batch: {}
+
+exporters:
+  otlphttp/lgtm:
+    endpoint: http://lgtm:4318
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/lgtm]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/lgtm]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/lgtm]

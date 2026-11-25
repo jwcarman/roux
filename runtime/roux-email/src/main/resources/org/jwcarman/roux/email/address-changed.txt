@@ -1,7 +1,0 @@
-{{extra.roux.appName}}
-
-Your account's email address was changed to {{email.maskedNewAddress}}. This address no longer signs in.
-
-If you didn't make this change, someone else may have access to your account: contact the site right away.
-
-You got this email from {{extra.roux.appName}}.

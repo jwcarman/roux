@@ -1,0 +1,64 @@
+# Local development database: `docker compose up -d`
+# Add the observability stack (Grafana/Tempo/Loki/Prometheus + collector) with
+# `docker compose --profile otel up -d`.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  # Mail catcher for local sign-in emails: the app sends to SMTP localhost:1025 and
+  # you read the mail (and click the link) at http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # web UI and API
+
+  # A local OpenID Connect provider for provider sign-in: `docker compose --profile oidc up -d`.
+  # Realm "roux-app" (users alice/alice and bob/bob) at http://localhost:8180, admin console admin/admin.
+  # Run the server with
+  #   KEYCLOAK_CLIENT_SECRET=roux-app-dev-secret OIDC_PROVIDERS_FILE=deploy/oidc-providers.dev.json go run ./cmd/server
+  keycloak:
+    profiles: ["oidc"]
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    volumes:
+      - ./deploy/keycloak/roux-app-realm.json:/opt/keycloak/data/import/roux-app-realm.json:ro
+    ports:
+      - "8180:8080"
+
+  # Observability backend: Grafana + Tempo (traces) + Prometheus (metrics) + Loki
+  # (logs). Only Grafana is published; telemetry arrives via the collector below.
+  # Grafana: http://localhost:3000 (admin / admin) -> Explore.
+  lgtm:
+    profiles: ["otel"]
+    image: grafana/otel-lgtm:latest
+    ports:
+      - "3000:3000"
+
+  # OpenTelemetry Collector: the app's OTLP endpoint. Run the server with
+  #   OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 go run ./cmd/server
+  otel-collector:
+    profiles: ["otel"]
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./deploy/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    depends_on:
+      - lgtm

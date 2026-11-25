@@ -61,25 +61,38 @@ jobs:
       - name: Check the guides and references
         run: node plugins/roux/scripts/check-guides.mjs
 
-  # The app template as create-roux-app ships it: the export leaves no link to roux's repository and
-  # follows roux's version (bumped with it after each release), and the packed starter makes an app
-  # carrying its own names.
-  app-template:
+  # The app template (template/): its Go checks, then its front end's tests and build. Its export
+  # for create-roux-app, and its Playwright suite, come back once the starter ships the Go template.
+  template:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: template
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: template/go.mod
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 'lts/*'
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - name: Test the export script
-        run: scripts/export-app-template.test.sh
-      - name: Install web dependencies
-        run: npm ci --ignore-scripts
+      - name: Formatting
+        run: make fmt
+      - name: Vet
+        run: make vet
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.15.0
+          working-directory: template
+      - name: Test
+        run: make test
+      # The template links the roux-web beside it, so roux-web is built first.
+      - name: Build roux-web
         working-directory: web
-      - name: Test the packed starter
-        run: web/create-roux-app/pack-test.sh
+        run: npm ci --ignore-scripts && npm run build -w @jwcarman/roux-web
+      - name: Front end tests with coverage, then the build
+        working-directory: template/frontend
+        run: npm ci --ignore-scripts && npm run coverage && npm run build
 
   web:
     runs-on: ubuntu-latest

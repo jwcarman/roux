@@ -1,7 +1,0 @@
-{{> card-start}}<p style="margin:0 0 16px 0;">{{#email.change}}Make this your account's email address, in place of the old one.{{/email.change}}{{^email.change}}Add this address to your account.{{/email.change}}</p>
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;"><tr><td style="border-radius:6px;background-color:{{extra.roux.brandColor}};"><a href="{{email.link}}" style="display:inline-block;padding:12px 24px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:24px;font-weight:bold;color:{{extra.roux.buttonText}};text-decoration:none;border-radius:6px;">{{#email.change}}Make this my email address{{/email.change}}{{^email.change}}Add this address{{/email.change}}</a></td></tr></table>
-<p style="margin:0 0 16px 0;">Or enter this code:</p>
-<p style="margin:0 0 24px 0;padding:16px;background-color:#f4f4f5;border-radius:6px;text-align:center;font-family:'Courier New',Courier,monospace;font-size:28px;line-height:36px;font-weight:bold;letter-spacing:4px;color:#18181b;">{{email.formattedCode}}</p>
-<p style="margin:0 0 16px 0;color:#52525b;font-size:14px;line-height:20px;">The link and the code expire in {{email.expiresIn}} and work once, while you are signed in.</p>
-<p style="margin:0 0 16px 0;color:#52525b;font-size:14px;line-height:20px;">If you didn't ask to add this address, ignore this email and nothing changes. Never share this code with anyone.</p>
-{{> card-end}}

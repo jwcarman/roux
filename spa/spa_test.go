@@ -797,3 +797,9 @@ func TestOfManyFirstRequestsOneCompresses(t *testing.T) {
 		t.Fatalf("%d compressions after one brotli and one gzip, want 2", n)
 	}
 }
+
+func TestTheStandInIsAFrontEndSpaAccepts(t *testing.T) {
+	if err := spa.Register(api.NewMux(), spa.Config{FS: spa.StandIn()}); err != nil {
+		t.Fatal(err)
+	}
+}

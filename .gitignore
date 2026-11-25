@@ -1,12 +1,8 @@
-target/
-.flattened-pom.xml
-.idea/
-*.iml
-.DS_Store
-*.log
-.classpath
 .project
 .settings/
+.idea/
+.DS_Store
+*.log
 .worktrees/
 logs/
 
@@ -18,5 +14,5 @@ logs/
 # superpowers working files (SDD ledgers, briefs, review packages)
 .superpowers/
 
-# incremental mutation-testing history (PIT and Stryker); cached in CI, never committed
+# incremental mutation-testing history (Stryker); cached in CI, never committed
 .mutation-history/

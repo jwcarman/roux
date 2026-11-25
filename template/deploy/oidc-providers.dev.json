@@ -1,0 +1,11 @@
+[
+  {
+    "kind": "oidc",
+    "id": "keycloak",
+    "name": "Keycloak",
+    "issuer": "http://localhost:8180/realms/roux-app",
+    "clientId": "roux-app",
+    "clientSecret": "${KEYCLOAK_CLIENT_SECRET}",
+    "signUp": { "open": true }
+  }
+]
