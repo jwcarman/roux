@@ -35,20 +35,20 @@ real guard, its errors answered by roux, on PostgreSQL. Nothing is mocked.
 - otherwise a PostgreSQL container (`postgres:17-alpine`) started once per test package, on first
   use, which needs Docker.
 
-A schema is named for the test (`rouxtest.New(t, "ranks")`), dropped if an earlier run left one,
+A schema is named for the test (`rouxtest.New(t, "labels")`), dropped if an earlier run left one,
 and the pool's `search_path` is set to it, so tests never see each other's rows. Use a different
 name in each test package that runs at the same time.
 
 ### The app: `rouxtest.New`
 
 ```go
-// setup is the ranks API over a fresh schema, with Olive (OWNER) and Ada (USER) signed in.
+// setup is the labels API over a fresh schema, with Olive (OWNER) and Ada (USER) signed in.
 func setup(t *testing.T) (owner, user *authntest.Browser) {
 	t.Helper()
-	a := rouxtest.New(t, "ranks")
-	a.Role("USER") // the app's own role, before ranks grants to it
-	a.Migrate(ranks.Module{}.Migrations()...)
-	ranks.Register(a.Kit(), ranks.Service{Pool: a.Pool, Clock: a.Clock.Now})
+	a := rouxtest.New(t, "labels")
+	a.Role("USER") // the app's own role, before labels grants to it
+	a.Migrate(labels.Module{}.Migrations()...)
+	labels.Register(a.Kit(), labels.Service{Pool: a.Pool, Clock: a.Clock.Now})
 	a.Serve()
 	return a.SignedIn(a.Person("Olive Owner", "OWNER")), a.SignedIn(a.Person("Ada Lovelace", "USER"))
 }
@@ -74,7 +74,7 @@ func setup(t *testing.T) (owner, user *authntest.Browser) {
 request, as roux-web's client does:
 
 ```go
-added := owner.Post("/api/ranks", map[string]any{"name": " Yellow belt ", "colour": "yellow"}).
+added := owner.Post("/api/labels", map[string]any{"name": " Urgent ", "colour": "yellow"}).
 	Want(t, 201, "add").JSON(t)
 ```
 
@@ -97,11 +97,11 @@ moving it.
 One test per behaviour, named for it, and one per refusal, asserting its status and its words:
 
 ```go
-func TestTwoRanksMayNotShareANameIgnoringCase(t *testing.T) {
+func TestTwoLabelsMayNotShareANameIgnoringCase(t *testing.T) {
 	owner, _ := setup(t)
-	owner.Post("/api/ranks", map[string]any{"name": "Yellow", "colour": "yellow"}).Want(t, 201, "first")
-	got := owner.Post("/api/ranks", map[string]any{"name": "YELLOW", "colour": "green"}).Want(t, 400, "second").JSON(t)
-	if errs := got["errors"].([]any); errs[0].(map[string]any)["message"] != ranks.NameTaken {
+	owner.Post("/api/labels", map[string]any{"name": "Waiting", "colour": "yellow"}).Want(t, 201, "first")
+	got := owner.Post("/api/labels", map[string]any{"name": "WAITING", "colour": "green"}).Want(t, 400, "second").JSON(t)
+	if errs := got["errors"].([]any); errs[0].(map[string]any)["message"] != labels.NameTaken {
 		t.Fatalf("got %v", got)
 	}
 }
@@ -111,7 +111,7 @@ func TestTwoRanksMayNotShareANameIgnoringCase(t *testing.T) {
 - **Every field the input checks**, and every refusal the service makes: `400` with the field and
   its message, `404`, `409` for a stale version.
 - **What the list returns** for each filter, sort and search, and what the service stored.
-- A test of a feature's own words names its constant (`ranks.NameTaken`), and of roux's words
+- A test of a feature's own words names its constant (`labels.NameTaken`), and of roux's words
   roux's (`problem.MustNotBeBlank`), so a change of wording is made in one place.
 
 ### The app's own tests
@@ -145,7 +145,7 @@ test: { environment: "node", include: ["src/**/*.test.{ts,tsx}"], setupFiles: ["
 ```
 
 roux's setup adds jest-dom's matchers, starts the fake network before the tests, sets the organization's
-context before each test (one fixed school and day, [Dates and time](dates-and-time.md#test)), and
+context before each test (one fixed organization and day, [Dates and time](dates-and-time.md#test)), and
 after each test waits for the requests still in flight, unmounts, drops the test's handlers and fails
 the test if a request went unanswered. It also gives jsdom what Chakra reaches for (`matchMedia`,
 `ResizeObserver`, `scrollTo`).
@@ -158,11 +158,11 @@ the test if a request went unanswered. It also gives jsdom what Chakra reaches f
 import { http, HttpResponse } from "msw";
 import { server } from "@jwcarman/roux-web/testing";
 
-server.use(http.get("/api/ranks", () => HttpResponse.json([{ id: "r1", name: "White" }])));
+server.use(http.get("/api/labels", () => HttpResponse.json([{ id: "l1", name: "Errand" }])));
 ```
 
 - A request no handler answers never reaches the real network, and fails the test that sent it
-  ("No handler answered: GET /api/ranks"), so a test cannot pass on a screen that silently failed to
+  ("No handler answered: GET /api/labels"), so a test cannot pass on a screen that silently failed to
   load. `checkAllAnswered()` is that check, which the setup runs after each test.
 - `settle(timeout = 1000)` waits until every request in flight has its answer (the setup runs it
   after each test, so an answer never lands after the test environment is gone); a request held open
@@ -191,7 +191,7 @@ import { renderWithProviders } from "@jwcarman/roux-web/testing";
 
 renderWithProviders(
   <ConfirmProvider>
-    <RankFormDialog open onClose={vi.fn()} />
+    <LabelFormDialog open onClose={vi.fn()} />
     <Toaster />
   </ConfirmProvider>,
 );
@@ -207,15 +207,15 @@ The server's refusals have fixed shapes (`contracts/problem-*.json` in roux's re
 | --- | --- | --- |
 | `invalidFields({ name: "Must not be blank" })` | 400 | `problem.Validation` or `problem.InvalidField` |
 | `invariantViolation("A class meets at most 7 times a week")` | 400 | `problem.BadRequest` |
-| `notFound("No rank r9")` | 404 | `problem.NotFound` |
+| `notFound("No label l9")` | 404 | `problem.NotFound` |
 | `stale()` | 409 | a save at a version that is no longer the latest |
 | `serverError(errorId?)` | 500 | an unexpected failure, with the reference it logged |
 
 ```ts
-server.use(http.post("/api/ranks", () => invalidFields({ name: "Another rank has this name" })));
+server.use(http.post("/api/labels", () => invalidFields({ name: "Another label has this name" })));
 ```
 
-Write field messages in the server's words (`Must not be blank`, `Another rank has this name`).
+Write field messages in the server's words (`Must not be blank`, `Another label has this name`).
 
 ### A form test
 
@@ -229,13 +229,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toaster } from "@jwcarman/roux-web/feedback";
 import { queryKeys } from "../queryKeys";
 import { invalidFields, renderWithProviders, server, stale } from "@jwcarman/roux-web/testing";
-import type { Rank } from "./ranks";
-import { RankFormDialog } from "./RankFormDialog";
+import type { Label } from "./labels";
+import { LabelFormDialog } from "./LabelFormDialog";
 
-const YELLOW: Rank = { id: "r2", name: "Yellow belt", colour: "YELLOW", version: 3 };
+const URGENT: Label = { id: "l2", name: "Urgent", colour: "red", version: 3 };
 
-async function open(rank?: Rank) {
-  const { client } = renderWithProviders(<RankFormDialog rank={rank} trigger={<Button>Open</Button>} />);
+async function open(label?: Label) {
+  const { client } = renderWithProviders(<LabelFormDialog label={label} trigger={<Button>Open</Button>} />);
   const invalidate = vi.spyOn(client, "invalidateQueries");
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "Open" }));
@@ -243,7 +243,7 @@ async function open(rank?: Rank) {
   return { user, dialog, invalidate };
 }
 
-describe("RankFormDialog", () => {
+describe("LabelFormDialog", () => {
   beforeEach(() => {
     document.cookie = "XSRF-TOKEN=token"; // the client sends it as X-XSRF-TOKEN, with no bootstrap call
   });
@@ -254,7 +254,7 @@ describe("RankFormDialog", () => {
 
   it("checks the fields in the server's words and sends nothing while they are wrong", async () => {
     const sent = vi.fn();
-    server.use(http.post("/api/ranks", sent));
+    server.use(http.post("/api/labels", sent));
     const { user } = await open();
 
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -263,39 +263,39 @@ describe("RankFormDialog", () => {
     expect(sent).not.toHaveBeenCalled();
   });
 
-  it("adds a rank, toasts, refreshes the list and closes", async () => {
+  it("adds a label, toasts, refreshes the list and closes", async () => {
     let body: unknown;
     server.use(
-      http.post("/api/ranks", async ({ request }) => {
+      http.post("/api/labels", async ({ request }) => {
         body = await request.json();
-        return HttpResponse.json({ id: "r1", name: "White belt", colour: "WHITE", version: 0 }, { status: 201 });
+        return HttpResponse.json({ id: "l1", name: "Errand", colour: "gray", version: 0 }, { status: 201 });
       }),
     );
     const { user, dialog, invalidate } = await open();
 
-    await user.type(screen.getByLabelText(/^Name/), " White belt ");
-    await user.selectOptions(screen.getByLabelText(/^Colour/), "WHITE");
+    await user.type(screen.getByLabelText(/^Name/), " Errand ");
+    await user.selectOptions(screen.getByLabelText(/^Colour/), "gray");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent("White belt was saved");
-    expect(body).toEqual({ name: "White belt", colour: "WHITE" });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.ranks.lists() });
+    expect(await screen.findByRole("status")).toHaveTextContent("Errand was saved");
+    expect(body).toEqual({ name: "Errand", colour: "gray" });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: queryKeys.labels.lists() });
     await waitFor(() => expect(dialog).toHaveAttribute("data-state", "closed"));
   });
 
   it("puts the server's field error under the field", async () => {
-    server.use(http.put("/api/ranks/r2", () => invalidFields({ name: "Another rank has this name" })));
-    const { user, dialog } = await open(YELLOW);
+    server.use(http.put("/api/labels/l2", () => invalidFields({ name: "Another label has this name" })));
+    const { user, dialog } = await open(URGENT);
 
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(await screen.findByText("Another rank has this name")).toBeInTheDocument();
+    expect(await screen.findByText("Another label has this name")).toBeInTheDocument();
     expect(dialog).toHaveAttribute("data-state", "open");
   });
 
-  it("says so when someone else saved the rank first", async () => {
-    server.use(http.put("/api/ranks/r2", () => stale()));
-    const { user } = await open(YELLOW);
+  it("says so when someone else saved the label first", async () => {
+    server.use(http.put("/api/labels/l2", () => stale()));
+    const { user } = await open(URGENT);
 
     await user.click(screen.getByRole("button", { name: "Save" }));
 
@@ -381,50 +381,51 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { pageOf, server } from "@jwcarman/roux-web/testing";
 import { renderRoute } from "../testing/route";
-import type { Student } from "./students";
+import { ITEMS_READ } from "../permissions.gen";
+import type { ItemRow } from "./items";
 
-const STUDENTS: Student[] = [
-  { id: "s1", name: "Ada Lovelace", email: "ada@example.org", joinedOn: "2026-09-01", status: "ACTIVE" },
-  { id: "s2", name: "Grace Hopper", email: null, joinedOn: "2026-10-01", status: "INACTIVE" },
+const ITEMS: ItemRow[] = [
+  { id: "i1", title: "Order the venue", day: "2026-11-24", at: "10:30", done: false, assigneeNames: ["Ada"], version: 0 },
+  { id: "i2", title: "Send the invitations", day: "2026-11-25", at: null, done: true, assigneeNames: [], version: 2 },
 ];
 
-/** `/api/students`, filtering by status, and recording each request's query string. */
-function studentsEndpoint() {
+/** `/api/items`, filtering by status, and recording each request's query string. */
+function itemsEndpoint() {
   const queries: string[] = [];
   server.use(
-    http.get("/api/students", ({ request }) => {
+    http.get("/api/items", ({ request }) => {
       const url = new URL(request.url);
       queries.push(url.search);
       const status = url.searchParams.get("status");
-      const rows = status ? STUDENTS.filter((student) => student.status === status) : STUDENTS;
+      const rows = status ? ITEMS.filter((item) => item.done === (status === "done")) : ITEMS;
       return HttpResponse.json(pageOf(rows, { pageIndex: 0, pageSize: 25 }));
     }),
   );
   return queries;
 }
 
-describe("/students", () => {
-  it("lists the students, with a dash for no email", async () => {
-    studentsEndpoint();
-    renderRoute("/students", { permissions: [] });
+describe("/items", () => {
+  it("lists the items, each linking to its page", async () => {
+    itemsEndpoint();
+    renderRoute("/items", { permissions: [ITEMS_READ] });
 
-    const table = await screen.findByRole("table", { name: "Students" });
-    expect(await within(table).findByRole("link", { name: "Ada Lovelace" })).toHaveAttribute("href", "/students/s1");
-    expect(within(table).getByRole("row", { name: /Grace Hopper/ })).toHaveTextContent("—");
+    const table = await screen.findByRole("table", { name: "Items" });
+    expect(await within(table).findByRole("link", { name: "Order the venue" })).toHaveAttribute("href", "/items/i1");
+    expect(within(table).getByRole("row", { name: /Send the invitations/ })).toHaveTextContent("Done");
   });
 
   it("filters by status from the chips, and keeps the filter in the URL", async () => {
-    const queries = studentsEndpoint();
-    const { router } = renderRoute("/students", { permissions: [] });
-    const table = await screen.findByRole("table", { name: "Students" });
-    await within(table).findByText("Ada Lovelace");
+    const queries = itemsEndpoint();
+    const { router } = renderRoute("/items", { permissions: [ITEMS_READ] });
+    const table = await screen.findByRole("table", { name: "Items" });
+    await within(table).findByText("Order the venue");
 
-    await userEvent.setup().click(screen.getByRole("button", { name: "Inactive", pressed: false }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Done", pressed: false }));
 
-    expect(await within(table).findByText("Grace Hopper")).toBeInTheDocument();
-    expect(within(table).queryByText("Ada Lovelace")).not.toBeInTheDocument();
-    expect(router.state.location.search).toEqual({ status: "INACTIVE" });
-    expect(queries.at(-1)).toContain("status=INACTIVE");
+    expect(await within(table).findByText("Send the invitations")).toBeInTheDocument();
+    expect(within(table).queryByText("Order the venue")).not.toBeInTheDocument();
+    expect(router.state.location.search).toEqual({ status: "done" });
+    expect(queries.at(-1)).toContain("status=done");
   });
 });
 ```

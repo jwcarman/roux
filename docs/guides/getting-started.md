@@ -13,12 +13,12 @@ Either way, features use roux by importing from it; no plumbing is written in th
 1. **Make the app.** With Node 20 or later:
 
    ```bash
-   npm create @jwcarman/roux-app acme-gym
+   npm create @jwcarman/roux-app team-planner
    ```
 
-   `acme-gym` is the directory, the Go module and the npm name: lowercase letters, digits and
-   single dashes. The app is called "Acme Gym" until the owner renames it on the Appearance page;
-   pass another name with `npm create @jwcarman/roux-app acme-gym -- --name "Acme Fitness"`. It is
+   `team-planner` is the directory, the Go module and the npm name: lowercase letters, digits and
+   single dashes. The app is called "Team Planner" until the owner renames it on the Appearance page;
+   pass another name with `npm create @jwcarman/roux-app team-planner -- --name "Acme Planner"`. It is
    roux's app template at the latest release (sign-in, the first owner, the sidebar frame, Users,
    Settings and Appearance), with roux from the Go module proxy and npm, and a first commit.
 2. **Start its database and mail catcher.** With Docker running:
@@ -76,16 +76,16 @@ roux supports one stack and nothing else:
 An app's whole `main` is one call:
 
 ```go
-// Command server runs Acme Gym.
+// Command server runs Team Planner.
 package main
 
 import (
 	"github.com/jwcarman/roux/app"
-	web "acme-gym/frontend"
+	web "team-planner/frontend"
 )
 
 func main() {
-	app.Main(app.Config{Name: "acme-gym", DisplayName: "Acme Gym", Frontend: web.Dist, Modules: modules})
+	app.Main(app.Config{Name: "team-planner", DisplayName: "Team Planner", Frontend: web.Dist, Modules: modules})
 }
 ```
 
@@ -124,7 +124,7 @@ func modules(k *app.Kit) ([]app.Module, error) {
 	if err != nil {
 		return nil, err
 	}
-	mods = append(mods, email, members, gym.Module{})
+	mods = append(mods, email, members, items.Module{})
 	if passkeys != nil {
 		mods = append(mods, passkeys)
 	}

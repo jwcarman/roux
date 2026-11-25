@@ -136,6 +136,9 @@ All notable changes to this project are documented in this file. The format foll
 - **A docs site**, built with MkDocs Material and published to GitHub Pages
   (<https://jwcarman.github.io/roux/>), with `llms.txt` and `llms-full.txt` for coding agents and
   a page on the Agent Skill.
+- **Every guide and the skill's cards use Roux The Day's domain** (items, labels, contacts, a
+  person's profile) in place of the dojo's students, ranks, coaches and classes; a new app's
+  example name is `team-planner`. The README and the docs' home page say roux is written for agents.
 - **The recipe and the features guide build `labels`** (a name and a colour, for tagging a team
   planner's items) instead of the dojo's ranks; the recipe check now lints the recipe's front end.
 - The docs' home page and the README show roux's mark.

@@ -36,16 +36,27 @@ the kits: the database, people and browsers, time, route tests, paged answers an
 ## Example: time
 
 ```go
-func TestALateCheckInIsRefused(t *testing.T) {
-	a := rouxtest.New(t, "classes")
-	a.Migrate(classes.Module{}.Migrations()...)
-	classes.Register(a.Kit(), classes.Service{Pool: a.Pool, Clock: a.Clock.Now})
+func TestTodayIsTheOrganizationsDay(t *testing.T) {
+	a := rouxtest.New(t, "items")
+	a.Role("USER")
+	a.Migrate(items.Module{}.Migrations()...)
+	items.Register(a.Kit(), items.Service{Pool: a.Pool, Clock: a.Clock.Now})
 	a.Serve()
-	coach := a.SignedIn(a.Person("Coach Carter", "OWNER"))
+	olive := a.SignedIn(a.Person("Olive", "OWNER"))
+	olive.Post("/api/items", map[string]any{"title": "Order the venue", "day": "2026-11-24"}).Want(t, 201, "add")
 
-	id := coach.Post("/api/classes", map[string]any{"startsAt": "2026-11-24T18:00:00Z"}).Want(t, 201, "add").JSON(t)["id"]
-	a.At(time.Date(2026, 11, 24, 19, 0, 0, 0, time.UTC))
-	coach.Post("/api/classes/"+id.(string)+"/check-ins", map[string]any{}).Want(t, 400, "after the class")
+	a.At(time.Date(2026, 11, 24, 9, 0, 0, 0, time.UTC))
+	var got struct{ Data []items.Row }
+	olive.Get("/api/items?when=today").Want(t, 200, "today").Decode(t, &got)
+	if len(got.Data) != 1 {
+		t.Fatalf("on the day: %v", got.Data)
+	}
+	a.At(time.Date(2026, 11, 25, 9, 0, 0, 0, time.UTC))
+	olive = a.SignedIn(a.Person("Olive", "OWNER")) // a day outlasts the session's idle timeout
+	olive.Get("/api/items?when=today").Want(t, 200, "tomorrow").Decode(t, &got)
+	if len(got.Data) != 0 {
+		t.Fatalf("the day after: %v", got.Data)
+	}
 }
 ```
 
@@ -80,22 +91,23 @@ import { http, HttpResponse } from "msw";
 import { expect, it } from "vitest";
 import { pageOf, server } from "@jwcarman/roux-web/testing";
 import { renderRoute } from "../../testing/route";
-import type { Student } from "../../students/students";
+import { ITEMS_READ } from "../../permissions.gen";
+import type { ItemRow } from "../../items/items";
 
-const STUDENTS: Student[] = [
-  { id: "s1", name: "Ada Lovelace", email: null, joinedOn: "2026-09-01", status: "ACTIVE" },
-  { id: "s2", name: "Grace Hopper", email: null, joinedOn: "2026-10-01", status: "INACTIVE" },
+const ITEMS: ItemRow[] = [
+  { id: "i1", title: "Order the venue", day: "2026-11-24", at: "10:30", done: false, assigneeNames: [], version: 0 },
+  { id: "i2", title: "Send the invitations", day: "2026-11-25", at: null, done: true, assigneeNames: [], version: 0 },
 ];
 
 it("filters by status and keeps it in the URL", async () => {
-  server.use(http.get("/api/students", () => HttpResponse.json(pageOf(STUDENTS, { pageIndex: 0, pageSize: 25 }))));
-  const { router } = renderRoute("/students", { permissions: ["students.read"] });
-  const table = await screen.findByRole("table", { name: "Students" });
-  await within(table).findByText("Ada Lovelace");
+  server.use(http.get("/api/items", () => HttpResponse.json(pageOf(ITEMS, { pageIndex: 0, pageSize: 25 }))));
+  const { router } = renderRoute("/items", { permissions: [ITEMS_READ] });
+  const table = await screen.findByRole("table", { name: "Items" });
+  await within(table).findByText("Order the venue");
 
-  await userEvent.setup().click(screen.getByRole("button", { name: "Inactive", pressed: false }));
+  await userEvent.setup().click(screen.getByRole("button", { name: "Done", pressed: false }));
 
-  expect(router.state.location.search).toEqual({ status: "INACTIVE" });
+  expect(router.state.location.search).toEqual({ status: "done" });
 });
 ```
 

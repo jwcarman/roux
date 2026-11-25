@@ -8,6 +8,13 @@ roux is said "roo". It is the base a Go + React business application is built on
 roles and permissions, the team, errors a person can read, paged lists, forms, money, dates and the
 activity log, written once with contracts that keep both sides honest.
 
+**roux is written for agents.** Its users are coding agents building apps, so it is designed for
+them to get right the first time: one way to do each thing, exact names that match across Go,
+TypeScript and the docs, mistakes that fail loudly (a compile error, a test naming the fix, a
+check that refuses) rather than silently, and an [Agent Skill](plugins/roux) that ships the
+knowledge with the code. Every example in the docs is code CI builds. People read it too; agents
+come first.
+
 Documentation: <https://jwcarman.github.io/roux/>.
 
 ## Packages
@@ -31,7 +38,7 @@ Web, published to npm:
 
 - `@jwcarman/roux-web` (`web/roux-web`): the React side, with one subpath per concern (`problem`,
   `api`, `paging`, `table`, `feedback`, `form`, `auth`, `signin`, `session`, `users` and more).
-- `@jwcarman/create-roux-app` (`web/create-roux-app`): `npm create @jwcarman/roux-app acme-gym`
+- `@jwcarman/create-roux-app` (`web/create-roux-app`): `npm create @jwcarman/roux-app team-planner`
   starts a new app from the template below, at the same release.
 
 Apps, never published as they are:

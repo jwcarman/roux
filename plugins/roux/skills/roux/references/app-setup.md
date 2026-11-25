@@ -22,7 +22,7 @@ app already has all of it; read this when changing it.
 
 ## Steps: a new app
 
-1. `npm create @jwcarman/roux-app acme-gym` (Node 20+): the directory, the Go module and the npm
+1. `npm create @jwcarman/roux-app team-planner` (Node 20+): the directory, the Go module and the npm
    name.
 2. `docker compose up -d` (PostgreSQL on 5432, Mailpit on <http://localhost:8025>).
 3. `make web`, then

@@ -57,9 +57,9 @@ and it passes through `fmt.Errorf("...: %w", p)` wrapping unchanged.
 ### Return 404 for a missing record
 
 ```go
-err := tx.QueryRow(ctx, `select version from rank where id = $1 for update`, id).Scan(&current)
+err := tx.QueryRow(ctx, `select version from label where id = $1 for update`, id).Scan(&current)
 if errors.Is(err, pgx.ErrNoRows) {
-	return problem.NotFound("This rank no longer exists")
+	return problem.NotFound("This label no longer exists")
 }
 ```
 
@@ -70,8 +70,8 @@ answered `404` as well, with a generic detail, but say what is missing where you
 ### Refuse a request that breaks a rule
 
 ```go
-if next.Order != current.Order+1 {
-	return problem.BadRequest("A student is promoted one rank at a time")
+if current.Done && in.Day != current.Day {
+	return problem.BadRequest("A done item can't be moved; reopen it first")
 }
 ```
 
@@ -86,7 +86,7 @@ database (or the clock), return `problem.InvalidField` naming the field as the c
 
 ```go
 var taken bool
-if err := tx.QueryRow(ctx, `select exists (select 1 from rank where lower(name) = lower($1) and id <> $2)`,
+if err := tx.QueryRow(ctx, `select exists (select 1 from label where lower(name) = lower($1) and id <> $2)`,
 	name, self).Scan(&taken); err != nil {
 	return err
 }
@@ -124,8 +124,8 @@ rules show (`contracts/messages.json` is the list both sides test against):
 ### Report a clash with the server's state (409)
 
 ```go
-if enrolled {
-	return problem.Conflict(fmt.Sprintf("%s is already enrolled in this class", student.Name))
+if booked {
+	return problem.Conflict(fmt.Sprintf("%s already has an item at %s", person.Name, at))
 }
 ```
 
@@ -138,7 +138,7 @@ made from. Check it first, before changing anything, with the row locked:
 
 ```go
 var current int64
-err := tx.QueryRow(ctx, `select version from rank where id = $1 for update`, id).Scan(&current)
+err := tx.QueryRow(ctx, `select version from label where id = $1 for update`, id).Scan(&current)
 // ... a missing row is a 404 ...
 if current != version {
 	return problem.StaleVersion()
@@ -153,13 +153,13 @@ Answer: `409`, `detail` `This record changed since you loaded it`. `useSchemaFor
 
 ### Refuse because of what another feature holds
 
-"A rank a student holds may not be removed" belongs to the feature that refers to ranks, and
-`ranks` must not import `students`. Invert it: the owning feature takes checks, and `modules.go`
+"A label items carry may not be removed" belongs to the feature that refers to labels, and
+`labels` must not import `items`. Invert it: the owning feature takes checks, and `modules.go`
 passes the referring feature's:
 
 ```go
-// in ranks: a reason a rank may not be removed, from a feature that refers to ranks
-type RemovalCheck func(ctx context.Context, tx pgx.Tx, rank Rank) error
+// in labels: a reason a label may not be removed, from a feature that refers to labels
+type RemovalCheck func(ctx context.Context, tx pgx.Tx, label Label) error
 
 type Module struct {
 	Clock         func() time.Time
@@ -168,14 +168,14 @@ type Module struct {
 ```
 
 ```go
-// in students
-func RankInUse(ctx context.Context, tx pgx.Tx, rank ranks.Rank) error {
+// in items
+func LabelInUse(ctx context.Context, tx pgx.Tx, label labels.Label) error {
 	var held bool
-	if err := tx.QueryRow(ctx, `select exists (select 1 from promotion where rank_id = $1)`, rank.ID).Scan(&held); err != nil {
+	if err := tx.QueryRow(ctx, `select exists (select 1 from item_label where label_id = $1)`, label.ID).Scan(&held); err != nil {
 		return err
 	}
 	if held {
-		return problem.Conflict(fmt.Sprintf("Students hold or have held %s", rank.Name))
+		return problem.Conflict(fmt.Sprintf("Items carry %s: take it off them first", label.Name))
 	}
 	return nil
 }
@@ -183,7 +183,7 @@ func RankInUse(ctx context.Context, tx pgx.Tx, rank ranks.Rank) error {
 
 ```go
 // in cmd/server/modules.go
-ranks.Module{RemovalChecks: []ranks.RemovalCheck{students.RankInUse}}
+labels.Module{RemovalChecks: []labels.RemovalCheck{items.LabelInUse}}
 ```
 
 The service runs each check in the delete's transaction. Keep the foreign key as the last line of
@@ -191,16 +191,16 @@ defence (a refusal there is the generic `409`), and the check as the one that sa
 
 ### Treat "already done" as success
 
-Some requests mean "make it so", and a repeat is not an error: marking a student present twice (a
+Some requests mean "make it so", and a repeat is not an error: assigning someone to an item twice (a
 double tap, two devices), adding someone to a group they are in. Let the unique constraint decide,
 and ask PostgreSQL not to fail:
 
 ```go
 tag, err := tx.Exec(ctx, `
-	insert into attendance (class_id, student_id, attended_on, created_at, created_by)
-	values ($1, $2, $3, $4, $5)
-	on conflict (class_id, student_id, attended_on) do nothing`,
-	classID, studentID, day, s.Clock(), caller.IdentityID)
+	insert into item_assignee (item_id, user_id)
+	values ($1, $2)
+	on conflict (item_id, user_id) do nothing`,
+	itemID, userID)
 if err != nil {
 	return err
 }

@@ -8,16 +8,16 @@ the environment.
 
 | Email | Sent when | Subject |
 | --- | --- | --- |
-| Sign-in | Someone asks for a link on the sign-in page | `Sign in to Acme Gym` |
-| Invitation | An owner invites someone ([Users](users.md)) | `You've been invited to Acme Gym` |
-| Address confirmation | Someone adds or changes an address on their account | `Confirm your email address for Acme Gym` |
-| Address changed | An address was changed, to the old address | `Your Acme Gym email address was changed` |
+| Sign-in | Someone asks for a link on the sign-in page | `Sign in to Team Planner` |
+| Invitation | An owner invites someone ([Users](users.md)) | `You've been invited to Team Planner` |
+| Address confirmation | Someone adds or changes an address on their account | `Confirm your email address for Team Planner` |
+| Address changed | An address was changed, to the old address | `Your Team Planner email address was changed` |
 | Passkey added, API key made, account linked | A passkey or an API key is added, or a provider's account linked | a notice naming what was added |
 
 A sign-in, invitation or confirmation email carries a link and a short code: the person opens the
 link, or types the code on the page they asked from. Both expire (`EMAIL_TOKEN_TTL`, five minutes
 by default) and work once. The text names the app first and ends with "You got this email from
-Acme Gym."; the HTML is a single card of tables with inline styles, so mail clients show it
+Team Planner."; the HTML is a single card of tables with inline styles, so mail clients show it
 alike, with the brand colour as its accent.
 
 The wording is roux's, in English. There is no way yet to change it, or to send in another

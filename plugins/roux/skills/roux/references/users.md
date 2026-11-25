@@ -8,10 +8,10 @@ them. An app adds what its own people are, never a second user table.
 ## Rules
 
 - Anything that signs in is a user; what never signs in is not. Pick a shape:
-  - nothing but a person with permissions (an instructor): **a role only**, no table;
-  - always signs in and has fields of its own (a coach's belt): **a table whose `id` is the user's**,
+  - nothing but a person with permissions (an organizer): **a role only**, no table;
+  - always signs in and has fields of its own (a person's team): **a table whose `id` is the user's**,
     `id uuid primary key references roux_user (id) on delete cascade`;
-  - sometimes signs in (a student, some with a portal login): **its own id and a nullable
+  - sometimes signs in (a contact, some with a login): **its own id and a nullable
     `user_id uuid references roux_user (id) on delete set null`**.
 - Never add columns to `roux_user`, keep a second display name, or copy the email: read them from
   `roux_user_directory`, which follows sign-in.
@@ -51,9 +51,9 @@ them. An app adds what its own people are, never a second user table.
 ## Example: a table that shares the user's id
 
 ```sql
-create table coach (
+create table profile (
     id      uuid primary key references roux_user (id) on delete cascade,
-    belt    text not null default '',
+    team    text not null default '',
     version bigint not null default 0
 );
 ```
@@ -61,14 +61,14 @@ create table coach (
 roux has no hook when a user joins, so make the row when it is first needed:
 
 ```go
-if _, err := tx.Exec(ctx, `insert into coach (id) values ($1) on conflict (id) do nothing`, coachID); err != nil {
+if _, err := tx.Exec(ctx, `insert into profile (id) values ($1) on conflict (id) do nothing`, userID); err != nil {
 	return err
 }
 ```
 
-A list of coaches with their names joins the directory in a view (`create view coach_list as select
-d.id, d.display_name, d.email, d.status, c.belt from coach c join roux_user_directory d on d.id =
-c.id`) and pages it with `page.New` (`lists.md`), filtered by
+A list of profiles with their names joins the directory in a view (`create view profile_list as
+select d.id, d.display_name, d.email, d.status, p.team from profile p join roux_user_directory d on
+d.id = p.id`) and pages it with `page.New` (`lists.md`), filtered by
 `page.Where("status = ?", users.StatusActive)`.
 
 ## Example: assigning people

@@ -26,20 +26,20 @@ const notify: {
 import { ApiError } from "@jwcarman/roux-web/api";
 import { notify } from "@jwcarman/roux-web/feedback";
 
-notify.success("Rank saved");
-notify.success("Ada was promoted to Green", { label: "Undo", onClick: undo });
+notify.success("Label saved");
+notify.success("Order the venue is done", { label: "Undo", onClick: undo });
 notify.error("The invitation could not be sent", "Ask them to sign in from the sign-in page.");
 
 // Only where you catch the error yourself:
 if (error instanceof ApiError) {
-  notify.problem(error.problem, "Could not promote Ada");
+  notify.problem(error.problem, "Could not reopen Order the venue");
 }
 ```
 
 - `success`: a status toast. `action` adds a button to it, such as Undo.
 - `error`: a failure toast, `title` and an optional `detail` under it. For a failure the app itself
   detects (a save that went through but whose email did not).
-- `problem`: a refused request. `title` names what failed (`Could not promote Ada`); under it go the
+- `problem`: a refused request. `title` names what failed (`Could not reopen Order the venue`); under it go the
   problem's `detail` and, for a 500, `Reference: <errorId>` on its own line. This is the toast
   `useSchemaForm` and `useServerAction` show for a refusal ([Errors](errors.md#in-the-browser-what-the-user-sees)),
   so call it only where you handle an `ApiError` yourself.
@@ -48,8 +48,8 @@ Toasts appear at the bottom right (`bottom-end`; inset on small screens) and pau
 idle. A failure toast is an alert (`role="alert"`, announced at once); any other is a status
 (`role="status"`, announced when the reader is idle).
 
-Write titles as the outcome in plain words, naming the thing: `Ada was promoted`, `Rank saved`,
-`Could not remove Yellow belt`. A save made through `useSchemaForm` or `useServerAction` toasts its
+Write titles as the outcome in plain words, naming the thing: `Order the venue is done`, `Label saved`,
+`Could not remove Urgent`. A save made through `useSchemaForm` or `useServerAction` toasts its
 success in that hook's `onSuccess` and its failure through `failure`; do not toast either again.
 
 `toaster` is the toaster `Toaster` draws: show toasts through `notify`, not `toaster.create`. Tests use
@@ -63,7 +63,7 @@ function useConfirm(): (options: ConfirmOptions) => Promise<boolean>;
 interface ConfirmOptions {
   title: string;
   message: string;
-  confirmLabel: string; // the action, such as "Deactivate"
+  confirmLabel: string; // the action, such as "Archive"
   destructive?: boolean; // colours the confirming button as a destructive action
 }
 
@@ -73,11 +73,11 @@ function removal(title: string, message: string): ConfirmOptions; // confirmLabe
 The mutation, in the resource module:
 
 ```ts
-/** Deactivates a student; the student and the lists refresh. */
-export const deactivateStudent = (id: string) =>
+/** Archives an item; the item and the lists refresh. */
+export const archiveItem = (id: string) =>
   mutationOptions({
-    mutationFn: () => sendJson<void>("POST", path`students/${id}/deactivation`),
-    meta: { refreshes: [queryKeys.students.detail(id), queryKeys.students.lists()] },
+    mutationFn: () => sendJson<void>("POST", path`items/${id}/archive`),
+    meta: { refreshes: [queryKeys.items.detail(id), queryKeys.items.lists()] },
   });
 ```
 
@@ -87,21 +87,21 @@ and the button:
 import { Button } from "@chakra-ui/react";
 import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, useConfirm } from "@jwcarman/roux-web/feedback";
-import { deactivateStudent } from "./students";
+import { archiveItem } from "./items";
 
-/** Deactivate, after asking: the student leaves the active list but keeps their history. */
-export function DeactivateStudentButton({ student }: { student: { id: string; name: string } }) {
+/** Archive, after asking: the item leaves the lists but keeps its history. */
+export function ArchiveItemButton({ item }: { item: { id: string; title: string } }) {
   const confirm = useConfirm();
-  const { run, pending } = useServerAction(deactivateStudent(student.id), {
-    failure: `Could not deactivate ${student.name}`,
-    onSuccess: () => notify.success(`${student.name} was deactivated`),
+  const { run, pending } = useServerAction(archiveItem(item.id), {
+    failure: `Could not archive ${item.title}`,
+    onSuccess: () => notify.success(`${item.title} was archived`),
   });
 
-  async function onDeactivate() {
+  async function onArchive() {
     const confirmed = await confirm({
-      title: `Deactivate ${student.name}?`,
-      message: "They leave the active list. Their rank history is kept.",
-      confirmLabel: "Deactivate",
+      title: `Archive ${item.title}?`,
+      message: "It leaves the lists. Its history is kept.",
+      confirmLabel: "Archive",
       destructive: true,
     });
     if (confirmed) {
@@ -110,8 +110,8 @@ export function DeactivateStudentButton({ student }: { student: { id: string; na
   }
 
   return (
-    <Button variant="outline" loading={pending} onClick={onDeactivate}>
-      Deactivate
+    <Button variant="outline" loading={pending} onClick={onArchive}>
+      Archive
     </Button>
   );
 }
@@ -120,14 +120,14 @@ export function DeactivateStudentButton({ student }: { student: { id: string; na
 - `confirm(options)` opens the app's one dialog (`role="alertdialog"`) and resolves `true` when the
   confirming button is pressed, `false` on Cancel, Escape or closing. Cancel has the focus first, so
   Enter alone never confirms.
-- `confirmLabel` is the action's verb, as on the button that asked (`Deactivate`, not `OK` or `Yes`).
+- `confirmLabel` is the action's verb, as on the button that asked (`Archive`, not `OK` or `Yes`).
 - `ConfirmOptions` is the question. For removing something, use `removal(title, message)`, which is
   `{ title, message, confirmLabel: "Remove", destructive: true }` (the whole button is in
   [Queries and mutations](queries-and-mutations.md#run-a-mutation-from-a-button)):
 
   ```ts
-  if (await confirm(removal(`Remove ${rank.name}?`, "It will be removed from the list."))) {
-    await run(rank.id);
+  if (await confirm(removal(`Remove ${label.name}?`, "It will be removed from the list."))) {
+    await run(label.id);
   }
   ```
 - `useConfirm` throws `useConfirm outside ConfirmProvider` when no `ConfirmProvider` is above it,
@@ -151,28 +151,28 @@ not load or a step that could not finish, inside the page:
 import { Button, Heading, List, Spinner, Stack } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { ErrorMessage } from "@jwcarman/roux-web/feedback";
-import { ranksQuery } from "../ranks/ranks";
+import { labelsQuery } from "../labels/labels";
 
-/** The ranks a student can be promoted to, or why they cannot be shown. */
-export function PromotionChoices() {
-  const ranks = useQuery(ranksQuery);
+/** The labels an item can carry, or why they cannot be shown. */
+export function LabelChoices() {
+  const labels = useQuery(labelsQuery);
   return (
     <Stack gap="3">
       <Heading as="h3" size="md">
-        Promote to
+        Label it
       </Heading>
-      {ranks.isPending && <Spinner aria-label="Loading" />}
-      {ranks.isError && (
-        <ErrorMessage title="The ranks could not be loaded">
-          <Button size="xs" variant="outline" onClick={() => void ranks.refetch()}>
+      {labels.isPending && <Spinner aria-label="Loading" />}
+      {labels.isError && (
+        <ErrorMessage title="The labels could not be loaded">
+          <Button size="xs" variant="outline" onClick={() => void labels.refetch()}>
             Try again
           </Button>
         </ErrorMessage>
       )}
-      {ranks.isSuccess && (
+      {labels.isSuccess && (
         <List.Root>
-          {ranks.data.map((rank) => (
-            <List.Item key={rank.id}>{rank.name}</List.Item>
+          {labels.data.map((label) => (
+            <List.Item key={label.id}>{label.name}</List.Item>
           ))}
         </List.Root>
       )}
@@ -235,23 +235,23 @@ A detail route turns the server's 404 into its own not-found page, named for the
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { ApiError } from "@jwcarman/roux-web/api";
 import { NotFoundPage } from "@jwcarman/roux-web/feedback";
-import { studentQuery } from "../../../students/studentQuery";
-import { StudentPage } from "../../../students/StudentPage";
+import { itemQuery } from "../../../items/items";
+import { ItemPage } from "../../../items/ItemPage";
 
-/** A student's page. The loader fetches the student first; one that does not exist is a 404. */
-export const Route = createFileRoute("/_signedIn/students/$studentId")({
+/** An item's page. The loader fetches the item first; one that does not exist is a 404. */
+export const Route = createFileRoute("/_signedIn/items/$itemId")({
   loader: async ({ context, params }) => {
     try {
-      await context.queryClient.ensureQueryData(studentQuery(params.studentId));
+      await context.queryClient.ensureQueryData(itemQuery(params.itemId));
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
-        throw notFound();
+        notFound({ throw: true });
       }
       throw error;
     }
   },
-  notFoundComponent: () => <NotFoundPage title="Student not found" />,
-  component: StudentPage,
+  notFoundComponent: () => <NotFoundPage title="Item not found" />,
+  component: ItemPage,
 });
 ```
 

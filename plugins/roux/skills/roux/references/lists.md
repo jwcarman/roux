@@ -25,10 +25,15 @@ shown with `QueryTable`, its state in the URL.
 **Server** (package `github.com/jwcarman/roux/page`, and `api`). The view is a migration:
 
 ```sql
-create view student_list as
-select s.id, s.name, s.email, s.joined_on, s.status, r.name as rank_name
-  from student s
-  left join rank r on r.id = s.rank_id;
+create view item_list as
+select i.id, i.title, i.notes, i.day, i.at_time, i.done, i.version,
+       coalesce(a.names, '{}') as assignee_names,
+       a.names[1]              as first_assignee_name
+  from item i
+  left join lateral (
+        select array_agg(u.display_name order by lower(u.display_name), u.id) as names
+          from item_assignee ia join roux_user u on u.id = ia.user_id
+         where ia.item_id = i.id) a on true;
 ```
 
 The list, a package variable:
@@ -38,52 +43,55 @@ The list, a package variable:
 type Sort string
 
 const (
-	ByName     Sort = "NAME"
-	ByJoinedOn Sort = "JOINED_ON"
+	ByDay      Sort = "DAY"
+	ByTitle    Sort = "TITLE"
+	ByAssignee Sort = "ASSIGNEE"
 )
 
 var list = page.New(page.ListConfig[Sort, Row]{
-	From:    "student_list",
-	Columns: "id, name, email, joined_on, status",
+	From:    "item_list",
+	Columns: "id, title, day, done, assignee_names, version",
 	Sorts: map[Sort][]page.Term{
-		ByName:     {page.By("lower(name)")},
-		ByJoinedOn: {page.By("joined_on")},
+		ByDay:      {page.By("day"), page.By("at_time").NullsFirst()},
+		ByTitle:    {page.By("lower(title)")},
+		ByAssignee: {page.By("lower(first_assignee_name)")},
 	},
-	DefaultSort:     ByName,
+	DefaultSort:     ByDay,
 	DefaultPageSize: 25,
-	Search:          []page.Field{page.Contains("name"), page.Contains("email")},
+	Search:          []page.Field{page.Contains("title"), page.Contains("notes")},
 	Scan:            scanRow,
 })
 
-// Row is a student as the list shows them.
+// Row is an item as the list shows it.
 type Row struct {
-	ID       uuid.UUID `json:"id"`
-	Name     string    `json:"name"`
-	Email    *string   `json:"email"`
-	JoinedOn string    `json:"joinedOn"` // 2026-11-24
-	Status   string    `json:"status"`
+	ID            uuid.UUID `json:"id"`
+	Title         string    `json:"title"`
+	Day           string    `json:"day"` // 2026-11-24
+	Done          bool      `json:"done"`
+	AssigneeNames []string  `json:"assigneeNames"`
+	Version       int64     `json:"version"`
 }
 
 func scanRow(row pgx.CollectableRow) (Row, error) {
 	var r Row
-	var joined time.Time
-	if err := row.Scan(&r.ID, &r.Name, &r.Email, &joined, &r.Status); err != nil {
+	var day time.Time
+	if err := row.Scan(&r.ID, &r.Title, &day, &r.Done, &r.AssigneeNames, &r.Version); err != nil {
 		return r, err
 	}
-	r.JoinedOn = joined.Format(time.DateOnly)
+	r.Day = day.Format(time.DateOnly)
 	return r, nil
 }
 
-// List is a page of students.
+// List is a page of items. f.Done is a *bool: nil when the request asks for neither.
 func (s Service) List(ctx context.Context, req page.Request, f Filter) (page.Page[Row], error) {
-	return list.Page(ctx, s.Pool, req, f.Search, page.WhereIf(f.Status != "", "status = ?", f.Status))
+	return list.Page(ctx, s.Pool, req, f.Search, page.WhereIf(f.Done != nil, "done = ?", f.Done))
 }
 ```
 
 The handler, and the filter it reads:
 
 ```go
-k.Handle("GET "+BasePath, StudentsRead, func(w http.ResponseWriter, r *http.Request) error {
+k.Handle("GET "+BasePath, ItemsRead, func(w http.ResponseWriter, r *http.Request) error {
 	req, err := api.PageRequest(r, list.Config())
 	if err != nil {
 		return err
@@ -103,11 +111,15 @@ k.Handle("GET "+BasePath, StudentsRead, func(w http.ResponseWriter, r *http.Requ
 ```go
 func filterOf(r *http.Request) (Filter, error) {
 	q := r.URL.Query()
-	f := Filter{Search: q.Get("search"), Status: q.Get("status")}
-	switch f.Status {
-	case "", StatusActive, StatusInactive:
+	f := Filter{Search: q.Get("search")}
+	switch q.Get("status") {
+	case "":
+	case "open":
+		f.Done = new(false) // a *bool (Go 1.26's new takes a value)
+	case "done":
+		f.Done = new(true)
 	default:
-		return Filter{}, problem.InvalidField("status", problem.MustBeOneOf(StatusActive, StatusInactive))
+		return Filter{}, problem.InvalidField("status", problem.MustBeOneOf("open", "done"))
 	}
 	return f, nil
 }
@@ -118,43 +130,43 @@ search, so a misspelled column stops startup instead of a request.
 
 Wire: `pageIndex` (0-based), `pageSize` (≤ 100), `sortBy`, `sortDirection` (`ASC`/`DESC`); answer
 `{ data, pagination: { pageIndex, pageSize, totalElementCount, totalPageCount, hasNext, hasPrevious } }`.
-An unknown `sortBy` is a 400 on `sortBy` ("Must be one of JOINED_ON, NAME").
+An unknown `sortBy` is a 400 on `sortBy` ("Must be one of ASSIGNEE, DAY, TITLE").
 
-**Module** (`students.ts`): `STUDENT_SORTS = ["NAME", "JOINED_ON"] as const`, the row interface, and
+**Module** (`items.ts`): `ITEM_SORTS = ["DAY", "TITLE", "ASSIGNEE"] as const`,
+`ITEM_STATUSES = ["open", "done"] as const`, the row interface (`ItemRow`), and
 
 ```ts
-export function studentsPage(filters: StudentFilters) {
-  return pageQuery(queryKeys.students.list(filters), (params, signal) =>
-    studentsApi.list({ ...params, ...filters }, signal),
-  );
+export function itemsPage(filters: ItemFilters) {
+  return pageQuery(queryKeys.items.list(filters), (params, signal) => itemsApi.list({ ...params, ...filters }, signal));
 }
 ```
 
-with `list: (filters) => [...queryKeys.students.lists(), filters] as const` in `queryKeys`, and
-`studentsApi.list = (params: PageParams & StudentFilters, signal?: AbortSignal) => getJson<PageDto<Student>>("students", { params, signal })`.
+with `list: (filters) => [...queryKeys.items.lists(), filters] as const` in `queryKeys`, and
+`itemsApi.list = (params: PageParams & ItemFilters, signal?: AbortSignal) => getJson<PageDto<ItemRow>>("items", { params, signal })`.
 
-**Page**: `QueryTable` with `aria-label`, `query={studentsPage({ search: search.search, status: search.status })}`,
-`columns` (each sortable column `id: "NAME" satisfies StudentSort`), `initialSort={{ id: "NAME", desc: false }}`,
-`params={search}`, `onParamsChange={(next) => navigate({ search: (prev) => ({ ...prev, ...next, sortBy: STUDENT_SORTS.find((s) => s === next.sortBy) }) })}`,
+**Page**: `QueryTable` with `aria-label`, `query={itemsPage({ search: search.search, status: search.status })}`,
+`columns` (each sortable column `id: "DAY" satisfies ItemSort`), `initialSort={{ id: "DAY", desc: false }}`,
+`params={search}`, `onParamsChange={(next) => navigate({ search: (prev) => ({ ...prev, ...next, sortBy: ITEM_SORTS.find((s) => s === next.sortBy) }) })}`,
 `getRowId`, `emptyText`, `errorText`. Above it, `DebouncedSearchInput` (`label`, `term`,
 `onSearchChange`; navigate with `replace: true`) and `FilterChips` (`label`, `options`, `value`,
 `onChange`, and `allLabel` or `defaultValue`). A search or filter change sets `pageIndex: undefined`.
 
-**Route** (`routes/_signedIn/students/index.tsx`):
+**Route** (`routes/_signedIn/items/index.tsx`):
 
 ```tsx
-export const Route = createFileRoute("/_signedIn/students/")({
-  validateSearch: (raw: Record<string, unknown>): StudentsSearch => ({
-    ...tableSearchOf(raw, STUDENT_SORTS),
-    status: enumSearchOf(raw.status, STUDENT_STATUSES),
+export const Route = createFileRoute("/_signedIn/items/")({
+  beforeLoad: ({ context }) => requirePermission(context.me, ITEMS_READ),
+  validateSearch: (raw: Record<string, unknown>): ItemsSearch => ({
+    ...tableSearchOf(raw, ITEM_SORTS),
+    status: enumSearchOf(raw.status, ITEM_STATUSES),
   }),
-  search: { middlewares: [stripSearchParams(STUDENTS_SEARCH_DEFAULTS)] },
-  component: StudentsPage,
+  search: { middlewares: [stripSearchParams(ITEMS_SEARCH_DEFAULTS)] },
+  component: ItemsPage,
 });
 ```
 
-`StudentsSearch = TableSearch<StudentSort> & { status?: StudentStatus }`; the defaults object uses
-`DEFAULT_PAGE_SIZE` (25) and `satisfies TableSearch<StudentSort>`.
+`ItemsSearch = TableSearch<ItemSort> & { status?: ItemStatus }`; the defaults object uses
+`DEFAULT_PAGE_SIZE` (25) and `satisfies TableSearch<ItemSort>`.
 
 ## Names
 
@@ -162,7 +174,7 @@ export const Route = createFileRoute("/_signedIn/students/")({
   `DefaultPageSize`, `MaxPageSize`, `Search`, `Scan`), `page.Term`, `page.By(...)` and
   `.NullsFirst()`, `page.Field`: `page.Contains`, `page.Prefix`, `page.Exact`; `page.Filter`:
   `page.Where(fragment, args...)`, `page.WhereIf(cond, fragment, args...)` (a slice is one
-  argument: `rank_id = any(?)`); `list.Page(ctx, db, req, search, filters...)`,
+  argument: `assignee_ids && ?`); `list.Page(ctx, db, req, search, filters...)`,
   `list.Check(ctx, db)`, `list.Config()`; `page.Request`, `page.Page[T]`, `page.Slice(sorted, req)`,
   `page.Of(rows, req, total)`. `page.New` returns a `*page.Paginator[S, T]`; `page.Querier` is a
   pool or a transaction; `page.Direction` is `page.Asc` or `page.Desc`; `page.Pagination` is the answer's `pagination`;

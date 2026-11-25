@@ -16,7 +16,7 @@ A paged endpoint reads these query parameters, all optional (`contracts/page-par
 | --- | --- | --- |
 | `pageIndex` | The page, counting from 0. | 0 |
 | `pageSize` | Rows per page; kept between 1 and the list's maximum (100 unless configured). | the list's default (20 unless configured) |
-| `sortBy` | One of the list's sorts (`NAME`, `JOINED_ON`): the constants of its sort type on the server. | the list's default sort |
+| `sortBy` | One of the list's sorts (`DAY`, `TITLE`): the constants of its sort type on the server. | the list's default sort |
 | `sortDirection` | `ASC` or `DESC` (any case). | `ASC` |
 
 and answers (`contracts/page.json`):
@@ -24,8 +24,8 @@ and answers (`contracts/page.json`):
 ```json
 {
   "data": [
-    { "id": "1", "name": "Ada" },
-    { "id": "2", "name": "Grace" }
+    { "id": "1", "title": "Order the venue" },
+    { "id": "2", "title": "Send the invitations" }
   ],
   "pagination": {
     "pageIndex": 0,
@@ -76,8 +76,8 @@ Refusals are Problem Details ([Errors](errors.md)), all `400` with `errors` on t
     "title": "Bad Request",
     "status": 400,
     "detail": "The request has invalid fields",
-    "errors": [{ "field": "sortBy", "message": "Must be one of EMAIL, JOINED_ON, NAME" }],
-    "instance": "/api/students"
+    "errors": [{ "field": "sortBy", "message": "Must be one of ASSIGNEE, DAY, TITLE" }],
+    "instance": "/api/items"
   }
   ```
 
@@ -102,11 +102,19 @@ assignees, a count) are columns of the view, so sorting and searching by them is
 from any other column:
 
 ```sql
--- The student list reads this: their name, their current rank, and when they joined.
-create view student_list as
-select s.id, s.name, s.email, s.joined_on, s.status, r.name as rank_name
-  from student s
-  left join rank r on r.id = s.rank_id;
+-- The items list reads this: the item, and its assignees' names, the first of them to sort by.
+create view item_list as
+select i.id, i.title, i.notes, i.day, i.at_time, i.done, i.version,
+       coalesce(a.ids, '{}')   as assignee_ids,
+       coalesce(a.names, '{}') as assignee_names,
+       a.names[1]              as first_assignee_name
+  from item i
+  left join lateral (
+        select array_agg(u.id order by lower(u.display_name), u.id)           as ids,
+               array_agg(u.display_name order by lower(u.display_name), u.id) as names
+          from item_assignee ia
+          join roux_user u on u.id = ia.user_id
+         where ia.item_id = i.id) a on true;
 ```
 
 A view is a migration like any table. `create or replace view` may add columns at the end but
@@ -119,49 +127,52 @@ cannot change or drop one; a changed view is `drop view` and `create view` in a 
 type Sort string
 
 const (
-	ByName     Sort = "NAME"
-	ByEmail    Sort = "EMAIL"
-	ByJoinedOn Sort = "JOINED_ON"
+	ByDay      Sort = "DAY"
+	ByTitle    Sort = "TITLE"
+	ByAssignee Sort = "ASSIGNEE"
 )
 
-// list is the student list: student_list, by name unless asked otherwise.
+// list is the items list: item_list, by day unless asked otherwise.
 var list = page.New(page.ListConfig[Sort, Row]{
-	From:    "student_list",
-	Columns: "id, name, email, joined_on, status",
+	From:    "item_list",
+	Columns: "id, title, day, at_time, done, assignee_names, version",
 	Sorts: map[Sort][]page.Term{
-		ByName:     {page.By("lower(name)")},
-		ByEmail:    {page.By("lower(email)").NullsFirst()},
-		ByJoinedOn: {page.By("joined_on")},
+		ByDay:      {page.By("day"), page.By("at_time").NullsFirst()},
+		ByTitle:    {page.By("lower(title)")},
+		ByAssignee: {page.By("lower(first_assignee_name)")},
 	},
-	DefaultSort:     ByName,
+	DefaultSort:     ByDay,
 	DefaultPageSize: 25,
-	Search:          []page.Field{page.Contains("name"), page.Contains("email")},
+	Search:          []page.Field{page.Contains("title"), page.Contains("notes")},
 	Scan:            scanRow,
 })
 
-// Row is a student as the list shows them.
+// Row is an item as the list shows it.
 type Row struct {
-	ID       uuid.UUID `json:"id"`
-	Name     string    `json:"name"`
-	Email    *string   `json:"email"`
-	JoinedOn string    `json:"joinedOn"` // 2026-11-24
-	Status   string    `json:"status"`
+	ID            uuid.UUID `json:"id"`
+	Title         string    `json:"title"`
+	Day           string    `json:"day"` // 2026-11-24
+	At            *string   `json:"at"`  // 10:30, or null for all day
+	Done          bool      `json:"done"`
+	AssigneeNames []string  `json:"assigneeNames"`
+	Version       int64     `json:"version"`
 }
 
 func scanRow(row pgx.CollectableRow) (Row, error) {
 	var r Row
-	var joined time.Time
-	if err := row.Scan(&r.ID, &r.Name, &r.Email, &joined, &r.Status); err != nil {
+	var day time.Time
+	var at pgtype.Time
+	if err := row.Scan(&r.ID, &r.Title, &day, &at, &r.Done, &r.AssigneeNames, &r.Version); err != nil {
 		return r, err
 	}
-	r.JoinedOn = joined.Format(time.DateOnly)
+	r.Day, r.At = day.Format(time.DateOnly), clock(at) // clock: "15:04", or nil for all day
 	return r, nil
 }
 ```
 
 - **The sort type is a string type** whose constants are the `sortBy` values; each maps to the
   terms it orders by. The request's direction applies to every term; `NullsFirst()` puts rows with
-  no value first (they come last otherwise, ascending).
+  no value first (they come last otherwise, ascending): here an all-day item leads its day.
 - **`From`, `Columns`, each term and each search field must be constants** in the code: their type
   is unexported, so a string built at run time does not compile. Values never go in them.
 - **`DefaultPageSize: 25`** matches the browser's `DEFAULT_PAGE_SIZE` (without it, 20); the
@@ -184,11 +195,14 @@ func scanRow(row pgx.CollectableRow) (Row, error) {
 ### The filters
 
 ```go
-// List is a page of students.
+// List is a page of items.
 func (s Service) List(ctx context.Context, req page.Request, f Filter) (page.Page[Row], error) {
 	filters := []page.Filter{
-		page.WhereIf(f.Status != "", "status = ?", f.Status),
-		page.WhereIf(f.JoinedAfter != nil, "joined_on > ?", f.JoinedAfter),
+		page.WhereIf(f.Done != nil, "done = ?", f.Done),
+		page.WhereIf(f.From != nil, "day >= ?", f.From),
+	}
+	if f.Assignee != nil {
+		filters = append(filters, page.Where("assignee_ids && ?", []uuid.UUID{*f.Assignee}))
 	}
 	return list.Page(ctx, s.Pool, req, f.Search, filters...)
 }
@@ -196,15 +210,17 @@ func (s Service) List(ctx context.Context, req page.Request, f Filter) (page.Pag
 
 - **`page.Where(fragment, args...)`** is one condition, with a `?` for each argument; the
   fragment is a constant and the values are always arguments. A slice is one argument: write
-  `rank_id = any(?)`, or `assignee_ids && ?` for an array column.
+  `label_id = any(?)`, or `assignee_ids && ?` for an array column (above: any of the item's
+  assignees is the one asked for).
 - **`page.WhereIf(cond, ...)`** is the condition when `cond` holds and nothing otherwise, so a list
-  of optional filters reads as a list.
+  of optional filters reads as a list. Its arguments are evaluated either way: pass a pointer as it
+  is (pgx sends the value), and dereference one only behind an `if`, as the assignee is here.
 - A `?` count that does not match the arguments panics the first time the line runs.
 
 ### The handler
 
 ```go
-k.Handle("GET "+BasePath, StudentsRead, func(w http.ResponseWriter, r *http.Request) error {
+k.Handle("GET "+BasePath, ItemsRead, func(w http.ResponseWriter, r *http.Request) error {
 	req, err := api.PageRequest(r, list.Config())
 	if err != nil {
 		return err
@@ -228,15 +244,22 @@ value it does not know as a `400` on that parameter, never ignoring it:
 ```go
 func filterOf(r *http.Request) (Filter, error) {
 	q := r.URL.Query()
-	f := Filter{Search: q.Get("search"), Status: q.Get("status")}
-	switch f.Status {
-	case "", StatusActive, StatusInactive:
+	f := Filter{Search: q.Get("search")}
+	switch q.Get("status") {
+	case "":
+	case "open":
+		f.Done = new(false)
+	case "done":
+		f.Done = new(true)
 	default:
-		return Filter{}, problem.InvalidField("status", problem.MustBeOneOf(StatusActive, StatusInactive))
+		return Filter{}, problem.InvalidField("status", problem.MustBeOneOf("open", "done"))
 	}
 	return f, nil
 }
 ```
+
+`new(false)` is a `*bool` pointing at `false` (since Go 1.26, `new` takes a value): `Done` is nil
+when the request asks for neither.
 
 A list whose order is fixed (a history, newest first) reads its request with
 `api.PageRequestUnsorted(r)`, which ignores any `sortBy`. A list already in memory pages with
@@ -246,34 +269,34 @@ A list whose order is fixed (a history, newest first) reads its request with
 ## The list's query
 
 A table, a growing list or a select takes the list's query: `pageQuery(queryKey, fetch)`, the list's
-key and how to fetch one page. Put it in the resource module, `src/students/students.ts`, beside
-`studentsApi` ([API client](api-client.md#write-an-api-module-for-a-resource)), as a function of the
+key and how to fetch one page. Put it in the resource module, `src/items/items.ts`, beside
+`itemsApi` ([API client](api-client.md#write-an-api-module-for-a-resource)), as a function of the
 list's filters, with the list's row type, statuses and sorts (the module already imports
 `queryKeys`):
 
 ```ts
-/** The statuses a student can have: the server's StatusActive and StatusInactive. */
-export const STUDENT_STATUSES = ["ACTIVE", "INACTIVE"] as const;
-export type StudentStatus = (typeof STUDENT_STATUSES)[number];
+/** The list's status filter: the server's `open` and `done`. */
+export const ITEM_STATUSES = ["open", "done"] as const;
+export type ItemStatus = (typeof ITEM_STATUSES)[number];
 
 /** The list's sorts: the column ids, and the server's `Sort` constants. */
-export const STUDENT_SORTS = ["NAME", "EMAIL", "JOINED_ON"] as const;
-export type StudentSort = (typeof STUDENT_SORTS)[number];
+export const ITEM_SORTS = ["DAY", "TITLE", "ASSIGNEE"] as const;
+export type ItemSort = (typeof ITEM_SORTS)[number];
 
-/** A row of the student list, as `/api/students` answers it. */
-export interface Student {
+/** A row of the items list, as `/api/items` answers it. */
+export interface ItemRow {
   id: string;
-  name: string;
-  email: string | null;
-  joinedOn: string;
-  status: StudentStatus;
+  title: string;
+  day: string;
+  at: string | null;
+  done: boolean;
+  assigneeNames: string[];
+  version: number;
 }
 
-/** The student list under `filters`, as a QueryTable takes it: its key and how to fetch a page. */
-export function studentsPage(filters: StudentFilters) {
-  return pageQuery(queryKeys.students.list(filters), (params, signal) =>
-    studentsApi.list({ ...params, ...filters }, signal),
-  );
+/** The items list under `filters`, as a QueryTable takes it: its key and how to fetch a page. */
+export function itemsPage(filters: ItemFilters) {
+  return pageQuery(queryKeys.items.list(filters), (params, signal) => itemsApi.list({ ...params, ...filters }, signal));
 }
 ```
 
@@ -297,7 +320,7 @@ adds the page request, `InfiniteSelect` its search and page size, and `InfiniteL
 `"infinite"` (an infinite query caches `{ pages, pageParams }`, not a plain list). All stay under the
 module's key, so `meta.refreshes` reaches them.
 
-The page never calls `studentsApi` or builds a key: it passes `query={studentsPage(filters)}`.
+The page never calls `itemsApi` or builds a key: it passes `query={itemsPage(filters)}`.
 
 ## A paged table
 
@@ -306,8 +329,9 @@ size, placeholder rows while the first page loads, `emptyText` when there are no
 the table when a page fails. It sits on the page without a box: small muted headings that stay in view
 down a long list (from `md` up), an arrow only on the sorted column, and the row under the pointer
 highlighted. The pager shows only when there is more than one page, and the page size only when a
-smaller size would show fewer rows; on one page the count is just `7 rows`. The students page (`src/students/StudentsPage.tsx`) keeps the page, sort,
-search and status filter in the URL, so a reload, Back and a shared link keep them:
+smaller size would show fewer rows; on one page the count is just `7 rows`. The items page
+(`src/items/ItemsPage.tsx`) keeps the page, sort, search and status filter in the URL, so a reload,
+Back and a shared link keep them:
 
 ```tsx
 import { Heading, Link, Stack } from "@chakra-ui/react";
@@ -315,65 +339,68 @@ import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import type { TableSearch } from "@jwcarman/roux-web/paging";
 import { DEFAULT_PAGE_SIZE, DebouncedSearchInput, FilterChips, QueryTable } from "@jwcarman/roux-web/table";
-import { STUDENT_SORTS, studentsPage, type Student, type StudentSort, type StudentStatus } from "./students";
+import { ITEM_SORTS, itemsPage, type ItemRow, type ItemSort, type ItemStatus } from "./items";
 
 /** The list's URL: page, sort and search, plus the status filter (all optional). */
-export type StudentsSearch = TableSearch<StudentSort> & { status?: StudentStatus };
+export type ItemsSearch = TableSearch<ItemSort> & { status?: ItemStatus };
 
 /** The list's defaults, left out of the URL. */
-export const STUDENTS_SEARCH_DEFAULTS = {
+export const ITEMS_SEARCH_DEFAULTS = {
   pageIndex: 0,
   pageSize: DEFAULT_PAGE_SIZE,
-  sortBy: "NAME",
+  sortBy: "DAY",
   sortDirection: "ASC",
-} as const satisfies TableSearch<StudentSort>;
+} as const satisfies TableSearch<ItemSort>;
 
 const STATUS_CHIPS = [
-  { value: "ACTIVE", label: "Active" },
-  { value: "INACTIVE", label: "Inactive" },
+  { value: "open", label: "Open" },
+  { value: "done", label: "Done" },
 ] as const;
 
-const column = createColumnHelper<Student>();
+const column = createColumnHelper<ItemRow>();
 
 /** Each sortable column's id is its sort's name; a column the server cannot sort says so. */
-const COLUMNS: ColumnDef<Student, unknown>[] = [
-  column.accessor("name", {
-    id: "NAME" satisfies StudentSort,
-    header: "Name",
+const COLUMNS: ColumnDef<ItemRow, unknown>[] = [
+  column.accessor((item) => (item.at ? `${item.day} ${item.at}` : item.day), {
+    id: "DAY" satisfies ItemSort,
+    header: "When",
+  }),
+  column.accessor("title", {
+    id: "TITLE" satisfies ItemSort,
+    header: "Title",
     cell: (info) => (
       <Link asChild>
-        <RouterLink to="/students/$studentId" params={{ studentId: info.row.original.id }}>
+        <RouterLink to="/items/$itemId" params={{ itemId: info.row.original.id }}>
           {info.getValue()}
         </RouterLink>
       </Link>
     ),
   }),
-  column.accessor("email", {
-    id: "EMAIL" satisfies StudentSort,
-    header: "Email",
-    cell: (info) => info.getValue() ?? "—",
+  column.accessor((item) => item.assigneeNames.join(", "), {
+    id: "ASSIGNEE" satisfies ItemSort,
+    header: "Assigned to",
   }),
-  column.accessor("joinedOn", { id: "JOINED_ON" satisfies StudentSort, header: "Joined" }),
-  column.accessor("status", {
+  column.accessor("done", {
+    id: "STATUS",
     header: "Status",
     enableSorting: false,
-    cell: (info) => (info.getValue() === "ACTIVE" ? "Active" : "Inactive"),
+    cell: (info) => (info.getValue() ? "Done" : "Open"),
   }),
 ];
 
-const route = getRouteApi("/_signedIn/students/");
+const route = getRouteApi("/_signedIn/items/");
 
-/** The students: paged, sortable, searchable, filtered by status, all kept in the URL. */
-export function StudentsPage() {
+/** The team's items: paged, sortable, searchable, filtered by status, all kept in the URL. */
+export function ItemsPage() {
   const search = route.useSearch();
   const navigate = route.useNavigate();
 
   return (
     <Stack gap="6">
-      <Heading as="h2">Students</Heading>
+      <Heading as="h2">Items</Heading>
       <DebouncedSearchInput
-        label="Search students"
-        placeholder="Search by name or email"
+        label="Search items"
+        placeholder="Search titles and notes"
         term={search.search}
         // Typing replaces the history entry: Back skips the letters, not the searches.
         onSearchChange={(term) =>
@@ -384,56 +411,56 @@ export function StudentsPage() {
         label="Status"
         options={STATUS_CHIPS}
         value={search.status}
-        allLabel="All statuses"
+        allLabel="Any status"
         onChange={(status) => navigate({ search: (previous) => ({ ...previous, status, pageIndex: undefined }) })}
       />
       <QueryTable
-        aria-label="Students"
-        query={studentsPage({ search: search.search, status: search.status })}
+        aria-label="Items"
+        query={itemsPage({ search: search.search, status: search.status })}
         columns={COLUMNS}
-        initialSort={{ id: STUDENTS_SEARCH_DEFAULTS.sortBy, desc: false }}
+        initialSort={{ id: ITEMS_SEARCH_DEFAULTS.sortBy, desc: false }}
         params={search}
         onParamsChange={(next) =>
           navigate({
             search: (previous) => ({
               ...previous,
               ...next,
-              sortBy: STUDENT_SORTS.find((sort) => sort === next.sortBy),
+              sortBy: ITEM_SORTS.find((sort) => sort === next.sortBy),
             }),
           })
         }
-        getRowId={(student) => student.id}
-        emptyText="No students found."
-        errorText="Could not load the students."
+        getRowId={(item) => item.id}
+        emptyText="No items found."
+        errorText="Could not load the items."
       />
     </Stack>
   );
 }
 ```
 
-The route (`src/routes/_signedIn/students/index.tsx`) reads the URL with `tableSearchOf` and
+The route (`src/routes/_signedIn/items/index.tsx`) reads the URL with `tableSearchOf` and
 `enumSearchOf`, and leaves the defaults out of it:
 
 ```tsx
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { enumSearchOf, tableSearchOf } from "@jwcarman/roux-web/paging";
-import { STUDENT_SORTS, STUDENT_STATUSES } from "../../../students/students";
-import { StudentsPage, STUDENTS_SEARCH_DEFAULTS, type StudentsSearch } from "../../../students/StudentsPage";
+import { ITEM_SORTS, ITEM_STATUSES } from "../../../items/items";
+import { ItemsPage, ITEMS_SEARCH_DEFAULTS, type ItemsSearch } from "../../../items/ItemsPage";
 
-export const Route = createFileRoute("/_signedIn/students/")({
-  validateSearch: (raw: Record<string, unknown>): StudentsSearch => ({
-    ...tableSearchOf(raw, STUDENT_SORTS),
-    status: enumSearchOf(raw.status, STUDENT_STATUSES),
+export const Route = createFileRoute("/_signedIn/items/")({
+  validateSearch: (raw: Record<string, unknown>): ItemsSearch => ({
+    ...tableSearchOf(raw, ITEM_SORTS),
+    status: enumSearchOf(raw.status, ITEM_STATUSES),
   }),
-  search: { middlewares: [stripSearchParams(STUDENTS_SEARCH_DEFAULTS)] },
-  component: StudentsPage,
+  search: { middlewares: [stripSearchParams(ITEMS_SEARCH_DEFAULTS)] },
+  component: ItemsPage,
 });
 ```
 
 How it fits together:
 
 - **Column ids are sort names.** A column's `id` is what the table sends as `sortBy`, so it must be
-  one of the list's sorts on the server (`satisfies StudentSort` makes the compiler check it). A
+  one of the list's sorts on the server (`satisfies ItemSort` makes the compiler check it). A
   column the server cannot sort sets `enableSorting: false`; an accessor column without it is
   sortable, and clicking it would ask for a sort the server refuses.
 - **One sort at a time.** A sortable header is a button with `aria-sort`; the first click sorts
@@ -445,12 +472,12 @@ How it fits together:
   (defaults for what is absent) and reports each change as `TableParams`
   (`{ pageIndex, pageSize, sortBy?, sortDirection? }`) instead of keeping its own; `params.search` is
   ignored. `onParamsChange` gives `sortBy` as a `string`: narrow it back to the sort type with
-  `STUDENT_SORTS.find(...)` before it goes in the URL.
+  `ITEM_SORTS.find(...)` before it goes in the URL.
 - **Typed URLs are checked.** `tableSearchOf(raw, sorts)` keeps a whole `pageIndex` (0 or more), a
   `pageSize` of at least 1 (capped at `MAX_PAGE_SIZE`, 100), a `sortBy` that is one of `sorts`, an
   `ASC`/`DESC` direction (any case), and a non-blank `search`; anything else is dropped.
   `enumSearchOf(raw, values)` keeps a filter value only if `values` offers it; for a filter whose
-  values are ids loaded at run time (a rank, a class), `idSearchOf(raw)` keeps a value only if it is
+  values are ids loaded at run time (an assignee, a label), `idSearchOf(raw)` keeps a value only if it is
   shaped like a UUID, so the route never needs its own `typeof` check. A date that is URL state (a
   page for one day, a report's start) is `dateSearchOf(raw)`: a real `YYYY-MM-DD` (`2026-02-30` is
   not one) or absent; the page falls back to the organization's `today()` ([Dates and time](dates-and-time.md)). A typed URL past the
@@ -463,7 +490,7 @@ How it fits together:
 
 | Prop | Type | Meaning |
 | --- | --- | --- |
-| `query` | `PageQuery<T>` | The list's query from its module (`studentsPage(filters)`): its key, filters included, and how to fetch one page. |
+| `query` | `PageQuery<T>` | The list's query from its module (`itemsPage(filters)`): its key, filters included, and how to fetch one page. |
 | `columns` | `ColumnDef<T, unknown>[]` | TanStack Table columns; sortable ids are sort names. |
 | `initialSort` | `ColumnSort` (`{ id, desc }`) | The sort when the URL or state has none. Give the server's default, so the header shows it. |
 | `initialPageSize` | `number` | Rows per page when none is given; at most 100. |
@@ -500,8 +527,7 @@ function FilterChips<T extends string>(props: FilterChipsProps<T>): JSX.Element;
   navigation so Back skips the keystrokes.
 - `FilterChips` (`FilterChipsProps<T>`, options of `FilterOption<T>`) is one filter as a row of toggle buttons (`aria-pressed`), one chosen at a time;
   `allLabel` adds a first chip that clears it (`undefined`). `label` names the group for screen
-  readers. When the list has its own default (the school's students show the active ones unless
-  asked), pass `defaultValue` instead of `allLabel`: that chip shows chosen while `value` is
+  readers. When the list has its own default (a list that shows open items unless asked), pass `defaultValue` instead of `allLabel`: that chip shows chosen while `value` is
   `undefined`, and choosing it reports `undefined`, so the default stays out of the URL and the page
   needs no `value ?? DEFAULT` or `x === DEFAULT ? undefined : x` of its own. The two props exclude
   each other; with a default there is no "no filter" to offer.
@@ -514,21 +540,21 @@ import { List, Stack } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { SearchInput, useDebounce } from "@jwcarman/roux-web/table";
-import { ranksQuery } from "./ranks";
+import { labelsQuery } from "./labels";
 
-/** The ranks whose name holds what was typed: a filter in the browser, no request per key. */
-export function RankFilter() {
+/** The labels whose name holds what was typed: a filter in the browser, no request per key. */
+export function LabelFilter() {
   const [text, setText] = useState("");
   const term = useDebounce(text, 200).trim().toLowerCase();
-  const ranks = useQuery(ranksQuery);
-  const shown = (ranks.data ?? []).filter((rank) => rank.name.toLowerCase().includes(term));
+  const labels = useQuery(labelsQuery);
+  const shown = (labels.data ?? []).filter((label) => label.name.toLowerCase().includes(term));
 
   return (
     <Stack gap="2">
-      <SearchInput label="Filter ranks" placeholder="Filter by name" value={text} onChange={setText} />
+      <SearchInput label="Filter labels" placeholder="Filter by name" value={text} onChange={setText} />
       <List.Root>
-        {shown.map((rank) => (
-          <List.Item key={rank.id}>{rank.name}</List.Item>
+        {shown.map((label) => (
+          <List.Item key={label.id}>{label.name}</List.Item>
         ))}
       </List.Root>
     </Stack>
@@ -555,23 +581,23 @@ import {
   TanstackTable,
   useQueryTable,
 } from "@jwcarman/roux-web/table";
-import { studentsPage, type Student } from "./students";
+import { itemsPage, type ItemRow } from "./items";
 
-const column = createColumnHelper<Student>();
+const column = createColumnHelper<ItemRow>();
 
-const COLUMNS: ColumnDef<Student, unknown>[] = [
-  column.accessor("name", { id: "NAME", header: "Name" }),
-  column.accessor("joinedOn", { id: "JOINED_ON", header: "Joined" }),
+const COLUMNS: ColumnDef<ItemRow, unknown>[] = [
+  column.accessor("day", { id: "DAY", header: "Day" }),
+  column.accessor("title", { id: "TITLE", header: "Title" }),
 ];
 
-/** The active students, with the row count and page size above the table and the pager below. */
-export function ActiveStudentsTable() {
+/** The open items, with the row count and page size above the table and the pager below. */
+export function OpenItemsTable() {
   const { table, isLoading, isError } = useQueryTable({
-    query: studentsPage({ status: "ACTIVE" }),
+    query: itemsPage({ status: "open" }),
     columns: COLUMNS,
-    initialSort: { id: "JOINED_ON", desc: true },
+    initialSort: { id: "DAY", desc: false },
     initialPageSize: 10,
-    getRowId: (student) => student.id,
+    getRowId: (item) => item.id,
   });
 
   return (
@@ -580,13 +606,13 @@ export function ActiveStudentsTable() {
         <TableStatus table={table} />
         <TablePageSizeSelect table={table} pageSizes={[10, 20, 50]} />
       </Flex>
-      {isError && <ErrorMessage>Could not load the students.</ErrorMessage>}
+      {isError && <ErrorMessage>Could not load the items.</ErrorMessage>}
       <TanstackTable
-        aria-label="Active students"
+        aria-label="Open items"
         table={table}
         isLoading={isLoading}
         isError={isError}
-        emptyText="No active students."
+        emptyText="Nothing open."
       />
       <TablePagination table={table} />
     </Stack>
@@ -625,24 +651,24 @@ import { Button, Stack } from "@chakra-ui/react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
 import { createSelectColumn, QueryTable } from "@jwcarman/roux-web/table";
-import { studentsPage, type Student } from "./students";
+import { itemsPage, type ItemRow } from "./items";
 
-const column = createColumnHelper<Student>();
+const column = createColumnHelper<ItemRow>();
 
-const COLUMNS: ColumnDef<Student, unknown>[] = [
-  column.accessor("name", { id: "NAME", header: "Name" }),
-  column.accessor("email", { id: "EMAIL", header: "Email", cell: (info) => info.getValue() ?? "—" }),
+const COLUMNS: ColumnDef<ItemRow, unknown>[] = [
+  column.accessor("day", { id: "DAY", header: "Day" }),
+  column.accessor("title", { id: "TITLE", header: "Title" }),
 ];
 
-/** Active students to choose for a grading, across pages. */
-export function ChooseStudents({ onChosen }: { onChosen: (students: Student[]) => void }) {
-  const [selected, setSelected] = useState<Map<string, Student>>(new Map());
+/** Open items to choose and mark done together, across pages. */
+export function ChooseItems({ onChosen }: { onChosen: (items: ItemRow[]) => void }) {
+  const [selected, setSelected] = useState<Map<string, ItemRow>>(new Map());
   const columns = [
-    createSelectColumn<Student>({
+    createSelectColumn<ItemRow>({
       selected,
       onSelectedChange: setSelected,
-      keyOf: (student) => student.id,
-      labelOf: (student) => student.name,
+      keyOf: (item) => item.id,
+      labelOf: (item) => item.title,
     }),
     ...COLUMNS,
   ];
@@ -650,14 +676,14 @@ export function ChooseStudents({ onChosen }: { onChosen: (students: Student[]) =
   return (
     <Stack gap="4">
       <QueryTable
-        aria-label="Active students"
-        query={studentsPage({ status: "ACTIVE" })}
+        aria-label="Open items"
+        query={itemsPage({ status: "open" })}
         columns={columns}
-        initialSort={{ id: "NAME", desc: false }}
-        getRowId={(student) => student.id}
+        initialSort={{ id: "DAY", desc: false }}
+        getRowId={(item) => item.id}
       />
       <Button alignSelf="start" disabled={selected.size === 0} onClick={() => onChosen([...selected.values()])}>
-        Add {selected.size} to the grading
+        Mark {selected.size} done
       </Button>
     </Stack>
   );
@@ -673,38 +699,38 @@ columns with `useMemo` keyed on `selected`, not inline on every render (see belo
 
 ## A short list
 
-A list that is never long (the school's ranks) is fetched whole and sorted in the browser with
+A list that is never long (the team's labels) is fetched whole and sorted in the browser with
 `SimpleQueryTable`: no pager, and no request to sort.
 
 ```tsx
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { SimpleQueryTable } from "@jwcarman/roux-web/table";
-import { ranksQuery, type Rank } from "./ranks";
+import { labelsQuery, type Label } from "./labels";
 
-const column = createColumnHelper<Rank>();
+const column = createColumnHelper<Label>();
 
-const COLUMNS: ColumnDef<Rank, unknown>[] = [
+const COLUMNS: ColumnDef<Label, unknown>[] = [
   column.accessor("name", { header: "Name" }),
   column.accessor("colour", { header: "Colour" }),
 ];
 
-/** Every rank, sorted in the browser: a list this short needs no paging. */
-export function RanksTable() {
+/** Every label, sorted in the browser: a list this short needs no paging. */
+export function LabelsTable() {
   return (
     <SimpleQueryTable
-      aria-label="Ranks"
-      query={ranksQuery}
+      aria-label="Labels"
+      query={labelsQuery}
       columns={COLUMNS}
       initialSort={{ id: "name", desc: false }}
-      getRowId={(rank) => rank.id}
-      emptyText="No ranks yet."
+      getRowId={(label) => label.id}
+      emptyText="No labels yet."
     />
   );
 }
 ```
 
 `SimpleQueryTableProps<T>`: `query` (the module's `queryOptions({ ... })` for the whole list, as
-`ranksQuery` is in [Queries and mutations](queries-and-mutations.md)), `columns`, `initialSort?`,
+`labelsQuery` is in [Queries and mutations](queries-and-mutations.md)), `columns`, `initialSort?`,
 `enabled?` (false holds the fetch, for example until a filter it needs is chosen), `getRowId?`,
 `emptyText?`, `errorText?`, and Chakra `Table.Root` props. Its column ids are the accessor keys
 (`name`), not sort names: the browser sorts.
@@ -722,11 +748,11 @@ function fetchAllPages<T>(
 
 ```ts
 import { fetchAllPages } from "@jwcarman/roux-web/paging";
-import { studentsApi } from "./students";
+import { itemsApi } from "./items";
 
-/** Every inactive student, a page of 100 at a time, for a mailing. */
-export function allInactiveStudents() {
-  return fetchAllPages((params) => studentsApi.list({ ...params, status: "INACTIVE" }));
+/** Every open item, a page of 100 at a time, for a printed list. */
+export function allOpenItems() {
+  return fetchAllPages((params) => itemsApi.list({ ...params, status: "open" }));
 }
 ```
 
@@ -737,46 +763,46 @@ wants paging.
 
 ## An ordered list
 
-A short list whose order is the point (the school's rank ladder) keeps a `position` on each row, 1 to
-n, and moves a row one step at a time. The pieces, from the dojo's ranks:
+A short list whose order is the point (the labels, in the order an item shows them) keeps a
+`position` on each row, 1 to n, and moves a row one step at a time. The pieces:
 
 - **The table.** `position` is unique, but a swap passes through a duplicate, so make the constraint
-  deferrable: `alter table rank add constraint rank_position_key unique (position) deferrable
+  deferrable: `alter table label add constraint label_position_key unique (position) deferrable
   initially deferred`. It is checked at commit.
-- **One endpoint per move, answering the new list.** `POST /api/ranks/{id}/move-up` and
+- **One endpoint per move, answering the new list.** `POST /api/labels/{id}/move-up` and
   `.../move-down` return the whole list. A move past either end is a `409`
-  (`problem.Conflict("Blue is already the lowest rank")`), not a silent no-op.
-- **The service swaps two positions** in one transaction, with the ladder locked:
+  (`problem.Conflict("Urgent is already first")`), not a silent no-op.
+- **The service swaps two positions** in one transaction, with the order locked:
 
 ```go
-// rung is a rank's place on the ladder.
-type rung struct {
+// slot is a label's place in the order.
+type slot struct {
 	ID       uuid.UUID
 	Name     string
 	Position int
 }
 
-// move swaps a rank with its neighbour: step is -1 (up) or 1 (down).
-func (s Service) move(ctx context.Context, id uuid.UUID, step int) ([]Rank, error) {
+// move swaps a label with its neighbour: step is -1 (up) or 1 (down).
+func (s Service) move(ctx context.Context, id uuid.UUID, step int) ([]Label, error) {
 	err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `select id, name, position from rank order by position for update`)
+		rows, err := tx.Query(ctx, `select id, name, position from label order by position for update`)
 		if err != nil {
 			return err
 		}
-		ladder, err := pgx.CollectRows(rows, pgx.RowToStructByPos[rung])
+		order, err := pgx.CollectRows(rows, pgx.RowToStructByPos[slot])
 		if err != nil {
 			return err
 		}
-		i := slices.IndexFunc(ladder, func(r rung) bool { return r.ID == id })
+		i := slices.IndexFunc(order, func(l slot) bool { return l.ID == id })
 		if i < 0 {
 			return notFound()
 		}
 		j := i + step
-		if j < 0 || j >= len(ladder) {
-			return problem.Conflict(fmt.Sprintf("%s is already at the end of the ladder", ladder[i].Name))
+		if j < 0 || j >= len(order) {
+			return problem.Conflict(fmt.Sprintf("%s is already at the end", order[i].Name))
 		}
-		_, err = tx.Exec(ctx, `update rank set position = case id when $1 then $4 when $2 then $3 end
-			where id in ($1, $2)`, ladder[i].ID, ladder[j].ID, ladder[i].Position, ladder[j].Position)
+		_, err = tx.Exec(ctx, `update label set position = case id when $1 then $4 when $2 then $3 end
+			where id in ($1, $2)`, order[i].ID, order[j].ID, order[i].Position, order[j].Position)
 		return err
 	})
 	if err != nil {
@@ -787,70 +813,70 @@ func (s Service) move(ctx context.Context, id uuid.UUID, step int) ([]Rank, erro
 ```
 
 - **A new row goes to the end** (`coalesce(max(position), 0) + 1`, with the table locked), and **a
-  removal closes the gap** in the same transaction: `update rank set position = position - 1 where
+  removal closes the gap** in the same transaction: `update label set position = position - 1 where
   position > $1`.
-- **The browser** has two mutations (`moveRankUp`, `moveRankDown`) that refresh the list (and any
-  query that embeds a rank, as the students' do). The row's buttons are disabled at the ends: take
+- **The browser** has two mutations (`moveLabelUp`, `moveLabelDown`) that refresh the list (and any
+  query that embeds a label, as the items' would). The row's buttons are disabled at the ends: take
   `first` and `last` from the table in the actions cell, `row.index === 0` and
   `row.index === table.getRowModel().rows.length - 1`, and give each `IconButton` an `aria-label` that
-  names the row (`Move Blue up`) and `loading` from its `useServerAction`.
+  names the row (`Move Urgent up`) and `loading` from its `useServerAction`.
 
 ```tsx
 column.display({
   id: "actions",
   cell: ({ row, table }) => (
-    <RankActions rank={row.original} first={row.index === 0} last={row.index === table.getRowModel().rows.length - 1} />
+    <LabelActions label={row.original} first={row.index === 0} last={row.index === table.getRowModel().rows.length - 1} />
   ),
 });
 ```
 
 ## A column only some people see
 
-A list everyone with `students.read` may open can carry fields only some of them may see (a
-student's payment status needs `payments.record`). The endpoint keeps its own permission; the
-column's is checked inside it, once:
+A list everyone with `items.read` may open can carry fields only some of them may see (an item's
+cost needs `costs.read`). The endpoint keeps its own permission; the column's is checked inside it,
+once:
 
 ```go
 caller := authn.PrincipalFrom(r.Context())
-withPayment := caller.Has(PaymentsRecord)
-if !withPayment && (f.Payment != "" || req.SortBy == string(ByPaidThrough)) {
+withCost := caller.Has(CostsRead)
+if !withCost && (f.CostOver != nil || req.SortBy == string(ByCost)) {
 	return problem.Forbidden()
 }
-out, err := svc.List(r.Context(), req, f, withPayment) // the rows' payment fields, or null
+out, err := svc.List(r.Context(), req, f, withCost) // the rows' cost, or null
 ```
 
 - **Refuse the filter and the sort, don't ignore them.** A caller who filters on a field they cannot
   see learns its values from which rows come back.
 - **Leave the fields `null` for such a caller**, not absent: the row's type stays one shape.
 - The page hides the column, filter and sort from the same permission
-  (`me.permissions.includes(PAYMENTS_RECORD)`, from `permissions.gen.ts`); the server's check is the one
+  (`me.permissions.includes(COSTS_READ)`, from `permissions.gen.ts`); the server's check is the one
   that counts.
 
 ## A list that grows
 
 `InfiniteList` shows a paged endpoint as a list that loads its next page on demand, newest first or
-in whatever order the endpoint gives. A student's rank history:
+in whatever order the endpoint gives. An item's comments:
 
 ```tsx
 import { Box, Text } from "@chakra-ui/react";
 import { InfiniteList } from "@jwcarman/roux-web/paging";
-import { promotionsPage } from "./students";
+import { commentsPage } from "./items";
 
-/** A student's rank history, a page at a time. */
-export function RankHistory({ studentId }: { studentId: string }) {
+/** An item's comments, newest first, a page at a time. */
+export function Comments({ itemId }: { itemId: string }) {
   return (
     <InfiniteList
-      aria-label="Rank history"
-      query={promotionsPage(studentId)}
-      getItemKey={(promotion) => promotion.id}
+      aria-label="Comments"
+      query={commentsPage(itemId)}
+      getItemKey={(comment) => comment.id}
       loadMode="hybrid"
-      emptyText="No promotions yet."
-      errorText="Could not load the rank history."
-      renderItem={(promotion) => (
+      emptyText="No comments yet."
+      errorText="Could not load the comments."
+      renderItem={(comment) => (
         <Box px="4" py="3">
-          <Text>{promotion.rankName}</Text>
+          <Text>{comment.text}</Text>
           <Text fontSize="sm" color="fg.muted">
-            {promotion.promotedOn}
+            {comment.authorName}, {comment.writtenOn}
           </Text>
         </Box>
       )}
@@ -859,22 +885,23 @@ export function RankHistory({ studentId }: { studentId: string }) {
 }
 ```
 
-with the query in the resource module, `src/students/students.ts`, and its key added to the factory
-in `src/queryKeys.ts`, under the student, so refreshing `queryKeys.students.detail(id)` after a
-promotion refreshes the history too:
+with the query in the resource module, `src/items/items.ts`, and its key added to the factory in
+`src/queryKeys.ts`, under the item, so refreshing `queryKeys.items.detail(id)` after a new comment
+refreshes the list too:
 
 ```ts
-/** A promotion as `/api/students/{id}/promotions` answers it, newest first. */
-export interface Promotion {
+/** A comment as `/api/items/{id}/comments` answers it, newest first. */
+export interface Comment {
   id: string;
-  rankName: string;
-  promotedOn: string;
+  text: string;
+  authorName: string;
+  writtenOn: string;
 }
 
-/** A student's rank history: its key and how to fetch a page of it, 20 promotions at a time. */
-export function promotionsPage(studentId: string) {
-  return pageQuery(queryKeys.students.promotions(studentId), ({ pageIndex }, signal) =>
-    getJson<PageDto<Promotion>>(path`students/${studentId}/promotions`, {
+/** An item's comments: its key and how to fetch a page of them, 20 at a time. */
+export function commentsPage(itemId: string) {
+  return pageQuery(queryKeys.items.comments(itemId), ({ pageIndex }, signal) =>
+    getJson<PageDto<Comment>>(path`items/${itemId}/comments`, {
       params: { pageIndex, pageSize: 20 },
       signal,
     }),
@@ -883,7 +910,7 @@ export function promotionsPage(studentId: string) {
 ```
 
 ```ts
-promotions: (id: string) => [...queryKeys.students.detail(id), "promotions"] as const,
+comments: (id: string) => [...queryKeys.items.detail(id), "comments"] as const,
 ```
 
 `InfiniteListProps<T>`:
@@ -908,26 +935,26 @@ loads more as the options scroll. It fetches nothing until it is opened.
 
 ```tsx
 import { InfiniteSelect } from "@jwcarman/roux-web/paging";
-import { studentsPage, type Student } from "./students";
+import { itemsPage, type ItemRow } from "./items";
 
-/** Picks one active student, searching the server as the user types. */
-export function StudentPicker({
-  studentId,
+/** Picks one open item (the one this item waits on), searching the server as the user types. */
+export function ItemPicker({
+  itemId,
   onChange,
 }: {
-  studentId: string | undefined;
+  itemId: string | undefined;
   onChange: (id: string | undefined) => void;
 }) {
   return (
-    <InfiniteSelect<Student>
-      label="Student"
-      value={studentId}
+    <InfiniteSelect<ItemRow>
+      label="Waits on"
+      value={itemId}
       onChange={onChange}
-      query={studentsPage({ status: "ACTIVE" })}
-      getItemId={(student) => student.id}
-      getItemLabel={(student) => student.name}
-      getItemSubtext={(student) => student.email ?? ""}
-      placeholder="Search by name or email"
+      query={itemsPage({ status: "open" })}
+      getItemId={(item) => item.id}
+      getItemLabel={(item) => item.title}
+      getItemSubtext={(item) => item.day}
+      placeholder="Search titles and notes"
       minSearchLength={2}
     />
   );
@@ -958,17 +985,17 @@ search and filters:
 
 ```ts
 import { queryStringOf } from "@jwcarman/roux-web/paging";
-import type { StudentStatus } from "./students";
+import type { ItemStatus } from "./items";
 
-/** The CSV of the students the list shows (its search and status), every page of it. */
-export function studentsExportHref(search: string | undefined, status: StudentStatus | undefined): string {
-  return `/api/students/export.csv${queryStringOf({ search, status })}`;
+/** The CSV of the items the list shows (its search and status), every page of it. */
+export function itemsExportHref(search: string | undefined, status: ItemStatus | undefined): string {
+  return `/api/items/export.csv${queryStringOf({ search, status })}`;
 }
 ```
 
 ## Things to know
 
-- **Define columns once.** Module scope (one constant per permission: `LADDER`, `MANAGE_COLUMNS`) or
+- **Define columns once.** Module scope (one constant per permission: `COLUMNS`, `MANAGE_COLUMNS`) or
   `useMemo`. Columns rebuilt on every render make new cell components, which React remounts: a
   dialog opened from a cell closes by itself whenever the page re-renders (a query finishing is
   enough), and a test passes alone and fails after another. A column that must read state (the

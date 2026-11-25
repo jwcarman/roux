@@ -9,34 +9,35 @@ per resource, one typed function per endpoint, and calls those functions from Ta
 
 ## Write an API module for a resource
 
-One file per resource, exporting one object whose members are the endpoints. For students:
+One file per resource, exporting one object whose members are the endpoints. For items:
 
 ```ts
 import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
 import type { PageDto, PageParams } from "@jwcarman/roux-web/paging";
 
-/** The student list's filters, as `/api/students` takes them. */
-export type StudentFilters = { search?: string; status?: StudentStatus; rankId?: string };
+/** The items list's filters, as `/api/items` takes them. `assignee` is `me` or a user's id. */
+export type ItemFilters = { search?: string; status?: ItemStatus; assignee?: string };
 
-/** `/api/students`: one function per endpoint. */
-export const studentsApi = {
-  list: (params: PageParams & StudentFilters, signal?: AbortSignal) =>
-    getJson<PageDto<Student>>("students", { params, signal }),
-  get: (id: string, signal?: AbortSignal) => getJson<StudentDetail>(path`students/${id}`, { signal }),
-  create: (request: StudentRequest) => sendJson<StudentDetail>("POST", "students", request),
-  update: (id: string, request: StudentRequest & { version: number }) =>
-    sendJson<StudentDetail>("PUT", path`students/${id}`, request),
-  promote: (id: string, rankId: string) => sendJson<StudentDetail>("POST", path`students/${id}/promotions`, { rankId }),
-  remove: (id: string) => sendJson<void>("DELETE", path`students/${id}`),
+/** `/api/items`: one function per endpoint. */
+export const itemsApi = {
+  list: (params: PageParams & ItemFilters, signal?: AbortSignal) =>
+    getJson<PageDto<ItemRow>>("items", { params, signal }),
+  get: (id: string, signal?: AbortSignal) => getJson<ItemDetail>(path`items/${id}`, { signal }),
+  create: (request: ItemRequest) => sendJson<ItemDetail>("POST", "items", request),
+  update: (id: string, request: ItemRequest & { version: number }) =>
+    sendJson<ItemDetail>("PUT", path`items/${id}`, request),
+  label: (id: string, labelId: string) => sendJson<ItemDetail>("POST", path`items/${id}/labels`, { labelId }),
+  markDone: (id: string, body: { done: boolean }) => sendJson<ItemDetail>("PUT", path`items/${id}/done`, body),
+  remove: (id: string) => sendJson<void>("DELETE", path`items/${id}`),
 };
 ```
 
 Rules the module follows:
 
-- Paths have no leading slash (`"students"`), so they go under `baseUrl` (`/api`).
+- Paths have no leading slash (`"items"`), so they go under `baseUrl` (`/api`).
 - Every path with a value in it uses the `path` tagged template, which URL-encodes each value.
 - Reads take an optional `signal` and pass it on, so TanStack Query can cancel them
-  (`queryFn: ({ signal }) => studentsApi.get(id, signal)`).
+  (`queryFn: ({ signal }) => itemsApi.get(id, signal)`).
 - Each function is typed by its answer: `getJson<T>`, `sendJson<T>`.
 
 ## Read JSON
@@ -60,12 +61,12 @@ Pass `params`; any object type works (`QueryParams` is `object`), including an i
 `PageParams`, so a page's parameters and filters can be spread together:
 
 ```ts
-getJson<PageDto<Student>>("students", { params: { pageIndex: 0, pageSize: 25, search: "ada", rankId: undefined } });
-// GET /api/students?pageIndex=0&pageSize=25&search=ada
+getJson<PageDto<ItemRow>>("items", { params: { pageIndex: 0, pageSize: 25, search: "venue", assignee: undefined } });
+// GET /api/items?pageIndex=0&pageSize=25&search=venue
 ```
 
 Values may be strings, numbers, booleans, or arrays of them. `null` and `undefined` are left out; an
-array repeats its key (`{ rank: ["white", "yellow"] }` becomes `rank=white&rank=yellow`). If the path
+array repeats its key (`{ label: ["urgent", "waiting"] }` becomes `label=urgent&label=waiting`). If the path
 already has a `?`, the parameters are appended with `&`.
 
 ## Put a value in a path
@@ -75,7 +76,7 @@ function path(strings: TemplateStringsArray, ...values: (string | number)[]): st
 ```
 
 ```ts
-path`students/${id}/promotions`; // each ${} is encodeURIComponent'd
+path`items/${id}/labels`; // each ${} is encodeURIComponent'd
 ```
 
 Never build a path with a plain template literal or `+`: an id with a `/` or `?` would change the
@@ -145,11 +146,11 @@ import { ApiError, isSessionLost } from "@jwcarman/roux-web/api";
 import { notify } from "@jwcarman/roux-web/feedback";
 
 try {
-  await studentsApi.promote(id, rankId);
+  await itemsApi.label(id, labelId);
 } catch (error) {
   if (isSessionLost(error)) return; // the session provider is already sending the user to sign in
   if (error instanceof ApiError && error.status === 409) {
-    notify.problem(error.problem, "Could not promote");
+    notify.problem(error.problem, "Could not label the item");
     return;
   }
   throw error;

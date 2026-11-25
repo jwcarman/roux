@@ -12,8 +12,8 @@ mistake is not feedback: it stays under the field.
   refusal via `failure`).
 - A button that changes data uses `useServerAction`; one with consequences asks first with
   `useConfirm`.
-- Titles are the outcome in plain words naming the thing: `Ada was promoted`, `Could not remove
-  Yellow belt`. A confirm's `confirmLabel` is the verb (`Deactivate`), not `OK`.
+- Titles are the outcome in plain words naming the thing: `Order the venue is done`, `Could not
+  remove Urgent`. A confirm's `confirmLabel` is the verb (`Archive`), not `OK`.
 - Use `NotFoundPage` and `ErrorPage`; never write those pages: the router and the error boundary
   already show them.
 
@@ -47,18 +47,18 @@ mistake is not feedback: it stays under the field.
 import { Button } from "@chakra-ui/react";
 import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, removal, useConfirm } from "@jwcarman/roux-web/feedback";
-import { removeRank, type Rank } from "./ranks";
+import { removeLabel, type Label } from "./labels";
 
-export function RemoveRankButton({ rank }: { rank: Rank }) {
+export function RemoveLabelButton({ label }: { label: Label }) {
   const confirm = useConfirm();
-  const { run, pending } = useServerAction(removeRank, {
-    failure: `Could not remove ${rank.name}`,
-    onSuccess: () => notify.success(`${rank.name} was removed`),
+  const { run, pending } = useServerAction(removeLabel, {
+    failure: `Could not remove ${label.name}`,
+    onSuccess: () => notify.success(`${label.name} was removed`),
   });
 
   async function onRemove() {
-    if (await confirm(removal(`Remove ${rank.name}?`, "It will be removed from the list."))) {
-      await run(rank.id);
+    if (await confirm(removal(`Remove ${label.name}?`, "It will be removed from the list."))) {
+      await run(label.id);
     }
   }
 
@@ -75,18 +75,18 @@ export function RemoveRankButton({ rank }: { rank: Rank }) {
 A toggle, switch, rating or row dropdown: show the change at once, end on the server's value.
 
 ```ts
-export const markAttendance = (classId: string, date: string, studentId: string) =>
-  optimisticMutation(queryKeys.attendance.mark(classId, date, studentId), {
-    mutationFn: (present: boolean) => attendanceApi.mark(classId, { studentId, date, present }),
-    meta: { refreshes: [queryKeys.attendance.checkIn(classId, date)] },
+export const markDone = (itemId: string) =>
+  optimisticMutation(queryKeys.items.done(itemId), {
+    mutationFn: (done: boolean) => itemsApi.markDone(itemId, { done }),
+    meta: { refreshes: [queryKeys.items.detail(itemId), queryKeys.items.lists()] },
   });
 
-const [present, toggle] = useOptimisticToggle(markAttendance(classId, date, id), attendee.present, {
-  failure: `Could not mark ${attendee.firstName}`,
+const [done, toggle] = useOptimisticToggle(markDone(item.id), item.done, {
+  failure: `Could not mark ${item.title}`,
 });
 ```
 
-- Send the wanted value (`present: boolean`), never "flip it".
+- Send the wanted value (`done: boolean`), never "flip it".
 - The key is as specific as the thing changed, or two controls share a queue.
 - Not for forms with Save, creates, values the server computes, or typing.
 - Never build it from `onMutate` + `setQueryData`: it flickers.
@@ -99,16 +99,16 @@ Root route: `notFoundComponent: () => <NotFoundPage />`, `errorComponent` render
 ```tsx
 loader: async ({ context, params }) => {
   try {
-    await context.queryClient.ensureQueryData(studentQuery(params.studentId));
+    await context.queryClient.ensureQueryData(itemQuery(params.itemId));
   } catch (error) {
-    if (error instanceof ApiError && error.status === 404) throw notFound();
+    if (error instanceof ApiError && error.status === 404) notFound({ throw: true });
     throw error;
   }
 },
-notFoundComponent: () => <NotFoundPage title="Student not found" />,
+notFoundComponent: () => <NotFoundPage title="Item not found" />,
 ```
 
-The page then reads it with `useSuspenseQuery(studentQuery(studentId))`.
+The page then reads it with `useSuspenseQuery(itemQuery(itemId))`.
 
 ## Check
 

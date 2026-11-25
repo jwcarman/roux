@@ -1,6 +1,6 @@
 # The activity log
 
-A record's history: who did what to it, and when. A user renamed, a student promoted, a payment
+A record's history: who did what to it, and when. A user renamed, an item done, a payment
 taken and then removed. The app says what happened, in its own terms, as a small struct, in the
 transaction that makes the change; roux stores it with who did it and when, and serves a record's
 history a page at a time to `ActivityList` in the browser.
@@ -32,7 +32,7 @@ func (a PlanRenamed) Describe() string { return "Renamed from " + a.From + " to 
 - The fields are stored as JSON (`encoding/json`, so give them `json` tags), a `money.Money` or an
   id as the API writes it. A struct with no fields is fine (`type UserDeactivated struct{}`).
 - `Describe()` cannot read the request or the organization: what it needs is a field. Text that
-  depends on the locale (an amount as the school writes it) is formatted by the service and passed
+  depends on the locale (an amount as the organization writes it) is formatted by the service and passed
   in:
 
   ```go
@@ -73,11 +73,11 @@ type, the description and the details.
 - **The anchor** is the id of the record the activity is about. It is a bare `uuid.UUID`: anything
   with an id has a history (a user's is anchored to their id), and there is no foreign key, so the
   history outlives the record ("Plan removed" stays).
-- **Related ids** are other records the activity concerns. A promotion is anchored to the student
-  and related to the rank, so the rank's history has it too:
+- **Related ids** are other records the activity concerns. A label given to an item is anchored to
+  the item and related to the label, so the label's history has it too:
 
   ```go
-  activity.Append(ctx, tx, now, studentID, StudentPromoted{RankID: rank.ID, Rank: rank.Name}, rank.ID)
+  activity.Append(ctx, tx, now, itemID, ItemLabelled{LabelID: label.ID, Label: label.Name}, label.ID)
   ```
 
   The anchor among the related ids, and a repeated id, are dropped.
@@ -94,8 +94,8 @@ it, newest first (then by id, so two at the same moment always come in the same 
 `page.Page[activity.Entry]`. The request's index and size are used; its sort is ignored.
 
 ```go
-k.Handle("GET "+BasePath+"/{id}/activities", StudentsRead, func(w http.ResponseWriter, r *http.Request) error {
-	id, err := studentID(r)
+k.Handle("GET "+BasePath+"/{id}/activities", ItemsRead, func(w http.ResponseWriter, r *http.Request) error {
+	id, err := itemID(r)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ k.Handle("GET "+BasePath+"/{id}/activities", StudentsRead, func(w http.ResponseW
 	if err != nil {
 		return err
 	}
-	out, err := svc.Activities(r.Context(), id, req) // 404 for an unknown student, then activity.History
+	out, err := svc.Activities(r.Context(), id, req) // 404 for an unknown item, then activity.History
 	if err != nil {
 		return err
 	}
@@ -137,13 +137,13 @@ description, who did it and when ("3 days ago", with the moment in the organizat
 title), "Show more" for the next page, and a line when there is nothing yet.
 
 ```ts
-// students.ts, the resource module
-export const studentHistory = (id: string) =>
-  historyQuery(queryKeys.students.activities(id), path`students/${id}/activities`);
+// items.ts, the resource module
+export const itemHistory = (id: string) =>
+  historyQuery(queryKeys.items.activities(id), path`items/${id}/activities`);
 ```
 
 ```tsx
-<ActivityList aria-label="History" query={studentHistory(student.id)} />
+<ActivityList aria-label="History" query={itemHistory(item.id)} />
 ```
 
 `ActivityListProps`: `aria-label`, `query`, `emptyText` ("Nothing has happened yet." unless given) and

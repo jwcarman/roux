@@ -16,7 +16,7 @@ The form never calls the API, catches an error, or keeps its own submitting stat
 
 ## Write the schema
 
-The schema mirrors the rules of the server's input. For a rank, the server's `validate`
+The schema mirrors the rules of the server's input. For a label, the server's `validate`
 ([A feature's server side](features.md#the-input)) refuses a blank name, a name over 40
 characters and a colour outside its list, and an edit without a `version`:
 
@@ -40,28 +40,28 @@ if edit && b.Version == nil {
 A create sends no `version`; the update checks the one it is sent before changing anything (a
 stale one is the `409`). See [Errors](errors.md#refuse-a-stale-save).
 
-The browser's schema, in `src/ranks/ranks.ts`, leaves `version` out: it is not a field the user edits.
-`updateRank(id, version)` adds it to the request (`{ ...request, version }`), and `createRank` sends
+The browser's schema, in `src/labels/labels.ts`, leaves `version` out: it is not a field the user edits.
+`updateLabel(id, version)` adds it to the request (`{ ...request, version }`), and `createLabel` sends
 none:
 
 ```ts
 import { oneOf, text } from "@jwcarman/roux-web/form";
 import { z } from "zod";
 
-/** The belt colours a rank can have: the server's Colours. */
-export const BELT_COLOURS = ["white", "yellow", "orange", "green", "blue", "brown", "black"] as const;
+/** The colours a label can have: the server's Colours (Chakra UI's palette names). */
+export const LABEL_COLOURS = ["gray", "red", "orange", "yellow", "green", "teal", "blue", "purple", "pink"] as const;
 
-/** The rank input's rules (without the version), in the server's words. */
-export const rankRequestSchema = z.object({
+/** The label input's rules (without the version), in the server's words. */
+export const labelRequestSchema = z.object({
   name: text().max(40),
-  colour: oneOf(BELT_COLOURS),
+  colour: oneOf(LABEL_COLOURS),
 });
 
-/** What a rank form sends: the name trimmed, the colour chosen. */
-export type RankRequest = z.output<typeof rankRequestSchema>;
+/** What a label form sends: the name trimmed, the colour chosen. */
+export type LabelRequest = z.output<typeof labelRequestSchema>;
 ```
 
-The whole resource module (API functions, queries, `createRank`, `updateRank`) is in
+The whole resource module (API functions, queries, `createLabel`, `updateLabel`) is in
 [Queries and mutations](queries-and-mutations.md#write-a-resource-module).
 
 ### The rule helpers
@@ -108,10 +108,10 @@ Their methods:
 - `oneOf` takes a `const` tuple (`["WHITE", "YELLOW"] as const`). Its input also accepts `""`, so a
   create's `defaultValues` can start a select at its placeholder.
 - **An optional choice** is `oneOf(values).optional()` or `id().optional()`: the select sits at its
-  placeholder (`""`, so `defaultValues` is `record.instructorId ?? ""`, or `inputOf(record.instructorId)`),
+  placeholder (`""`, so `defaultValues` is `record.labelId ?? ""`, or `inputOf(record.labelId)`),
   and the parsed value, which is what the mutation sends, is `null` (a `*string` left nil on the
   server). Give the select a `placeholder` that says what none means (`No
-  instructor`); write no `.transform` of your own.
+  label`); write no `.transform` of your own.
 - The types, for annotating your own helpers: `TextRule<Out>` (`text`, `email`, `url`, `phone`),
   `DateRule<Out>`, `TimeRule<Out>`, `ChoiceRule<V, Out>` (`oneOf`, `id`), `NumberRule<Out>`; `AfterRule<Shape>` is `after()`'s second argument; `Out` is the output, `string | null` or `number | null` once
   optional.
@@ -134,7 +134,7 @@ under the later field, and the same check on the server. Do not write it as a `.
 message of your own:
 
 ```ts
-export const classRequestSchema = after(z.object({ startsAt: time(), endsAt: time() }), {
+export const slotRequestSchema = after(z.object({ startsAt: time(), endsAt: time() }), {
   field: "endsAt",
   other: "startsAt",
 });
@@ -183,7 +183,7 @@ form with `timeInputOf(record.startsAt)` (`18:30:00` as `18:30`; `null` as `""`)
 expected format`, as the browser's rule says (`contracts/time.json` holds the browser's cases):
 
 ```tsx
-const classSchema = z.object({ name: text().max(60), startsAt: time(), endsAt: time().optional() });
+const slotSchema = z.object({ title: text().max(120), startsAt: time(), endsAt: time().optional() });
 
 <form.AppField name="startsAt">{(f) => <f.InputField label="Starts" type="time" />}</form.AppField>;
 ```
@@ -194,7 +194,7 @@ itself for today).
 
 ### Write a rule the helpers lack
 
-A choice among ids loaded at run time (a select of ranks from a query) is `id()`: `rankId: id()`. There
+A choice among ids loaded at run time (a select of labels from a query) is `id()`: `labelId: id()`. There
 is no helper for a boolean, a date-time or a text with a format of your own. Write the Zod schema
 yourself, in the server's words, and register it in `fieldRules` so its field shows the required
 indicator:
@@ -221,47 +221,47 @@ it as above.
 
 ## A form in a dialog
 
-The rank form, for both a new rank and an edit, in `src/ranks/RankFormDialog.tsx`:
+The label form, for both a new label and an edit, in `src/labels/LabelFormDialog.tsx`:
 
 ```tsx
 import type { ReactElement } from "react";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { FormDialog, useSchemaForm } from "@jwcarman/roux-web/form";
-import { BELT_COLOURS, createRank, rankRequestSchema, updateRank, type Rank } from "./ranks";
+import { LABEL_COLOURS, createLabel, labelRequestSchema, updateLabel, type Label } from "./labels";
 
-/** "New rank", or "Edit" for the rank given (at the version shown), in a dialog. */
-export function RankFormDialog({ rank, trigger }: { rank?: Rank; trigger: ReactElement }) {
+/** "New label", or "Edit" for the label given (at the version shown), in a dialog. */
+export function LabelFormDialog({ label, trigger }: { label?: Label; trigger: ReactElement }) {
   const form = useSchemaForm({
-    schema: rankRequestSchema,
-    defaultValues: rank ? { name: rank.name, colour: rank.colour } : { name: "", colour: "" },
-    mutation: rank ? updateRank(rank.id, rank.version) : createRank,
+    schema: labelRequestSchema,
+    defaultValues: label ? { name: label.name, colour: label.colour } : { name: "", colour: "" },
+    mutation: label ? updateLabel(label.id, label.version) : createLabel,
     onSuccess: (saved) => notify.success(`${saved.name} was saved`),
   });
 
   return (
-    <FormDialog form={form} title={rank ? `Edit ${rank.name}` : "New rank"} trigger={trigger}>
+    <FormDialog form={form} title={label ? `Edit ${label.name}` : "New label"} trigger={trigger}>
       <form.AppField name="name">{(f) => <f.InputField label="Name" />}</form.AppField>
       <form.AppField name="colour">
-        {(f) => <f.SelectField label="Colour" options={BELT_COLOURS} placeholder="Choose a colour" />}
+        {(f) => <f.SelectField label="Colour" options={LABEL_COLOURS} placeholder="Choose a colour" />}
       </form.AppField>
     </FormDialog>
   );
 }
 ```
 
-Used as `<RankFormDialog trigger={<Button>New rank</Button>} />` above the list, and
-`<RankFormDialog rank={rank} trigger={<Button variant="outline">Edit</Button>} />` on each row.
+Used as `<LabelFormDialog trigger={<Button>New label</Button>} />` above the list, and
+`<LabelFormDialog label={label} trigger={<Button variant="outline">Edit</Button>} />` on each row.
 
 What the user gets with no more code:
 
 - The name field is marked required and takes at most 40 characters (`required` and `maxLength` come
   from the schema); the colours read `White`, `Yellow`, ... (bare values are humanized).
 - `Must not be blank` under the name when it is left empty, once the field is left or Save is pressed.
-- A save trims the name, sends `{ name, colour }` through `createRank` or `updateRank`, waits for the
-  rank list to refetch, toasts `Rank was saved`, and closes the dialog.
-- The server's `problem.InvalidField("name", "Another rank has this name")` shows under the name
+- A save trims the name, sends `{ name, colour }` through `createLabel` or `updateLabel`, waits for the
+  label list to refetch, toasts `Label was saved`, and closes the dialog.
+- The server's `problem.InvalidField("name", "Another label has this name")` shows under the name
   field, and the dialog stays open.
-- A rank someone else saved meanwhile is refused (409); the form starts over from their rank
+- A label someone else saved meanwhile is refused (409); the form starts over from their label
   ([below](#versions-and-409-conflicts)).
 
 ## useSchemaForm
@@ -285,7 +285,7 @@ not). The options (`SchemaFormOptions`):
 | --- | --- |
 | `schema` | Validates the whole form when a field is left and on submit; a `.refine`'s message lands on its `path`. On submit, the schema's parsed output (trimmed, `""` as `null`) is what is sent. |
 | `defaultValues` | The values the form starts with: the record being edited, or a create's blanks. Typed as the schema's input, so every field is present and holds what its input holds (strings, `number \| undefined`, booleans). Build it from the record on every render; an untouched form follows it when it changes. |
-| `mutation` | The `mutationOptions` that saves `z.output<S>`. Build it on every render (`updateRank(rank.id, rank.version)`). |
+| `mutation` | The `mutationOptions` that saves `z.output<S>`. Build it on every render (`updateLabel(label.id, label.version)`). |
 | `onSuccess` | Runs after a save succeeds and after the mutation's `meta.refreshes` have refetched, with the server's answer and the values sent. A success toast goes here. |
 | `failure` | The toast title for a refusal. Defaults to `Could not save`. A plain string. |
 
@@ -336,14 +336,14 @@ function timeInputOf(iso: string | null): string; // a time of day as a time inp
 function dateTimeInputOf(iso: string | null): string; // an ISO instant as a datetime-local value, in the browser's time zone; null as ""
 ```
 
-For a student whose `email` and `phone` may be `null`:
+For a contact (a supplier, a venue) whose `email` and `phone` may be `null`:
 
 ```ts
 defaultValues: {
-  name: student.name,
-  email: inputOf(student.email),
-  phone: inputOf(student.phone),
-  joinedOn: student.joinedOn,
+  name: contact.name,
+  email: inputOf(contact.email),
+  phone: inputOf(contact.phone),
+  addedOn: contact.addedOn,
 },
 ```
 
@@ -382,17 +382,17 @@ opens at the latest record. The footer holds Cancel and the submit button; the f
 import { Button } from "@chakra-ui/react";
 import { useState } from "react";
 import { FormDialog, useSchemaForm } from "@jwcarman/roux-web/form";
-import { BELT_COLOURS, createRank, rankRequestSchema } from "./ranks";
+import { LABEL_COLOURS, createLabel, labelRequestSchema } from "./labels";
 
-/** Opens the new-rank dialog when the page has no ranks yet, as well as from its button. */
-export function FirstRankDialog({ empty }: { empty: boolean }) {
+/** Opens the new-label dialog when the page has no labels yet, as well as from its button. */
+export function FirstLabelDialog({ empty }: { empty: boolean }) {
   const [open, setOpen] = useState(empty);
-  const form = useSchemaForm({ schema: rankRequestSchema, defaultValues: { name: "", colour: "" }, mutation: createRank });
+  const form = useSchemaForm({ schema: labelRequestSchema, defaultValues: { name: "", colour: "" }, mutation: createLabel });
   return (
-    <FormDialog form={form} title="New rank" trigger={<Button>New rank</Button>} open={open} onOpenChange={setOpen}>
+    <FormDialog form={form} title="New label" trigger={<Button>New label</Button>} open={open} onOpenChange={setOpen}>
       <form.AppField name="name">{(f) => <f.InputField label="Name" />}</form.AppField>
       <form.AppField name="colour">
-        {(f) => <f.SelectField label="Colour" options={BELT_COLOURS} placeholder="Choose a colour" />}
+        {(f) => <f.SelectField label="Colour" options={LABEL_COLOURS} placeholder="Choose a colour" />}
       </form.AppField>
     </FormDialog>
   );
@@ -415,21 +415,21 @@ components inside `form.AppForm`:
 import { HStack, Stack } from "@chakra-ui/react";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { inputOf, useSchemaForm } from "@jwcarman/roux-web/form";
-import { studentRequestSchema, updateStudent, type StudentDetail } from "./students";
+import { contactRequestSchema, updateContact, type ContactDetail } from "./contacts";
 
-/** A student's details, edited in place at the version shown. */
-export function StudentDetailsForm({ student }: { student: StudentDetail }) {
+/** A contact's details, edited in place at the version shown. */
+export function ContactDetailsForm({ contact }: { contact: ContactDetail }) {
   const form = useSchemaForm({
-    schema: studentRequestSchema,
+    schema: contactRequestSchema,
     defaultValues: {
-      name: student.name,
-      email: inputOf(student.email),
-      phone: inputOf(student.phone),
-      joinedOn: student.joinedOn,
+      name: contact.name,
+      email: inputOf(contact.email),
+      phone: inputOf(contact.phone),
+      addedOn: contact.addedOn,
     },
-    mutation: updateStudent(student.id, student.version),
-    onSuccess: () => notify.success("Student saved"),
-    failure: "Could not save the student",
+    mutation: updateContact(contact.id, contact.version),
+    onSuccess: () => notify.success("Contact saved"),
+    failure: "Could not save the contact",
   });
 
   return (
@@ -439,7 +439,7 @@ export function StudentDetailsForm({ student }: { student: StudentDetail }) {
           <form.AppField name="name">{(f) => <f.InputField label="Name" />}</form.AppField>
           <form.AppField name="email">{(f) => <f.InputField label="Email" type="email" />}</form.AppField>
           <form.AppField name="phone">{(f) => <f.InputField label="Phone" type="tel" />}</form.AppField>
-          <form.AppField name="joinedOn">{(f) => <f.InputField label="Joined" type="date" />}</form.AppField>
+          <form.AppField name="addedOn">{(f) => <f.InputField label="Added" type="date" />}</form.AppField>
           <HStack gap="3">
             <form.SubmitButton>Save</form.SubmitButton>
             <form.ResetButton />
@@ -452,7 +452,7 @@ export function StudentDetailsForm({ student }: { student: StudentDetail }) {
 }
 ```
 
-with, in `src/students/students.ts` beside `studentsApi` ([API client](api-client.md)):
+with, in `src/contacts/contacts.ts` beside `contactsApi` ([API client](api-client.md)):
 
 ```ts
 import { mutationOptions } from "@tanstack/react-query";
@@ -460,33 +460,32 @@ import { date, email, phone, text } from "@jwcarman/roux-web/form";
 import { z } from "zod";
 import { queryKeys } from "../queryKeys";
 
-/** A student as `/api/students/{id}` answers it. */
-export interface StudentDetail {
+/** A contact as `/api/contacts/{id}` answers it. */
+export interface ContactDetail {
   id: string;
   name: string;
   email: string | null;
   phone: string | null;
-  joinedOn: string;
-  rankId: string;
+  addedOn: string;
   version: number;
 }
 
-/** StudentRequest's rules (without the version), in the server's words. */
-export const studentRequestSchema = z.object({
+/** ContactRequest's rules (without the version), in the server's words. */
+export const contactRequestSchema = z.object({
   name: text().max(80),
   email: email().max(320).optional(),
   phone: phone().max(30).optional(),
-  joinedOn: date(),
+  addedOn: date(),
 });
 
-/** What a student form sends: trimmed, a blank email or phone as null. */
-export type StudentRequest = z.output<typeof studentRequestSchema>;
+/** What a contact form sends: trimmed, a blank email or phone as null. */
+export type ContactRequest = z.output<typeof contactRequestSchema>;
 
-/** Saves a student at the `version` it was read at; a change made since answers 409. */
-export const updateStudent = (id: string, version: number) =>
+/** Saves a contact at the `version` it was read at; a change made since answers 409. */
+export const updateContact = (id: string, version: number) =>
   mutationOptions({
-    mutationFn: (request: StudentRequest) => studentsApi.update(id, { ...request, version }),
-    meta: { refreshes: [queryKeys.students.detail(id), queryKeys.students.lists()] },
+    mutationFn: (request: ContactRequest) => contactsApi.update(id, { ...request, version }),
+    meta: { refreshes: [queryKeys.contacts.detail(id), queryKeys.contacts.lists()] },
   });
 ```
 
@@ -541,8 +540,8 @@ reserved, so an error appearing does not move the buttons.
 - `placeholder` is shown while nothing is chosen, and the value is then `""`. Use it with `oneOf` (its
   input takes `""`).
 
-Every field type in one form, a grading for a rank. The schema, in `src/gradings/gradings.ts` (with
-`gradingsApi` and `createGrading` beside it, as in the ranks module):
+Every field type in one form: an event, with a label. The schema, in `src/events/events.ts` (with
+`eventsApi` and `createEvent` beside it, as in the labels module):
 
 ```ts
 import { date, id, integer, number, oneOf, text } from "@jwcarman/roux-web/form";
@@ -550,18 +549,18 @@ import { z } from "zod";
 
 export const SESSIONS = ["MORNING", "EVENING"] as const;
 
-/** GradingRequest's rules, in the server's words. */
-export const gradingRequestSchema = z.object({
-  rankId: id(),
-  heldOn: date(),
+/** EventRequest's rules, in the server's words. */
+export const eventRequestSchema = z.object({
+  labelId: id(),
+  day: date(),
   session: oneOf(SESSIONS),
   places: integer().min(1).max(40),
-  fee: number().min(0).optional(),
+  cost: number().min(0).optional(),
   open: z.boolean(),
   notes: text().max(500).optional(),
 });
 
-export type GradingRequest = z.output<typeof gradingRequestSchema>;
+export type EventRequest = z.output<typeof eventRequestSchema>;
 ```
 
 ```tsx
@@ -569,40 +568,40 @@ import { Button } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { FormDialog, useSchemaForm } from "@jwcarman/roux-web/form";
-import { ranksQuery } from "../ranks/ranks";
-import { createGrading, gradingRequestSchema } from "./gradings";
+import { labelsQuery } from "../labels/labels";
+import { createEvent, eventRequestSchema } from "./events";
 
-/** Schedules a grading: when, for which rank, how many places. */
-export function NewGradingDialog() {
-  const ranks = useQuery(ranksQuery);
+/** Schedules an event: when, under which label, how many places. */
+export function NewEventDialog() {
+  const labels = useQuery(labelsQuery);
   const form = useSchemaForm({
-    schema: gradingRequestSchema,
+    schema: eventRequestSchema,
     defaultValues: {
-      rankId: "",
-      heldOn: "",
+      labelId: "",
+      day: "",
       session: "MORNING",
       places: undefined,
-      fee: undefined,
+      cost: undefined,
       open: false,
       notes: "",
     },
-    mutation: createGrading,
-    onSuccess: () => notify.success("Grading scheduled"),
-    failure: "Could not schedule the grading",
+    mutation: createEvent,
+    onSuccess: () => notify.success("Event scheduled"),
+    failure: "Could not schedule the event",
   });
-  const rankOptions = (ranks.data ?? []).map((rank) => ({ value: rank.id, label: rank.name }));
+  const labelOptions = (labels.data ?? []).map((label) => ({ value: label.id, label: label.name }));
 
   return (
     <FormDialog
       form={form}
-      title="Schedule a grading"
-      trigger={<Button>Schedule a grading</Button>}
+      title="Schedule an event"
+      trigger={<Button>Schedule an event</Button>}
       submitLabel="Schedule"
     >
-      <form.AppField name="rankId">
-        {(f) => <f.SelectField label="Rank" options={rankOptions} placeholder="Choose a rank" />}
+      <form.AppField name="labelId">
+        {(f) => <f.SelectField label="Label" options={labelOptions} placeholder="Choose a label" />}
       </form.AppField>
-      <form.AppField name="heldOn">{(f) => <f.InputField label="Date" type="date" />}</form.AppField>
+      <form.AppField name="day">{(f) => <f.InputField label="Date" type="date" />}</form.AppField>
       <form.AppField name="session">
         {(f) => (
           <f.RadioGroupField
@@ -616,10 +615,10 @@ export function NewGradingDialog() {
         )}
       </form.AppField>
       <form.AppField name="places">{(f) => <f.NumberField label="Places" min={1} max={40} />}</form.AppField>
-      <form.AppField name="fee">
-        {(f) => <f.NumberField label="Fee" min={0} step={0.5} helperText="Leave empty when it is free" />}
+      <form.AppField name="cost">
+        {(f) => <f.NumberField label="Cost" min={0} step={0.5} helperText="Leave empty when it is free" />}
       </form.AppField>
-      <form.AppField name="open">{(f) => <f.CheckboxField label="Open to other schools" />}</form.AppField>
+      <form.AppField name="open">{(f) => <f.CheckboxField label="Open to guests" />}</form.AppField>
       <form.AppField name="notes">{(f) => <f.TextAreaField label="Notes" />}</form.AppField>
     </FormDialog>
   );
@@ -642,18 +641,18 @@ An edit form must not quietly undo someone else's save. roux handles this with t
    from:
 
    ```ts
-   export const updateRank = (id: string, version: number) =>
+   export const updateLabel = (id: string, version: number) =>
      mutationOptions({
-       mutationFn: (request: RankRequest) => ranksApi.update(id, { ...request, version }),
-       meta: { refreshes: [queryKeys.ranks.detail(id), queryKeys.ranks.lists()] },
+       mutationFn: (request: LabelRequest) => labelsApi.update(id, { ...request, version }),
+       meta: { refreshes: [queryKeys.labels.detail(id), queryKeys.labels.lists()] },
      });
    ```
 
-3. **The form** is given the record's values and `updateRank(rank.id, rank.version)` on every render.
+3. **The form** is given the record's values and `updateLabel(label.id, label.version)` on every render.
 
 What `useSchemaForm` then does:
 
-- While the form is untouched it follows the record: a refetch that brings a newer rank shows it, and
+- While the form is untouched it follows the record: a refetch that brings a newer label shows it, and
   a save would go at its version.
 - Once the user edits, the draft is pinned to the mutation (so the version) it started from. A refetch
   that brings someone else's save meanwhile does not move it: the save goes at the old version and the
@@ -688,10 +687,10 @@ Pass a `useSchemaForm` form to a section component typed with `SchemaForm<typeof
 
 ```tsx
 import type { SchemaForm } from "@jwcarman/roux-web/form";
-import type { studentRequestSchema } from "./students";
+import type { contactRequestSchema } from "./contacts";
 
-/** The student form's contact section. */
-export function ContactFields({ form }: { form: SchemaForm<typeof studentRequestSchema> }) {
+/** The contact form's contact section. */
+export function ContactFields({ form }: { form: SchemaForm<typeof contactRequestSchema> }) {
   return (
     <>
       <form.AppField name="email">{(f) => <f.InputField label="Email" type="email" />}</form.AppField>
@@ -813,7 +812,7 @@ export function SwitchField({ label, helperText }: { label: string; helperText?:
 }
 ```
 
-Use it as `<form.AppField name="open">{() => <SwitchField label="Open to other schools" />}</form.AppField>`.
+Use it as `<form.AppField name="open">{() => <SwitchField label="Open to guests" />}</form.AppField>`.
 The field components on `f.` are fixed; a custom one is rendered by name inside `form.AppField`.
 
 `FormField` (`FormFieldProps`: `label`, `helperText`, `required`, `controlLabelled`, `children`)
@@ -841,7 +840,7 @@ The other building blocks:
 Gaps that a builder hits:
 
 - **A nullable record field needs `inputOf` in `defaultValues`.** An optional text's input is
-  `string`, so `email: student.email` (`string | null`) does not compile (`Type 'string | null' is
+  `string`, so `email: contact.email` (`string | null`) does not compile (`Type 'string | null' is
   not assignable to type 'string'`). Use `inputOf`, `numberInputOf`, `timeInputOf` or `dateTimeInputOf`.
 - **`url()` rejects a host without a dot**, such as `http://localhost:8080`, and **`email()` rejects a
   domain without a dot**, such as `ann@localhost`, though Go's `net/url` and `net/mail` accept both.

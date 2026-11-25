@@ -19,6 +19,11 @@ Go 1.27 · PostgreSQL 17 · React 19 · Chakra UI v3 · TanStack
 
 </div>
 
+**roux is written for agents.** It is designed for a coding agent to get right the first time: one
+way to do each thing, exact names that match across Go, TypeScript and these docs, mistakes that
+fail loudly instead of silently, and an [Agent Skill](agent-skill.md) that carries all of it into
+the agent's context. Every example here is code CI builds.
+
 roux is what every business app needs before its first feature: people who sign in, roles and
 permissions, a team to invite, errors a person can read, paged lists, forms, money and dates. A new
 app starts from roux's template with all of it working; each feature the app adds is a Go package

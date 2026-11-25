@@ -35,27 +35,27 @@ refreshes them all:
 ```ts
 /** The app's query keys, built in one place so related queries share a prefix. */
 export const queryKeys = {
-  ranks: {
-    all: ["ranks"] as const,
-    lists: () => [...queryKeys.ranks.all, "list"] as const,
-    detail: (id: string) => [...queryKeys.ranks.all, "detail", id] as const,
+  labels: {
+    all: ["labels"] as const,
+    lists: () => [...queryKeys.labels.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.labels.all, "detail", id] as const,
   },
-  students: {
-    all: ["students"] as const,
-    lists: () => [...queryKeys.students.all, "list"] as const,
-    list: (filters: { search?: string; status?: string; rankId?: string }) =>
-      [...queryKeys.students.lists(), filters] as const,
-    detail: (id: string) => [...queryKeys.students.all, "detail", id] as const,
+  items: {
+    all: ["items"] as const,
+    lists: () => [...queryKeys.items.all, "list"] as const,
+    list: (filters: { search?: string; status?: string; assignee?: string }) =>
+      [...queryKeys.items.lists(), filters] as const,
+    detail: (id: string) => [...queryKeys.items.all, "detail", id] as const,
   },
 };
 ```
 
-A key matches every key it is a prefix of: `queryKeys.students.lists()` matches each
-`queryKeys.students.list(filters)`, whatever the filters.
+A key matches every key it is a prefix of: `queryKeys.items.lists()` matches each
+`queryKeys.items.list(filters)`, whatever the filters.
 
 ## Write a resource module
 
-One file per resource, in its feature folder (`src/ranks/ranks.ts`): the request's schema, the API
+One file per resource, in its feature folder (`src/labels/labels.ts`): the request's schema, the API
 functions, the queries and the mutations. Everything the pages and forms need is imported from here.
 
 ```ts
@@ -65,83 +65,83 @@ import { oneOf, text } from "@jwcarman/roux-web/form";
 import { z } from "zod";
 import { queryKeys } from "../queryKeys";
 
-/** The belt colours a rank can have: the server's BeltColour enum. */
-export const BELT_COLOURS = ["WHITE", "YELLOW", "ORANGE", "GREEN", "BLUE", "BROWN", "BLACK"] as const;
-export type BeltColour = (typeof BELT_COLOURS)[number];
+/** The colours a label can have: the server's Colours (Chakra UI's palette names). */
+export const LABEL_COLOURS = ["gray", "red", "orange", "yellow", "green", "teal", "blue", "purple", "pink"] as const;
+export type LabelColour = (typeof LABEL_COLOURS)[number];
 
-/** A rank as `/api/ranks` answers it. */
-export interface Rank {
+/** A label as `/api/labels` answers it. */
+export interface Label {
   id: string;
   name: string;
-  colour: BeltColour;
+  colour: LabelColour;
   version: number;
 }
 
-/** RankRequest's rules (without the version), in the server's words. */
-export const rankRequestSchema = z.object({
+/** LabelRequest's rules (without the version), in the server's words. */
+export const labelRequestSchema = z.object({
   name: text().max(40),
-  colour: oneOf(BELT_COLOURS),
+  colour: oneOf(LABEL_COLOURS),
 });
 
-/** What a rank form sends: the name trimmed, the colour chosen. */
-export type RankRequest = z.output<typeof rankRequestSchema>;
+/** What a label form sends: the name trimmed, the colour chosen. */
+export type LabelRequest = z.output<typeof labelRequestSchema>;
 
-/** `/api/ranks`: one function per endpoint. */
-export const ranksApi = {
-  list: (signal?: AbortSignal) => getJson<Rank[]>("ranks", { signal }),
-  get: (id: string, signal?: AbortSignal) => getJson<Rank>(path`ranks/${id}`, { signal }),
-  create: (request: RankRequest) => sendJson<Rank>("POST", "ranks", request),
-  update: (id: string, request: RankRequest & { version: number }) =>
-    sendJson<Rank>("PUT", path`ranks/${id}`, request),
-  remove: (id: string) => sendJson<void>("DELETE", path`ranks/${id}`),
+/** `/api/labels`: one function per endpoint. */
+export const labelsApi = {
+  list: (signal?: AbortSignal) => getJson<Label[]>("labels", { signal }),
+  get: (id: string, signal?: AbortSignal) => getJson<Label>(path`labels/${id}`, { signal }),
+  create: (request: LabelRequest) => sendJson<Label>("POST", "labels", request),
+  update: (id: string, request: LabelRequest & { version: number }) =>
+    sendJson<Label>("PUT", path`labels/${id}`, request),
+  remove: (id: string) => sendJson<void>("DELETE", path`labels/${id}`),
 };
 
-/** Every rank, for the ranks page and the rank pickers. */
-export const ranksQuery = queryOptions({
-  queryKey: queryKeys.ranks.lists(),
-  queryFn: ({ signal }) => ranksApi.list(signal),
+/** Every label, for the labels page and the label pickers. */
+export const labelsQuery = queryOptions({
+  queryKey: queryKeys.labels.lists(),
+  queryFn: ({ signal }) => labelsApi.list(signal),
 });
 
-/** A rank, for a detail page's loader (`ensureQueryData`) and the page (`useSuspenseQuery`). */
-export function rankQuery(id: string) {
+/** A label, for a detail page's loader (`ensureQueryData`) and the page (`useSuspenseQuery`). */
+export function labelQuery(id: string) {
   return queryOptions({
-    queryKey: queryKeys.ranks.detail(id),
-    queryFn: ({ signal }) => ranksApi.get(id, signal),
+    queryKey: queryKeys.labels.detail(id),
+    queryFn: ({ signal }) => labelsApi.get(id, signal),
   });
 }
 
-/** Adds a rank; the rank list refreshes. */
-export const createRank = mutationOptions({
-  mutationFn: (request: RankRequest) => ranksApi.create(request),
-  meta: { refreshes: [queryKeys.ranks.lists()] },
+/** Adds a label; the label list refreshes. */
+export const createLabel = mutationOptions({
+  mutationFn: (request: LabelRequest) => labelsApi.create(request),
+  meta: { refreshes: [queryKeys.labels.lists()] },
 });
 
-/** Saves a rank at the `version` it was read at; a change made since answers 409. */
-export const updateRank = (id: string, version: number) =>
+/** Saves a label at the `version` it was read at; a change made since answers 409. */
+export const updateLabel = (id: string, version: number) =>
   mutationOptions({
-    mutationFn: (request: RankRequest) => ranksApi.update(id, { ...request, version }),
-    meta: { refreshes: [queryKeys.ranks.detail(id), queryKeys.ranks.lists()] },
+    mutationFn: (request: LabelRequest) => labelsApi.update(id, { ...request, version }),
+    meta: { refreshes: [queryKeys.labels.detail(id), queryKeys.labels.lists()] },
   });
 
-/** Removes a rank; the rank list refreshes. */
-export const removeRank = mutationOptions({
-  mutationFn: (id: string) => ranksApi.remove(id),
-  meta: { refreshes: [queryKeys.ranks.lists()] },
+/** Removes a label; the label list refreshes. */
+export const removeLabel = mutationOptions({
+  mutationFn: (id: string) => labelsApi.remove(id),
+  meta: { refreshes: [queryKeys.labels.lists()] },
 });
 ```
 
 The rules this module follows:
 
 - A query is a `queryOptions(...)` constant, or a function of its parameters when it has some
-  (`rankQuery(id)`). The `queryFn` passes `signal` on, so a query that is no longer needed is
+  (`labelQuery(id)`). The `queryFn` passes `signal` on, so a query that is no longer needed is
   cancelled.
 - A mutation is a `mutationOptions(...)` constant, or a function when it needs values the request
-  does not carry: the id in the path and the `version` the record was read at (`updateRank(id,
-  version)`). Its `mutationFn` takes the schema's output (`RankRequest`), which is what
+  does not carry: the id in the path and the `version` the record was read at (`updateLabel(id,
+  version)`). Its `mutationFn` takes the schema's output (`LabelRequest`), which is what
   `useSchemaForm` submits.
 - Every mutation that changes what a query shows names that query in `meta.refreshes`.
 - A paged list (for `QueryTable`, `InfiniteList` or `InfiniteSelect`) is a function of its filters
-  that returns `pageQuery(queryKeys.students.list(filters), (params, signal) => ...)`: its key and
+  that returns `pageQuery(queryKeys.items.list(filters), (params, signal) => ...)`: its key and
   how to fetch one page, passing `signal` on. A short list for `SimpleQueryTable` is a plain
   `queryOptions(...)` constant. See [Tables and paging](tables-and-paging.md).
 
@@ -152,21 +152,21 @@ Use the module's queries with TanStack's hooks:
 ```tsx
 import { List, Spinner, Text } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
-import { ranksQuery } from "./ranks";
+import { labelsQuery } from "./labels";
 
-/** The school's ranks, in order. */
-export function RankList() {
-  const ranks = useQuery(ranksQuery);
-  if (ranks.isPending) {
+/** The team's labels. */
+export function LabelList() {
+  const labels = useQuery(labelsQuery);
+  if (labels.isPending) {
     return <Spinner aria-label="Loading" />;
   }
-  if (ranks.isError) {
-    return <Text>The ranks could not be loaded. Try again in a moment.</Text>;
+  if (labels.isError) {
+    return <Text>The labels could not be loaded. Try again in a moment.</Text>;
   }
   return (
     <List.Root>
-      {ranks.data.map((rank) => (
-        <List.Item key={rank.id}>{rank.name}</List.Item>
+      {labels.data.map((label) => (
+        <List.Item key={label.id}>{label.name}</List.Item>
       ))}
     </List.Root>
   );
@@ -174,10 +174,10 @@ export function RankList() {
 ```
 
 For a detail page, the route's `loader` fetches first with
-`await context.queryClient.ensureQueryData(rankQuery(params.rankId))` (pass the app's `queryClient` in
-the router's context), and the page reads it with `useSuspenseQuery(rankQuery(rankId))`, so it renders
+`await context.queryClient.ensureQueryData(labelQuery(params.labelId))` (pass the app's `queryClient` in
+the router's context), and the page reads it with `useSuspenseQuery(labelQuery(labelId))`, so it renders
 with data at once. A missing record rejects with an `ApiError` whose `status` is 404: catch it in the
-loader and `throw notFound()`, and give the route a `notFoundComponent` (`NotFoundPage` from
+loader and call `notFound({ throw: true })` (it throws for you, so lint sees no non-Error thrown), and give the route a `notFoundComponent` (`NotFoundPage` from
 `/feedback`, see [Feedback](feedback.md)). Any other failed query rejects with its `ApiError`
 ([Errors](errors.md#in-the-browser-reading-a-problem)).
 
@@ -185,8 +185,8 @@ loader and `throw notFound()`, and give the route a `notFoundComponent` (`NotFou
 
 ```ts
 mutationOptions({
-  mutationFn: (request: RankRequest) => ranksApi.update(id, { ...request, version }),
-  meta: { refreshes: [queryKeys.ranks.detail(id), queryKeys.ranks.lists()] },
+  mutationFn: (request: LabelRequest) => labelsApi.update(id, { ...request, version }),
+  meta: { refreshes: [queryKeys.labels.detail(id), queryKeys.labels.lists()] },
 });
 ```
 
@@ -218,7 +218,7 @@ mutation: { ...renameMe(profile.version), onSettled: () => refreshProfile() },
 
 ## Run a mutation from a button
 
-A button that changes something on the server (remove, promote, archive) runs its mutation with
+A button that changes something on the server (remove, reopen, archive) runs its mutation with
 `useServerAction`. It takes the mutation and `ServerActionOptions`, and returns a `ServerAction`:
 
 ```ts
@@ -246,19 +246,19 @@ interface ServerAction<Variables> {
 import { Button } from "@chakra-ui/react";
 import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, removal, useConfirm } from "@jwcarman/roux-web/feedback";
-import { removeRank, type Rank } from "./ranks";
+import { removeLabel, type Label } from "./labels";
 
-/** Remove, after asking; a rank still held by students is refused by the server (409). */
-export function RemoveRankButton({ rank }: { rank: Rank }) {
+/** Remove, after asking; a label items still carry is refused by the server (409). */
+export function RemoveLabelButton({ label }: { label: Label }) {
   const confirm = useConfirm();
-  const { run, pending } = useServerAction(removeRank, {
-    failure: `Could not remove ${rank.name}`,
-    onSuccess: () => notify.success(`${rank.name} was removed`),
+  const { run, pending } = useServerAction(removeLabel, {
+    failure: `Could not remove ${label.name}`,
+    onSuccess: () => notify.success(`${label.name} was removed`),
   });
 
   async function onRemove() {
-    if (await confirm(removal(`Remove ${rank.name}?`, "It will be removed from the list."))) {
-      await run(rank.id);
+    if (await confirm(removal(`Remove ${label.name}?`, "It will be removed from the list."))) {
+      await run(label.id);
     }
   }
 
@@ -316,25 +316,27 @@ function useOptimisticToggle<TData>(
 ```
 
 ```ts
-// attendance.ts: the key names this student's mark; the mutation sends the wanted state
-export const markAttendance = (classId: string, date: string, studentId: string) =>
-  optimisticMutation(queryKeys.attendance.mark(classId, date, studentId), {
-    mutationFn: (present: boolean) => attendanceApi.mark(classId, { studentId, date, present }),
-    meta: { refreshes: [queryKeys.attendance.checkIn(classId, date)] },
+// items.ts: the key names this item's done mark; the mutation sends the wanted state
+export const markDone = (itemId: string) =>
+  optimisticMutation(queryKeys.items.done(itemId), {
+    mutationFn: (done: boolean) => itemsApi.markDone(itemId, { done }),
+    meta: { refreshes: [queryKeys.items.detail(itemId), queryKeys.items.lists()] },
   });
 ```
 
 ```tsx
-function AttendeeToggle({ classId, date, attendee }: { classId: string; date: string; attendee: Attendee }) {
-  const [present, toggle] = useOptimisticToggle(
-    markAttendance(classId, date, attendee.studentId),
-    attendee.present, // from the check-in query
-    { failure: `Could not mark ${attendee.firstName}` },
+function DoneToggle({ item }: { item: ItemRow }) {
+  const [done, toggle] = useOptimisticToggle(
+    markDone(item.id),
+    item.done, // from the list's query
+    { failure: `Could not mark ${item.title}` },
   );
   return (
-    <Button aria-pressed={present} onClick={() => void toggle()}>
-      {attendee.firstName}
-    </Button>
+    <Checkbox.Root checked={done} onCheckedChange={() => void toggle()}>
+      <Checkbox.HiddenInput />
+      <Checkbox.Control />
+      <Checkbox.Label>{item.title}</Checkbox.Label>
+    </Checkbox.Root>
   );
 }
 ```
@@ -357,9 +359,9 @@ What it does:
 - Two taps in the same instant (a double tap, before React has shown the first) are not lost:
   `toggle()` asks for the opposite of what was last asked, not of what is rendered, so a quick
   double tap sends `true` then `false`.
-- Send the wanted value (`present: boolean`), never "flip it": the server then answers a repeat the
+- Send the wanted value (`done: boolean`), never "flip it": the server then answers a repeat the
   same way, and a request that is retried is harmless.
-- `key` must be as specific as the thing the control changes (class, date and student), or two
+- `key` must be as specific as the thing the control changes (this item's done mark), or two
   controls share a queue and a pending value.
 - Leaving the page drops the saves still queued: each waits for the one before it to be answered and
   refetched. Fine for a toggle; a control that must not lose a change is not this.

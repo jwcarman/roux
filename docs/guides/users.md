@@ -15,22 +15,22 @@ may do; the app's own table, when it has one, says what they are. Pick one of th
 
 | The app's thing | Shape | Example |
 | --- | --- | --- |
-| Is nothing but a person with permissions | **A role only.** No table: the user and their role are all there is. | An instructor who teaches classes |
-| Always signs in, and has fields of its own | **A table that shares the user's id.** | A coach with a belt and a bio |
-| Sometimes signs in | **A table with an optional reference to a user**, set when it is given a login. | A student, some of whom get a portal login |
+| Is nothing but a person with permissions | **A role only.** No table: the user and their role are all there is. | An organizer who can change everyone's items |
+| Always signs in, and has fields of its own | **A table that shares the user's id.** | A person's profile: the team they are on |
+| Sometimes signs in | **A table with an optional reference to a user**, set when it is given a login. | A contact (a supplier, a venue), some of whom get a login |
 
 A table that shares the user's id makes it its key, and goes when the user does:
 
 ```sql
-create table coach (
+create table profile (
     id      uuid primary key references roux_user (id) on delete cascade,
-    belt    text not null default '',
+    team    text not null default '',
     version bigint not null default 0
 );
 ```
 
 roux has no hook that runs when a user joins, so the app makes the row when it is first needed
-(`insert into coach (id) values ($1) on conflict (id) do nothing`), or from its own invite
+(`insert into profile (id) values ($1) on conflict (id) do nothing`), or from its own invite
 endpoint after `users.Service.Invite`.
 
 A table for something that only sometimes signs in has its own id and a nullable
@@ -42,7 +42,7 @@ the app's table.
 
 ## Referring to people
 
-A feature that assigns work to people, or lists who attended, keeps their ids, and checks them in
+A feature that assigns work to people, or lists who came, keeps their ids, and checks them in
 the transaction that stores them:
 
 ```go
@@ -133,24 +133,24 @@ an empty status means `ACTIVE`.
 
 ## An app's own list
 
-An app that shows users with columns of its own (a coach's belt) writes its own list over a view
+An app that shows users with columns of its own (a person's team) writes its own list over a view
 that joins its table to the directory, and searches, filters and sorts by the user's fields too:
 
 ```sql
-create view coach_list as
-select d.id, d.display_name, d.email, d.status, c.belt
-  from coach c
-  join roux_user_directory d on d.id = c.id;
+create view profile_list as
+select d.id, d.display_name, d.email, d.status, p.team
+  from profile p
+  join roux_user_directory d on d.id = p.id;
 ```
 
 ```go
 var list = page.New(page.ListConfig[Sort, Row]{
-	From:    "coach_list",
-	Columns: "id, display_name, email, belt",
+	From:    "profile_list",
+	Columns: "id, display_name, email, team",
 	Sorts: map[Sort][]page.Term{
 		ByName:  {page.By("lower(display_name)")},
 		ByEmail: {page.By("lower(email)")},
-		ByBelt:  {page.By("belt")},
+		ByTeam:  {page.By("lower(team)")},
 	},
 	DefaultSort: ByName,
 	Search:      []page.Field{page.Contains("display_name"), page.Contains("email")},

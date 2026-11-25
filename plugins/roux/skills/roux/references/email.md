@@ -16,10 +16,10 @@ is SMTP, set by the environment.
 
 | Email | Sent when | Subject |
 | --- | --- | --- |
-| Sign-in | someone asks for a link | `Sign in to Acme Gym` |
-| Invitation | someone is invited (`users.md`) | `You've been invited to Acme Gym` |
-| Address confirmation | an address is added or changed | `Confirm your email address for Acme Gym` |
-| Address changed | to the old address | `Your Acme Gym email address was changed` |
+| Sign-in | someone asks for a link | `Sign in to Team Planner` |
+| Invitation | someone is invited (`users.md`) | `You've been invited to Team Planner` |
+| Address confirmation | an address is added or changed | `Confirm your email address for Team Planner` |
+| Address changed | to the old address | `Your Team Planner email address was changed` |
 | Notices | a passkey or API key added, a provider's account linked | a notice naming it |
 
 - Settings: `SMTP_ADDR` (default `localhost:1025`, Mailpit), `MAIL_FROM` (default

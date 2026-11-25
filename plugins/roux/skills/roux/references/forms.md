@@ -125,7 +125,7 @@ request body (trimmed, `""` as `null`); a server field error under its field; `s
 
 ## Pitfalls
 
-- `email: student.email` where it may be `null` doesn't compile: use `inputOf`.
+- `email: contact.email` where it may be `null` doesn't compile: use `inputOf`.
 - A schema key with no field refuses every submit.
 - `url()` rejects `http://localhost:8080`, `email()` rejects `ann@localhost`: write that field's Zod
   and register it where those are valid.

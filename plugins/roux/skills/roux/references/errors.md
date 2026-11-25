@@ -19,11 +19,11 @@ show. On the server it is a `*problem.Problem` returned as the handler's error.
 
 | Situation | Return | Answer |
 | --- | --- | --- |
-| Missing record | `problem.NotFound("This rank no longer exists")` | 404, `detail` = message |
+| Missing record | `problem.NotFound("This label no longer exists")` | 404, `detail` = message |
 | Every field's mistakes | `problem.Validation(problem.Violation{Field: "name", Message: problem.MustNotBeBlank}, ...)` | 400, `detail` `The request has invalid fields`, `errors: [{field, message}]` |
-| One field only the server can judge | `problem.InvalidField("email", "Another student has this email address")` | 400 with `errors` |
-| A rule about the request as a whole | `problem.BadRequest("A student is promoted one rank at a time")` | 400, no `errors` |
-| Clash with server state, no one field to blame | `problem.Conflict(name + " is already enrolled")` | 409 |
+| One field only the server can judge | `problem.InvalidField("name", "Another label has this name")` | 400 with `errors` |
+| A rule about the request as a whole | `problem.BadRequest("A done item can't be moved; reopen it first")` | 400, no `errors` |
+| Clash with server state, no one field to blame | `problem.Conflict(name + " already has an item at " + at)` | 409 |
 | Stale `version` | `problem.StaleVersion()`, compared first in the update's transaction | 409 `This record changed since you loaded it` |
 | Holds the route's permission, but not this record | `problem.Forbidden()` | 403 |
 | Signed out, outside a `k.Handle` route | `problem.Unauthorized()` | 401 |
@@ -57,12 +57,12 @@ opened by hand (`pool.Begin`) is closed with `defer pgdb.Rollback(ctx, tx)`; pre
 
 ## Refuse because of what another feature holds
 
-The owning feature takes checks; the referring feature supplies one, so `ranks` never imports
-`students`:
+The owning feature takes checks; the referring feature supplies one, so `labels` never imports
+`items`:
 
 ```go
-// in ranks: a reason a rank may not be removed, from a feature that refers to ranks
-type RemovalCheck func(ctx context.Context, tx pgx.Tx, rank Rank) error
+// in labels: a reason a label may not be removed, from a feature that refers to labels
+type RemovalCheck func(ctx context.Context, tx pgx.Tx, label Label) error
 
 type Module struct {
 	Clock         func() time.Time
@@ -71,33 +71,33 @@ type Module struct {
 ```
 
 ```go
-// in students
-func RankInUse(ctx context.Context, tx pgx.Tx, rank ranks.Rank) error {
+// in items
+func LabelInUse(ctx context.Context, tx pgx.Tx, label labels.Label) error {
 	var held bool
-	if err := tx.QueryRow(ctx, `select exists (select 1 from promotion where rank_id = $1)`, rank.ID).Scan(&held); err != nil {
+	if err := tx.QueryRow(ctx, `select exists (select 1 from item_label where label_id = $1)`, label.ID).Scan(&held); err != nil {
 		return err
 	}
 	if held {
-		return problem.Conflict(fmt.Sprintf("Students hold or have held %s", rank.Name))
+		return problem.Conflict(fmt.Sprintf("Items carry %s: take it off them first", label.Name))
 	}
 	return nil
 }
 ```
 
-In `cmd/server/modules.go`: `ranks.Module{RemovalChecks: []ranks.RemovalCheck{students.RankInUse}}`.
+In `cmd/server/modules.go`: `labels.Module{RemovalChecks: []labels.RemovalCheck{items.LabelInUse}}`.
 The service runs each check inside the delete's transaction. Keep the foreign key too.
 
 ## "Already done" is success
 
-A repeat request (mark present twice) must not fail on the unique constraint. Let PostgreSQL skip
+A repeat request (assign someone twice) must not fail on the unique constraint. Let PostgreSQL skip
 it:
 
 ```go
 tag, err := tx.Exec(ctx, `
-	insert into attendance (class_id, student_id, attended_on, created_at, created_by)
-	values ($1, $2, $3, $4, $5)
-	on conflict (class_id, student_id, attended_on) do nothing`,
-	classID, studentID, day, s.Clock(), caller.IdentityID)
+	insert into item_assignee (item_id, user_id)
+	values ($1, $2)
+	on conflict (item_id, user_id) do nothing`,
+	itemID, userID)
 if err != nil {
 	return err
 }
@@ -135,7 +135,7 @@ A Go test per refusal: `Want(t, 404, ...)`, `Want(t, 400, ...)` and read `errors
 
 - A button's request refused with field `errors` shows only the generic detail: refuse buttons with
   `problem.BadRequest` or `problem.Conflict`.
-- `fmt.Errorf("rank %s not found", id)` returned from a handler is a `500`: return
+- `fmt.Errorf("label %s not found", id)` returned from a handler is a `500`: return
   `problem.NotFound(...)`.
 - Wrapping a problem loses nothing (`errors.As` finds it), but a problem's `detail` is what the
   person reads: never put an internal error's text in it.
