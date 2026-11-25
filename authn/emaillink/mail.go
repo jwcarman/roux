@@ -224,6 +224,22 @@ func maskAddress(address string) string {
 	return string(first) + "***"
 }
 
+// addressAddedMessage tells an address already on the account that another was added, masked
+// as in addressChangedMessage: an added address is a way in, so someone who did not add it must
+// hear of it at an address that is surely theirs.
+func addressAddedMessage(app, brandColor, to, newAddress string) Message {
+	masked := maskAddress(newAddress)
+	text := fmt.Sprintf(`%[1]s
+
+%[2]s was added to your account and can now sign in. If you did not add it, remove it and secure your account.
+
+You got this email from %[1]s.
+`, app, masked)
+	return notice(app, brandColor, to, "An email address was added to your "+app+" account", text,
+		"<strong>"+html.EscapeString(masked)+"</strong> was added to your account and can now sign in.",
+		"If you did not add it, remove it and secure your account.")
+}
+
 // addressChangedMessage tells the old address it was replaced, showing the new one masked:
 // it is the address most likely to still belong to the real owner if someone else had their
 // session. The wording is roux's.

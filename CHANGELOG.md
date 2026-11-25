@@ -16,6 +16,8 @@ All notable changes to this project are documented in this file. The format foll
   however busy it is, so a stolen cookie kept warm still dies. `authn.EndSessions` ends an
   identity's sessions inside a transaction.
 
+- **"An email address was added" email.** Confirming a new address emails every address already
+  on the account, with the new one masked, as replacing one does: an added address is a way in.
 - **"An API key was made" email.** Making or rotating a key emails the owner
   (`apikey.Config.Notify`, wired to `emaillink.Method.APIKeyMade` by `app.APIKeysFromEnv`), as
   adding a passkey does.

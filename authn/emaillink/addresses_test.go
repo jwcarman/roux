@@ -571,3 +571,21 @@ func TestTellingTheOwnerAnAPIKeyWasMade(t *testing.T) {
 		t.Fatal("emailed an identity with no address")
 	}
 }
+
+func TestTheAddressesAlreadyThereHearOfANewOne(t *testing.T) {
+	e := setup(t)
+	b := e.signedIn()
+	msg := e.ask(b, "new@example.test", nil)
+	before := e.settle()
+	b.post("/api/roux/auth/me/email-addresses/confirmations", map[string]string{"token": confirmTokenOf(t, msg)})
+	mail := e.waitForMail(before + 1)
+	if len(mail) != before+1 {
+		t.Fatalf("%d emails after confirming, want one notice", len(mail)-before)
+	}
+	notice := mail[before]
+	if notice.To != owner || notice.Subject != "An email address was added to your Acme Gym account" ||
+		!strings.Contains(notice.Text, "n***@example.test was added to your account and can now sign in.") ||
+		strings.Contains(notice.Text, "new@example.test") || !strings.Contains(notice.HTML, "n***@example.test") {
+		t.Fatalf("the notice: %+v", notice)
+	}
+}

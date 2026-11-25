@@ -243,10 +243,35 @@ func (m *Method) confirmAddress(h *authn.Host, w http.ResponseWriter, r *http.Re
 		if err := m.cfg.Sender.Send(ctx, addressChangedMessage(m.cfg.AppName, m.cfg.BrandColor, oldAddress, req.address)); err != nil {
 			slog.WarnContext(ctx, "could not tell a replaced address", "err", err)
 		}
+	} else { // an addition: every address already there hears about it, the same way
+		m.tellTheOthers(ctx, p.IdentityID, credentialID, req.address)
 	}
 	return api.JSON(w, http.StatusOK, struct {
 		CredentialID string `json:"credentialId"`
 	}{credentialID.String()})
+}
+
+// tellTheOthers emails each of the identity's addresses but the one just added that it was
+// added. A failure is logged: the address is added either way.
+func (m *Method) tellTheOthers(ctx context.Context, identityID, added uuid.UUID, address string) {
+	rows, err := m.store.pool.Query(ctx, `
+		select e.address from roux_credential_identity ci
+		  join roux_email_credential e on e.id = ci.credential_id
+		 where ci.identity_id = $1 and e.id <> $2
+		 order by e.id`, identityID, added)
+	if err == nil {
+		var others []string
+		if others, err = pgx.CollectRows(rows, pgx.RowTo[string]); err == nil {
+			for _, other := range others {
+				if serr := m.cfg.Sender.Send(ctx, addressAddedMessage(m.cfg.AppName, m.cfg.BrandColor, other, address)); serr != nil {
+					slog.WarnContext(ctx, "could not tell an address that another was added", "err", serr)
+				}
+			}
+		}
+	}
+	if err != nil {
+		slog.WarnContext(ctx, "could not find the addresses to tell of a new one", "err", err)
+	}
 }
 
 func (m *Method) consumeAddressToken(ctx context.Context, identityID uuid.UUID, token string) (pending, error) {
