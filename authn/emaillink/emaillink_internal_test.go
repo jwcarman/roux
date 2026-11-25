@@ -425,68 +425,93 @@ func fakeSMTPWith(t *testing.T, f fakeServer) (addr string, got chan string) {
 		if err != nil {
 			return
 		}
-		defer func() { _ = conn.Close() }()
-		var log strings.Builder
-		defer func() { got <- log.String() }()
-		r := bufio.NewReader(conn)
-		reply := func(s string) { _, _ = fmt.Fprintf(conn, "%s\r\n", s) }
-		reply("220 fake ESMTP")
+		c := &fakeConn{fakeServer: f, conn: conn, r: bufio.NewReader(conn)}
+		defer func() { _ = c.conn.Close() }()
+		defer func() { got <- c.log.String() }()
+		c.reply("220 fake ESMTP")
 		for {
-			line, err := r.ReadString('\n')
-			if err != nil {
+			line, err := c.r.ReadString('\n')
+			if err != nil || !c.answer(strings.TrimRight(line, "\r\n")) {
 				return
-			}
-			line = strings.TrimRight(line, "\r\n")
-			cmd := strings.ToUpper(line)
-			if answer, ok := f.refuse[strings.Fields(cmd + " ")[0]]; ok {
-				log.WriteString("refused " + line + "\n")
-				reply(answer)
-				continue
-			}
-			switch {
-			case strings.HasPrefix(cmd, "EHLO"), strings.HasPrefix(cmd, "HELO"):
-				if f.startTLS != nil {
-					if _, secured := conn.(*tls.Conn); !secured {
-						reply("250-fake")
-						reply("250 STARTTLS")
-						continue
-					}
-				}
-				reply("250 fake")
-			case cmd == "STARTTLS":
-				reply("220 go ahead")
-				secured := tls.Server(conn, f.startTLS)
-				if err := secured.Handshake(); err != nil {
-					log.WriteString("handshake failed\n")
-					return
-				}
-				log.WriteString("STARTTLS\n")
-				conn, r = secured, bufio.NewReader(secured)
-			case strings.HasPrefix(cmd, "AUTH"):
-				log.WriteString("AUTH\n")
-				reply("235 accepted")
-			case strings.HasPrefix(cmd, "MAIL FROM"), strings.HasPrefix(cmd, "RCPT TO"):
-				log.WriteString(line + "\n")
-				reply("250 ok")
-			case cmd == "DATA":
-				reply("354 go ahead")
-				for {
-					l, err := r.ReadString('\n')
-					if err != nil || l == ".\r\n" {
-						break
-					}
-					log.WriteString(l)
-				}
-				reply("250 queued")
-			case cmd == "QUIT":
-				reply("221 bye")
-				return
-			default:
-				reply("250 ok")
 			}
 		}
 	}()
 	return ln.Addr().String(), got
+}
+
+// fakeConn is one conversation with the fake SMTP server, logging what the test asserts on.
+type fakeConn struct {
+	fakeServer
+	conn net.Conn
+	r    *bufio.Reader
+	log  strings.Builder
+}
+
+func (c *fakeConn) reply(s string) { _, _ = fmt.Fprintf(c.conn, "%s\r\n", s) }
+
+// answer replies to one command line; false ends the conversation.
+func (c *fakeConn) answer(line string) bool {
+	cmd := strings.ToUpper(line)
+	if answer, ok := c.refuse[strings.Fields(cmd + " ")[0]]; ok {
+		c.log.WriteString("refused " + line + "\n")
+		c.reply(answer)
+		return true
+	}
+	switch {
+	case strings.HasPrefix(cmd, "EHLO"), strings.HasPrefix(cmd, "HELO"):
+		c.hello()
+	case cmd == "STARTTLS":
+		return c.upgrade()
+	case strings.HasPrefix(cmd, "AUTH"):
+		c.log.WriteString("AUTH\n")
+		c.reply("235 accepted")
+	case strings.HasPrefix(cmd, "MAIL FROM"), strings.HasPrefix(cmd, "RCPT TO"):
+		c.log.WriteString(line + "\n")
+		c.reply("250 ok")
+	case cmd == "DATA":
+		c.data()
+	case cmd == "QUIT":
+		c.reply("221 bye")
+		return false
+	default:
+		c.reply("250 ok")
+	}
+	return true
+}
+
+// hello offers STARTTLS until the connection is secured, when the server has it.
+func (c *fakeConn) hello() {
+	if _, secured := c.conn.(*tls.Conn); c.startTLS != nil && !secured {
+		c.reply("250-fake")
+		c.reply("250 STARTTLS")
+		return
+	}
+	c.reply("250 fake")
+}
+
+func (c *fakeConn) upgrade() bool {
+	c.reply("220 go ahead")
+	secured := tls.Server(c.conn, c.startTLS)
+	if err := secured.Handshake(); err != nil {
+		c.log.WriteString("handshake failed\n")
+		return false
+	}
+	c.log.WriteString("STARTTLS\n")
+	c.conn, c.r = secured, bufio.NewReader(secured)
+	return true
+}
+
+// data logs the message up to its closing dot.
+func (c *fakeConn) data() {
+	c.reply("354 go ahead")
+	for {
+		l, err := c.r.ReadString('\n')
+		if err != nil || l == ".\r\n" {
+			break
+		}
+		c.log.WriteString(l)
+	}
+	c.reply("250 queued")
 }
 
 func TestSMTPSendSpeaksSMTP(t *testing.T) {

@@ -429,8 +429,9 @@ type Users struct {
 
 func (*Users) Name() string { return "users" }
 
-// mountsFirst: the other modules read the organization and the theme this module sets.
-func (*Users) mountsFirst() {}
+func (*Users) mountsFirst() {
+	// Only a marker: the other modules read the organization and the theme this module sets.
+}
 func (*Users) Migrations() []pgdb.Migration {
 	return []pgdb.Migration{activity.Migration, users.Migration, theme.Migration}
 }
