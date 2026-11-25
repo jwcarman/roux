@@ -228,6 +228,7 @@ statement aborts the transaction, and everything after it fails.
 | A unique or foreign-key violation returned as it is | 409 | `A resource with these values already exists.`, `The operation conflicts with a related resource.` (never the database's text) |
 | Anything under `/api/roux/auth/` | its status | sign-in's own problems, with `type` `urn:roux:error:<code>` and `code` |
 | A panic | 500 | `Something went wrong`, with `errorId` |
+| The request's own cancellation, after the client went away (a page left mid-request) | 499 (`api.StatusClientClosedRequest`) | nothing anyone reads; logged at DEBUG, not ERROR, and no failed trace |
 | Anything else | 500 | `Something went wrong`, with `errorId` (`contracts/problem-server-error.json`) |
 
 An error type of the app's own can say how it is answered by having a method

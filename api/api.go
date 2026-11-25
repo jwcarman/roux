@@ -3,6 +3,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -77,6 +78,14 @@ func opaque500(errorID string) *problem.Problem {
 	return p
 }
 
+// StatusClientClosedRequest is the status of a request whose client went away before the answer
+// (nginx's 499): below 500, so it marks no trace as failed.
+const StatusClientClosedRequest = 499
+
+func clientClosed() *problem.Problem {
+	return &problem.Problem{Type: "about:blank", Title: "Client Closed Request", Status: StatusClientClosedRequest}
+}
+
 // toProblem resolves an error to a problem, in order of precedence:
 //  1. the error chain contains a *problem.Problem
 //  2. the chain contains a ProblemSource
@@ -96,6 +105,12 @@ func (m *Mux) toProblem(r *http.Request, err error) *problem.Problem {
 		if p := m.mappings[i](err); p != nil {
 			return p
 		}
+	}
+	if errors.Is(err, context.Canceled) && r.Context().Err() != nil {
+		// The client went away (a page left, a tab closed): nobody reads the answer and nothing
+		// failed here, so it is no error. A cancellation while the client waits still is one.
+		slog.DebugContext(r.Context(), "the client went away", "method", r.Method, "path", r.URL.Path)
+		return clientClosed()
 	}
 	// The client learns nothing of the cause, but gets an id that finds it in the log.
 	errorID := uuid.NewString()

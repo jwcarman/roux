@@ -1,9 +1,12 @@
 package api_test
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -225,6 +228,34 @@ func TestUnexpectedErrorsAreOpaqueWithAnErrorID(t *testing.T) {
 	}
 	if strings.Contains(rec.Body.String(), "hunter2") {
 		t.Fatalf("the cause leaked: %s", rec.Body)
+	}
+}
+
+func TestAClientThatWentAwayIsNoError(t *testing.T) {
+	var logs bytes.Buffer
+	old := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() { slog.SetDefault(old) })
+	m := api.NewMux()
+	m.Handle("GET /api/slow", func(_ http.ResponseWriter, r *http.Request) error { return r.Context().Err() })
+	m.Handle("GET /api/cancels", func(http.ResponseWriter, *http.Request) error {
+		return fmt.Errorf("the query: %w", context.Canceled)
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	rec := httptest.NewRecorder()
+	m.ServeHTTP(rec, httptest.NewRequestWithContext(ctx, "GET", "/api/slow", nil))
+	if rec.Code != api.StatusClientClosedRequest || !strings.Contains(logs.String(), `level=DEBUG msg="the client went away"`) ||
+		strings.Contains(logs.String(), "level=ERROR") {
+		t.Fatalf("gone: %d\n%s", rec.Code, logs.String())
+	}
+
+	logs.Reset()
+	rec = httptest.NewRecorder()
+	m.ServeHTTP(rec, httptest.NewRequest("GET", "/api/cancels", nil))
+	if rec.Code != 500 || !strings.Contains(logs.String(), `level=ERROR msg="unhandled error"`) {
+		t.Fatalf("still waiting: %d\n%s", rec.Code, logs.String())
 	}
 }
 

@@ -42,7 +42,8 @@ without the route's permission (403 `You do not have permission`); no CSRF token
 `Invalid CSRF token`); no route under `/api/` (404) or the wrong method (405); `pgx.ErrNoRows`
 returned as it is (404 `The requested resource does not exist.`); a unique or foreign-key
 violation (409, never the database's text); a panic or any other error (500 `Something went
-wrong`, with `errorId`, logged). Under `/api/roux/auth/`, sign-in answers its own problems (`type`
+wrong`, with `errorId`, logged); the request's cancellation after its client went away is 499
+(`api.StatusClientClosedRequest`), logged at DEBUG, not an error. Under `/api/roux/auth/`, sign-in answers its own problems (`type`
 `urn:roux:error:<code>`, `code`).
 
 Database errors: the app registers `pgdb.RegisterErrors` for you (the `404` and `409` above).

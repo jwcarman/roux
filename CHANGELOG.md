@@ -149,6 +149,10 @@ All notable changes to this project are documented in this file. The format foll
   there is no scan code to keep in step. A field without a tag, or a tag that is not a plain column
   name, makes `page.New` panic, naming the field and the tag to write. A value in another form
   than the database keeps it (a date as `2026-11-24`) is the view's work (`to_char`).
+- **A client that went away is no error:** a handler that returns its request's cancellation after
+  the client left (a page left mid-request) answers 499 (`api.StatusClientClosedRequest`) and logs
+  at DEBUG, instead of a 500 logged as an unhandled ERROR. A cancellation while the client still
+  waits is still a 500.
 - **Rows are read by name everywhere:** the feature recipe's `Label`, `users.Member` and the
   guides' examples tag each field with its column and use `pgx.RowToStructByName`; no list of
   columns has to match a struct's field order.
