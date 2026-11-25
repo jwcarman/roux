@@ -12,6 +12,11 @@ All notable changes to this project are documented in this file. The format foll
   Day: v1.19.1 can panic on malformed compressed input (GO-2026-6865), reachable through the
   Prometheus metrics handler. CI now runs `govulncheck` on roux and the template, and the repository
   has CodeQL scanning and Dependabot security updates.
+- **`github.com/go-jose/go-jose/v4` is v4.1.6** (from v4.1.4; Dependabot's high and medium
+  advisories), in roux, the template and Roux The Day.
+- **`qs` 6.17.1 and `minimatch` 11.0.1** through npm `overrides` in roux-web's workspace, the
+  template's front end and Roux The Day's: both come in only through Stryker, which pins the
+  vulnerable lines. Development tools only; nothing in an app's bundle changes.
 
 ### Added
 

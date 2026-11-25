@@ -75,8 +75,9 @@ services:
 EOF
 
 compose up -d --build --wait >"$WORK/up.log" 2>&1 || { cat "$WORK/up.log" >&2; fail "docker compose up failed"; }
-app="http://$(compose port app 8080)"
-mailpit="http://$(compose port mailpit 8025)"
+# Both are published on this machine only (ports.yaml), so plain HTTP never leaves it.
+app="http://127.0.0.1:$(compose port app 8080 | sed 's/.*://')"
+mailpit="http://127.0.0.1:$(compose port mailpit 8025 | sed 's/.*://')"
 
 for _ in $(seq 1 60); do
   curl -fs "$app/api/roux/readyz" >/dev/null && break
