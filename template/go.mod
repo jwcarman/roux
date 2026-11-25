@@ -5,6 +5,7 @@ go 1.27
 require (
 	github.com/jackc/pgx/v5 v5.13.0
 	github.com/jwcarman/roux v0.0.0
+	go.yaml.in/yaml/v3 v3.0.5
 )
 
 require (

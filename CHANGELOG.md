@@ -32,8 +32,9 @@ All notable changes to this project are documented in this file. The format foll
 ### Changed
 
 - **The template's development services stay on this machine.** `compose.yaml` publishes every
-  port on 127.0.0.1 only and pins each image to a release (Mailpit v1.34.0, otel-lgtm 0.41.1, the
-  collector 0.165.0); a test in `cmd/server` keeps it so.
+  port on 127.0.0.1 only and pins each image to a release (Postgres 17.6, Mailpit v1.34.0,
+  Keycloak 26.0.8, otel-lgtm 0.41.1, the collector 0.165.0); a test in `cmd/server` reads the file
+  as YAML and keeps it so, whichever way a port is written.
 - **Plain HTTP for a real host must be on purpose.** A `PUBLIC_URL` of `http://` for a host other
   than this machine stops startup, saying to serve over HTTPS, unless `COOKIE_SECURE=false` says
   so; then a warning is logged. Localhost is unaffected.
