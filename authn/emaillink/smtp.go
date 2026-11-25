@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -19,10 +20,12 @@ import (
 	"time"
 )
 
-// SMTPSender delivers email over SMTP, over STARTTLS, authenticating when Username
-// is set. Without STARTTLS it sends only to a server on this machine (Mailpit, on
-// localhost:1025 for local development, offers neither), unless AllowPlaintext says
-// the network between is trusted: a sign-in link sent in the clear can be read and used.
+// SMTPSender delivers email over SMTP, encrypted, authenticating when Username is set. On port
+// 465 it speaks TLS from the first byte (implicit TLS, RFC 8314); on any other port (587, the
+// usual submission port) it upgrades with STARTTLS. Without either it sends only to a server on
+// this machine (Mailpit, on localhost:1025 for local development, offers neither), unless
+// AllowPlaintext says the network between is trusted: a sign-in link sent in the clear can be
+// read and used.
 type SMTPSender struct {
 	// Addr is host:port of the SMTP server.
 	Addr string
@@ -36,8 +39,12 @@ type SMTPSender struct {
 	// relay on a network you trust.
 	AllowPlaintext bool
 
-	dial func(ctx context.Context, addr string) (net.Conn, error) // tests reach a fake server by another name
+	dial  func(ctx context.Context, addr string) (net.Conn, error) // tests reach a fake server by another name
+	roots *x509.CertPool                                           // tests trust their own certificate; nil is the system's
 }
+
+// implicitTLSPort is SMTP's port for TLS from the first byte (RFC 8314).
+const implicitTLSPort = "465"
 
 // loopback reports whether host is this machine.
 func loopback(host string) bool {
@@ -58,7 +65,7 @@ func (s *SMTPSender) Send(ctx context.Context, m Message) error {
 	if timeout <= 0 {
 		timeout = 30 * time.Second
 	}
-	host, _, err := net.SplitHostPort(s.Addr)
+	host, port, err := net.SplitHostPort(s.Addr)
 	if err != nil {
 		return fmt.Errorf("smtp: bad address %q: %w", s.Addr, err)
 	}
@@ -77,6 +84,16 @@ func (s *SMTPSender) Send(ctx context.Context, m Message) error {
 		deadline = d
 	}
 	_ = conn.SetDeadline(deadline)
+	tlsConfig := &tls.Config{ServerName: host, MinVersion: tls.VersionTLS12, RootCAs: s.roots}
+	implicit := port == implicitTLSPort
+	if implicit {
+		secured := tls.Client(conn, tlsConfig)
+		if err := secured.HandshakeContext(ctx); err != nil {
+			_ = conn.Close()
+			return fmt.Errorf("smtp: TLS on port %s: %w", port, err)
+		}
+		conn = secured
+	}
 
 	c, err := smtp.NewClient(conn, host)
 	if err != nil {
@@ -85,12 +102,10 @@ func (s *SMTPSender) Send(ctx context.Context, m Message) error {
 	}
 	defer func() { _ = c.Close() }() // after Quit this only reports the connection already closed
 
-	if ok, _ := c.Extension("STARTTLS"); ok {
-		if err := c.StartTLS(&tls.Config{ServerName: host, MinVersion: tls.VersionTLS12}); err != nil {
-			return fmt.Errorf("smtp: starttls: %w", err)
+	if !implicit {
+		if err := s.startTLS(c, host, tlsConfig); err != nil {
+			return err
 		}
-	} else if !loopback(host) && !s.AllowPlaintext {
-		return fmt.Errorf("smtp: %s offers no STARTTLS, and is not on this machine: refusing to send a sign-in link in the clear (set AllowPlaintext for a relay on a trusted network)", s.Addr)
 	}
 	if s.Username != "" {
 		if err := c.Auth(smtp.PlainAuth("", s.Username, s.Password, host)); err != nil {
@@ -114,6 +129,21 @@ func (s *SMTPSender) Send(ctx context.Context, m Message) error {
 		return fmt.Errorf("smtp: send: %w", err)
 	}
 	return c.Quit()
+}
+
+// startTLS upgrades the conversation to TLS, or refuses to go on in the clear to a server off this
+// machine unless the network is trusted.
+func (s *SMTPSender) startTLS(c *smtp.Client, host string, config *tls.Config) error {
+	if ok, _ := c.Extension("STARTTLS"); ok {
+		if err := c.StartTLS(config); err != nil {
+			return fmt.Errorf("smtp: starttls: %w", err)
+		}
+		return nil
+	}
+	if !loopback(host) && !s.AllowPlaintext {
+		return fmt.Errorf("smtp: %s offers no STARTTLS, and is not on this machine: refusing to send a sign-in link in the clear (use port 465 if the server speaks TLS there, or set SMTP_ALLOW_PLAINTEXT=true, AllowPlaintext, for a relay on a trusted network)", s.Addr)
+	}
+	return nil
 }
 
 // build writes the message as MIME: multipart/alternative, text first, then HTML.

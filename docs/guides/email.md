@@ -56,7 +56,7 @@ one language: the app's templates choose it.
 
 | Variable | What it is |
 | --- | --- |
-| `SMTP_ADDR` | The mail server, `host:port` (default `localhost:1025`: Mailpit, from `compose.yaml`). |
+| `SMTP_ADDR` | The mail server, `host:port` (default `localhost:1025`: Mailpit, from `compose.yaml`). On port `465` the connection is TLS from the first byte; on any other port (`587`, the usual one) it is upgraded with STARTTLS. |
 | `MAIL_FROM` | The address every email is sent from (default `no-reply@localhost`). |
 | `SMTP_USERNAME`, `SMTP_PASSWORD` | The mail server's login (SendGrid, SES, Postmark and the like give one), both or neither. It is sent only over TLS, or to this machine. |
 | `SMTP_ALLOW_PLAINTEXT` | `true` to send without STARTTLS to a server off this machine, on a network you trust. Without it, such a server must offer STARTTLS. |
@@ -71,6 +71,28 @@ stops still go out: the modules drain them during shutdown.
 In development, Mailpit catches every email; read them, and open their links, at
 <http://localhost:8025>. The end-to-end tests read the sign-in link from Mailpit's API
 ([Testing](testing.md#playwright)).
+
+### Sending for real
+
+An email service (Postmark, SendGrid, Mailgun, Amazon SES, Resend and the like) is an SMTP server
+too: every one of them offers SMTP beside its own API, and roux speaks SMTP, so a service is four
+settings and no code:
+
+```sh
+SMTP_ADDR=smtp.postmarkapp.com:587       # the service's SMTP host; 587 (STARTTLS) or 465 (TLS)
+SMTP_USERNAME=<the service's SMTP user>   # often an API key or token, per the service's SMTP page
+SMTP_PASSWORD=<its SMTP password>         # a secret: from the deployment's secret store
+MAIL_FROM=no-reply@yourdomain.com         # an address or domain the service has verified
+```
+
+- **Verify the sender first.** A service sends only from an address or domain you have verified
+  with it (the DNS records it asks for: SPF, DKIM, and a DMARC policy), and mail from an
+  unverified one is refused or lands in spam.
+- **Check it before people need it.** Sign in with your own address once the settings are in
+  place. A wrong host, port or login is logged (`smtp: connect`, `smtp: auth`, ...) and the person
+  is told the link could not be sent.
+- A server that offers neither TLS nor STARTTLS is refused, so a link never crosses the network in
+  the clear: on a relay inside a network you trust, `SMTP_ALLOW_PLAINTEXT=true`.
 
 ## Don't
 

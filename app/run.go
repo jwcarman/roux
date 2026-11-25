@@ -106,7 +106,7 @@ func Run(ctx context.Context, cfg Config) error {
 	srv := Server(addr, telemetry.HTTP(api.Recoverer(mux), health.LivePath, health.ReadyPath), secure)
 	errc := make(chan error, 1)
 	go func() { errc <- srv.ListenAndServe() }()
-	slog.Info(kit.AppName+" is up at "+Getenv("PUBLIC_URL", "http://localhost:8080"),
+	slog.Info(kit.AppName+" is up at "+publicURL(),
 		"roux", rouxVersion(debug.ReadBuildInfo()), "go", runtime.Version(), "addr", addr)
 
 	select {

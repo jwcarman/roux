@@ -167,7 +167,7 @@ func EmailLinkFromEnv(appName string, emails fs.FS) (*EmailLink, error) {
 		return nil, errors.New("SMTP_USERNAME and SMTP_PASSWORD go together: set both to sign in to the mail server, or neither")
 	}
 	m, err := emaillink.New(emaillink.Config{
-		LinkBaseURL:    strings.TrimRight(Getenv("PUBLIC_URL", "http://localhost:8080"), "/") + "/signin/link",
+		LinkBaseURL:    strings.TrimRight(publicURL(), "/") + "/signin/link",
 		CodeSecret:     secret,
 		ResendInterval: resend,
 		TokenTTL:       ttl,
@@ -218,7 +218,7 @@ func PasskeysFromEnv(appName string, email *EmailLink) (*Passkeys, error) {
 	if email == nil {
 		return nil, errors.New("passkeys need email sign-in (set CODE_SECRET): a passkey is registered from a recent session, which email makes")
 	}
-	public, err := url.Parse(Getenv("PUBLIC_URL", "http://localhost:8080"))
+	public, err := url.Parse(publicURL())
 	if err != nil || public.Scheme == "" || public.Host == "" {
 		return nil, fmt.Errorf("PUBLIC_URL must be the address people use, such as https://app.example.com, not %q", os.Getenv("PUBLIC_URL"))
 	}
@@ -349,7 +349,7 @@ func OIDCFromEnv(email *EmailLink, members *Users) (*OIDC, error) {
 	}
 	m, err := oidc.New(oidc.Config{
 		Providers:  providers,
-		PublicURL:  Getenv("PUBLIC_URL", "http://localhost:8080"),
+		PublicURL:  publicURL(),
 		SuccessURL: Getenv("OIDC_SUCCESS_URL", "/"),
 		FailureURL: Getenv("OIDC_FAILURE_URL", "/signin"),
 		LinkURL:    os.Getenv("OIDC_LINK_URL"),
@@ -448,3 +448,6 @@ func (u *Users) Start(ctx context.Context, k *Kit) error {
 	}
 	return nil
 }
+
+// publicURL is where browsers reach the app (PUBLIC_URL), http://localhost:8080 in development.
+func publicURL() string { return Getenv("PUBLIC_URL", "http://localhost:8080") }

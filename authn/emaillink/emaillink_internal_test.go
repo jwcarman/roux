@@ -3,9 +3,15 @@ package emaillink
 import (
 	"bufio"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"io/fs"
+	"math/big"
 	"mime"
 	"mime/multipart"
 	"mime/quotedprintable"
@@ -391,6 +397,12 @@ func fakeSMTP(t *testing.T) (addr string, got chan string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	return fakeSMTPOn(t, ln)
+}
+
+// fakeSMTPOn is fakeSMTP on a listener of the test's, such as a TLS one.
+func fakeSMTPOn(t *testing.T, ln net.Listener) (addr string, got chan string) {
+	t.Helper()
 	t.Cleanup(func() { _ = ln.Close() })
 	got = make(chan string, 1)
 	go func() {
@@ -412,6 +424,9 @@ func fakeSMTP(t *testing.T) (addr string, got chan string) {
 			switch cmd := strings.ToUpper(line); {
 			case strings.HasPrefix(cmd, "EHLO"), strings.HasPrefix(cmd, "HELO"):
 				reply("250 fake")
+			case strings.HasPrefix(cmd, "AUTH"):
+				log.WriteString("AUTH\n")
+				reply("235 accepted")
 			case strings.HasPrefix(cmd, "MAIL FROM"), strings.HasPrefix(cmd, "RCPT TO"):
 				log.WriteString(line + "\n")
 				reply("250 ok")
@@ -497,5 +512,79 @@ func TestSMTPSendsPlainTextToATrustedRelay(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("the server never finished the conversation")
+	}
+}
+
+// selfSigned is a certificate for host, and a pool that trusts it.
+func selfSigned(t *testing.T, host string) (tls.Certificate, *x509.CertPool) {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		DNSNames:     []string{host},
+		NotBefore:    time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+		NotAfter:     time.Date(2100, 1, 1, 0, 0, 0, 0, time.UTC),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}
+	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cert, err := x509.ParseCertificate(der)
+	if err != nil {
+		t.Fatal(err)
+	}
+	roots := x509.NewCertPool()
+	roots.AddCert(cert)
+	return tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}, roots
+}
+
+func TestSMTPSpeaksTLSFromTheFirstByteOnPort465(t *testing.T) {
+	cert, roots := selfSigned(t, "mail.example.com")
+	ln, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12})
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr, got := fakeSMTPOn(t, ln)
+	s := &SMTPSender{
+		Addr: "mail.example.com:465", From: "no-reply@example.com", Username: "u", Password: "p",
+		Timeout: 5 * time.Second, roots: roots,
+		dial: func(ctx context.Context, _ string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "tcp", addr)
+		},
+	}
+	if err := s.Send(context.Background(), Message{To: "ada@example.com", Subject: "Hi", Text: "hello"}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case log := <-got:
+		if !strings.Contains(log, "AUTH\n") || !strings.Contains(log, "RCPT TO:<ada@example.com>") {
+			t.Errorf("signed in and sent over TLS: %s", log)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the server never finished the conversation")
+	}
+}
+
+func TestSMTPOnPort465RefusesACertificateItCannotTrust(t *testing.T) {
+	cert, _ := selfSigned(t, "mail.example.com")
+	ln, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12})
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr, _ := fakeSMTPOn(t, ln)
+	s := &SMTPSender{
+		Addr: "mail.example.com:465", From: "no-reply@example.com", Timeout: 5 * time.Second,
+		dial: func(ctx context.Context, _ string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "tcp", addr)
+		},
+	}
+	err = s.Send(context.Background(), Message{To: "ada@example.com", Subject: "Hi", Text: "hello"})
+	if err == nil || !strings.Contains(err.Error(), "smtp: TLS on port 465:") {
+		t.Fatalf("%v", err)
 	}
 }

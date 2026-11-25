@@ -23,11 +23,15 @@ Delivery is SMTP, set by the environment.
 | Address added | to the account's other addresses | `An email address was added to your Team Planner account` |
 | Notices | a passkey or API key added, a provider's account linked | a notice naming it |
 
-- Settings: `SMTP_ADDR` (default `localhost:1025`, Mailpit), `MAIL_FROM` (default
+- Settings: `SMTP_ADDR` (default `localhost:1025`, Mailpit; port `465` is TLS from the first byte,
+  any other is upgraded with STARTTLS), `MAIL_FROM` (default
   `no-reply@localhost`), `SMTP_USERNAME` and `SMTP_PASSWORD` (the server's login, both or neither),
   `SMTP_ALLOW_PLAINTEXT` (`true` to send without STARTTLS to a server off
   this machine), `EMAIL_RESEND_INTERVAL` (`60s`), `EMAIL_TOKEN_TTL` (`5m`), `PUBLIC_URL` (links
   point to `PUBLIC_URL/signin/link#token=...`).
+- An email service (Postmark, SendGrid, Mailgun, SES, Resend) is used through its SMTP endpoint:
+  `SMTP_ADDR=<its host>:587`, its SMTP login in `SMTP_USERNAME`/`SMTP_PASSWORD`, and a `MAIL_FROM`
+  the service has verified. No code, and no sender of the app's own.
 - The app's name is `APP_NAME`, or the owner's saved theme's; the colour is the theme's brand
   colour.
 - Package `github.com/jwcarman/roux/authn/emaillink`: `Message` (`To`, `Subject`, `Text`, `HTML`),

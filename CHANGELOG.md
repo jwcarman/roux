@@ -149,6 +149,9 @@ All notable changes to this project are documented in this file. The format foll
   there is no scan code to keep in step. A field without a tag, or a tag that is not a plain column
   name, makes `page.New` panic, naming the field and the tag to write. A value in another form
   than the database keeps it (a date as `2026-11-24`) is the view's work (`to_char`).
+- **SMTP on port 465 speaks TLS from the first byte** (implicit TLS, RFC 8314); any other port
+  is upgraded with STARTTLS, as before. The email guide's new "Sending for real" shows an email
+  service (Postmark, SendGrid, SES and the like) set up through its SMTP endpoint.
 - **A client that went away is no error:** a handler that returns its request's cancellation after
   the client left (a page left mid-request) answers 499 (`api.StatusClientClosedRequest`) and logs
   at DEBUG, instead of a 500 logged as an unhandled ERROR. A cancellation while the client still
