@@ -10,7 +10,7 @@ export type QueryTableProps<T> = UseQueryTableOptions<T> &
   };
 
 /**
- * A paged, sortable table over a jpa-utils endpoint. Put any search or filter in `query`
+ * A paged, sortable table over a paged endpoint. Put any search or filter in `query`
  * (its key and its fetch); a change returns the table to its first page.
  */
 export function QueryTable<T>({

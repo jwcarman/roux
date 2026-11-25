@@ -136,7 +136,7 @@ describe("fetchAllPages", () => {
     await expect(fetchAllPages(fetcher, { pageSize: 2 })).resolves.toEqual([1, 2, 3, 4, 5]);
   });
 
-  it("asks for pages of 100 by default, the most a jpa-utils Paginator allows", async () => {
+  it("asks for pages of 100 by default, the most the server's paginator allows", async () => {
     const seen: PageParams[] = [];
     await fetchAllPages((params) => {
       seen.push(params);

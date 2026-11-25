@@ -112,7 +112,7 @@ function pageIndexOf(index: number): number {
 }
 
 /**
- * A TanStack table over a jpa-utils paged endpoint: the server pages and sorts, TanStack Query
+ * A TanStack table over a paged endpoint: the server pages and sorts, TanStack Query
  * fetches and caches, and the table holds the page and sort the user chose, or reports them to a
  * caller that keeps them ({@link UseQueryTableOptions.params}).
  */

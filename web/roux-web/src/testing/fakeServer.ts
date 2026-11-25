@@ -15,7 +15,7 @@ export function people(count: number): Person[] {
   });
 }
 
-/** A paged, sortable, searchable endpoint over `rows`, like a jpa-utils `Paginator`'s. */
+/** A paged, sortable, searchable endpoint over `rows`, like the server's `page.Paginator`. */
 export function fakeEndpoint(rows: readonly Person[]) {
   return (params: PageParams): Promise<PageDto<Person>> => {
     const term = params.search?.toLowerCase();

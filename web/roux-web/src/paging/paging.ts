@@ -1,11 +1,11 @@
-/** How the client talks to jpa-utils' paged endpoints: `PageParams` in, `PageDto` out. */
+/** How the client talks to roux's paged endpoints (the page package on the server): `PageParams` in, `PageDto` out. */
 
 import type { QueryKey } from "@tanstack/react-query";
 import { parseIsoDate } from "../dates/dates";
 
 export type SortDirection = "ASC" | "DESC";
 
-/** jpa-utils' page of results: one page of `data` and where it sits in the whole. */
+/** A page of results: one page of `data` and where it sits in the whole. */
 export interface PaginationDto {
   pageIndex: number;
   pageSize: number;
@@ -20,7 +20,7 @@ export interface PageDto<T> {
   pagination: PaginationDto;
 }
 
-/** What a paged list endpoint accepts (jpa-utils' PageParams, plus a search term). */
+/** What a paged list endpoint accepts (the page package's paging parameters, plus a search term). */
 export interface PageParams {
   pageIndex?: number;
   pageSize?: number;
@@ -42,7 +42,7 @@ export function pageQuery<T>(queryKey: QueryKey, fetch: PageQuery<T>["fetch"]): 
   return { queryKey, fetch };
 }
 
-/** The most rows a jpa-utils `Paginator` returns per page by default. */
+/** The most rows the server's paginator returns per page by default (`page.DefaultMaxSize`). */
 export const MAX_PAGE_SIZE = 100;
 
 /** The query string for `params`: `""` when there is nothing to send, else `"?a=b&c=d"`. */

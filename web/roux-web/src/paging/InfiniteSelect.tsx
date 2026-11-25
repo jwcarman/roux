@@ -33,7 +33,7 @@ export interface InfiniteSelectProps<T> {
 const LOAD_MARGIN = 50;
 
 /**
- * Picks one item from a jpa-utils paged endpoint: Chakra's combobox (ARIA combobox and listbox,
+ * Picks one item from a paged endpoint: Chakra's combobox (ARIA combobox and listbox,
  * arrow keys, Enter, Escape) over a server-side search that loads more as the list scrolls.
  * Fetches nothing until opened.
  */

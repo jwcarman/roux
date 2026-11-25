@@ -68,14 +68,14 @@ interface Descriptor {
   transports?: AuthenticatorTransport[];
 }
 
-/** The parts of Spring's creation options that hold bytes; the rest passes through. */
+/** The parts of the server's creation options that hold bytes; the rest passes through. */
 interface CreationOptionsJson {
   challenge: string;
   user: { id: string; name: string; displayName: string };
   excludeCredentials?: Descriptor[];
 }
 
-/** The parts of Spring's request options that hold bytes; the rest passes through. */
+/** The parts of the server's request options that hold bytes; the rest passes through. */
 interface RequestOptionsJson {
   challenge: string;
   allowCredentials?: Descriptor[];

@@ -50,8 +50,8 @@ describe("rules say what the server says", () => {
   });
 });
 
-// @Phone on the server and phone() here are one rule (contracts/phone.json; the Go validation package is the server side).
-describe("phone() is the server's @Phone", () => {
+// phone() here is the rule contracts/phone.json holds, for a server check to match.
+describe("phone() is contracts/phone.json's rule", () => {
   const fixture = contract<{ pattern: string; message: string; valid: string[]; invalid: string[] }>("phone.json");
 
   it("has the server's pattern", () => {
@@ -73,9 +73,8 @@ describe("phone() is the server's @Phone", () => {
   });
 });
 
-// A malformed LocalTime in a body is a field error with the browser's words (contracts/time.json;
-// RuleContractTest is the Java side).
-describe("time() is how the server reads a LocalTime", () => {
+// A malformed time in a body is a field error with the browser's words (contracts/time.json).
+describe("time() reads a time as contracts/time.json says", () => {
   const fixture = contract<{ message: string; valid: string[]; invalid: string[] }>("time.json");
 
   it.each(fixture.valid)("accepts %j", (value) => {
@@ -87,8 +86,8 @@ describe("time() is how the server reads a LocalTime", () => {
   });
 });
 
-// @After on the server and after() here are one rule (contracts/after.json; RuleContractTest is the Java side).
-describe("after() is the server's @After", () => {
+// after() here is the rule contracts/after.json holds, for a server check to match.
+describe("after() is contracts/after.json's rule", () => {
   interface Case {
     field: string;
     other: string;
@@ -124,8 +123,8 @@ describe("after() is the server's @After", () => {
   });
 });
 
-// money() here and roux-money's constraints on the server are one rule (contracts/money.json;
-// MoneyContractTest is the Java side). The server never parses typed text: "parse" is the browser's
+// money() here and the money package on the server are one rule (contracts/money.json; the Go
+// side is money_test.go). The server never parses typed text: "parse" is the browser's
 // alone, and "rules" checks the messages both sides give for the same amount.
 describe("money() is the server's money", () => {
   interface ParseCase {

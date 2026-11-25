@@ -28,7 +28,7 @@ export function dateTimeInputOf(iso: string | null): string {
 }
 
 /**
- * A record's `LocalTime` as a `time` input's value (`HH:mm`, without the seconds Jackson writes);
+ * A record's time of day as a `time` input's value (`HH:mm`, without any seconds the server writes);
  * `null` as `""`. Text that is not a time is kept as it is, so the form's rule refuses it.
  */
 export function timeInputOf(iso: string | null): string {

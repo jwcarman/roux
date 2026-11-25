@@ -140,8 +140,8 @@ export function url(): TextRule {
 }
 
 /**
- * What a phone number looks like: digits, spaces and `+ - ( ) .`, at least 7 digits. The server's
- * `@Phone` carries the same string (`Phone.PATTERN`), and `contracts/phone.json` holds the two together.
+ * What a phone number looks like: digits, spaces and `+ - ( ) .`, at least 7 digits.
+ * `contracts/phone.json` holds the rule, for a server check to match.
  */
 export const PHONE_PATTERN = String.raw`^(?=(?:\D*\d){7})[\d +\-().]+$`;
 const PHONE = new RegExp(PHONE_PATTERN);
@@ -164,8 +164,8 @@ export type DateRule<Out extends string | null = string> = Rule<
   string,
   {
     /**
-     * Not after the organization's today (`today()`, the server's): `Must not be in the future`,
-     * exactly as the server's `@NotInFuture` decides.
+     * Not after the organization's today (`today()`, the server's): `Must not be in the future`, in
+     * the server's words (`problem.MustNotBeInFuture`).
      */
     notInFuture(): DateRule<Out>;
     /** May be left empty, which gives `null`. */
@@ -236,7 +236,7 @@ function optionalTime(): TimeRule<string | null> {
 
 /**
  * A required time of day, from `<input type="time">`: `Must not be empty`, `Is not in the expected
- * format`. The wire format is `HH:mm` (a `LocalTime`: Jackson reads it, and writes `HH:mm:ss`).
+ * format`. The wire format is `HH:mm` (a server may write `HH:mm:ss`, which the form reads too).
  */
 export function time(): TimeRule {
   return requiredTime();
@@ -393,13 +393,13 @@ export interface AfterRule<Shape> {
   field: Extract<keyof Shape, string>;
   /** The earlier field. */
   other: Extract<keyof Shape, string>;
-  /** What the earlier field is called in the message, such as `the start time`; its name as words by default. Give the server's `@After(otherLabel = ...)` the same. */
+  /** What the earlier field is called in the message, such as `the start time`; its name as words by default. A server check gives the same. */
   otherLabel?: string;
 }
 
 /**
- * `field` must be after `other`: `Must be after {other}`, shown under `field`. The server's
- * `@After` (roux-validation) says the same words. Works for times, dates, date-times and numbers;
+ * `field` must be after `other`: `Must be after {other}`, shown under `field`, in the words
+ * `contracts/after.json` holds for a server check. Works for times, dates, date-times and numbers;
  * equal is not after. A field that is empty or not yet valid is left to its own rule. Call it last
  * (it returns Zod's own schema): `after(z.object({ startsAt: time(), endsAt: time() }), { field: "endsAt", other: "startsAt" })`.
  */

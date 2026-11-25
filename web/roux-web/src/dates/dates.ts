@@ -1,7 +1,7 @@
 /**
  * ISO strings (the wire format) and date-fns Dates (what an app does arithmetic and display with).
- * A `LocalDate` travels as `2026-11-17` and a `LocalTime` as `18:30` (the server also sends
- * `18:30:00`); an instant is an ISO string `new Date(iso)` reads. The helpers here are strict: a
+ * A day travels as `2026-11-17` and a time of day as `18:30` (or `18:30:00`, which a server
+ * may send); an instant is an ISO string `new Date(iso)` reads. The helpers here are strict: a
  * string that is not a real date or time is `undefined`, never a rolled-over date.
  */
 import { format, isValid, parse } from "date-fns";
@@ -19,25 +19,25 @@ function strictParse(text: string, pattern: string, reference: Date): Date | und
   return isValid(date) && format(date, pattern) === text ? date : undefined;
 }
 
-/** A `LocalDate` string (`2026-11-17`) as a Date at midnight in the browser's time zone; `undefined` unless it is a real calendar date. */
+/** A day string (`2026-11-17`) as a Date at midnight in the browser's time zone; `undefined` unless it is a real calendar date. */
 export function parseIsoDate(iso: string): Date | undefined {
   return strictParse(iso, DATE_PATTERN, REFERENCE_DAY);
 }
 
-/** A Date's calendar day in the browser's time zone as a `LocalDate` string (`2026-11-17`). */
+/** A Date's calendar day in the browser's time zone as a day string (`2026-11-17`). */
 export function formatIsoDate(date: Date): string {
   return format(date, DATE_PATTERN);
 }
 
 /**
- * A `LocalTime` string (`18:30`, or `18:30:00` as the server writes it) as a Date on an arbitrary
+ * A time-of-day string (`18:30`, or `18:30:00` as a server may write it) as a Date on an arbitrary
  * day; `undefined` unless it is a real time of day.
  */
 export function parseIsoTime(iso: string): Date | undefined {
   return strictParse(iso, TIME_PATTERN, REFERENCE_DAY) ?? strictParse(iso, TIME_WITH_SECONDS_PATTERN, REFERENCE_DAY);
 }
 
-/** A Date's time of day as a `LocalTime` string (`18:30`), which is also what `<input type="time">` holds. */
+/** A Date's time of day as a time-of-day string (`18:30`), which is also what `<input type="time">` holds. */
 export function formatIsoTime(date: Date): string {
   return format(date, TIME_PATTERN);
 }

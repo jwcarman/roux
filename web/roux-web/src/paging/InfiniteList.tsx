@@ -29,7 +29,7 @@ export interface InfiniteListProps<T> {
   containerProps?: BoxProps;
 }
 
-/** A list that grows a page at a time from a jpa-utils paged endpoint. */
+/** A list that grows a page at a time from a paged endpoint (page.Paginator on the server). */
 export function InfiniteList<T>({
   "aria-label": label,
   query,

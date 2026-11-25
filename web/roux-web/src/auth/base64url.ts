@@ -1,4 +1,4 @@
-// WebAuthn's JSON (Spring Security's) carries bytes as base64url strings; the browser wants bytes.
+// WebAuthn's JSON (the server's, from go-webauthn) carries bytes as base64url strings; the browser wants bytes.
 
 /** Bytes from a base64url string, with or without padding. */
 export function decode(text: string): Uint8Array<ArrayBuffer> {
