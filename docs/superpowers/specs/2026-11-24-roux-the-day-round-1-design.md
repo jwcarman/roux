@@ -26,7 +26,9 @@ extract it."
 ## Non-goals (later rounds)
 
 A "my day" view, an item's history (the activity log), email on assignment, checking an item off
-safely from two devices at once, an organizer role. Extracting the paginator into roux is the
+safely from two devices at once, an organizer role. Round one's guarantee is the version check: an edit or a
+check-off from a stale copy is a 409, never a silent overwrite; making a repeated check-off succeed
+quietly is the later round's. Extracting the paginator into roux is the
 step after this round, not part of it.
 
 ## Anti-goals
@@ -58,6 +60,14 @@ step after this round, not part of it.
 
 ## The paginator (in the app: `internal/paging`)
 
+**SQL text only from constants.** Every parameter that becomes SQL text (`From`, `Columns`, sort
+terms, search fields, `Where` fragments) has an unexported string type, `type sql string`. Go lets
+an untyped string constant become any string type, so `paging.Where("day < ?", today)` compiles,
+but a `string` variable or a `fmt.Sprintf` result does not: interpolating a value into SQL is a
+compile error, not a review comment. Values only ever travel as arguments. (Fable's review: with
+plain strings, `Where(fmt.Sprintf(...))` was the realistic injection path, and agents write most
+of the code.)
+
 Declared once per list, as jpa-utils' `static final Paginator`:
 
 ```go
@@ -71,9 +81,11 @@ const (
 
 var itemPages = paging.New(paging.Config[ItemSort, Item]{
 	From:    "item_list",                        // a view shaped for the list
-	Columns: "id, title, day, at, done, assignee_names, version",
-	Sorts: map[ItemSort]string{                  // the name a client sends -> the SQL it sorts by
-		ByDay: "day, at nulls first", ByTitle: "lower(title)", ByAssignee: "first_assignee_name",
+	Columns: "id, title, day, at_time, done, assignee_names, version",
+	Sorts: map[ItemSort][]paging.Term{           // the name a client sends -> what it sorts by
+		ByDay:      {paging.By("day"), paging.By("at_time").NullsFirst()},
+		ByTitle:    {paging.By("lower(title)")},
+		ByAssignee: {paging.By("first_assignee_name")},
 	},
 	DefaultSort: ByDay,
 	Search:      []paging.Field{paging.Contains("title"), paging.Contains("notes")},
@@ -85,19 +97,29 @@ var itemPages = paging.New(paging.Config[ItemSort, Item]{
   that is one of the sorts, a default page size within the maximum, at least one sort or a
   tiebreaker) and panics on a mistake: it runs at package initialization, so a mistake stops the
   app before it serves anything.
-- `p.Check(ctx, db)` runs `select <columns>, <sort expressions> from <from> where false` and so
-  finds a misspelled column; the module calls it when the app starts (a `Starter`), and a test
-  calls it against the migrated schema.
+- `p.Check(ctx, db)` runs the real page query with `where false`, for every sort in both
+  directions, and so finds a misspelled column or a bad sort term; the module calls it when the
+  app starts (a `Starter`, after migrations), and a test calls it against the migrated schema.
+- The sort direction is never text from the request: the paginator writes `ASC` or `DESC` from a
+  switch on `page.Asc`/`page.Desc` and applies it to every term and the tiebreaker, so
+  `day, at_time nulls first` sorts both terms the same way. (roux's own `page.Config.Resolve` takes
+  any `Direction` today and `users.List` pastes it into `ORDER BY`; only `api.PageRequest` checks
+  it. That is fixed in roux in this round: `Resolve` refuses any other direction.)
+- The allowed `sortBy` values are listed in sorted order (a map's order is random), so the 400's
+  "must be one of" is stable.
 - `p.Config()` is a `page.Config` (sort names, default, sizes, tiebreaker `id`), so the handler
   keeps `api.PageRequest(r, itemPages.Config())` and the HTTP contract is unchanged.
 - `p.Page(ctx, db, req, search, filters...) (page.Page[Item], error)` runs the count and the page
   query: `select <columns> from <from> where <filters and search> order by <sort> <dir>, id <dir>
   limit .. offset ..`.
 - Filters: `paging.Where("day < ?", today)` with `?` placeholders, numbered `$1..$n` for the
-  whole statement; `paging.WhereIf(cond, ...)` adds one only when `cond`. A `?` inside a SQL
-  string literal or Postgres's jsonb `?` operator is not supported (documented, and a finding if it
-  bites).
-- Search, as jpa-utils: the term is split into lower-cased words (duplicates dropped, at most 10);
+  whole statement; `paging.WhereIf(cond, ...)` adds one only when `cond`. It fails closed: `Where`
+  panics when the number of `?` differs from the number of arguments, and refuses a fragment
+  holding `'`, `"`, `--`, `/*`, `;` or `$` (a literal, a comment or a hand-numbered placeholder),
+  so a stray `?` can never shift a value onto the wrong placeholder. A slice binds as one argument
+  (`assignee_ids && ?`, `= any(?)`); there is no IN-list expansion.
+- Search, as jpa-utils: the term (at most 200 characters, else a 400 on `search`) is split into
+  lower-cased words (duplicates dropped, at most 10);
   a row matches when every word matches at least one search field; `Contains` (`lower(col) like
   '%w%' escape '\'`), `Prefix` and `Exact`, with `%`, `_` and `\` escaped.
 - Generic over the row type because Go methods cannot have type parameters of their own (unlike
@@ -108,13 +130,17 @@ var itemPages = paging.New(paging.Config[ItemSort, Item]{
 **Schema** (`cmd/server/migrations/002_items.sql`, after the template's `001_roles.sql`; the
 app's migration already runs after `roux-users`, so the view can read `roux_user_directory`):
 
-- `item`: `id uuid`, `title text` (1–120), `notes text` (0–2000), `day date`, `at time` (null:
-  all day), `done boolean`, `version int`, `created_at`, `created_by` (identity).
+- `item`: `id uuid default gen_random_uuid()`, `title text` (1–120 characters after trimming),
+  `notes text` (0–2000), `day date`, `at_time time` (null: all day; not `at`, a Postgres keyword),
+  `done boolean`, `version int`, `created_at`, `created_by`, `modified_at`, `modified_by`
+  (identities). The lengths are `check` constraints as well as API validation.
 - `item_assignee`: `item_id`, `user_id` (roux's user directory), primary key both.
 - `item_list` view: the item's columns plus `assignee_ids uuid[]`, `assignee_names text[]` (by
-  name) and `first_assignee_name` (for the sort), from `roux_user_directory`.
+  name) and `first_assignee_name` (for the sort), from `roux_user_directory`. It names its columns
+  and never selects the directory's `email`: the list shows names, not addresses.
 
-**Permissions**: `items.read` and `items.write`, both granted to USER and OWNER in
+**Permissions**: `items.read` and `items.write`, granted to USER and OWNER, and `items.delete.any`,
+granted to OWNER only, in
 `cmd/server/migrations/003_item_permissions.sql`; added to `permissions.gen.ts` by hand (roux has no Go
 generator for it yet: a finding).
 
@@ -122,11 +148,25 @@ generator for it yet: a finding).
 
 - `GET /api/items?search=&when=overdue|today|week|all&assignee=me|<user id>&status=open|done`
   plus `pageIndex, pageSize, sortBy, sortDirection`: a page of items.
-- `POST /api/items`, `GET /api/items/{id}`, `PUT /api/items/{id}` (with `version`; stale is 409),
-  `DELETE /api/items/{id}`.
+- `POST /api/items`, `GET /api/items/{id}` (everything the edit dialog needs, `notes` and
+  `assignee_ids` included, which the list leaves out), `PUT /api/items/{id}` (with `version`;
+  stale is 409), `DELETE /api/items/{id}`.
+- A write reads the item `for update`, compares the version, and bumps it for any change,
+  assignees alone included, as `users` does for a rename.
+- Who may do what (James): every team member may add and edit any item; only the item's author
+  (`created_by`) or an OWNER may delete it. Anyone else gets a 403, checked inside the delete's
+  transaction. OWNER is recognized by a permission, `items.delete.any`, granted to OWNER only, not
+  by the role's name; the author needs only `items.write`.
+- `when` or `status` with any other value is a 400 on that field, never ignored.
+- Every route goes through the host's guard (CSRF, sign-in, then the permission), and a test calls
+  each endpoint without its permission, as `users`' `TestEveryEndpointChecksItsPermission` does.
 - `when` uses the team's time zone (the organization's): overdue is open and before today; today is
   today; this week is Monday to Sunday of the current week.
-- Assignees must be active users of the team; at least one.
+- Assignees: at least one, at most 50, duplicates dropped, each an active user of the team,
+  checked inside the write's transaction.
+- Time: "today" and the week come from the organization's zone with the app's clock (injectable
+  in tests), tested across a Sunday to Monday boundary and a daylight-saving day. `at` is parsed
+  strictly as `HH:MM`, `00:00` to `23:59`.
 
 **Frontend**: an Items page in the nav (needs `items.read`), with roux-web's table, search input,
 filter chips and paging, sorting by the three sorts; add and edit in a `FormDialog` (title, notes,
@@ -153,17 +193,25 @@ search and filter.
 - **When and status.** They combine with *and*: `when=overdue` means open and before today, so with
   `status=done` it is empty. Overdue is by day only: a timed item earlier today is "today", not
   overdue. The week starts on Monday.
-- **The time of an item.** `at` is a wall-clock time in the team's zone, stored as `time` and
-  never converted. The JSON is `"day": "2026-11-24"` and `"at": "10:30"` or `null` for all day
+- **The time of an item.** `at_time` is a wall-clock time in the team's zone, stored as `time` and
+  never converted. The JSON is `"day": "2026-11-24"` and `"at": "10:30"` (the column is `at_time`) or `null` for all day
   (no separate flag); a time with seconds is refused.
-- **`?` in a string literal.** Documented as unsupported, with a test showing the failure it
-  gives, so nobody learns it from a production bug.
+- **`?` in a string literal.** Refused by `Where` (see the paginator), with tests for each refusal.
 - **`Check` at start.** It runs in the module's `Start` against the real database, and a failure
   stops the app: that is the point of it. Tests that assemble the app run it too.
 - **e2e.** The test signs in as the owner, invites a second person through the API, and assigns
   an item to both; nothing is seeded.
 - **CI.** A `roux-the-day` job like the template's (Go checks, then the frontend's gates); its
   e2e suite runs locally, as the template's does until create-roux-app ships the Go template.
+
+## Fable's security review (2026-11-24)
+
+No critical findings: as designed, no client value reached SQL text. Folded in above: SQL text only
+from constants, `Where` failing closed, the direction from a switch (and roux's `Resolve` fixed),
+`Check` running the real queries, the write path's limits and locking, strict `when`/`status`,
+the guard and its test, the view naming its columns, the search term's cap. Left as notes for the
+extraction: `%word%` over a large table is a sequential scan (pg_trgm), and a search field the
+caller is not shown would be a blind oracle (here `notes` is shown by `GET /api/items/{id}`).
 
 ## Left to the builder
 
