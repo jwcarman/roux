@@ -13,9 +13,14 @@ This is for the organization's own users (staff). A viewer's own locale is not s
 ```bash
 ORG_TIME_ZONE=America/New_York   # an IANA zone: where the organization's day starts and ends
 ORG_LOCALE=en-US                 # a BCP 47 tag: how dates, numbers and amounts are written
+ORG_WEEK_START=Monday            # the first day of the week; default: where the locale's region starts it
 ```
 
-They default to `UTC` and `en-US`. An unknown zone stops startup (`the time zone "Mars/Base" is
+They default to `UTC` and `en-US`. `ORG_WEEK_START` is a day's English name, in any case; without it
+the week starts where the locale's region starts it (CLDR's data): Sunday for `en-US`, `ja-JP` and
+`pt-BR`, Saturday for `ar-EG`, Monday for `en-GB`, `de-DE` and most of the world. A name that is not
+a day stops startup (`ORG_WEEK_START "Mon" is not a day: name one in English, such as Monday or
+Sunday`). An unknown zone stops startup (`the time zone "Mars/Base" is
 not an IANA zone`), and so does a locale written any other way than its canonical form (`the
 locale "en-us" must be a BCP 47 tag written canonically, such as en-US`). Prefer a place's zone to
 a fixed offset: a place's zone knows its daylight saving time, an offset does not.
@@ -97,9 +102,13 @@ roux's shell writes the organization's context into every page it serves, beside
   "today": "2026-11-20",
   "todayEndsAt": "2026-11-21T05:00:00Z",
   "currency": "USD",
-  "fractionDigits": 2
+  "fractionDigits": 2,
+  "weekStart": 0
 }
 ```
+
+`weekStart` (a `WeekDay` in roux-web's types) is the first day of the week, 0 (Sunday) to 6 (Saturday), as `getDay()`, date-fns's
+`weekStartsOn` and Go's `time.Weekday` count them.
 
 `currency` and `fractionDigits` are `null` without `ORG_CURRENCY`. `GET /api/roux/organization`
 (signed in; `organization.Path`) answers the same; it is an `organization.Context`, built by the
@@ -156,6 +165,35 @@ naming the fix. There is no fallback to the device's date or locale.
 
 None takes a locale or a zone.
 
+### Weeks
+
+A week view, "this week" or a weekly report starts its week on the organization's first day, never
+a day written into the code:
+
+```ts
+import { addDays } from "date-fns";
+import { firstDayOfWeek, formatIsoDate, parseIsoDate } from "@jwcarman/roux-web/dates";
+import { today } from "@jwcarman/roux-web/organization";
+
+const start = firstDayOfWeek(today()); // "2026-11-22" when weeks start on Sunday
+const days = Array.from({ length: 7 }, (_, i) => formatIsoDate(addDays(parseIsoDate(start)!, i)));
+```
+
+`firstDayOfWeek(day)` is the first day of the organization's week that holds `day`; a day that is
+not a date throws. A week in the URL is read with `dateSearchOf` and then moved to its week's first
+day, so a typed or stale `?start=` still shows a whole week:
+
+```tsx
+validateSearch: (raw: Record<string, unknown>): WeekSearch => {
+  const start = dateSearchOf(raw.start);
+  return { start: start === undefined ? undefined : firstDayOfWeek(start) };
+},
+```
+
+On the server, `k.Organization().WeekStart` is the same day as a `time.Weekday`. When a feature asks
+for a week of its own ("weeks run Sunday to Saturday"), the setting is still the way: set
+`ORG_WEEK_START`, so every week in the app agrees.
+
 ### Test
 
 Every test starts in one fixed organization, set in the Vitest setup:
@@ -166,7 +204,8 @@ import { setOrganization, testOrganization } from "@jwcarman/roux-web/organizati
 beforeEach(() => setOrganization(testOrganization()));
 ```
 
-`testOrganization()` is New York, `en-US`, USD with 2 digits, today `2026-06-15` (a Monday). A test
+`testOrganization()` is New York, `en-US`, USD with 2 digits, weeks starting on Sunday
+(`weekStart: 0`), today `2026-06-15` (a Monday). A test
 that needs another day sets it: `setOrganization(testOrganization({ today: "2026-11-17" }))`. No test
 fakes the device's clock to move today, and none answers `GET /api/roux/organization`.
 
@@ -183,3 +222,5 @@ which reads like a permissions bug. Sign the person in again after moving it ([T
 - Don't pass a locale or a zone to a formatter, or format with `Intl` or `toLocaleString` yourself.
 - Don't check "not in the future" against the server's own today: use the organization's
   ([Forms](forms.md#the-rule-helpers)).
+- Don't write a week's first day into the code (`weekStartsOn: 0`, `startOfWeek` without it): use
+  `firstDayOfWeek`, which follows `ORG_WEEK_START`.

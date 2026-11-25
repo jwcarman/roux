@@ -1,5 +1,5 @@
 // Package organization is what the browser is told about the organization the app
-// serves: its time zone, its locale, what today is there and when it ends. A
+// serves: its time zone, its locale, the first day of its week, what today is there and when it ends. A
 // business date must never depend on where the server runs, so "today" is always
 // read in the organization's zone. It travels in the page (#app-context, see
 // kit/spa) and at GET /api/roux/organization, where the browser asks when its today ends.
@@ -30,11 +30,15 @@ type Context struct {
 	TodayEndsAt    time.Time `json:"todayEndsAt"`    // when the browser should ask for the new day
 	Currency       *string   `json:"currency"`       // ISO 4217, or null
 	FractionDigits *int      `json:"fractionDigits"` // the currency's digits, or null
+	// WeekStart is the first day of the organization's week, 0 (Sunday) to 6 (Saturday), as Go's
+	// time.Weekday, JavaScript's getDay() and date-fns's weekStartsOn count them.
+	WeekStart time.Weekday `json:"weekStart"`
 }
 
 // NewContext computes today and its end from one reading of now, so a midnight
 // between two readings cannot pair a day with the next day's end. Today ends at
-// the organization's next midnight, so a 23- or 25-hour day is right.
+// the organization's next midnight, so a 23- or 25-hour day is right. The week starts
+// where the locale's region starts it (Calendar.WithWeekStart chooses another day).
 func NewContext(now time.Time, zone *time.Location, locale string) Context {
 	local := now.In(zone)
 	today := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, zone)
@@ -43,16 +47,46 @@ func NewContext(now time.Time, zone *time.Location, locale string) Context {
 		Locale:      locale,
 		Today:       today.Format(time.DateOnly),
 		TodayEndsAt: today.AddDate(0, 0, 1).UTC(),
+		WeekStart:   weekStartOf(locale),
 	}
 }
+
+// weekStartOf is the first day of the week where locale's region keeps it (CLDR's weekData):
+// Sunday in the United States, Saturday in Egypt, Monday in most of the world. A locale without a
+// region uses its language's likeliest one (en is the United States).
+func weekStartOf(locale string) time.Weekday {
+	tag, err := language.Parse(locale)
+	if err != nil {
+		return time.Monday
+	}
+	region, _ := tag.Region()
+	if day, ok := firstDays[region.String()]; ok {
+		return day
+	}
+	return time.Monday
+}
+
+// firstDays is every region whose week does not start on Monday (CLDR supplemental weekData).
+var firstDays = func() map[string]time.Weekday {
+	days := map[string]time.Weekday{"MV": time.Friday}
+	for _, r := range strings.Fields("AE AF BH DJ DZ EG IQ IR JO KW LY OM QA SD SY") {
+		days[r] = time.Saturday
+	}
+	for _, r := range strings.Fields("AG AS BD BR BS BT BW BZ CA CN CO DM DO ET GT GU HK HN ID IL IN JM JP " +
+		"KE KH KR LA MH MM MO MT MX MZ NI NP PA PE PH PK PR PT PY SA SG SV TH TT TW UM US VE VI WS YE ZA ZW") {
+		days[r] = time.Sunday
+	}
+	return days
+}()
 
 // Calendar is the organization's zone, locale and (when it deals in money) currency
 // over a clock.
 type Calendar struct {
-	zone     *time.Location
-	locale   string
-	currency money.Currency
-	clock    func() time.Time
+	zone      *time.Location
+	locale    string
+	currency  money.Currency
+	weekStart *time.Weekday // nil: the locale's
+	clock     func() time.Time
 }
 
 // NewCalendar checks the settings (they fail startup, not a request): the zone must
@@ -88,12 +122,23 @@ func (c *Calendar) WithCurrency(cur money.Currency) *Calendar {
 	return &copied
 }
 
+// WithWeekStart is the calendar of an organization whose week starts on day, whatever its
+// locale's region does.
+func (c *Calendar) WithWeekStart(day time.Weekday) *Calendar {
+	copied := *c
+	copied.weekStart = &day
+	return &copied
+}
+
 // Currency is the organization's currency, or "" when it deals in none.
 func (c *Calendar) Currency() money.Currency { return c.currency }
 
 // Context is the organization as of now.
 func (c *Calendar) Context() Context {
 	ctx := NewContext(c.clock(), c.zone, c.locale)
+	if c.weekStart != nil {
+		ctx.WeekStart = *c.weekStart
+	}
 	if c.currency != "" {
 		code, digits := string(c.currency), c.currency.Digits()
 		ctx.Currency, ctx.FractionDigits = &code, &digits

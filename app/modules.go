@@ -442,6 +442,8 @@ func (*Users) Migrations() []pgdb.Migration {
 //	INVITABLE_ROLES  roles an invitation may give, comma separated (default USER)
 //	ORG_TIME_ZONE    the organization's IANA time zone (default UTC); ORG_LOCALE (default en-US)
 //	ORG_CURRENCY     the ISO 4217 currency the organization deals in, if any (USD)
+//	ORG_WEEK_START   the first day of the organization's week (Monday); default: where ORG_LOCALE's
+//	                 region starts it (Sunday for en-US, Monday for most others)
 //	OWNER_EMAIL      the first owner's address; OWNER_NAME their name (both, or neither)
 func UsersFromEnv(email *EmailLink) *Users { return &Users{email: email} }
 
@@ -470,6 +472,13 @@ func (u *Users) Mount(_ context.Context, k *Kit) error {
 			return fmt.Errorf("ORG_CURRENCY: %w", err)
 		}
 		calendar = calendar.WithCurrency(cur)
+	}
+	if v := os.Getenv("ORG_WEEK_START"); v != "" {
+		day, err := weekday(v)
+		if err != nil {
+			return err
+		}
+		calendar = calendar.WithWeekStart(day)
 	}
 	themes := theme.Service{Pool: k.Pool, Defaults: spa.StockTheme(k.AppName)}
 	u.svc = users.Service{Pool: k.Pool, Host: k.Host, Email: u.email.Method, Invitable: invitable}
@@ -507,6 +516,16 @@ func (u *Users) Start(ctx context.Context, k *Kit) error {
 		}
 	}
 	return nil
+}
+
+// weekday reads ORG_WEEK_START: a day's English name, in any case.
+func weekday(name string) (time.Weekday, error) {
+	for d := time.Sunday; d <= time.Saturday; d++ {
+		if strings.EqualFold(strings.TrimSpace(name), d.String()) {
+			return d, nil
+		}
+	}
+	return 0, fmt.Errorf("ORG_WEEK_START %q is not a day: name one in English, such as Monday or Sunday", name)
 }
 
 // publicURL is where browsers reach the app (PUBLIC_URL), http://localhost:8080 in development.

@@ -6,6 +6,16 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- **The organization's week start.** `ORG_WEEK_START` names the first day of the week (`Monday`, in
+  any case); without it, the week starts where `ORG_LOCALE`'s region starts it (CLDR's data: Sunday
+  for `en-US`, Monday for `en-GB`, Saturday for `ar-EG`). It travels in the organization context
+  (`organization.Context.WeekStart`, a `time.Weekday`; `weekStart`, 0 to 6, in the browser), and
+  roux-web's `firstDayOfWeek(day)` (`@jwcarman/roux-web/dates`) is the first day of the
+  organization's week holding a day. `Calendar.WithWeekStart` sets it in Go. roux-web refuses a
+  context without `weekStart`: roux-web and the server go up together.
+
 ### Changed
 
 - **`make dev` is a live loop at <http://localhost:5173>.** It runs the server under

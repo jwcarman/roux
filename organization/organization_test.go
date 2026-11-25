@@ -68,6 +68,32 @@ func TestACurrencyIsToldWithItsDigits(t *testing.T) {
 	}
 }
 
+func TestTheWeekStartsWhereTheLocaleStartsIt(t *testing.T) {
+	now := time.Date(2026, 11, 24, 12, 0, 0, 0, time.UTC)
+	for locale, want := range map[string]time.Weekday{
+		"en-US": time.Sunday, "en": time.Sunday, "en-GB": time.Monday, "de-DE": time.Monday,
+		"fr": time.Monday, "ar-EG": time.Saturday, "ja-JP": time.Sunday, "dv-MV": time.Friday,
+	} {
+		if got := organization.NewContext(now, time.UTC, locale).WeekStart; got != want {
+			t.Errorf("%s: the week starts on %s, want %s", locale, got, want)
+		}
+	}
+}
+
+func TestAnOrganizationChoosesItsOwnWeekStart(t *testing.T) {
+	now := func() time.Time { return time.Date(2026, 11, 24, 12, 0, 0, 0, time.UTC) }
+	cal, err := organization.NewCalendar("Europe/Berlin", "de-DE", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := cal.WithWeekStart(time.Sunday).Context().WeekStart; got != time.Sunday {
+		t.Fatalf("chosen: %s", got)
+	}
+	if got := cal.Context().WeekStart; got != time.Monday {
+		t.Fatalf("WithWeekStart must not change the calendar it was called on: %s", got)
+	}
+}
+
 func TestCalendarChecksItsSettings(t *testing.T) {
 	now := func() time.Time { return time.Date(2026, 11, 24, 12, 0, 0, 0, time.UTC) }
 	if cal, err := organization.NewCalendar("America/New_York", "en-US", now); err != nil || cal.Context().Today != "2026-11-24" {
@@ -101,7 +127,7 @@ func TestOrganizationEndpoint(t *testing.T) {
 		t.Fatalf("anonymous: %d", r.StatusCode)
 	}
 	r := env.SignedIn(env.Identity()).Get("/api/roux/organization")
-	want := `{"timeZone":"America/New_York","locale":"en-US","today":"2026-11-24","todayEndsAt":"2026-11-25T05:00:00Z","currency":null,"fractionDigits":null}`
+	want := `{"timeZone":"America/New_York","locale":"en-US","today":"2026-11-24","todayEndsAt":"2026-11-25T05:00:00Z","currency":null,"fractionDigits":null,"weekStart":0}`
 	if r.StatusCode != 200 || strings.TrimSpace(string(r.Body)) != want {
 		t.Fatalf("%d %s\nwant %s", r.StatusCode, r.Body, want)
 	}

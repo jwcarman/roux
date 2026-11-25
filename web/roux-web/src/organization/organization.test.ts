@@ -22,6 +22,7 @@ const DOJO: OrganizationContext = {
   todayEndsAt: "2026-11-21T05:00:00Z",
   currency: "USD",
   fractionDigits: 2,
+  weekStart: 0,
 };
 
 function pageWith(text: string | null): Document {
@@ -82,6 +83,13 @@ describe("readPageOrganization", () => {
       "has a currency without its fractionDigits, or digits without a currency",
     );
     expect(read({ currency: null })).toThrow("has a currency without its fractionDigits");
+  });
+
+  it("refuses a week start that is not a day of the week", () => {
+    for (const weekStart of [undefined, "1", -1, 7, 1.5]) {
+      expect(read({ weekStart })).toThrow("has no weekStart (0, Sunday, to 6, Saturday)");
+    }
+    expect(read({ weekStart: 6 })()).toMatchObject({ weekStart: 6 });
   });
 
   it("refuses a time zone this browser does not know", () => {
@@ -156,6 +164,7 @@ describe("testOrganization", () => {
       todayEndsAt: "2026-06-16T04:00:00Z",
       currency: "USD",
       fractionDigits: 2,
+      weekStart: 0,
     });
     expect(testOrganization({ locale: "fr-FR" }).locale).toBe("fr-FR");
   });

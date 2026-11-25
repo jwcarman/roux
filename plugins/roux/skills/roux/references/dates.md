@@ -15,15 +15,22 @@ this month, default dates and "not in the future" are the organization's on both
   which use the organization's locale and zone so every viewer sees the same date.
 - "Not in the future" compares with the organization's today (`problem.MustNotBeInFuture`), never
   the server's zone: near midnight they differ.
+- A week starts on `firstDayOfWeek(day)` (`ORG_WEEK_START`, or the locale's region), never a day in
+  the code (`weekStartsOn`). A feature that names its own week ("Sunday to Saturday") sets
+  `ORG_WEEK_START` in the app's settings, not a constant.
+- A date in the URL is read with `dateSearchOf(raw.x)` in `validateSearch` (a bad one is
+  `undefined`, never a crash). `validateSearch` returns every key, `undefined` when bad: a key left
+  out lets the raw URL value through.
 - Date arithmetic with date-fns (`addDays`, `isAfter`); no hand-written date math.
 
 ## Names
 
 Settings: `ORG_TIME_ZONE` (an IANA zone, default `UTC`; an offset is refused), `ORG_LOCALE`
-(BCP 47, default `en-US`).
+(BCP 47, default `en-US`), `ORG_WEEK_START` (a day's English name; default where the locale's region
+starts the week: Sunday for `en-US`, Monday for `en-GB`, Saturday for `ar-EG`).
 
 Server: `k.Organization()` → `organization.Context` (in the browser, `OrganizationContext`) (`TimeZone`, `Locale`, `Today`, `TodayEndsAt`,
-`Currency`, `FractionDigits`); the users module sets it before any other module mounts, so read it at `Mount` or per request. The same context is in every
+`Currency`, `FractionDigits`, `WeekStart` (a `time.Weekday`; `weekStart`, 0 Sunday to 6 Saturday, in the browser)); the users module sets it before any other module mounts, so read it at `Mount` or per request. The same context is in every
 page and at `GET /api/roux/organization` (`organization.Path`, signed in), built by the users
 module's `organization.Calendar`.
 
@@ -37,7 +44,7 @@ Browser, `@jwcarman/roux-web/organization`: `loadOrganization()` and `startDayWa
 `main.tsx` (`app-setup.md`); `today()` (`"2026-11-20"`), `useToday()` in a component;
 `organization()`, `setOrganization(context)`, `onOrganizationChange(listener)`,
 `clearOrganization()`; `readPageOrganization()`, `fetchOrganization()`, `ORGANIZATION_PATH`,
-`CONTEXT_PLACEHOLDER`, `RETRY_MS`; `testOrganization(overrides)` for tests.
+`CONTEXT_PLACEHOLDER`, `RETRY_MS`, `WeekDay` (0–6); `testOrganization(overrides)` for tests (weeks from Sunday).
 
 Browser, `@jwcarman/roux-web/dates` (organization's locale, `""` for `null`):
 
@@ -51,7 +58,10 @@ Browser, `@jwcarman/roux-web/dates` (organization's locale, `""` for `null`):
 | `formatRelativeTime` | an instant | `3 days ago` |
 
 Plus `parseIsoDate`, `formatIsoDate`, `parseIsoTime`, `formatIsoTime` to go between ISO strings and
-`Date` (strict: `2026-02-30` is `undefined`). Money: `formatMoney` (`money.md`).
+`Date` (strict: `2026-02-30` is `undefined`), and `firstDayOfWeek(day)`: the first day of the
+organization's week holding `day` (`firstDayOfWeek(today())` starts this week; days by `addDays`).
+A week in the URL: `const start = dateSearchOf(raw.start); return { start: start === undefined ?
+undefined : firstDayOfWeek(start) };` (`dateSearchOf` is `@jwcarman/roux-web/paging`). Money: `formatMoney` (`money.md`).
 
 A time from the server starts a form through `timeInputOf`.
 

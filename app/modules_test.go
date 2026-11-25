@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/jwcarman/roux/api"
 	"github.com/jwcarman/roux/app"
@@ -342,6 +343,7 @@ func TestTheUsersModuleSetsUpTheOrganizationAndTheFirstOwner(t *testing.T) {
 	t.Setenv("ORG_TIME_ZONE", "America/New_York")
 	t.Setenv("ORG_LOCALE", "en-GB")
 	t.Setenv("ORG_CURRENCY", "EUR")
+	t.Setenv("ORG_WEEK_START", "sunday")
 	t.Setenv("OWNER_EMAIL", "owner@example.test")
 	t.Setenv("OWNER_NAME", "Olive Owner")
 	k, err := assembled(t, "app_users_module")
@@ -349,7 +351,8 @@ func TestTheUsersModuleSetsUpTheOrganizationAndTheFirstOwner(t *testing.T) {
 		t.Fatal(err)
 	}
 	org := k.Organization()
-	if org.TimeZone != "America/New_York" || org.Locale != "en-GB" || org.Currency == nil || *org.Currency != "EUR" {
+	// en-GB's week starts on Monday; ORG_WEEK_START says otherwise.
+	if org.TimeZone != "America/New_York" || org.Locale != "en-GB" || org.Currency == nil || *org.Currency != "EUR" || org.WeekStart != time.Sunday {
 		t.Fatalf("%+v", org)
 	}
 	var owners int
@@ -393,6 +396,7 @@ func TestTheUsersModuleRefusesWhatItCannotUse(t *testing.T) {
 		{"app_users_owner_role", "INVITABLE_ROLES", "MEMBER, OWNER", "OWNER"},
 		{"app_users_bad_zone", "ORG_TIME_ZONE", "Mars/Olympus", "Mars/Olympus"},
 		{"app_users_bad_currency", "ORG_CURRENCY", "XYZ", "ORG_CURRENCY"},
+		{"app_users_bad_week_start", "ORG_WEEK_START", "Mon", "ORG_WEEK_START"},
 		{"app_users_lone_owner", "OWNER_EMAIL", "owner@example.test", "OWNER_NAME"},
 	} {
 		t.Run(c.name, func(t *testing.T) {

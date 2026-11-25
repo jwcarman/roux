@@ -76,7 +76,7 @@ it.** Each reference is rules, exact names, steps, an example, the check and the
 | `rouxtest`, browsers and the clock in Go tests, MSW answers, route tests, Playwright | `references/tests.md` (~1,600 tokens) |
 | A new app, modules, environment settings, `main.tsx`, the session and guards, navigation, theme, sign-in, CSP | `references/app-setup.md` (~2,800 tokens) |
 | Money | `references/money.md` (~1,000 tokens) |
-| Today, the organization's zone, dates and times in columns, formatting | `references/dates.md` (~1,200 tokens) |
+| Today, the organization's zone and week, dates and times in columns, a date in the URL, formatting | `references/dates.md` (~1,500 tokens) |
 | A record's history | `references/activity-log.md` (~1,200 tokens) |
 | The emails roux sends, rewording one, SMTP settings | `references/email.md` (~1,100 tokens) |
 

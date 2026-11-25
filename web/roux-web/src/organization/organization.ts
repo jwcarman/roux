@@ -3,8 +3,8 @@ import { getJson } from "../api/client";
 import { resolveUrl } from "../api/url";
 
 /**
- * What the server says about the organization (`ORG_TIME_ZONE`, `ORG_LOCALE`, `ORG_CURRENCY`): where
- * it is, how it writes, and what today is there. The page carries it in `#app-context`; `GET
+ * What the server says about the organization (`ORG_TIME_ZONE`, `ORG_LOCALE`, `ORG_CURRENCY`,
+ * `ORG_WEEK_START`): where it is, how it writes, where its week starts, and what today is there. The page carries it in `#app-context`; `GET
  * /api/organization` answers it too.
  */
 export interface OrganizationContext {
@@ -20,7 +20,15 @@ export interface OrganizationContext {
   currency: string | null;
   /** The currency's digits (`2`), or `null` when it has none. */
   fractionDigits: number | null;
+  /**
+   * The first day of the organization's week: 0 (Sunday) to 6 (Saturday), as `getDay()` and
+   * date-fns's `weekStartsOn` count them. `firstDayOfWeek(day)` (`@jwcarman/roux-web/dates`) uses it.
+   */
+  weekStart: WeekDay;
 }
+
+/** A day of the week as `getDay()` counts it: 0 is Sunday, 6 is Saturday. */
+export type WeekDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 /** Where the server answers the context. */
 export const ORGANIZATION_PATH = "roux/organization";
@@ -56,6 +64,9 @@ function checked(raw: unknown, where: string): OrganizationContext {
   }
   if ((context.currency === null) !== (context.fractionDigits === null)) {
     refuse("has a currency without its fractionDigits, or digits without a currency");
+  }
+  if (!Number.isInteger(context.weekStart) || (context.weekStart as number) < 0 || (context.weekStart as number) > 6) {
+    refuse(`has no weekStart (0, Sunday, to 6, Saturday): ${String(context.weekStart)}`);
   }
   const timeZone = context.timeZone as string;
   try {
@@ -159,6 +170,7 @@ export function testOrganization(overrides: Partial<OrganizationContext> = {}): 
     todayEndsAt: "2026-06-16T04:00:00Z",
     currency: "USD",
     fractionDigits: 2,
+    weekStart: 0,
     ...overrides,
   };
 }

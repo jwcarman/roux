@@ -161,7 +161,7 @@ if in.StartsAt.Valid && in.EndsAt.Valid && in.EndsAt.Microseconds <= in.StartsAt
 roux-web's date library is date-fns (a peer dependency). The wire format stays an ISO string: a
 date is `2026-11-17`, a time of day is `18:30` (what a `type="time"` input holds), an instant is an
 ISO string (Go's `time.Time` in JSON). Use date-fns directly for
-arithmetic and display (`addDays`, `isAfter`, `format`, `startOfWeek`); do not write your own date
+arithmetic and display (`addDays`, `isAfter`, `format`; a week's first day is `firstDayOfWeek`, the organization's); do not write your own date
 arithmetic. A business date's "today" is the organization's `today()`, never `new Date()`, and
 display goes through `formatDate`, `formatTime` and `formatDateTime` ([Dates and time](dates-and-time.md)).
 To go between the strings and Dates, `@jwcarman/roux-web/dates` has four strict helpers

@@ -73,6 +73,7 @@ with the front end inside; `make image` the container image; `make up` that imag
 | `OWNER_EMAIL`, `OWNER_NAME` | the first owner, both or neither; required until someone can manage the team |
 | `INVITABLE_ROLES` | roles invitations may give (default `USER`); never `OWNER` |
 | `ORG_TIME_ZONE`, `ORG_LOCALE` | the organization's zone and locale (`dates.md`) |
+| `ORG_WEEK_START` | the week's first day (`dates.md`); default from `ORG_LOCALE`'s region |
 | `ORG_CURRENCY` | once the app has money (`money.md`) |
 | `PASSKEYS`, `PASSKEY_RP_ID`, `PASSKEY_ORIGINS` | passkeys follow `PUBLIC_URL`; `false` turns them off; a parent domain; more origins |
 | `API_KEYS`, `API_KEY_PREFIX`, `API_KEY_HEADER`, `API_KEY_MAX_LIFETIME` | API keys (`false` to turn off) |
