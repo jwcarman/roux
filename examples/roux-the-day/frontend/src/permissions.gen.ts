@@ -6,6 +6,11 @@ export const USERS_INVITE = "users.invite";
 export const USERS_MANAGE = "users.manage";
 export const USERS_OWNERS = "users.owners";
 export const ADMIN = "roux.admin";
+// Roux The Day's own (internal/items): added by hand, as roux has no generator for an app's
+// permissions yet (FINDINGS.md).
+export const ITEMS_READ = "items.read";
+export const ITEMS_WRITE = "items.write";
+export const ITEMS_DELETE_ANY = "items.delete.any";
 
 /** Every permission there is: what the navigation's items may need. */
 export const PERMISSIONS = [
@@ -15,6 +20,9 @@ export const PERMISSIONS = [
   USERS_MANAGE,
   USERS_OWNERS,
   ADMIN,
+  ITEMS_READ,
+  ITEMS_WRITE,
+  ITEMS_DELETE_ANY,
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

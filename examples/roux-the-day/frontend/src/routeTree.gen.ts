@@ -15,6 +15,8 @@ import { Route as SignedInAppearanceRouteImport } from './routes/_signedIn/appea
 import { Route as SignedInSettingsRouteImport } from './routes/_signedIn/settings'
 import { Route as SigninIndexRouteImport } from './routes/signin/index'
 import { Route as SigninLinkRouteImport } from './routes/signin/link'
+import { Route as SignedInItemsIndexRouteImport } from './routes/_signedIn/items/index'
+import { Route as SignedInItemsItemIdRouteImport } from './routes/_signedIn/items/$itemId'
 import { Route as SignedInUsersIndexRouteImport } from './routes/_signedIn/users/index'
 import { Route as SignedInUsersUserIdRouteImport } from './routes/_signedIn/users/$userId'
 
@@ -47,6 +49,16 @@ const SigninLinkRoute = SigninLinkRouteImport.update({
   path: '/signin/link',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignedInItemsIndexRoute = SignedInItemsIndexRouteImport.update({
+  id: '/items/',
+  path: '/items/',
+  getParentRoute: () => SignedInRoute,
+} as any)
+const SignedInItemsItemIdRoute = SignedInItemsItemIdRouteImport.update({
+  id: '/items/$itemId',
+  path: '/items/$itemId',
+  getParentRoute: () => SignedInRoute,
+} as any)
 const SignedInUsersIndexRoute = SignedInUsersIndexRouteImport.update({
   id: '/users/',
   path: '/users/',
@@ -64,7 +76,9 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SignedInSettingsRoute
   '/signin/link': typeof SigninLinkRoute
   '/signin/': typeof SigninIndexRoute
+  '/items/$itemId': typeof SignedInItemsItemIdRoute
   '/users/$userId': typeof SignedInUsersUserIdRoute
+  '/items/': typeof SignedInItemsIndexRoute
   '/users/': typeof SignedInUsersIndexRoute
 }
 export interface FileRoutesByTo {
@@ -73,7 +87,9 @@ export interface FileRoutesByTo {
   '/signin/link': typeof SigninLinkRoute
   '/': typeof SignedInIndexRoute
   '/signin': typeof SigninIndexRoute
+  '/items/$itemId': typeof SignedInItemsItemIdRoute
   '/users/$userId': typeof SignedInUsersUserIdRoute
+  '/items': typeof SignedInItemsIndexRoute
   '/users': typeof SignedInUsersIndexRoute
 }
 export interface FileRoutesById {
@@ -84,7 +100,9 @@ export interface FileRoutesById {
   '/signin/link': typeof SigninLinkRoute
   '/_signedIn/': typeof SignedInIndexRoute
   '/signin/': typeof SigninIndexRoute
+  '/_signedIn/items/$itemId': typeof SignedInItemsItemIdRoute
   '/_signedIn/users/$userId': typeof SignedInUsersUserIdRoute
+  '/_signedIn/items/': typeof SignedInItemsIndexRoute
   '/_signedIn/users/': typeof SignedInUsersIndexRoute
 }
 export interface FileRouteTypes {
@@ -95,7 +113,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signin/link'
     | '/signin/'
+    | '/items/$itemId'
     | '/users/$userId'
+    | '/items/'
     | '/users/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -104,7 +124,9 @@ export interface FileRouteTypes {
     | '/signin/link'
     | '/'
     | '/signin'
+    | '/items/$itemId'
     | '/users/$userId'
+    | '/items'
     | '/users'
   id:
     | '__root__'
@@ -114,7 +136,9 @@ export interface FileRouteTypes {
     | '/signin/link'
     | '/_signedIn/'
     | '/signin/'
+    | '/_signedIn/items/$itemId'
     | '/_signedIn/users/$userId'
+    | '/_signedIn/items/'
     | '/_signedIn/users/'
   fileRoutesById: FileRoutesById
 }
@@ -168,6 +192,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SigninLinkRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_signedIn/items/': {
+      id: '/_signedIn/items/'
+      path: '/items'
+      fullPath: '/items/'
+      preLoaderRoute: typeof SignedInItemsIndexRouteImport
+      parentRoute: typeof SignedInRoute
+    }
+    '/_signedIn/items/$itemId': {
+      id: '/_signedIn/items/$itemId'
+      path: '/items/$itemId'
+      fullPath: '/items/$itemId'
+      preLoaderRoute: typeof SignedInItemsItemIdRouteImport
+      parentRoute: typeof SignedInRoute
+    }
     '/_signedIn/users/': {
       id: '/_signedIn/users/'
       path: '/users'
@@ -189,7 +227,9 @@ interface SignedInRouteChildren {
   SignedInAppearanceRoute: typeof SignedInAppearanceRoute
   SignedInSettingsRoute: typeof SignedInSettingsRoute
   SignedInIndexRoute: typeof SignedInIndexRoute
+  SignedInItemsItemIdRoute: typeof SignedInItemsItemIdRoute
   SignedInUsersUserIdRoute: typeof SignedInUsersUserIdRoute
+  SignedInItemsIndexRoute: typeof SignedInItemsIndexRoute
   SignedInUsersIndexRoute: typeof SignedInUsersIndexRoute
 }
 
@@ -197,7 +237,9 @@ const SignedInRouteChildren: SignedInRouteChildren = {
   SignedInAppearanceRoute: SignedInAppearanceRoute,
   SignedInSettingsRoute: SignedInSettingsRoute,
   SignedInIndexRoute: SignedInIndexRoute,
+  SignedInItemsItemIdRoute: SignedInItemsItemIdRoute,
   SignedInUsersUserIdRoute: SignedInUsersUserIdRoute,
+  SignedInItemsIndexRoute: SignedInItemsIndexRoute,
   SignedInUsersIndexRoute: SignedInUsersIndexRoute,
 }
 

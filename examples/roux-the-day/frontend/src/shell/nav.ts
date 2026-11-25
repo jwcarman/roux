@@ -1,4 +1,4 @@
-import { LuHouse, LuPalette, LuUsers } from "react-icons/lu";
+import { LuHouse, LuListTodo, LuPalette, LuUsers } from "react-icons/lu";
 import { defineNav } from "@jwcarman/roux-web/navigation";
 import { PERMISSIONS } from "../permissions.gen";
 
@@ -14,6 +14,13 @@ export const nav = defineNav(PERMISSIONS, [
     icon: LuHouse,
     description: "A welcome page.",
     start: true,
+  },
+  {
+    label: "Items",
+    to: "/items",
+    icon: LuListTodo,
+    permission: "items.read",
+    description: "The team's plans: what is happening, when, and who has it.",
   },
   {
     label: "Users",

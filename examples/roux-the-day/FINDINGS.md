@@ -33,3 +33,24 @@ it, and where in the app it shows. What more than one app would need is extracte
 - **The paginator refuses quotes in its columns.** So formatting a value in SQL
   (`to_char(day, 'YYYY-MM-DD')`) is not possible in `Columns`; the scanner formats instead, or
   the view does it. Fine, but worth saying in the paginator's docs when it is extracted.
+- **The app's permissions are added by hand.** `permissions.gen.ts` says roux generates it, but
+  nothing generates an app's own permissions (`items.read`, ...), so they were typed in, and can
+  drift from `internal/items`. *roux could:* the Go port of the permissions generator (a test
+  that writes the file from every module's constants, and fails when it is stale).
+- **No field for choosing several people.** roux-web's `FormField` frames one control: checkboxes
+  inside it share the field's id, so every label ticked the first box. The app built
+  `AssigneesField` on a Chakra fieldset (`frontend/src/items/AssigneesField.tsx`). *roux could:*
+  a `CheckboxGroupField` (or a multi-select over a query) with the form's error rules.
+- **Sharing fields between an add dialog and an edit page.** TanStack's `withForm` does not accept
+  roux's `SchemaForm`, so `ItemFields` is a plain component taking `SchemaForm<typeof
+  itemSchema>`. Fine, but roux-web's docs could say that is the way.
+- **A dialog's button is replaced once its data loads.** `AddItem` shows a disabled button until
+  the team loads, then a different one; a test that held the first never saw it enable. The
+  template's invite test re-queries; worth a line in roux-web's testing guide.
+- **A conditional time field.** "All day" hides the time, and the schema needs a `refine` so a
+  time is required only when shown. Works with roux-web's rules; a recipe would save the hunt.
+- **Server and client page sizes differ.** roux-web's tables default to 25 a page; Go's `page`
+  defaults to 20. Harmless (the client always sends its size), but surprising in a test.
+- **No lint gate in the app.** roux's lint config (`web/lint-tools`) expects roux-web's tsconfig
+  layout and skips `template/`, so neither the template nor this app is linted.
+  *roux could:* give the template (and so every app) the same lint gate roux-web has.
