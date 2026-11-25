@@ -13,6 +13,8 @@ export const queryKeys = {
       when?: string;
       assignee?: string;
       status?: string;
+      from?: string;
+      to?: string;
     }) => [...queryKeys.items.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.items.all, "detail", id] as const,
   },

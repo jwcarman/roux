@@ -13,6 +13,7 @@ import { Route as SignedInRouteImport } from './routes/_signedIn'
 import { Route as SignedInIndexRouteImport } from './routes/_signedIn/index'
 import { Route as SignedInAppearanceRouteImport } from './routes/_signedIn/appearance'
 import { Route as SignedInSettingsRouteImport } from './routes/_signedIn/settings'
+import { Route as SignedInWeekRouteImport } from './routes/_signedIn/week'
 import { Route as SigninIndexRouteImport } from './routes/signin/index'
 import { Route as SigninLinkRouteImport } from './routes/signin/link'
 import { Route as SignedInItemsIndexRouteImport } from './routes/_signedIn/items/index'
@@ -37,6 +38,11 @@ const SignedInAppearanceRoute = SignedInAppearanceRouteImport.update({
 const SignedInSettingsRoute = SignedInSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => SignedInRoute,
+} as any)
+const SignedInWeekRoute = SignedInWeekRouteImport.update({
+  id: '/week',
+  path: '/week',
   getParentRoute: () => SignedInRoute,
 } as any)
 const SigninIndexRoute = SigninIndexRouteImport.update({
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/': typeof SignedInIndexRoute
   '/appearance': typeof SignedInAppearanceRoute
   '/settings': typeof SignedInSettingsRoute
+  '/week': typeof SignedInWeekRoute
   '/signin/link': typeof SigninLinkRoute
   '/signin/': typeof SigninIndexRoute
   '/items/$itemId': typeof SignedInItemsItemIdRoute
@@ -84,6 +91,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/appearance': typeof SignedInAppearanceRoute
   '/settings': typeof SignedInSettingsRoute
+  '/week': typeof SignedInWeekRoute
   '/signin/link': typeof SigninLinkRoute
   '/': typeof SignedInIndexRoute
   '/signin': typeof SigninIndexRoute
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/_signedIn': typeof SignedInRouteWithChildren
   '/_signedIn/appearance': typeof SignedInAppearanceRoute
   '/_signedIn/settings': typeof SignedInSettingsRoute
+  '/_signedIn/week': typeof SignedInWeekRoute
   '/signin/link': typeof SigninLinkRoute
   '/_signedIn/': typeof SignedInIndexRoute
   '/signin/': typeof SigninIndexRoute
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/'
     | '/appearance'
     | '/settings'
+    | '/week'
     | '/signin/link'
     | '/signin/'
     | '/items/$itemId'
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
   to:
     | '/appearance'
     | '/settings'
+    | '/week'
     | '/signin/link'
     | '/'
     | '/signin'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/_signedIn'
     | '/_signedIn/appearance'
     | '/_signedIn/settings'
+    | '/_signedIn/week'
     | '/signin/link'
     | '/_signedIn/'
     | '/signin/'
@@ -176,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SignedInSettingsRouteImport
+      parentRoute: typeof SignedInRoute
+    }
+    '/_signedIn/week': {
+      id: '/_signedIn/week'
+      path: '/week'
+      fullPath: '/week'
+      preLoaderRoute: typeof SignedInWeekRouteImport
       parentRoute: typeof SignedInRoute
     }
     '/signin/': {
@@ -226,6 +245,7 @@ declare module '@tanstack/react-router' {
 interface SignedInRouteChildren {
   SignedInAppearanceRoute: typeof SignedInAppearanceRoute
   SignedInSettingsRoute: typeof SignedInSettingsRoute
+  SignedInWeekRoute: typeof SignedInWeekRoute
   SignedInIndexRoute: typeof SignedInIndexRoute
   SignedInItemsItemIdRoute: typeof SignedInItemsItemIdRoute
   SignedInUsersUserIdRoute: typeof SignedInUsersUserIdRoute
@@ -236,6 +256,7 @@ interface SignedInRouteChildren {
 const SignedInRouteChildren: SignedInRouteChildren = {
   SignedInAppearanceRoute: SignedInAppearanceRoute,
   SignedInSettingsRoute: SignedInSettingsRoute,
+  SignedInWeekRoute: SignedInWeekRoute,
   SignedInIndexRoute: SignedInIndexRoute,
   SignedInItemsItemIdRoute: SignedInItemsItemIdRoute,
   SignedInUsersUserIdRoute: SignedInUsersUserIdRoute,

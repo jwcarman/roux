@@ -1,4 +1,10 @@
-import { LuHouse, LuListTodo, LuPalette, LuUsers } from "react-icons/lu";
+import {
+  LuCalendarDays,
+  LuHouse,
+  LuListTodo,
+  LuPalette,
+  LuUsers,
+} from "react-icons/lu";
 import { defineNav } from "@jwcarman/roux-web/navigation";
 import { PERMISSIONS } from "../permissions.gen";
 
@@ -21,6 +27,13 @@ export const nav = defineNav(PERMISSIONS, [
     icon: LuListTodo,
     permission: "items.read",
     description: "The team's plans: what is happening, when, and who has it.",
+  },
+  {
+    label: "Week",
+    to: "/week",
+    icon: LuCalendarDays,
+    permission: "items.read",
+    description: "The week at a glance: Monday to Sunday, a day at a time.",
   },
   {
     label: "Users",

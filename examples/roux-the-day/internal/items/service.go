@@ -39,6 +39,8 @@ type Filter struct {
 	When     When
 	Assignee *uuid.UUID
 	Done     *bool
+	// From and To bound the day, both inclusive; nil is no bound.
+	From, To *time.Time
 }
 
 // today is the team's date now, at midnight UTC (how a Postgres date travels).
@@ -68,6 +70,12 @@ func (s Service) List(ctx context.Context, req page.Request, f Filter) (page.Pag
 	}
 	if f.Done != nil {
 		filters = append(filters, page.Where("done = ?", *f.Done))
+	}
+	if f.From != nil {
+		filters = append(filters, page.Where("day >= ?", *f.From))
+	}
+	if f.To != nil {
+		filters = append(filters, page.Where("day <= ?", *f.To))
 	}
 	return list.Page(ctx, s.Pool, req, f.Search, filters...)
 }

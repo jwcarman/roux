@@ -2,6 +2,7 @@ package items
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -17,7 +18,7 @@ const BasePath = "/api/items"
 // Register serves the items' endpoints; each is a kit route, so CSRF, sign-in and the
 // permission are checked before the handler runs.
 //
-//	GET    /api/items       a page of items: search, when, assignee, status   items.read
+//	GET    /api/items       a page of items: search, when, from, to, assignee, status   items.read
 //	POST   /api/items       add an item                                       items.write
 //	GET    /api/items/{id}  one item, with what its dialog needs              items.read
 //	PUT    /api/items/{id}  change it, from the version last seen (409)       items.write
@@ -141,5 +142,27 @@ func filterOf(r *http.Request) (Filter, error) {
 		}
 		f.Assignee = &id
 	}
+	var err error
+	if f.From, err = dayParam(q.Get("from"), "from"); err != nil {
+		return Filter{}, err
+	}
+	if f.To, err = dayParam(q.Get("to"), "to"); err != nil {
+		return Filter{}, err
+	}
+	if f.From != nil && f.To != nil && f.To.Before(*f.From) {
+		return Filter{}, problem.InvalidField("to", "Must not be before from")
+	}
 	return f, nil
+}
+
+// dayParam reads a day (2026-11-24) from the query; empty is none.
+func dayParam(v, field string) (*time.Time, error) {
+	if v == "" {
+		return nil, nil
+	}
+	d, err := time.Parse(time.DateOnly, v)
+	if err != nil {
+		return nil, problem.InvalidField(field, problem.InvalidValue)
+	}
+	return &d, nil
 }

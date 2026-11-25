@@ -61,6 +61,27 @@ it, and where in the app it shows. What more than one app would need is extracte
   duplicate detection skips `examples/**` (`sonar-project.properties`); everything else is
   checked there as it is anywhere.
 
+## Round two: the week
+
+The Week page (`/week`, `items/WeekPage.tsx`) shows one week, a row a day, with today marked;
+the list endpoint gained `from` and `to` (both days included).
+
+- **One width for every page.** roux-web's `AppShell` holds the content to `3xl` (about 44rem),
+  which suits forms and tables but leaves seven day columns 94px each, so the week is a row a
+  day rather than a grid. *roux could:* let a route ask for a wide page (a `wide` flag on the
+  route's static data, or a `PageHeader` prop).
+- **Week arithmetic, again.** The page works out a day's Monday and the next seven days
+  (`items/week.ts`), as the server does in `service.go`. *roux could:* put both in the civil
+  dates extraction (2 below): `mondayOf`, `weekDays`, and their Go twins.
+- **A stale page from a rebuilt front end.** With `FRONTEND_DIR`, the server reads
+  `index.html` once at startup; `npm run build` in another terminal replaces the hashed assets it
+  names, and the page is blank (a 404 on the old script) until the server restarts. *roux
+  could:* read `index.html` on each request when serving from disk (the embedded build cannot
+  change).
+- **A cancelled request logged as an error.** When the browser leaves a page mid-request, the
+  handler's query fails with `context canceled` and `api` logs it at ERROR as an unhandled
+  error. *roux could:* log a request the client abandoned at debug, not as an error.
+
 ## Extract into roux (next, in order)
 
 1. ~~**The paginator**~~ (done: `page.New`) (`internal/paging`) into roux's `page` package: `Where`/`WhereIf`, sorts

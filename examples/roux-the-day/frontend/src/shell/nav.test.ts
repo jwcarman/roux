@@ -9,7 +9,7 @@ describe("the app's navigation", () => {
       navItemsFor(nav, [ITEMS_READ, USERS_READ, THEME_MANAGE]).map(
         (item) => item.label,
       ),
-    ).toEqual(["Home", "Items", "Users", "Appearance"]);
+    ).toEqual(["Home", "Items", "Week", "Users", "Appearance"]);
   });
 
   it("leaves out a page that needs a permission the caller lacks", () => {
@@ -37,6 +37,12 @@ describe("the app's navigation", () => {
         to: "/items",
         description:
           "The team's plans: what is happening, when, and who has it.",
+        start: undefined,
+      },
+      {
+        label: "Week",
+        to: "/week",
+        description: "The week at a glance: Monday to Sunday, a day at a time.",
         start: undefined,
       },
       {

@@ -25,6 +25,9 @@ export type ItemFilters = {
   when?: string;
   assignee?: string;
   status?: string;
+  /** The first and last day, both included (`2026-11-23`). */
+  from?: string;
+  to?: string;
 };
 
 /** The longest title and notes, and the most assignees (internal/items/input.go). */
@@ -60,6 +63,27 @@ export function itemsPage(filters: ItemFilters) {
   return pageQuery(queryKeys.items.list(filters), (params, signal) =>
     itemsApi.list({ ...params, ...filters }, signal),
   );
+}
+
+/** The most items a week shows: one page, the most the server sends at once. */
+export const WEEK_LIMIT = 100;
+
+/** The week from `monday` to its Sunday, by day then time, for everyone or for `me`. */
+export function weekQuery(monday: string, sunday: string, assignee?: "me") {
+  const filters = { from: monday, to: sunday, assignee };
+  return queryOptions({
+    queryKey: queryKeys.items.list(filters),
+    queryFn: ({ signal }) =>
+      itemsApi.list(
+        {
+          ...filters,
+          pageSize: WEEK_LIMIT,
+          sortBy: "DAY",
+          sortDirection: "ASC",
+        },
+        signal,
+      ),
+  });
 }
 
 /** An item, for its page's loader and the page. */

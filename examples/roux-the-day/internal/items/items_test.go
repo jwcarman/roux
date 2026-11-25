@@ -138,16 +138,20 @@ func listFixture(t *testing.T) *fx {
 func TestListFilters(t *testing.T) {
 	f := listFixture(t)
 	for query, want := range map[string][]string{
-		"":                              {"Last week", "Yesterday", "Done yesterday", "Today", "Sunday", "Next Monday"},
-		"?when=all":                     {"Last week", "Yesterday", "Done yesterday", "Today", "Sunday", "Next Monday"},
-		"?when=overdue":                 {"Last week", "Yesterday"},
-		"?when=today":                   {"Today"},
-		"?when=week":                    {"Yesterday", "Done yesterday", "Today", "Sunday"},
-		"?status=done":                  {"Done yesterday"},
-		"?status=open&when=week":        {"Yesterday", "Today", "Sunday"},
-		"?when=overdue&status=done":     {},
-		"?assignee=" + f.grace.String(): {"Today"},
-		"?search=yesterday":             {"Yesterday", "Done yesterday"},
+		"":                               {"Last week", "Yesterday", "Done yesterday", "Today", "Sunday", "Next Monday"},
+		"?when=all":                      {"Last week", "Yesterday", "Done yesterday", "Today", "Sunday", "Next Monday"},
+		"?when=overdue":                  {"Last week", "Yesterday"},
+		"?when=today":                    {"Today"},
+		"?when=week":                     {"Yesterday", "Done yesterday", "Today", "Sunday"},
+		"?status=done":                   {"Done yesterday"},
+		"?status=open&when=week":         {"Yesterday", "Today", "Sunday"},
+		"?when=overdue&status=done":      {},
+		"?assignee=" + f.grace.String():  {"Today"},
+		"?search=yesterday":              {"Yesterday", "Done yesterday"},
+		"?from=2026-11-23&to=2026-11-29": {"Yesterday", "Done yesterday", "Today", "Sunday"},
+		"?from=2026-11-29":               {"Sunday", "Next Monday"},
+		"?to=2026-11-17":                 {"Last week"},
+		"?from=2026-11-24&to=2026-11-24": {"Today"},
 	} {
 		got := f.titles(f.asAda, query)
 		if !slices.Equal(got, want) {
@@ -201,6 +205,9 @@ func TestListRefusesAnUnknownWhenStatusOrAssignee(t *testing.T) {
 		"?assignee=ada":                       "assignee",
 		"?sortBy=PRICE":                       "sortBy",
 		"?search=" + strings.Repeat("x", 201): "search",
+		"?from=soon":                          "from",
+		"?to=2026-13-01":                      "to",
+		"?from=2026-11-29&to=2026-11-23":      "to",
 	} {
 		r := f.asAda.Get("/api/items"+query).Want(t, 400, query)
 		if !strings.Contains(string(r.Body), `"field":"`+field+`"`) {
