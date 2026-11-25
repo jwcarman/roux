@@ -1,0 +1,12 @@
+{{define "subject"}}Sign in to {{.App}}{{end -}}
+{{.App}}
+
+Sign in: {{.Link}}
+
+Or enter this code: {{.Code}}
+
+The link and the code expire in {{.ExpiresIn}} and work once.
+
+If you didn't ask to sign in, ignore this email. Never share this code with anyone.
+
+You got this email from {{.App}}.

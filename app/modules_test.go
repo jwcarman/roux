@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/jwcarman/roux/app"
 	"github.com/jwcarman/roux/pgtest"
@@ -17,7 +18,7 @@ const secret = "0123456789abcdef0123456789abcdef"
 func emailLink(t *testing.T) *app.EmailLink {
 	t.Helper()
 	t.Setenv("CODE_SECRET", secret)
-	e, err := app.EmailLinkFromEnv("Acme")
+	e, err := app.EmailLinkFromEnv("Acme", nil)
 	if err != nil || e == nil {
 		t.Fatalf("%v %v", e, err)
 	}
@@ -93,7 +94,7 @@ func TestPlainHTTPForARealHostMustBeOnPurpose(t *testing.T) {
 
 func TestEmailLinkIsOffWithoutACodeSecret(t *testing.T) {
 	t.Setenv("CODE_SECRET", "")
-	if e, err := app.EmailLinkFromEnv("Acme"); e != nil || err != nil {
+	if e, err := app.EmailLinkFromEnv("Acme", nil); e != nil || err != nil {
 		t.Fatalf("%v %v", e, err)
 	}
 }
@@ -110,18 +111,22 @@ func TestEmailLinkIsAModuleOfItsOwn(t *testing.T) {
 func TestEmailLinkRefusesWhatItCannotUse(t *testing.T) {
 	t.Setenv("CODE_SECRET", secret)
 	t.Setenv("EMAIL_RESEND_INTERVAL", "soon")
-	_, err := app.EmailLinkFromEnv("Acme")
+	_, err := app.EmailLinkFromEnv("Acme", nil)
 	wantError(t, err, "EMAIL_RESEND_INTERVAL")
 
 	t.Setenv("EMAIL_RESEND_INTERVAL", "")
 	t.Setenv("EMAIL_TOKEN_TTL", "a while")
-	_, err = app.EmailLinkFromEnv("Acme")
+	_, err = app.EmailLinkFromEnv("Acme", nil)
 	wantError(t, err, "EMAIL_TOKEN_TTL")
 
 	t.Setenv("EMAIL_TOKEN_TTL", "")
 	t.Setenv("CODE_SECRET", "short")
-	_, err = app.EmailLinkFromEnv("Acme")
+	_, err = app.EmailLinkFromEnv("Acme", nil)
 	wantError(t, err, "CodeSecret")
+
+	t.Setenv("CODE_SECRET", secret)
+	_, err = app.EmailLinkFromEnv("Acme", fstest.MapFS{"signin.txt": {Data: []byte("Hi")}})
+	wantError(t, err, "signin.txt", "sign-in")
 }
 
 func TestPasskeysAreOffWithoutARelyingParty(t *testing.T) {

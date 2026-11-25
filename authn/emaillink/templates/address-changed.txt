@@ -1,0 +1,8 @@
+{{define "subject"}}Your {{.App}} email address was changed{{end -}}
+{{.App}}
+
+Your account's email address was changed to {{.Address}}. This address no longer signs in.
+
+If you didn't make this change, someone else may have access to your account: contact the site right away.
+
+You got this email from {{.App}}.

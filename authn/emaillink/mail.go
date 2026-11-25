@@ -1,10 +1,15 @@
 package emaillink
 
 import (
+	"bytes"
 	"context"
+	"embed"
+	"errors"
 	"fmt"
-	"html"
+	htmltemplate "html/template"
+	"io/fs"
 	"strings"
+	texttemplate "text/template"
 	"time"
 	"unicode/utf8"
 )
@@ -42,179 +47,181 @@ func expiresIn(d time.Duration) string {
 	return plural(int(d.Round(time.Second)/time.Second), "second")
 }
 
-// messageBuilder writes one kind of email that carries a link and a code.
-type messageBuilder func(app, brandColor, to, link, formattedCode string, ttl time.Duration) Message
+// The emails roux sends, by name. Each is two files: <name>.txt (the subject, as a
+// {{define "subject"}}, then the text body) and <name>.html (a {{define "body"}} placed in
+// layout.html). The names are a contract: an app overrides an email by shipping a file of the
+// same name in Config.Templates.
+const (
+	emailSignIn              = "sign-in"
+	emailInvitation          = "invitation"
+	emailAddressConfirmation = "address-confirmation"
+	emailPasskeyAdded        = "passkey-added"
+	emailAccountLinked       = "account-linked"
+	emailAPIKeyMade          = "api-key-made"
+	emailAddressAdded        = "address-added"
+	emailAddressChanged      = "address-changed"
+	layoutFile               = "layout.html"
+)
 
-// linkEmail is the shape shared by emails that carry a link and a code; only the
-// wording differs. (Hard-coded for now; templates come later.)
-type linkEmail struct {
-	subject   string                  // "Sign in to {app}"
-	textLead  func(app string) string // what comes before the link in the text
-	htmlLead  string                  // the sentence above the button, HTML (already escaped)
-	button    string                  // the button's label
-	ignoreTip string                  // what to do with an email nobody expected
-	onceNote  string                  // after "work once", e.g. ", while you are signed in"
+var emailNames = []string{emailSignIn, emailInvitation, emailAddressConfirmation, emailPasskeyAdded,
+	emailAccountLinked, emailAPIKeyMade, emailAddressAdded, emailAddressChanged}
+
+//go:embed templates
+var stockFiles embed.FS
+
+// mailData is what every template is given. App and BrandColor are always set; the rest only in
+// the emails that use them (documented on Config.Templates).
+type mailData struct {
+	App        string
+	BrandColor string
+	Link       string // sign-in, invitation, address-confirmation
+	Code       string // the typed code, formatted: K7F-2QM
+	ExpiresIn  string // "5 minutes"
+	Change     bool   // address-confirmation: the address replaces the old one
+	Passkey    string // passkey-added: the passkey's name
+	Provider   string // account-linked: the provider's name, such as "google"
+	APIKey     string // api-key-made: the key's name
+	Address    string // address-added, address-changed: the other address, masked (n***@example.com)
 }
 
-func (k linkEmail) build(app, brandColor, to, link, formattedCode string, ttl time.Duration) Message {
-	valid := expiresIn(ttl)
-	text := fmt.Sprintf(`%[1]s
-
-%[2]s %[3]s
-
-Or enter this code: %[4]s
-
-The link and the code expire in %[5]s and work once%[7]s.
-
-%[6]s Never share this code with anyone.
-
-You got this email from %[1]s.
-`, app, k.textLead(app), link, formattedCode, valid, k.ignoreTip, k.onceNote)
-
-	a, l, c, v, b := html.EscapeString(app), html.EscapeString(link), html.EscapeString(formattedCode), html.EscapeString(valid), html.EscapeString(brandColor)
-	page := fmt.Sprintf(`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>%[1]s</title>
-</head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;">
-<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
-<tr><td align="center" style="padding:32px 16px;">
-<table role="presentation" width="480" cellpadding="0" cellspacing="0" border="0" style="width:100%%;max-width:480px;background-color:#ffffff;border:1px solid #e4e4e7;border-radius:8px;">
-<tr><td style="padding:24px 32px;border-bottom:4px solid %[5]s;font-family:Arial,Helvetica,sans-serif;font-size:20px;line-height:28px;font-weight:bold;color:#18181b;">%[1]s</td></tr>
-<tr><td style="padding:24px 32px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:24px;color:#27272a;">
-<p style="margin:0 0 16px 0;">%[6]s</p>
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;"><tr><td style="border-radius:6px;background-color:%[5]s;"><a href="%[2]s" style="display:inline-block;padding:12px 24px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:24px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:6px;">%[7]s</a></td></tr></table>
-<p style="margin:0 0 16px 0;">Or enter this code:</p>
-<p style="margin:0 0 24px 0;padding:16px;background-color:#f4f4f5;border-radius:6px;text-align:center;font-family:'Courier New',Courier,monospace;font-size:28px;line-height:36px;font-weight:bold;letter-spacing:4px;color:#18181b;">%[3]s</p>
-<p style="margin:0 0 16px 0;color:#52525b;font-size:14px;line-height:20px;">The link and the code expire in %[4]s and work once%[9]s.</p>
-<p style="margin:0 0 16px 0;color:#52525b;font-size:14px;line-height:20px;">%[8]s Never share this code with anyone.</p>
-</td></tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>
-`, a, l, c, v, b, fmt.Sprintf(k.htmlLead, "<strong>"+a+"</strong>"), fmt.Sprintf(k.button, a), html.EscapeString(k.ignoreTip), html.EscapeString(k.onceNote))
-
-	return Message{To: to, Subject: fmt.Sprintf(k.subject, app), Text: text, HTML: page}
+// emailTemplate is one email's parsed templates.
+type emailTemplate struct {
+	text *texttemplate.Template
+	html *htmltemplate.Template
 }
 
-// signInTo is the button that signs in, and the subject of the sign-in email.
-const signInTo = "Sign in to %s"
+// mailTemplates is every email, parsed and checked once at New.
+type mailTemplates map[string]emailTemplate
 
-// signInMessage is the email that carries a sign-in link and code. The wording is roux's.
-var signInMessage messageBuilder = linkEmail{
-	subject:   signInTo,
-	textLead:  func(string) string { return "Sign in:" },
-	htmlLead:  "Use the button to sign in to %s.",
-	button:    signInTo,
-	ignoreTip: "If you didn't ask to sign in, ignore this email.",
-}.build
-
-// invitationMessage is the email that invites someone: the same link and code, with an
-// invitation's words. The wording is roux's.
-var invitationMessage messageBuilder = linkEmail{
-	subject:   "You've been invited to %s",
-	textLead:  func(app string) string { return "You have been invited to " + app + ". Accept by signing in:" },
-	htmlLead:  "You have been invited to %s. Accept by signing in.",
-	button:    signInTo,
-	ignoreTip: "If you weren't expecting this invitation, ignore this email.",
-}.build
-
-// notice is the shape shared by emails that only tell someone something: a lead and a tip,
-// both given as already-escaped HTML, and the same words as text.
-func notice(app, brandColor, to, subject, text, htmlLead, htmlTip string) Message {
-	a, b := html.EscapeString(app), html.EscapeString(brandColor)
-	page := fmt.Sprintf(`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>%[1]s</title>
-</head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;">
-<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
-<tr><td align="center" style="padding:32px 16px;">
-<table role="presentation" width="480" cellpadding="0" cellspacing="0" border="0" style="width:100%%;max-width:480px;background-color:#ffffff;border:1px solid #e4e4e7;border-radius:8px;">
-<tr><td style="padding:24px 32px;border-bottom:4px solid %[2]s;font-family:Arial,Helvetica,sans-serif;font-size:20px;line-height:28px;font-weight:bold;color:#18181b;">%[1]s</td></tr>
-<tr><td style="padding:24px 32px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:24px;color:#27272a;">
-<p style="margin:0 0 16px 0;">%[3]s</p>
-<p style="margin:0 0 16px 0;color:#52525b;font-size:14px;line-height:20px;">%[4]s</p>
-</td></tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>
-`, a, b, htmlLead, htmlTip)
-	return Message{To: to, Subject: subject, Text: text, HTML: page}
-}
-
-// yourAccount is how a notice's subject names the account: "your Acme account".
-func yourAccount(app string) string { return "your " + app + " account" }
-
-// passkeyAddedMessage tells the owner that a passkey was added, so that someone who did
-// not add one notices. The wording is roux's.
-func passkeyAddedMessage(app, brandColor, to, label string) Message {
-	text := fmt.Sprintf(`%[1]s
-
-A passkey named "%[2]s" was added to your account. If you did not add it, remove it and secure your account.
-
-You got this email from %[1]s.
-`, app, label)
-	return notice(app, brandColor, to, "A passkey was added to "+yourAccount(app), text,
-		"A passkey named <strong>"+html.EscapeString(label)+"</strong> was added to your account.",
-		"If you did not add it, remove it and secure your account.")
-}
-
-// accountLinkedMessage tells the owner that a provider account was linked, so that someone
-// who did not link one notices. The wording follows the passkey notice.
-func accountLinkedMessage(app, brandColor, to, provider string) Message {
-	text := fmt.Sprintf(`%[1]s
-
-A %[2]s account was linked to your account. If you did not link it, unlink it and secure your account.
-
-You got this email from %[1]s.
-`, app, provider)
-	return notice(app, brandColor, to, "A "+provider+" account was linked to "+yourAccount(app), text,
-		"A <strong>"+html.EscapeString(provider)+"</strong> account was linked to your account.",
-		"If you did not link it, unlink it and secure your account.")
-}
-
-// apiKeyMadeMessage tells the owner that a secret for an API key was made (a new key or a
-// rotation), so that someone who did not make one notices: a key lasts for months.
-func apiKeyMadeMessage(app, brandColor, to, name string) Message {
-	text := fmt.Sprintf(`%[1]s
-
-A secret for the API key "%[2]s" was made on your account. If you did not make it, revoke it and secure your account.
-
-You got this email from %[1]s.
-`, app, name)
-	return notice(app, brandColor, to, "An API key was made for "+yourAccount(app), text,
-		"A secret for the API key <strong>"+html.EscapeString(name)+"</strong> was made on your account.",
-		"If you did not make it, revoke it and secure your account.")
-}
-
-// addressConfirmationMessage asks someone to confirm an address they are adding to their
-// account, or making theirs in place of another. The wording is roux's.
-func addressConfirmationMessage(change bool) messageBuilder {
-	htmlLead := "Add this address to your account."
-	textLead := func(string) string { return "Add this address to your account:" }
-	if change {
-		htmlLead = "Make this your account's email address, in place of the old one."
-		textLead = func(string) string { return "Make this your account's email address, in place of the old one:" }
+// loadTemplates parses each email from the app's files where it has one, roux's otherwise, and
+// renders each with sample data, so a template that cannot render stops startup naming its file.
+func loadTemplates(own fs.FS) (mailTemplates, error) {
+	stock, err := fs.Sub(stockFiles, "templates")
+	if err != nil {
+		return nil, err
 	}
-	return linkEmail{
-		subject:   "Confirm your email address for %s",
-		textLead:  textLead,
-		htmlLead:  htmlLead,
-		button:    "Confirm this address",
-		ignoreTip: "If you didn't ask to add this address, ignore this email and nothing changes.",
-		onceNote:  ", while you are signed in",
-	}.build
+	read := func(file string) (string, error) {
+		if own != nil {
+			b, err := fs.ReadFile(own, file)
+			if err == nil {
+				return string(b), nil
+			}
+			if !errors.Is(err, fs.ErrNotExist) {
+				return "", fmt.Errorf("emaillink: reading %s from Templates: %w", file, err)
+			}
+		}
+		b, err := fs.ReadFile(stock, file)
+		return string(b), err
+	}
+	if err := unknownFiles(own); err != nil {
+		return nil, err
+	}
+	layout, err := read(layoutFile)
+	if err != nil {
+		return nil, err
+	}
+	out := mailTemplates{}
+	for _, name := range emailNames {
+		t, err := parseEmail(name, layout, read)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := t.render("check@example.test", sampleData); err != nil {
+			return nil, fmt.Errorf("emaillink: the %s email does not render: %w", name, err)
+		}
+		out[name] = t
+	}
+	return out, nil
+}
+
+// unknownFiles refuses a template file that is no email roux sends (a misspelled name would
+// otherwise be ignored and roux's wording sent). Files of other kinds, a README, are left alone.
+func unknownFiles(own fs.FS) error {
+	if own == nil {
+		return nil
+	}
+	entries, err := fs.ReadDir(own, ".")
+	if err != nil {
+		return fmt.Errorf("emaillink: reading Templates: %w", err)
+	}
+	known := map[string]bool{layoutFile: true}
+	for _, name := range emailNames {
+		known[name+".txt"], known[name+".html"] = true, true
+	}
+	for _, e := range entries {
+		n := e.Name()
+		if (strings.HasSuffix(n, ".txt") || strings.HasSuffix(n, ".html")) && !known[n] {
+			return fmt.Errorf("emaillink: Templates has %s, which is no email roux sends: name it after one of %s (.txt or .html), or layout.html",
+				n, strings.Join(emailNames, ", "))
+		}
+	}
+	return nil
+}
+
+func parseEmail(name, layout string, read func(string) (string, error)) (emailTemplate, error) {
+	txt, err := read(name + ".txt")
+	if err != nil {
+		return emailTemplate{}, err
+	}
+	page, err := read(name + ".html")
+	if err != nil {
+		return emailTemplate{}, err
+	}
+	text, err := texttemplate.New(name + ".txt").Option("missingkey=error").Parse(txt)
+	if err != nil {
+		return emailTemplate{}, fmt.Errorf("emaillink: %w", err)
+	}
+	if text.Lookup("subject") == nil {
+		return emailTemplate{}, fmt.Errorf(`emaillink: %s.txt has no subject: start it with {{define "subject"}}...{{end}}`, name)
+	}
+	html, err := htmltemplate.New(layoutFile).Option("missingkey=error").Parse(layout)
+	if err == nil {
+		_, err = html.New(name + ".html").Parse(page)
+	}
+	if err != nil {
+		return emailTemplate{}, fmt.Errorf("emaillink: %w", err)
+	}
+	if html.Lookup("body") == nil {
+		return emailTemplate{}, fmt.Errorf(`emaillink: %s.html has no body: write it as {{define "body"}}...{{end}}`, name)
+	}
+	return emailTemplate{text: text, html: html}, nil
+}
+
+// sampleData renders each template once at startup, every field set.
+var sampleData = mailData{
+	App: "App", BrandColor: "#3b82f6", Link: "http://localhost/signin/link#token=t", Code: "K7F-2QM",
+	ExpiresIn: "5 minutes", Passkey: "Phone", Provider: "google", APIKey: "CI", Address: "n***@example.com",
+}
+
+func (t emailTemplate) render(to string, d mailData) (Message, error) {
+	var subject, text, page bytes.Buffer
+	if err := t.text.ExecuteTemplate(&subject, "subject", d); err != nil {
+		return Message{}, err
+	}
+	if err := t.text.Execute(&text, d); err != nil {
+		return Message{}, err
+	}
+	if err := t.html.ExecuteTemplate(&page, layoutFile, d); err != nil {
+		return Message{}, err
+	}
+	// A subject is one header line: a line break in it would end the header.
+	oneLine := strings.Join(strings.Fields(subject.String()), " ")
+	return Message{To: to, Subject: oneLine, Text: text.String(), HTML: page.String()}, nil
+}
+
+// mail renders the named email for this method's app.
+func (m *Method) mail(name, to string, d mailData) (Message, error) {
+	d.App, d.BrandColor = m.cfg.AppName, m.cfg.BrandColor
+	return m.templates[name].render(to, d)
+}
+
+// notify renders and sends a notice; a failure is returned for the caller to log.
+func (m *Method) notify(ctx context.Context, name, to string, d mailData) error {
+	msg, err := m.mail(name, to, d)
+	if err != nil {
+		return err
+	}
+	return m.cfg.Sender.Send(ctx, msg)
 }
 
 // maskAddress hides all but the first character of an address's local part, so the old
@@ -225,59 +232,4 @@ func maskAddress(address string) string {
 		return string(first) + "***" + address[at:]
 	}
 	return string(first) + "***"
-}
-
-// addressAddedMessage tells an address already on the account that another was added, masked
-// as in addressChangedMessage: an added address is a way in, so someone who did not add it must
-// hear of it at an address that is surely theirs.
-func addressAddedMessage(app, brandColor, to, newAddress string) Message {
-	masked := maskAddress(newAddress)
-	text := fmt.Sprintf(`%[1]s
-
-%[2]s was added to your account and can now sign in. If you did not add it, remove it and secure your account.
-
-You got this email from %[1]s.
-`, app, masked)
-	return notice(app, brandColor, to, "An email address was added to "+yourAccount(app), text,
-		"<strong>"+html.EscapeString(masked)+"</strong> was added to your account and can now sign in.",
-		"If you did not add it, remove it and secure your account.")
-}
-
-// addressChangedMessage tells the old address it was replaced, showing the new one masked:
-// it is the address most likely to still belong to the real owner if someone else had their
-// session. The wording is roux's.
-func addressChangedMessage(app, brandColor, to, newAddress string) Message {
-	masked := maskAddress(newAddress)
-	text := fmt.Sprintf(`%[1]s
-
-Your account's email address was changed to %[2]s. This address no longer signs in.
-
-If you didn't make this change, someone else may have access to your account: contact the site right away.
-
-You got this email from %[1]s.
-`, app, masked)
-	a, m, b := html.EscapeString(app), html.EscapeString(masked), html.EscapeString(brandColor)
-	page := fmt.Sprintf(`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>%[1]s</title>
-</head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;">
-<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;">
-<tr><td align="center" style="padding:32px 16px;">
-<table role="presentation" width="480" cellpadding="0" cellspacing="0" border="0" style="width:100%%;max-width:480px;background-color:#ffffff;border:1px solid #e4e4e7;border-radius:8px;">
-<tr><td style="padding:24px 32px;border-bottom:4px solid %[3]s;font-family:Arial,Helvetica,sans-serif;font-size:20px;line-height:28px;font-weight:bold;color:#18181b;">%[1]s</td></tr>
-<tr><td style="padding:24px 32px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:24px;color:#27272a;">
-<p style="margin:0 0 16px 0;">Your account's email address was changed to <strong>%[2]s</strong>. This address no longer signs in.</p>
-<p style="margin:0 0 16px 0;color:#52525b;font-size:14px;line-height:20px;">If you didn't make this change, someone else may have access to your account: contact the site right away.</p>
-</td></tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>
-`, a, m, b)
-	return Message{To: to, Subject: "Your " + app + " email address was changed", Text: text, HTML: page}
 }

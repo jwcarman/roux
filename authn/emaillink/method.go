@@ -66,6 +66,8 @@ type Method struct {
 	hasher hasher
 	store  store
 	wg     sync.WaitGroup
+	// templates is every email, parsed and checked at New.
+	templates mailTemplates
 }
 
 // New validates the configuration (naming the fix in any error) and returns the method.
@@ -74,7 +76,11 @@ func New(cfg Config) (*Method, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Method{cfg: cfg, hasher: hasher{key: []byte(cfg.CodeSecret)}}, nil
+	templates, err := loadTemplates(cfg.Templates)
+	if err != nil {
+		return nil, err
+	}
+	return &Method{cfg: cfg, hasher: hasher{key: []byte(cfg.CodeSecret)}, templates: templates}, nil
 }
 
 func (m *Method) now() time.Time { return m.cfg.Clock().UTC() }
@@ -147,7 +153,7 @@ func (m *Method) send(h *authn.Host) api.HandlerFunc {
 // fails loudly: the outcome is for logs and for callers who may see it (an
 // invitation sent by the owner), never for the person asking.
 func (m *Method) Issue(ctx context.Context, address string) Outcome {
-	outcome := m.issue(ctx, address, signInMessage)
+	outcome := m.issue(ctx, address, emailSignIn)
 	slog.DebugContext(ctx, "sign-in email requested", "outcome", outcome)
 	return outcome
 }
@@ -157,7 +163,7 @@ func (m *Method) Issue(ctx context.Context, address string) Outcome {
 // RegisterIn); the outcome says whether the email went out, and the invitation
 // stands either way.
 func (m *Method) Invite(ctx context.Context, address string) Outcome {
-	outcome := m.issue(ctx, address, invitationMessage)
+	outcome := m.issue(ctx, address, emailInvitation)
 	slog.DebugContext(ctx, "invitation email requested", "outcome", outcome)
 	return outcome
 }
@@ -219,7 +225,7 @@ func (m *Method) PasskeyAdded(ctx context.Context, identityID uuid.UUID, label s
 	if err != nil || address == "" {
 		return err
 	}
-	return m.cfg.Sender.Send(ctx, passkeyAddedMessage(m.cfg.AppName, m.cfg.BrandColor, address, label))
+	return m.notify(ctx, emailPasskeyAdded, address, mailData{Passkey: label})
 }
 
 // AccountLinked emails the identity's oldest address that a provider account was linked
@@ -230,7 +236,7 @@ func (m *Method) AccountLinked(ctx context.Context, identityID uuid.UUID, provid
 	if err != nil || address == "" {
 		return err
 	}
-	return m.cfg.Sender.Send(ctx, accountLinkedMessage(m.cfg.AppName, m.cfg.BrandColor, address, provider))
+	return m.notify(ctx, emailAccountLinked, address, mailData{Provider: provider})
 }
 
 // APIKeyMade emails the identity's oldest address that a secret for the named API key was made
@@ -241,14 +247,14 @@ func (m *Method) APIKeyMade(ctx context.Context, identityID uuid.UUID, name stri
 	if err != nil || address == "" {
 		return err
 	}
-	return m.cfg.Sender.Send(ctx, apiKeyMadeMessage(m.cfg.AppName, m.cfg.BrandColor, address, name))
+	return m.notify(ctx, emailAPIKeyMade, address, mailData{APIKey: name})
 }
 
 // IsAddress reports whether the text is a plain email address (no display name, no
 // angle brackets, no whitespace), of a sane length.
 func IsAddress(s string) bool { return looksLikeAnAddress(s) }
 
-func (m *Method) issue(ctx context.Context, address string, build messageBuilder) Outcome {
+func (m *Method) issue(ctx context.Context, address, email string) Outcome {
 	if !looksLikeAnAddress(address) {
 		return UnknownAddress
 	}
@@ -284,8 +290,11 @@ func (m *Method) issue(ctx context.Context, address string, build messageBuilder
 	}
 
 	link := m.cfg.LinkBaseURL + "#token=" + token
-	msg := build(m.cfg.AppName, m.cfg.BrandColor, address, link, formatCode(code), m.cfg.TokenTTL)
-	if err := m.cfg.Sender.Send(ctx, msg); err != nil {
+	msg, err := m.mail(email, address, mailData{Link: link, Code: formatCode(code), ExpiresIn: expiresIn(m.cfg.TokenTTL)})
+	if err == nil {
+		err = m.cfg.Sender.Send(ctx, msg)
+	}
+	if err != nil {
 		// Never log the message: it carries the link and the code.
 		slog.WarnContext(ctx, "sign-in link: could not send the email", "err", err)
 		if derr := m.store.deleteToken(context.WithoutCancel(ctx), credentialID, tokenHash); derr != nil {

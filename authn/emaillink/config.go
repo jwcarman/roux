@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"io/fs"
 	"strings"
 	"time"
 )
@@ -44,6 +45,17 @@ type Config struct {
 	AppName string
 	// BrandColor is the email's accent colour, "#rrggbb" (default blue).
 	BrandColor string
+	// Templates holds the app's own wording for any of roux's emails, overriding roux's file by
+	// file (nil: roux's for all). An email is <name>.txt, a {{define "subject"}} then the text
+	// body (text/template), and <name>.html, a {{define "body"}} placed in layout.html
+	// (html/template, so values are escaped). The names: sign-in, invitation,
+	// address-confirmation, passkey-added, account-linked, api-key-made, address-added,
+	// address-changed, and layout.html. Every template gets .App and .BrandColor; the link
+	// emails .Link, .Code and .ExpiresIn (address-confirmation also .Change); passkey-added
+	// .Passkey; account-linked .Provider; api-key-made .APIKey; address-added and
+	// address-changed .Address (masked). Each is rendered once at New: one that cannot render
+	// stops startup naming its file. Copy roux's from authn/emaillink/templates to start.
+	Templates fs.FS
 	// Sender delivers the emails. Required.
 	Sender Sender
 	// Clock is the time source; default time.Now.

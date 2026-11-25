@@ -1,0 +1,6 @@
+{{define "subject"}}A {{.Provider}} account was linked to your {{.App}} account{{end -}}
+{{.App}}
+
+A {{.Provider}} account was linked to your account. If you did not link it, unlink it and secure your account.
+
+You got this email from {{.App}}.

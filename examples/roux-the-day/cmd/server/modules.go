@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"io/fs"
 
 	"github.com/jwcarman/roux/app"
 	"github.com/jwcarman/roux/pgdb"
@@ -17,7 +18,11 @@ func modules(k *app.Kit) ([]app.Module, error) {
 	if k.Pool == nil {
 		return mods, nil // no database, nobody signs in
 	}
-	email, err := app.EmailLinkFromEnv(k.AppName)
+	emails, err := fs.Sub(emailFiles, "emails")
+	if err != nil {
+		return nil, err
+	}
+	email, err := app.EmailLinkFromEnv(k.AppName, emails)
 	if err != nil || email == nil {
 		return mods, err // no CODE_SECRET: signing in is off, and so is everything that needs it
 	}
@@ -53,6 +58,11 @@ func modules(k *app.Kit) ([]app.Module, error) {
 	}
 	return mods, nil
 }
+
+// emailFiles is this application's wording for roux's emails (emails/README.md).
+//
+//go:embed emails
+var emailFiles embed.FS
 
 //go:embed migrations/*.sql
 var appMigrations embed.FS

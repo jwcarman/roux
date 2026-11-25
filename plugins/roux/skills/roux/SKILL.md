@@ -78,7 +78,7 @@ it.** Each reference is rules, exact names, steps, an example, the check and the
 | Money | `references/money.md` (~1,000 tokens) |
 | Today, the organization's zone, dates and times in columns, formatting | `references/dates.md` (~1,200 tokens) |
 | A record's history | `references/activity-log.md` (~1,200 tokens) |
-| The emails roux sends, SMTP settings | `references/email.md` (~600 tokens) |
+| The emails roux sends, rewording one, SMTP settings | `references/email.md` (~1,100 tokens) |
 
 ## Before you finish
 

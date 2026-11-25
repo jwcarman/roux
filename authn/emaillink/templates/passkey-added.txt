@@ -1,0 +1,6 @@
+{{define "subject"}}A passkey was added to your {{.App}} account{{end -}}
+{{.App}}
+
+A passkey named "{{.Passkey}}" was added to your account. If you did not add it, remove it and secure your account.
+
+You got this email from {{.App}}.

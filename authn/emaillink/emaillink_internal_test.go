@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"mime"
 	"mime/multipart"
 	"mime/quotedprintable"
@@ -12,6 +13,7 @@ import (
 	"net/mail"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/google/uuid"
@@ -189,7 +191,8 @@ func TestExpiresIn(t *testing.T) {
 }
 
 func TestSignInMessage(t *testing.T) {
-	m := signInMessage("Acme Gym", "#3b82f6", "ada@example.com", "http://x/signin/link#token=abc", "K7F-2QM", 5*time.Minute)
+	m := stock(t, emailSignIn, "ada@example.com", mailData{App: "Acme Gym", BrandColor: "#3b82f6",
+		Link: "http://x/signin/link#token=abc", Code: "K7F-2QM", ExpiresIn: expiresIn(5 * time.Minute)})
 	if m.To != "ada@example.com" || m.Subject != "Sign in to Acme Gym" {
 		t.Fatalf("%+v", m)
 	}
@@ -205,9 +208,121 @@ func TestSignInMessage(t *testing.T) {
 	}
 
 	// Hostile values cannot break out of the HTML.
-	h := signInMessage(`<script>alert(1)</script>`, `red"onload="x`, "a@b.co", `http://x/"><script>alert(2)</script>`, "K7F-2QM", time.Minute)
+	h := stock(t, emailSignIn, "a@b.co", mailData{App: `<script>alert(1)</script>`, BrandColor: `red"onload="x`,
+		Link: `http://x/"><script>alert(2)</script>`, Code: "K7F-2QM", ExpiresIn: "1 minute"})
 	if strings.Contains(h.HTML, "<script>") || strings.Contains(h.HTML, `"onload=`) {
 		t.Errorf("html injection survived:\n%s", h.HTML)
+	}
+}
+
+// stock renders one of roux's own emails.
+func stock(t *testing.T, name, to string, d mailData) Message {
+	t.Helper()
+	ts, err := loadTemplates(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := ts[name].render(to, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return m
+}
+
+func TestAnAppsTemplateReplacesRouxsByName(t *testing.T) {
+	own := fstest.MapFS{
+		"sign-in.txt":  {Data: []byte("{{define \"subject\"}}Your link for\n {{.App}}{{end}}Go: {{.Link}}\n")},
+		"sign-in.html": {Data: []byte(`{{define "body"}}<p>Go to <a href="{{.Link}}">{{.App}}</a></p>{{end}}`)},
+	}
+	ts, err := loadTemplates(own)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := ts[emailSignIn].render("a@b.co", mailData{App: "Tea & Co", BrandColor: "#000000", Link: "http://x/l#token=t"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.Subject != "Your link for Tea & Co" || m.Text != "Go: http://x/l#token=t\n" {
+		t.Errorf("%q / %q", m.Subject, m.Text)
+	}
+	if !strings.Contains(m.HTML, `<p>Go to <a href="http://x/l#token=t">Tea &amp; Co</a></p>`) || !strings.Contains(m.HTML, "<!DOCTYPE html>") {
+		t.Errorf("the app's body, in roux's layout, escaped:\n%s", m.HTML)
+	}
+	inv, err := ts[emailInvitation].render("a@b.co", mailData{App: "Tea & Co"})
+	if err != nil || inv.Subject != "You've been invited to Tea & Co" {
+		t.Errorf("an email the app does not override stays roux's: %q %v", inv.Subject, err)
+	}
+}
+
+func TestATemplateThatCannotRenderStopsStartup(t *testing.T) {
+	for _, tc := range []struct {
+		files fs.FS
+		want  string
+	}{
+		{fstest.MapFS{"invitation.txt": {Data: []byte("Hello {{.App}}")}}, "invitation.txt has no subject"},
+		{fstest.MapFS{"invitation.html": {Data: []byte("<p>{{.App}}</p>")}}, "invitation.html has no body"},
+		{fstest.MapFS{"passkey-added.txt": {Data: []byte(`{{define "subject"}}x{{end}}{{.Passcode}}`)}}, "the passkey-added email does not render"},
+		{fstest.MapFS{"layout.html": {Data: []byte("{{.App")}}, "layout.html"},
+		{fstest.MapFS{"sign-in.txt": {Data: []byte("{{if}}")}}, "sign-in.txt"},
+		{fstest.MapFS{"sign-in.html": {Data: []byte("{{end}}")}}, "sign-in.html"},
+		{fstest.MapFS{"sign-in.txt": {Mode: fs.ModeDir}}, "reading sign-in.txt from Templates"},
+		{fstest.MapFS{"sign-in.html": {Mode: fs.ModeDir}}, "reading sign-in.html from Templates"},
+		{fstest.MapFS{"layout.html": {Mode: fs.ModeDir}}, "reading layout.html from Templates"},
+		{fstest.MapFS{"signin.txt": {Data: []byte("x")}, "README.md": {Data: []byte("x")}}, "Templates has signin.txt, which is no email roux sends"},
+		{badDir{}, "reading Templates"},
+	} {
+		if _, err := loadTemplates(tc.files); err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("want an error naming %q, got %v", tc.want, err)
+		}
+	}
+}
+
+func TestATemplateThatFailsOnSomeDataIsAnErrorNotAMessage(t *testing.T) {
+	fails := "{{if .Change}}{{.Change.Nope}}{{end}}"
+	for _, own := range []fstest.MapFS{
+		{"address-confirmation.txt": {Data: []byte(`{{define "subject"}}` + fails + `{{end}}x`)}},
+		{"address-confirmation.txt": {Data: []byte(`{{define "subject"}}x{{end}}` + fails)}},
+		{"address-confirmation.html": {Data: []byte(`{{define "body"}}` + fails + `{{end}}`)}},
+	} {
+		ts, err := loadTemplates(own)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ts[emailAddressConfirmation].render("a@b.co", mailData{Change: true}); err == nil {
+			t.Errorf("%v rendered", own)
+		}
+		m := &Method{templates: ts}
+		if err := m.notify(t.Context(), emailAddressConfirmation, "a@b.co", mailData{Change: true}); err == nil {
+			t.Errorf("%v was sent", own)
+		}
+	}
+}
+
+// badDir is a file system whose top directory cannot be read.
+type badDir struct{}
+
+func (badDir) Open(string) (fs.File, error) { return nil, fs.ErrPermission }
+
+func TestEveryStockEmailRendersCleanly(t *testing.T) {
+	ts, err := loadTemplates(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, change := range []bool{false, true} {
+		for _, name := range emailNames {
+			d := sampleData
+			d.Change = change
+			m, err := ts[name].render("a@b.co", d)
+			if err != nil {
+				t.Fatal(name, err)
+			}
+			for _, part := range []string{m.Subject, m.Text, m.HTML} {
+				// %!( was a format string's missing verb, shown in the address confirmation email.
+				if strings.Contains(part, "%!") || strings.Contains(part, "<no value>") || strings.TrimSpace(part) == "" {
+					t.Errorf("%s (change %v):\n%s", name, change, part)
+				}
+			}
+		}
 	}
 }
 

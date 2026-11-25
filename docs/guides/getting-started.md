@@ -115,7 +115,11 @@ func modules(k *app.Kit) ([]app.Module, error) {
 	if k.Pool == nil {
 		return mods, nil // no database, nobody signs in
 	}
-	email, err := app.EmailLinkFromEnv(k.AppName)
+	emails, err := fs.Sub(emailFiles, "emails") // cmd/server/emails: your wording for roux's emails
+	if err != nil {
+		return nil, err
+	}
+	email, err := app.EmailLinkFromEnv(k.AppName, emails)
 	if err != nil || email == nil {
 		return mods, err // no CODE_SECRET: signing in is off, and so is everything that needs it
 	}
@@ -138,7 +142,7 @@ dependency does not compile. roux's stock modules:
 
 | Constructor | The feature |
 | --- | --- |
-| `app.EmailLinkFromEnv(appName)` | Sign-in by an emailed link or typed code. Nil without `CODE_SECRET`. |
+| `app.EmailLinkFromEnv(appName, emails)` | Sign-in by an emailed link or typed code; `emails` is the app's wording for any of roux's emails ([Email](email.md)). Nil without `CODE_SECRET`. |
 | `app.UsersFromEnv(email)` | The users directory, roles and invitations, the owner's theme, the organization, and the first owner ([Users](users.md), [Roles and permissions](roles.md)). |
 | `app.PasskeysFromEnv(appName, email)` | Passkeys. Nil without `PASSKEY_RP_ID`. |
 | `app.APIKeysFromEnv(email)` | API keys, made by a signed-in person. On unless `API_KEYS=off`. |

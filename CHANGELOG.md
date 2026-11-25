@@ -8,6 +8,14 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **An app can reword any of roux's emails** (`authn/emaillink`): each email is now a pair of Go
+  templates (`<name>.txt` with its subject, `<name>.html` in a shared `layout.html`), and a file of
+  the same name in the app's `cmd/server/emails/` replaces roux's. `app.EmailLinkFromEnv(appName,
+  emails)` takes the folder (`emaillink.Config.Templates`); the template embeds it, with a README
+  naming each email and its values. Every email renders once at startup: a misnamed file, a missing
+  subject or body, or an unknown value stops the server naming the file. roux's own emails read and
+  look exactly as before.
+
 - **The template's front end has Prettier and ESLint** (`npm run format`, `format:check`, `lint`),
   with roux-web's settings, in `frontend/lint-tools/`; CI checks both. The skill's `check.sh` runs
   them, writing Prettier's fixes as it does gofmt's.
@@ -110,6 +118,9 @@ All notable changes to this project are documented in this file. The format foll
   their lifetime more than 30 days ago.
 
 ### Fixed
+
+- **The address confirmation email showed `%!(EXTRA string=...)`** after its first sentence and
+  on its button: a format string with no place for the app's name. It reads cleanly now.
 
 - The Dockerfiles install the front end with `npm ci --ignore-scripts`: no package's install script
   runs in the image build.

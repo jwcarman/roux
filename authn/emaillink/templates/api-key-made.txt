@@ -1,0 +1,6 @@
+{{define "subject"}}An API key was made for your {{.App}} account{{end -}}
+{{.App}}
+
+A secret for the API key "{{.APIKey}}" was made on your account. If you did not make it, revoke it and secure your account.
+
+You got this email from {{.App}}.

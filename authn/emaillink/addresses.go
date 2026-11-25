@@ -191,8 +191,13 @@ func (m *Method) requestAddress(ctx context.Context, identityID uuid.UUID, addre
 	}
 
 	link := m.cfg.AddressConfirmationURL + ConfirmFragment + token
-	msg := addressConfirmationMessage(replaces != nil)(m.cfg.AppName, m.cfg.BrandColor, address, link, formatCode(code), m.cfg.TokenTTL)
-	if err := m.cfg.Sender.Send(ctx, msg); err != nil {
+	msg, err := m.mail(emailAddressConfirmation, address, mailData{
+		Link: link, Code: formatCode(code), ExpiresIn: expiresIn(m.cfg.TokenTTL), Change: replaces != nil,
+	})
+	if err == nil {
+		err = m.cfg.Sender.Send(ctx, msg)
+	}
+	if err != nil {
 		// Never log the message: it carries the link and the code.
 		slog.WarnContext(ctx, "address request: could not send the email", "err", err)
 		if _, derr := m.store.pool.Exec(context.WithoutCancel(ctx), `delete from roux_email_address_request where id = $1`, id); derr != nil {
@@ -241,7 +246,7 @@ func (m *Method) confirmAddress(h *authn.Host, w http.ResponseWriter, r *http.Re
 		return err
 	}
 	if oldAddress != "" { // a change: the old address hears about it, and a failure to tell it is only logged
-		if err := m.cfg.Sender.Send(ctx, addressChangedMessage(m.cfg.AppName, m.cfg.BrandColor, oldAddress, req.address)); err != nil {
+		if err := m.notify(ctx, emailAddressChanged, oldAddress, mailData{Address: maskAddress(req.address)}); err != nil {
 			slog.WarnContext(ctx, "could not tell a replaced address", "err", err)
 		}
 	} else { // an addition: every address already there hears about it, the same way
@@ -264,7 +269,7 @@ func (m *Method) tellTheOthers(ctx context.Context, identityID, added uuid.UUID,
 		var others []string
 		if others, err = pgx.CollectRows(rows, pgx.RowTo[string]); err == nil {
 			for _, other := range others {
-				if serr := m.cfg.Sender.Send(ctx, addressAddedMessage(m.cfg.AppName, m.cfg.BrandColor, other, address)); serr != nil {
+				if serr := m.notify(ctx, emailAddressAdded, other, mailData{Address: maskAddress(address)}); serr != nil {
 					slog.WarnContext(ctx, "could not tell an address that another was added", "err", serr)
 				}
 			}

@@ -39,8 +39,8 @@ with the front end inside; `make image` the container image.
 - `cmd/server/main.go`: `app.Main(app.Config{Name, DisplayName, Frontend: frontend.Dist, Modules: modules})`.
 - `cmd/server/modules.go`: `modules(k *app.Kit) ([]app.Module, error)`, roux's modules then the
   app's; and `permissions()` (`permissions.md`).
-- Stock modules (nil when their setting is missing): `app.EmailLinkFromEnv(appName)` (needs
-  `CODE_SECRET`), `app.UsersFromEnv(email)`, `app.PasskeysFromEnv(appName, email)`
+- Stock modules (nil when their setting is missing): `app.EmailLinkFromEnv(appName, emails)` (needs
+  `CODE_SECRET`; `emails` is `cmd/server/emails`, `email.md`), `app.UsersFromEnv(email)`, `app.PasskeysFromEnv(appName, email)`
   (`PASSKEY_RP_ID`), `app.APIKeysFromEnv(email)`, `app.OIDCFromEnv(email, members)`
   (`OIDC_PROVIDERS_FILE`), `app.JWTFromEnv(email)` (`JWT_ISSUER`).
 - A module is any type with `Name() string`, plus what it needs:

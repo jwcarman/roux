@@ -1,0 +1,12 @@
+{{define "subject"}}Confirm your email address for {{.App}}{{end -}}
+{{.App}}
+
+{{if .Change}}Make this your account's email address, in place of the old one:{{else}}Add this address to your account:{{end}} {{.Link}}
+
+Or enter this code: {{.Code}}
+
+The link and the code expire in {{.ExpiresIn}} and work once, while you are signed in.
+
+If you didn't ask to add this address, ignore this email and nothing changes. Never share this code with anyone.
+
+You got this email from {{.App}}.

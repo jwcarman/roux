@@ -1,0 +1,6 @@
+{{define "subject"}}An email address was added to your {{.App}} account{{end -}}
+{{.App}}
+
+{{.Address}} was added to your account and can now sign in. If you did not add it, remove it and secure your account.
+
+You got this email from {{.App}}.

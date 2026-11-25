@@ -1,0 +1,12 @@
+{{define "subject"}}You've been invited to {{.App}}{{end -}}
+{{.App}}
+
+You have been invited to {{.App}}. Accept by signing in: {{.Link}}
+
+Or enter this code: {{.Code}}
+
+The link and the code expire in {{.ExpiresIn}} and work once.
+
+If you weren't expecting this invitation, ignore this email. Never share this code with anyone.
+
+You got this email from {{.App}}.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net"
 	"net/url"
@@ -124,7 +125,10 @@ func (e *EmailLink) SignIn() authn.Method       { return e.Method }
 //	MAIL_FROM     the sender's address (default no-reply@localhost)
 //	SMTP_ALLOW_PLAINTEXT  true to send without STARTTLS to a relay off this machine, on a network you trust
 //	EMAIL_RESEND_INTERVAL, EMAIL_TOKEN_TTL   durations such as 1s or 5m (defaults 60s and 5m)
-func EmailLinkFromEnv(appName string) (*EmailLink, error) {
+//
+// emails is the app's own wording for roux's emails (emaillink.Config.Templates): the template's
+// cmd/server/emails folder, where a file named after an email replaces roux's.
+func EmailLinkFromEnv(appName string, emails fs.FS) (*EmailLink, error) {
 	secret := os.Getenv("CODE_SECRET")
 	if secret == "" {
 		slog.Info("signing in is off: set CODE_SECRET to turn it on")
@@ -144,6 +148,7 @@ func EmailLinkFromEnv(appName string) (*EmailLink, error) {
 		ResendInterval: resend,
 		TokenTTL:       ttl,
 		AppName:        appName,
+		Templates:      emails,
 		Sender: &emaillink.SMTPSender{
 			Addr:           Getenv("SMTP_ADDR", "localhost:1025"),
 			From:           Getenv("MAIL_FROM", "no-reply@localhost"),
