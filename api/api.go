@@ -336,6 +336,12 @@ func MapType[T error](m *Mux, fn func(T) *problem.Problem) {
 }
 
 func (m *Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if isAPIPath(r.URL.Path) {
+		// An API answer is data, never a page to guess at (a new API key is one of them), and is
+		// not kept by the browser or a proxy unless its handler says it may be.
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Cache-Control", "no-store")
+	}
 	h, pattern := m.sm.Handler(r)
 	if pattern != "" {
 		m.sm.ServeHTTP(w, r) // sets path values before dispatching

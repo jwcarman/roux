@@ -20,8 +20,15 @@ All notable changes to this project are documented in this file. The format foll
   (`apikey.Config.Notify`, wired to `emaillink.Method.APIKeyMade` by `app.APIKeysFromEnv`), as
   adding a passkey does.
 
+- **`app.Server`**: the HTTP server with every connection bounded (headers 10 s, request 30 s,
+  answer 60 s, idle 120 s) and, over HTTPS, HSTS for a year. The template's `main` uses it: an
+  app made before this sets only `ReadHeaderTimeout`, so change its `http.Server` to
+  `app.Server(addr, handler, secure)`.
+
 ### Changed
 
+- **API answers are `nosniff` and `no-store`** unless their handler sets its own caching, and a
+  static file opened on its own (a stray `.html` or `.svg`) is sandboxed by its own CSP.
 - **Managing users no longer reaches owners.** Changing an owner's role or deactivating an owner
   takes `users.owners` and a recent sign-in, as making an owner does; `users.manage` alone is a
   403. Inviting someone or changing a role refuses a role holding a permission the caller does

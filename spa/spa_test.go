@@ -321,6 +321,16 @@ func TestOtherFilesRevalidateWithETag(t *testing.T) {
 	}
 }
 
+func TestAFileOpenedOnItsOwnRunsNoScript(t *testing.T) {
+	h := server(t, spa.Config{})
+	for _, path := range []string{"/favicon.svg", "/robots.txt", "/assets/app-abc123.js"} {
+		rec := do(h, "GET", path, "")
+		if csp := rec.Header().Get("Content-Security-Policy"); csp != "default-src 'none'; img-src 'self' data:; style-src 'self'; sandbox" {
+			t.Errorf("%s: CSP %q", path, csp)
+		}
+	}
+}
+
 func TestThemeAndContextAreWrittenIntoThePage(t *testing.T) {
 	zone, _ := time.LoadLocation("America/New_York")
 	now := time.Date(2026, 11, 24, 23, 30, 0, 0, zone)

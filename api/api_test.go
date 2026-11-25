@@ -266,3 +266,29 @@ func TestASentinelsWrappingStaysOnTheServer(t *testing.T) {
 		t.Fatalf("%d %s", rec.Code, body)
 	}
 }
+
+func TestAnAPIAnswerIsNeitherSniffedNorStored(t *testing.T) {
+	m := api.NewMux()
+	m.Handle("GET /api/key", okHandler)
+	m.Handle("GET /api/cached", func(w http.ResponseWriter, r *http.Request) error {
+		w.Header().Set("Cache-Control", "public, max-age=60")
+		return api.JSON(w, 200, "ok")
+	})
+	m.Fallback(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) }))
+	get := func(path string) http.Header {
+		rec := httptest.NewRecorder()
+		m.ServeHTTP(rec, httptest.NewRequest("GET", path, nil))
+		return rec.Header()
+	}
+	for _, path := range []string{"/api/key", "/api/missing"} {
+		if h := get(path); h.Get("X-Content-Type-Options") != "nosniff" || h.Get("Cache-Control") != "no-store" {
+			t.Errorf("%s: %v", path, h)
+		}
+	}
+	if h := get("/api/cached"); h.Get("Cache-Control") != "public, max-age=60" {
+		t.Errorf("a handler's own caching was overridden: %v", h)
+	}
+	if h := get("/somewhere"); h.Get("Cache-Control") != "" {
+		t.Errorf("the page's answers are the front end's to set: %v", h)
+	}
+}

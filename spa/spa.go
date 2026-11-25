@@ -287,6 +287,10 @@ func jsonInScript(v any) (string, error) {
 	return string(b), err
 }
 
+// fileCSP is the policy of a static file opened on its own: nothing loads but its own images
+// and styles, and it is sandboxed, so no script in it runs.
+const fileCSP = "default-src 'none'; img-src 'self' data:; style-src 'self'; sandbox"
+
 // file serves one static file from the frontend FS. A missing file is a 404
 // (never the shell). If etag is set the file is revalidated by content hash.
 func (h *handler) file(w http.ResponseWriter, r *http.Request, name, cacheControl string, etag bool) {
@@ -302,6 +306,9 @@ func (h *handler) file(w http.ResponseWriter, r *http.Request, name, cacheContro
 	hd := w.Header()
 	hd.Set("Cache-Control", cacheControl)
 	hd.Set("X-Content-Type-Options", "nosniff")
+	// The page's own CSP governs these files as the page loads them; this one is for a file
+	// opened on its own (a stray .html or .svg in the build), which then runs no script.
+	hd.Set("Content-Security-Policy", fileCSP)
 	tag := etagOf(data)
 	if compressible(name) && len(data) >= minCompress {
 		hd.Add("Vary", "Accept-Encoding") // caches must keep the two representations apart

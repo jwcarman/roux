@@ -121,7 +121,9 @@ func run() error {
 	if v := os.Getenv("ADDR"); v != "" {
 		addr = v
 	}
-	srv := &http.Server{Addr: addr, Handler: telemetry.HTTP(api.Recoverer(mux), health.LivePath, health.ReadyPath), ReadHeaderTimeout: 10 * time.Second}
+	// Every connection is bounded (headers, body, answer, idle), and over HTTPS the browser is
+	// told to stay on it (HSTS).
+	srv := app.Server(addr, telemetry.HTTP(api.Recoverer(mux), health.LivePath, health.ReadyPath), secure)
 
 	errc := make(chan error, 1)
 	go func() { errc <- srv.ListenAndServe() }()
