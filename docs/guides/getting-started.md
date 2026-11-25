@@ -29,7 +29,7 @@ Either way, features use roux by importing from it; no plumbing is written in th
 
    That starts PostgreSQL (`localhost:5432`, user, password and database `app`) and Mailpit, which
    catches every email the app sends and shows it at <http://localhost:8025>; builds the front end
-   the first time; and runs the server at <http://localhost:8080> with development settings: a
+   whenever anything under `frontend/` is newer than the last build; and runs the server at <http://localhost:8080> with development settings: a
    development `CODE_SECRET`, the compose database, and `owner@example.com` as the first owner.
    Each gives way to the environment: `OWNER_EMAIL=you@example.com make dev` makes you the owner
    instead. While working on pages, run `npm run dev` in `frontend/` as well: Vite serves the pages

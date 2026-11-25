@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- **`make dev` and `make e2e` rebuild the front end whenever it is out of date** (anything under
+  `frontend/` newer than the last build; `npm ci` again when the lock changed), not only when there
+  is no build: before, a page changed or merged after the first build was never served.
+
 - **A new app's first branch is `main`** (`create-roux-app`), unless git's `init.defaultBranch`
   names another; it was git's built-in default, `master`, where nothing was set.
 

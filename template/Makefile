@@ -9,9 +9,9 @@ check: fmt vet lint test
 
 # dev's settings are for this machine, and each gives way to the environment: OWNER_EMAIL=you@...
 # make dev signs you in as yourself. A deployment makes its own CODE_SECRET (openssl rand -base64 32).
-dev: ## run the app at http://localhost:8080: Postgres and Mailpit (http://localhost:8025), the front end built once, the server
+dev: ## run the app at http://localhost:8080: Postgres and Mailpit (http://localhost:8025), the front end built when it is out of date, the server
 	docker compose up -d --wait postgres mailpit
-	@test -f frontend/dist/index.html || $(MAKE) web
+	@$(MAKE) --no-print-directory frontend/dist/index.html
 	CODE_SECRET="$${CODE_SECRET:-development-only-code-secret-do-not-deploy}" \
 	DATABASE_URL="$${DATABASE_URL:-postgres://app:app@localhost:5432/app}" \
 	OWNER_EMAIL="$${OWNER_EMAIL:-owner@example.com}" OWNER_NAME="$${OWNER_NAME:-Owner}" \
@@ -35,6 +35,18 @@ lint:
 
 build: web ## one self-contained binary (bin/roux-app): front end embedded, stripped
 	go build -tags embedweb -ldflags='-s -w' -trimpath -o bin/roux-app ./cmd/server
+
+# The front end's build, remade whenever anything it is built from is newer than it, so make dev
+# and make e2e never serve a stale one; its dependencies are installed again when the lock changes.
+# Tests and the generated route tree are not inputs (the router plugin rewrites the tree as it builds).
+FRONTEND_INPUTS := $(shell find frontend/src frontend/public -type f ! -name '*.test.ts' ! -name '*.test.tsx' ! -name routeTree.gen.ts 2>/dev/null) \
+	frontend/index.html frontend/vite.config.ts frontend/tsconfig.json frontend/node_modules/.package-lock.json
+
+frontend/node_modules/.package-lock.json: frontend/package-lock.json
+	cd frontend && npm ci
+
+frontend/dist/index.html: $(FRONTEND_INPUTS)
+	cd frontend && npm run build
 
 web: ## build the front end into frontend/dist
 	cd frontend && npm ci && npm run build

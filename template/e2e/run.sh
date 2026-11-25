@@ -15,7 +15,7 @@ OWNER_NAME="Olive Owner"
 
 docker compose up -d --wait postgres mailpit
 docker compose exec -T postgres sh -c 'dropdb -U app --if-exists app_e2e && createdb -U app app_e2e'
-[[ -f frontend/dist/index.html ]] || make web
+make --no-print-directory frontend/dist/index.html
 go build -o bin/e2e-server ./cmd/server
 (cd e2e && npm ci --ignore-scripts --no-audit --no-fund >/dev/null && node_modules/.bin/playwright install chromium >/dev/null)
 

@@ -24,7 +24,7 @@ app already has all of it; read this when changing it.
 
 1. `npm create @jwcarman/roux-app team-planner` (Node 20+): the directory, the Go module and the npm
    name.
-2. `make dev`: PostgreSQL and Mailpit (<http://localhost:8025>), the front end built once, and the
+2. `make dev`: PostgreSQL and Mailpit (<http://localhost:8025>), the front end rebuilt when it is out of date, and the
    server at <http://localhost:8080> with development settings (owner `owner@example.com`; each
    setting gives way to the environment). For pages, `npm run dev` in `frontend/` too (Vite on
    5173, `/api` passed to the server).
