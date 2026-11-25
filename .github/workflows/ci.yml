@@ -19,53 +19,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  java:
+  # The Go runtime, fastest check first. Database tests start their own Postgres containers
+  # (testcontainers-go), which the runner's Docker provides.
+  go:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # full history, so SonarCloud can attribute new code and blame
           fetch-depth: 0
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
-          java-version: '25'
-          distribution: 'liberica'
-          cache: maven
-      # The dojo's Playwright suite (E2eIT) runs on pushes to main only. Its Chromium needs system
-      # libraries the runner does not have; the build installs the browser itself.
-      - name: Install Chromium system libraries
-        if: github.event_name == 'push'
-        run: sudo npx -y "playwright@$(node -p "require('./examples/dojo/e2e/package.json').devDependencies['@playwright/test'].replace(/^[^0-9]*/, '')")" install-deps chromium
-      # roux's modules, then the dojo and the app template: their Java tests, Vitest and, on pushes, E2eIT.
-      - run: ./mvnw -B verify ${{ github.event_name != 'push' && '-DskipITs' || '' }}
-      - name: Upload the dojo's and the app template's test logs
-        if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+          go-version-file: go.mod
+      - name: Formatting
+        run: make fmt
+      - name: Vet
+        run: make vet
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          name: dojo-logs
-          path: |
-            examples/dojo/target/playwright.log
-            examples/dojo/target/app.log
-            examples/dojo/target/surefire-reports/
-            examples/dojo/target/failsafe-reports/
-            templates/app/target/playwright.log
-            templates/app/target/app.log
-            templates/app/target/surefire-reports/
-            templates/app/target/failsafe-reports/
-          if-no-files-found: ignore
-      # Analyses the build above (classes and JaCoCo reports). Pull requests from forks get no
+          version: v2.15.0
+      - name: Test
+        run: make test
+      # Reads the coverage the tests wrote (coverage.out). Pull requests from forks get no
       # secrets, so they skip it rather than fail.
       - name: SonarCloud analysis
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: SonarSource/sonarqube-scan-action@70bad232163b09d998ea0707ee80c0ec80798c16 # v8.5.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        # Fully qualified: this Maven does not resolve the "sonar:" prefix from the project's plugins.
-        run: ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
 
   # The Claude Code plugin: every public roux name is in a guide and in the skill's references,
   # every roux import a reference shows exists, and the skill's index gives each reference's size.
-  # Then the skill's recipe: its feature, built into a fresh copy of the app template, passes that
-  # app's whole build (Java tests on Docker, both 100% coverage gates).
+  # (The recipe check, which built a Java app, returns with the Go template.)
   plugin:
     runs-on: ubuntu-latest
     steps:
@@ -75,13 +60,6 @@ jobs:
           node-version: 'lts/*'
       - name: Check the guides and references
         run: node plugins/roux/scripts/check-guides.mjs
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
-        with:
-          java-version: '25'
-          distribution: 'liberica'
-          cache: maven
-      - name: Build the recipe's feature into a fresh app
-        run: plugins/roux/scripts/check-recipe.sh
 
   # The app template as create-roux-app ships it: the export leaves no link to roux's repository and
   # follows roux's version (bumped with it after each release), and the packed starter makes an app
