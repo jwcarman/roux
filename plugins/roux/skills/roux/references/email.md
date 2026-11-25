@@ -62,7 +62,11 @@ sign-in link from Mailpit's API.
 
 ## Pitfalls
 
-- Without `CODE_SECRET`, sign-in is off and no email is sent.
+- `CODE_SECRET` is required: without it the app does not start.
+- An `SMTP_ADDR` that is not `host:port`, or a `MAIL_FROM` that is not an address, stops startup.
+- At startup roux checks the mail server in the background (connect, TLS, sign in; nothing sent):
+  `mail server ready` at INFO, or an ERROR naming the cause. A failed send is an ERROR too. Read
+  the log after changing mail settings; the sign-in page never says the mail failed.
 - A file in `cmd/server/emails/` named after no email (`signin.txt`) stops startup: name it as
   above. Other files (the folder's `README.md`) are ignored.
 - Copying only the `.txt` changes the subject and text; the HTML stays roux's. Copy both.

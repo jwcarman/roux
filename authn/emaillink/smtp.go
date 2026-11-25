@@ -61,57 +61,11 @@ func (s *SMTPSender) Send(ctx context.Context, m Message) error {
 	if err != nil {
 		return err
 	}
-	timeout := s.Timeout
-	if timeout <= 0 {
-		timeout = 30 * time.Second
-	}
-	host, port, err := net.SplitHostPort(s.Addr)
+	c, err := s.open(ctx)
 	if err != nil {
-		return fmt.Errorf("smtp: bad address %q: %w", s.Addr, err)
-	}
-
-	dialer := net.Dialer{Timeout: timeout}
-	dial := s.dial
-	if dial == nil {
-		dial = func(ctx context.Context, addr string) (net.Conn, error) { return dialer.DialContext(ctx, "tcp", addr) }
-	}
-	conn, err := dial(ctx, s.Addr)
-	if err != nil {
-		return fmt.Errorf("smtp: connect: %w", err)
-	}
-	deadline := time.Now().Add(timeout)
-	if d, ok := ctx.Deadline(); ok && d.Before(deadline) {
-		deadline = d
-	}
-	_ = conn.SetDeadline(deadline)
-	tlsConfig := &tls.Config{ServerName: host, MinVersion: tls.VersionTLS12, RootCAs: s.roots}
-	implicit := port == implicitTLSPort
-	if implicit {
-		secured := tls.Client(conn, tlsConfig)
-		if err := secured.HandshakeContext(ctx); err != nil {
-			_ = conn.Close()
-			return fmt.Errorf("smtp: TLS on port %s: %w", port, err)
-		}
-		conn = secured
-	}
-
-	c, err := smtp.NewClient(conn, host)
-	if err != nil {
-		_ = conn.Close()
-		return fmt.Errorf("smtp: greeting: %w", err)
+		return err
 	}
 	defer func() { _ = c.Close() }() // after Quit this only reports the connection already closed
-
-	if !implicit {
-		if err := s.startTLS(c, host, tlsConfig); err != nil {
-			return err
-		}
-	}
-	if s.Username != "" {
-		if err := c.Auth(smtp.PlainAuth("", s.Username, s.Password, host)); err != nil {
-			return fmt.Errorf("smtp: auth: %w", err)
-		}
-	}
 	if err := c.Mail(s.From); err != nil {
 		return fmt.Errorf("smtp: MAIL FROM: %w", err)
 	}
@@ -131,6 +85,74 @@ func (s *SMTPSender) Send(ctx context.Context, m Message) error {
 	return c.Quit()
 }
 
+// Check does everything Send does before the message, connecting, securing the connection and
+// signing in, then says goodbye without sending anything. An error names the step that failed.
+func (s *SMTPSender) Check(ctx context.Context) error {
+	c, err := s.open(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = c.Close() }()
+	return c.Quit()
+}
+
+// open connects, secures the connection (TLS from the first byte on port 465, else STARTTLS) and
+// signs in: a client ready for MAIL FROM.
+func (s *SMTPSender) open(ctx context.Context) (*smtp.Client, error) {
+	timeout := s.Timeout
+	if timeout <= 0 {
+		timeout = 30 * time.Second
+	}
+	host, port, err := net.SplitHostPort(s.Addr)
+	if err != nil {
+		return nil, fmt.Errorf("smtp: bad address %q: %w", s.Addr, err)
+	}
+
+	dialer := net.Dialer{Timeout: timeout}
+	dial := s.dial
+	if dial == nil {
+		dial = func(ctx context.Context, addr string) (net.Conn, error) { return dialer.DialContext(ctx, "tcp", addr) }
+	}
+	conn, err := dial(ctx, s.Addr)
+	if err != nil {
+		return nil, fmt.Errorf("smtp: connect to %s: %w", s.Addr, err)
+	}
+	deadline := time.Now().Add(timeout)
+	if d, ok := ctx.Deadline(); ok && d.Before(deadline) {
+		deadline = d
+	}
+	_ = conn.SetDeadline(deadline)
+	tlsConfig := &tls.Config{ServerName: host, MinVersion: tls.VersionTLS12, RootCAs: s.roots}
+	implicit := port == implicitTLSPort
+	if implicit {
+		secured := tls.Client(conn, tlsConfig)
+		if err := secured.HandshakeContext(ctx); err != nil {
+			_ = conn.Close()
+			return nil, fmt.Errorf("smtp: TLS on port %s: %w", port, err)
+		}
+		conn = secured
+	}
+
+	c, err := smtp.NewClient(conn, host)
+	if err != nil {
+		_ = conn.Close()
+		return nil, fmt.Errorf("smtp: greeting: %w", err)
+	}
+	if !implicit {
+		if err := s.startTLS(c, host, tlsConfig); err != nil {
+			_ = c.Close()
+			return nil, err
+		}
+	}
+	if s.Username != "" {
+		if err := c.Auth(smtp.PlainAuth("", s.Username, s.Password, host)); err != nil {
+			_ = c.Close()
+			return nil, fmt.Errorf("smtp: auth: the server refused SMTP_USERNAME and SMTP_PASSWORD: %w", err)
+		}
+	}
+	return c, nil
+}
+
 // startTLS upgrades the conversation to TLS, or refuses to go on in the clear to a server off this
 // machine unless the network is trusted.
 func (s *SMTPSender) startTLS(c *smtp.Client, host string, config *tls.Config) error {
@@ -141,7 +163,7 @@ func (s *SMTPSender) startTLS(c *smtp.Client, host string, config *tls.Config) e
 		return nil
 	}
 	if !loopback(host) && !s.AllowPlaintext {
-		return fmt.Errorf("smtp: %s offers no STARTTLS, and is not on this machine: refusing to send a sign-in link in the clear (use port 465 if the server speaks TLS there, or set SMTP_ALLOW_PLAINTEXT=true, AllowPlaintext, for a relay on a trusted network)", s.Addr)
+		return fmt.Errorf("smtp: %s offers no STARTTLS, and is not on this machine: refusing to send a sign-in link in the clear (use port 465 if the server speaks TLS there, or set SMTP_ALLOW_PLAINTEXT=true for a relay on a network you trust)", s.Addr)
 	}
 	return nil
 }

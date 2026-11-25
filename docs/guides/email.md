@@ -88,9 +88,13 @@ MAIL_FROM=no-reply@yourdomain.com         # an address or domain the service has
 - **Verify the sender first.** A service sends only from an address or domain you have verified
   with it (the DNS records it asks for: SPF, DKIM, and a DMARC policy), and mail from an
   unverified one is refused or lands in spam.
-- **Check it before people need it.** Sign in with your own address once the settings are in
-  place. A wrong host, port or login is logged (`smtp: connect`, `smtp: auth`, ...) and the person
-  is told the link could not be sent.
+- **Read the startup log.** An `SMTP_ADDR` that is not `host:port`, or a `MAIL_FROM` that is not
+  an address, stops startup. Then, without holding startup up, roux connects to the mail server,
+  secures the connection and signs in, sending nothing: `mail server ready` at INFO, or an ERROR
+  naming what is wrong (`smtp: connect to ...`, `smtp: auth: the server refused SMTP_USERNAME and
+  SMTP_PASSWORD`, an untrusted certificate, no STARTTLS). A mail server that is down does not stop
+  the app, and the readiness probe does not watch it; an email that fails to send later is logged
+  as an ERROR too, while the person is told only to check their email, as for any address.
 - A server that offers neither TLS nor STARTTLS is refused, so a link never crosses the network in
   the clear: on a relay inside a network you trust, `SMTP_ALLOW_PLAINTEXT=true`.
 

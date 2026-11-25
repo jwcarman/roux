@@ -96,7 +96,7 @@ func (m *Method) notify(ctx context.Context, identityID uuid.UUID, name string) 
 	ctx = context.WithoutCancel(ctx)
 	m.wg.Go(func() {
 		if err := m.cfg.Notify(ctx, identityID, name); err != nil {
-			slog.WarnContext(ctx, "could not send the API-key-made notice", "err", err)
+			slog.ErrorContext(ctx, "could not send the API-key-made notice", "err", err)
 		}
 	})
 }

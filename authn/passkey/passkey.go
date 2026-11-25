@@ -345,7 +345,7 @@ func (m *Method) notify(ctx context.Context, identityID uuid.UUID, label string)
 	go func() {
 		defer m.wg.Done()
 		if err := m.cfg.Notify(ctx, identityID, label); err != nil {
-			slog.WarnContext(ctx, "could not send the passkey-added notice", "err", err)
+			slog.ErrorContext(ctx, "could not send the passkey-added notice", "err", err)
 		}
 	}()
 }

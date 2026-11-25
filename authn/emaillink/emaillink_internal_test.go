@@ -661,7 +661,7 @@ func TestSMTPRefusesASTARTTLSCertificateItCannotTrust(t *testing.T) {
 
 func TestSMTPSaysWhichStepTheServerRefused(t *testing.T) {
 	for command, want := range map[string]string{
-		"AUTH": "smtp: auth: 535 \"5.7.8 refused\"",
+		"AUTH": "smtp: auth: the server refused SMTP_USERNAME and SMTP_PASSWORD: 535 \"5.7.8 refused\"",
 		"MAIL": "smtp: MAIL FROM: 535 \"5.7.8 refused\"",
 		"RCPT": "smtp: RCPT TO: 535 \"5.7.8 refused\"",
 		"DATA": "smtp: DATA: 535 \"5.7.8 refused\"",
@@ -687,5 +687,42 @@ func TestSMTPRefusesABadAddressOrSender(t *testing.T) {
 	}
 	if !loopback("localhost") || !loopback("127.0.0.1") {
 		t.Error("loopback")
+	}
+}
+
+func TestCheckSignsInAndSendsNothing(t *testing.T) {
+	cert, roots := selfSigned(t, "mail.example.com")
+	addr, got := fakeSMTPWith(t, fakeServer{startTLS: &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12}})
+	if err := toFake("mail.example.com:587", addr, roots).Check(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	log := <-got
+	if !strings.Contains(log, "STARTTLS\n") || !strings.Contains(log, "AUTH\n") || strings.Contains(log, "MAIL") {
+		t.Errorf("want an upgrade and a login, and no message:\n%s", log)
+	}
+}
+
+func TestCheckNamesWhatIsWrong(t *testing.T) {
+	addr, _ := fakeSMTPWith(t, fakeServer{refuse: map[string]string{"AUTH": "535 5.7.8 refused"}})
+	s := &SMTPSender{Addr: addr, From: "no-reply@example.com", Username: "u", Password: "p", Timeout: 5 * time.Second}
+	if err := s.Check(context.Background()); err == nil || !strings.Contains(err.Error(), "SMTP_USERNAME and SMTP_PASSWORD") {
+		t.Errorf("login: %v", err)
+	}
+
+	addr, _ = fakeSMTPWith(t, fakeServer{})
+	err := toFake("mail.example.com:25", addr, nil).Check(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "SMTP_ALLOW_PLAINTEXT=true for a relay") || strings.Contains(err.Error(), "AllowPlaintext") {
+		t.Errorf("plaintext: %v", err)
+	}
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	closed := ln.Addr().String()
+	_ = ln.Close()
+	err = (&SMTPSender{Addr: closed, From: "no-reply@example.com", Timeout: 5 * time.Second}).Check(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "smtp: connect to "+closed) {
+		t.Errorf("connect: %v", err)
 	}
 }

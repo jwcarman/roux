@@ -199,7 +199,7 @@ func (m *Method) requestAddress(ctx context.Context, identityID uuid.UUID, addre
 	}
 	if err != nil {
 		// Never log the message: it carries the link and the code.
-		slog.WarnContext(ctx, "address request: could not send the email", "err", err)
+		slog.ErrorContext(ctx, "address request: could not send the email", "err", err)
 		if _, derr := m.store.pool.Exec(context.WithoutCancel(ctx), `delete from roux_email_address_request where id = $1`, id); derr != nil {
 			slog.WarnContext(ctx, "address request: could not remove the unsent request", "err", derr)
 		}

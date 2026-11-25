@@ -7,9 +7,12 @@ import (
 	"io/fs"
 	"log/slog"
 	"net"
+	"net/mail"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -125,7 +128,38 @@ func plainHTTPOffThisMachine(address string) bool {
 }
 
 // EmailLink is sign-in by an emailed link or typed code.
-type EmailLink struct{ Method *emaillink.Method }
+type EmailLink struct {
+	Method *emaillink.Method
+
+	mail   *emaillink.SMTPSender
+	checks sync.WaitGroup
+}
+
+// mailCheckTimeout bounds the startup check of the mail server.
+const mailCheckTimeout = 10 * time.Second
+
+// Start checks the mail server in the background (connect, secure, sign in; nothing is sent), so
+// a slow or unreachable one never holds up startup. A failure is logged as an ERROR naming the
+// cause: until it is fixed nobody can sign in by email. It is checked once; a failed send is
+// logged the same way later.
+func (e *EmailLink) Start(ctx context.Context, _ *Kit) error {
+	e.checks.Go(func() {
+		ctx, cancel := context.WithTimeout(ctx, mailCheckTimeout)
+		defer cancel()
+		if err := e.mail.Check(ctx); err != nil {
+			slog.ErrorContext(ctx, "the mail server cannot be used: sign-in emails will not go out until this is fixed", "err", err)
+			return
+		}
+		slog.InfoContext(ctx, "mail server ready", "addr", e.mail.Addr)
+	})
+	return nil
+}
+
+// Drain waits for the mail server check and for emails accepted a moment ago to go out.
+func (e *EmailLink) Drain() {
+	e.checks.Wait()
+	e.Method.Wait()
+}
 
 func (*EmailLink) Name() string                 { return "email-link" }
 func (*EmailLink) Migrations() []pgdb.Migration { return []pgdb.Migration{emaillink.Migration} }
@@ -170,6 +204,16 @@ func EmailLinkFromEnv(appName string, emails fs.FS) (*EmailLink, error) {
 	if (user == "") != (password == "") {
 		return nil, errors.New("SMTP_USERNAME and SMTP_PASSWORD go together: set both to sign in to the mail server, or neither")
 	}
+	sender := &emaillink.SMTPSender{
+		Addr:           Getenv("SMTP_ADDR", "localhost:1025"),
+		From:           Getenv("MAIL_FROM", "no-reply@localhost"),
+		Username:       user,
+		Password:       password,
+		AllowPlaintext: plaintext,
+	}
+	if err := checkMailSettings(sender); err != nil {
+		return nil, err
+	}
 	m, err := emaillink.New(emaillink.Config{
 		LinkBaseURL:    strings.TrimRight(publicURL(), "/") + "/signin/link",
 		CodeSecret:     secret,
@@ -177,18 +221,26 @@ func EmailLinkFromEnv(appName string, emails fs.FS) (*EmailLink, error) {
 		TokenTTL:       ttl,
 		AppName:        appName,
 		Templates:      emails,
-		Sender: &emaillink.SMTPSender{
-			Addr:           Getenv("SMTP_ADDR", "localhost:1025"),
-			From:           Getenv("MAIL_FROM", "no-reply@localhost"),
-			Username:       user,
-			Password:       password,
-			AllowPlaintext: plaintext,
-		},
+		Sender:         sender,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &EmailLink{Method: m}, nil
+	return &EmailLink{Method: m, mail: sender}, nil
+}
+
+// checkMailSettings refuses SMTP_ADDR and MAIL_FROM that could never work: typos, not outages.
+func checkMailSettings(s *emaillink.SMTPSender) error {
+	host, port, err := net.SplitHostPort(s.Addr)
+	if n, perr := strconv.Atoi(port); err != nil || host == "" || perr != nil || n < 1 || n > 65535 {
+		return fmt.Errorf("SMTP_ADDR is %q: it must be the mail server's host:port, such as smtp.example.com:587 "+
+			"(STARTTLS) or smtp.example.com:465 (TLS)", s.Addr)
+	}
+	if _, err := mail.ParseAddress(s.From); err != nil {
+		return fmt.Errorf("MAIL_FROM is %q: it must be an email address, such as no-reply@example.com or "+
+			"\"Acme <no-reply@example.com>\"", s.From)
+	}
+	return nil
 }
 
 // Passkeys is sign-in with passkeys (WebAuthn).

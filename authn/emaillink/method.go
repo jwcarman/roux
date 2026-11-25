@@ -295,7 +295,7 @@ func (m *Method) issue(ctx context.Context, address, email string) Outcome {
 	}
 	if err != nil {
 		// Never log the message: it carries the link and the code.
-		slog.WarnContext(ctx, "sign-in link: could not send the email", "err", err)
+		slog.ErrorContext(ctx, "sign-in link: could not send the email", "err", err)
 		if derr := m.store.deleteToken(context.WithoutCancel(ctx), credentialID, tokenHash); derr != nil {
 			slog.WarnContext(ctx, "sign-in link: could not remove the unsent token", "err", derr)
 		}
