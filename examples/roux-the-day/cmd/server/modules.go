@@ -5,6 +5,8 @@ import (
 
 	"github.com/jwcarman/roux/app"
 	"github.com/jwcarman/roux/pgdb"
+
+	"roux-the-day/internal/items"
 )
 
 // modules is the list of what this application is made of: the features it turns on, and its
@@ -36,7 +38,7 @@ func modules(k *app.Kit) ([]app.Module, error) {
 	if err != nil {
 		return nil, err
 	}
-	mods = append(mods, email, members)
+	mods = append(mods, email, members, items.Module{})
 	if passkeys != nil {
 		mods = append(mods, passkeys)
 	}
