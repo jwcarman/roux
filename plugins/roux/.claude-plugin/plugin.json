@@ -1,9 +1,20 @@
 {
   "name": "roux",
-  "description": "Agent skill for roux, the base Spring Boot and React apps are built on: Problem Details errors, the API client, queries and mutations, forms, paged tables, feedback and testing, done roux's one way.",
-  "author": { "name": "jwcarman" },
+  "description": "Agent skill for roux, the base Go and React apps are built on: features as Go packages with SQL migrations, Problem Details errors, permissions, paged lists, forms, money, dates, the activity log and tests, done roux's one way.",
+  "author": {
+    "name": "jwcarman"
+  },
   "homepage": "https://github.com/jwcarman/roux",
   "repository": "https://github.com/jwcarman/roux",
   "license": "Apache-2.0",
-  "keywords": ["spring-boot", "react", "tanstack", "chakra-ui", "zod", "problem-details"]
+  "keywords": [
+    "go",
+    "pgx",
+    "postgresql",
+    "react",
+    "tanstack",
+    "chakra-ui",
+    "zod",
+    "problem-details"
+  ]
 }

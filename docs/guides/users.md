@@ -60,8 +60,9 @@ since left can still name them and mark them inactive. A feature's table refers 
 
 ## The endpoints
 
-All under `/api/roux/users` (`users.BasePath`), each behind one of the users' permissions, which
-its migration grants to `OWNER`. Grant them to the app's own roles in the app's migration (the
+All under `/api/roux/users` (`users.BasePath`), each behind one of the users' permissions
+(`users.UsersRead`, `users.UsersInvite`, `users.UsersManage`, `users.UsersOwners`), which its
+migration grants to `OWNER`. Grant them to the app's own roles in the app's migration (the
 template grants `users.read` to `USER`).
 
 | Endpoint | Permission | Does |
@@ -157,7 +158,8 @@ var list = page.New(page.ListConfig[Sort, Row]{
 })
 ```
 
-with `page.Where("status = ?", users.StatusActive)` as a filter. [Tables and paging](tables-and-paging.md#the-server)
+with `page.Where("status = ?", users.StatusActive)` as a filter (`users.StatusDeactivated` for
+the others). [Tables and paging](tables-and-paging.md#the-server)
 covers the paginator and the endpoint.
 
 ## Its activities
@@ -165,8 +167,23 @@ covers the paginator and the endpoint.
 Every change is recorded against the user, in its transaction: `user.invited`
 (`users.UserInvited`), `user.signed_up` (`users.UserSignedUp`, a provider sign-up),
 `user.renamed` (`users.UserRenamed`, from and to; only when the name changed),
-`user.deactivated`, `user.reactivated` and `user.role_changed` (from and to). The actor is the
+`user.deactivated` (`users.UserDeactivated`), `user.reactivated` (`users.UserReactivated`) and
+`user.role_changed` (`users.UserRoleChanged`, from and to). The actor is the
 signed-in user, named from `roux_user`.
+
+## In the browser: `@jwcarman/roux-web/users`
+
+The template's Users pages are built on this client; an app's own page about people uses it too.
+
+- `usersApi`: `list`, `get`, `invite`, `changeStatus`, `renameMe`, over `/api/roux/users`.
+- Queries: `usersPage(filters)` (a `UserFilters`: `search`, `role`, `status`; rows are `User`),
+  `userQuery(id)` (a `UserDetail`), `userActivitiesPage(id)`, `invitableRolesQuery`. Their keys are
+  `userKeys`, under `["roux", "users"]`.
+- Mutations: `inviteUser` (an `Invitation`, answering an `InvitationResult` with `linkSent`),
+  `changeUserStatus(id)` (a `UserStatusAction`: `deactivate` or `reactivate`), `renameMe(version)`
+  (a `Rename`).
+- Schemas: `invitationSchema` and `renameSchema`, in the server's words; `MAX_NAME` is 80, the
+  server's `users.MaxNameLength`.
 
 ## Don't
 

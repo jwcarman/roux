@@ -1,6 +1,6 @@
 # Forms beyond the recipe
 
-The common create/edit dialog is `feature.md` steps 7–8. This card covers the rule helpers, every
+The common create/edit dialog is `feature.md` steps 9–10. This card covers the rule helpers, every
 field, a form on a page, 409s, and forms that don't save through a mutation.
 
 ## Rules
@@ -15,27 +15,30 @@ field, a form on a page, 409s, and forms that don't save through a mutation.
 
 ## Names: rule helpers
 
-| Helper | Input | Mirrors |
+Each helper's words are the server's; the server's `validate` (`feature.md` step 3) checks the same
+rule:
+
+| Helper | Input | The server's check in `validate` |
 | --- | --- | --- |
-| `text()` | trimmed string | `@NotBlank` |
-| `email()` | trimmed | `@NotBlank @Email` |
-| `url()` | trimmed, http(s) | `@NotBlank @URL` |
-| `phone()` | trimmed, ≥ 7 digits | `@NotBlank @Phone` (`Phone.PATTERN`) |
-| `date()` | `YYYY-MM-DD` | `@NotNull LocalDate` |
-| `time()` | `HH:mm` | `@NotNull LocalTime` |
-| `number()` / `integer()` | `number \| undefined` | `@NotNull` |
-| `oneOf(values)` | select value, `""` placeholder | `@NotNull` enum |
-| `id()` | select over loaded ids | `@NotNull UUID` |
-| `money()` | see `money.md` | |
+| `text()` | trimmed string | trimmed, then `problem.MustNotBeBlank` when empty |
+| `email()` | trimmed | `net/mail.ParseAddress`, else `problem.ValidEmail` |
+| `url()` | trimmed, http(s) | `net/url.Parse` with an `http`/`https` scheme and a host, else `problem.ValidURL` |
+| `phone()` | trimmed, ≥ 7 digits | no Go helper yet: the pattern in roux's `contracts/phone.json` as a `regexp`, else `problem.BadFormat` |
+| `date()` | `YYYY-MM-DD` | `time.Parse(time.DateOnly, s)`, else `problem.BadFormat`; missing `problem.MustNotBeEmpty` |
+| `time()` | `HH:mm` | `time.Parse("15:04", s)`, else `problem.BadFormat` |
+| `number()` / `integer()` | `number \| undefined` | a `*float64` / `*int64` that is not nil |
+| `oneOf(values)` | select value, `""` placeholder | `slices.Contains(values, v)`, else `problem.MustBeOneOf(values...)` |
+| `id()` | select over loaded ids | `uuid.Parse`, and that the row exists |
+| `money()` | see `money.md` | `money.Check` |
 
-Methods: `.max(n)` (text: `@Size(max = n)`; numbers: `@Max`), `.min(n)` (`@Min`),
-`.notInFuture()` on `date` (`@NotInFuture`, never `@PastOrPresent`), `.optional()` (empty → `null`).
+Methods: `.max(n)` (text: `problem.MustBeBetween(1, n)` when required, `(0, n)` when optional;
+numbers: `problem.MustBeAtMost(n)`), `.min(n)` (`problem.MustBeAtLeast(n)`), `.notInFuture()` on
+`date` (the server compares with the organization's today, `problem.MustNotBeInFuture`; never
+`time.Now()`), `.optional()` (empty → `null`; on the server a nil pointer passes).
 Rule types for your own helpers: `TextRule`, `DateRule`, `TimeRule`, `ChoiceRule`, `NumberRule`,
-`AfterRule`. Server validators you never reference: `AfterValidator`, `NotInFutureValidator`,
-`PhoneValidator`.
+`AfterRule`.
 
-**Two fields in order:** `@After(field = "endsOn", other = "startsOn")` on the request record, and in
-the browser, last:
+**Two fields in order:** in the browser, last:
 
 ```ts
 export const termSchema = after(z.object({ startsOn: date(), endsOn: date() }), {
@@ -45,9 +48,16 @@ export const termSchema = after(z.object({ startsOn: date(), endsOn: date() }), 
 });
 ```
 
-The message is `Must be after {other}`; with `otherLabel` on both sides (`@After(..., otherLabel =
-"the start date")`) it reads `Must be after the start date`. Equal is not after. Works for dates,
-times, instants and numbers.
+and in `validate`, when both sides are present and valid (an empty field is left to its own rule):
+
+```go
+if !in.EndsOn.IsZero() && !in.StartsOn.IsZero() && !in.EndsOn.After(in.StartsOn) {
+	bad("endsOn", problem.MustBeAfter("the start date"))
+}
+```
+
+The message is `Must be after {other}` (`startsOn` → `Must be after starts on` without a label);
+give both sides the same label. Equal is not after. Works for dates, times, instants and numbers.
 
 **A rule no helper covers:** write Zod in the server's words and register it in `fieldRules`:
 
@@ -87,7 +97,7 @@ Inside `form.AppField name="..."`, the child gets `f` with: `f.InputField` (`typ
   `SubmittingIndicator`).
 - A long form: pass the form to sections typed `SchemaForm<typeof schema>` (not `withForm`, which
   takes only `useAppForm` forms).
-- Not a save (who's sign-in, a filter): `useAppForm({ defaultValues, validators: { onBlur: schema,
+- Not a save (a sign-in link, a filter): `useAppForm({ defaultValues, validators: { onBlur: schema,
   onSubmit: schema }, onSubmit })`. Place a 400's field errors with `fieldErrorsOf(problem)` and
   `form.setFieldMeta(name, (m) => ({ ...m, errorMap: { ...m.errorMap, onServer: message } }))`.
 - A custom control: `FormField` (`label`, `helperText`, `required`, `controlLabelled`) with

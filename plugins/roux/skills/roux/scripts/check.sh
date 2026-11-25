@@ -1,66 +1,107 @@
 #!/usr/bin/env bash
-# The roux app's checks that need no Docker, in the order the build needs them. Run it from the
-# app's root before you finish:  bash <this skill's directory>/scripts/check.sh
+# A roux app's checks, in the order the build needs them. Run it from the app's root (where go.mod
+# is) before you finish:  bash <this skill's directory>/scripts/check.sh
 #
-#   1. Every Liquibase changelog is well-formed XML (one that is not stops the app from starting).
-#   2. ./mvnw spotless:apply formats the Java: every later Maven run checks the format and fails on it.
-#   3. PermissionsListTest rewrites frontend/src/permissions.gen.ts from the Permissions constants
-#      (the frontend build fails against a stale one); it runs again when the first run rewrote it.
-#   4. ./mvnw test-compile compiles main and test code, and runs the frontend's npm ci, its tests
-#      with the 100% coverage gate, and its type-checked build.
+#   1. gofmt -w formats the Go (the build's format check fails on any unformatted file).
+#   2. The permissions test rewrites frontend/src/permissions.gen.ts from permissions() in
+#      cmd/server/modules.go (the frontend fails to compile against a stale one); it runs twice,
+#      since the run that rewrites the file fails.
+#   3. go vet, then golangci-lint when it is installed.
+#   4. The Go tests, when a database is reachable: TEST_DATABASE_URL, or Docker for a container.
+#   5. The frontend: npm ci when node_modules is missing, its lint and format checks if it has them,
+#      its tests with the 100% coverage gate, and its type-checked build.
 #
-# It stops at the first failure with what to do. The Java tests need Docker: ./mvnw verify runs them.
+# It stops at the first failure with what to do, and ends by naming every step it skipped: a
+# skipped step has not passed.
 set -uo pipefail
 
-if [ ! -x ./mvnw ] || [ ! -f pom.xml ]; then
-  echo "check: run this from the app's root (where mvnw is)" >&2
+if [ ! -f go.mod ] || [ ! -d cmd/server ]; then
+  echo "check: run this from the app's root (where go.mod and cmd/server are)" >&2
   exit 2
 fi
 log="$(mktemp -t roux-check.XXXXXX)"
+skipped=()
 
 fail() {
   echo "check: FAIL $1" >&2
   echo "  $2" >&2
-  [ -n "${3:-}" ] && head -n 5 "$log" | sed 's/^/  /' >&2
-  # Compile errors, failing tests and type errors; then coverage rows that list uncovered lines.
-  grep -E '^\[ERROR\] .*\.(java|xml)|ERROR: Coverage|error TS|FAIL |AssertionError|violations|Expected' "$log" \
-    | sed -E 's/^\[INFO\] //' | awk '!seen[$0]++' | head -n 20 | sed 's/^/  /' >&2
-  grep -E '\|[^|]*\|[^|]*\|[^|]*\|[^|]*\| *[0-9][0-9,-]* *$' "$log" | sed -E 's/^\[INFO\] //' \
-    | head -n 10 | sed 's/^/  uncovered: /' >&2
+  # Compile and vet errors with file and line, failing tests, lint findings, type errors, and
+  # coverage shortfalls; then the rows that list uncovered lines.
+  grep -E '\.go:[0-9]+|^--- FAIL|^FAIL|panic:|error TS|ERROR: Coverage|FAIL |AssertionError|Expected|✗|[0-9]+:[0-9]+ +error' "$log" \
+    | awk '!seen[$0]++' | head -n 25 | sed 's/^/  /' >&2
+  grep -E '\|[^|]*\|[^|]*\|[^|]*\|[^|]*\| *[0-9][0-9,-]* *$' "$log" | head -n 10 | sed 's/^/  uncovered: /' >&2
   echo "  full output: $log" >&2
   exit 1
 }
 
-# 1. Changelogs.
-for xml in src/main/resources/db/changelog/*.xml; do
-  [ -f "$xml" ] || continue
-  if command -v xmllint >/dev/null; then
-    xmllint --noout "$xml" >"$log" 2>&1
-  else
-    python3 -c 'import sys, xml.dom.minidom; xml.dom.minidom.parse(sys.argv[1])' "$xml" >"$log" 2>&1
-  fi || fail "$xml is not well-formed XML" \
-    "every changeSet goes inside <databaseChangeLog>, before its closing tag; nothing after it" raw
-done
-echo "check: ok   changelogs are well-formed"
+step() { echo "check: $1" >&2; }
 
-# 2. Format.
-./mvnw -B spotless:apply >"$log" 2>&1 || fail "./mvnw spotless:apply" "a Java file that does not parse"
-echo "check: ok   Java formatted"
+# 1. Format.
+step "gofmt"
+go list -f '{{.Dir}}' ./... >"$log.dirs" 2>"$log" || fail "go list" "the module does not load: fix go.mod or the import named below"
+xargs gofmt -w <"$log.dirs" >"$log" 2>&1 || fail "gofmt" "a file does not parse: fix the syntax error below"
+rm -f "$log.dirs"
 
-# 3. The permissions list.
-if [ -f frontend/src/permissions.gen.ts ]; then
-  permissions() {
-    ./mvnw -B test -Dskip.npm -Dtest=PermissionsListTest -Dsurefire.failIfNoSpecifiedTests=false >"$log" 2>&1
-  }
-  permissions || permissions || fail "PermissionsListTest (it compiles the app first)" \
-    "a Java compile error below; or Permissions.class missing from PermissionClasses.ALL"
-  echo "check: ok   permissions.gen.ts matches the Permissions constants"
+# 2. The permissions list.
+if [ -f cmd/server/permissions_test.go ]; then
+  step "permissions.gen.ts"
+  perms="TestTheFrontEndListsEveryPermission"
+  if ! go test ./cmd/server -run "$perms" >"$log" 2>&1; then
+    go test ./cmd/server -run "$perms" >"$log" 2>&1 \
+      || fail "permissions" "the permissions test fails twice: read it; permissions() in cmd/server/modules.go must compile and list each feature's Permissions"
+  fi
+else
+  skipped+=("permissions.gen.ts (no cmd/server/permissions_test.go)")
 fi
 
-# 4. Compile, and the frontend's gates.
-./mvnw -B test-compile >"$log" 2>&1 || fail "./mvnw test-compile" \
-  "a Java compile error, or the frontend's tests, 100% coverage or type check (cd frontend && npm run coverage; npm run build)"
-echo "check: ok   Java compiled; frontend tests, 100% coverage and build pass"
+# 3. Vet and lint.
+step "go vet"
+go vet ./... >"$log" 2>&1 || fail "go vet" "fix each finding below (it compiles the tests too)"
+lint="${GOLANGCI_LINT:-golangci-lint}"
+if command -v "$lint" >/dev/null 2>&1; then
+  step "golangci-lint"
+  "$lint" run ./... >"$log" 2>&1 || fail "golangci-lint" "fix each finding below; never silence one with nolint"
+else
+  skipped+=("golangci-lint (not installed; CI runs it)")
+fi
 
+# 4. The Go tests.
+if [ -n "${TEST_DATABASE_URL:-}" ] || docker info >/dev/null 2>&1; then
+  step "go test"
+  go test ./... >"$log" 2>&1 || fail "go test" "a test fails: fix the code (or the test's data), never delete the test"
+else
+  skipped+=("the Go tests (no TEST_DATABASE_URL and no Docker): read each test against the recipe's step 7")
+fi
+
+# 5. The frontend.
+if [ -f frontend/package.json ]; then
+  has() { grep -q "\"$1\":" frontend/package.json; }
+  if [ ! -d frontend/node_modules ]; then
+    step "npm ci"
+    (cd frontend && npm ci --no-audit --no-fund) >"$log" 2>&1 || fail "npm ci" "the frontend's dependencies do not install"
+  fi
+  for script in format:check lint; do
+    if has "$script"; then
+      step "npm run $script"
+      (cd frontend && npm run -s "$script") >"$log" 2>&1 || fail "npm run $script" "fix each finding below"
+    fi
+  done
+  if has coverage; then
+    step "npm run coverage"
+    (cd frontend && npm run -s coverage) >"$log" 2>&1 \
+      || fail "frontend tests" "a test fails, or a line or branch runs in no test (100% gate): test it, don't delete it"
+  else
+    step "npm test"
+    (cd frontend && npm test) >"$log" 2>&1 || fail "frontend tests" "a test fails"
+  fi
+  step "npm run build"
+  (cd frontend && npm run -s build) >"$log" 2>&1 || fail "frontend build" "a type error or a missing import: fix each one below"
+else
+  skipped+=("the frontend (no frontend/package.json)")
+fi
+
+for s in "${skipped[@]+"${skipped[@]}"}"; do
+  echo "check: SKIPPED $s" >&2
+done
 rm -f "$log"
-echo "check: ok   (the Java tests need Docker: ./mvnw verify runs them)"
+echo "check: ok"

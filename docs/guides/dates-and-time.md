@@ -75,7 +75,7 @@ Register(k, Service{
   a wall-clock time in the organization's zone, never converted.
 - **A moment is a `timestamptz` column** and a `time.Time`, answered as an ISO string (Go's JSON).
 - `k.Organization()` is the whole context below (`TimeZone`, `Locale`, `Today`, `TodayEndsAt`,
-  `Currency`, `FractionDigits`), for text the server writes (`money.Format(locale)`).
+  `Currency`, `FractionDigits`), for text the server writes (an amount's `Format(locale)`).
 - **A test sets the clock**: `rouxtest.App`'s `Clock` (`a.Clock.Now`, moved with `a.At(moment)`),
   passed as the service's `Clock`. Today is that moment's date in the organization's zone
   (`2026-04-15T03:00:00Z` is still April 14 in New York).
@@ -102,7 +102,8 @@ roux's shell writes the organization's context into every page it serves, beside
 ```
 
 `currency` and `fractionDigits` are `null` without `ORG_CURRENCY`. `GET /api/roux/organization`
-(signed in) answers the same; it is an `organization.Context`.
+(signed in; `organization.Path`) answers the same; it is an `organization.Context`, built by the
+users module's `organization.Calendar` from the settings.
 
 ## The browser: `@jwcarman/roux-web/organization`
 

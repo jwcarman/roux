@@ -1,127 +1,109 @@
 # Users
 
-A user is anyone who can sign in. who owns the identity, status, addresses, passkeys and roles;
-roux-users (in the starter) adds the display name (`AppUser`, table `roux_user`) and the
-`/api/users` endpoints.
+A user is a member of the team: anyone who can sign in. roux's users module (`app.UsersFromEnv`,
+package `users`) keeps each one's display name in `roux_user`, serves the endpoints that list,
+invite and manage them under `/api/roux/users`, and the template's `frontend/src/users/` pages use
+them. An app adds what its own people are, never a second user table.
 
 ## Rules
 
-- Anything that signs in is a user. Pick one shape: **a role only** (no entity); **an entity that
-  shares the user's id** (always signs in: `@MapsId`, made in a `UserJoined` listener for its
-  role); **an entity with an optional `@OneToOne AppUser user`** (sometimes signs in, set when it's
-  invited).
-- No domain fields on `AppUser`, no second display name, no copy of the email (read it from the
-  directory).
-- Deactivate or change a role through `Users` (or wrap the change in `LastAdminGuard`), never
-  `WhoService`/`RbacService` alone.
-- Sign-in and identity are who's: browser calls go through `@jwcarman/who-client`, never hand-written
-  fetches.
+- Anything that signs in is a user; what never signs in is not. Pick a shape:
+  - nothing but a person with permissions (an instructor): **a role only**, no table;
+  - always signs in and has fields of its own (a coach's belt): **a table whose `id` is the user's**,
+    `id uuid primary key references roux_user (id) on delete cascade`;
+  - sometimes signs in (a student, some with a portal login): **its own id and a nullable
+    `user_id uuid references roux_user (id) on delete set null`**.
+- Never add columns to `roux_user`, keep a second display name, or copy the email: read them from
+  `roux_user_directory`, which follows sign-in.
+- Store a person's id only after `users.MustBeActive` in the same transaction: an unknown or
+  deactivated id would be kept silently.
+- Change users through roux's endpoints or `users.Service`, never your own SQL on roux's tables:
+  they apply the invitable roles, the last administrator and the activity log.
 
 ## Names
 
-Endpoints, under `/api/users` (permissions from `RouxUserPermissions`: `USERS_READ`, `USERS_INVITE`,
-`USERS_MANAGE`, `USERS_OWNERS`):
+- `users.MustBeActive(ctx, tx, field, ids)`: a `400` on `field`, "Must be active members of the team"
+  (`users.MustBeActiveMembers`), unless every id is an active member.
+- `users.Members(ctx, db, ids)`: each as `users.Member` (`ID`, `Name`, `Active`), by name, leaving
+  out ids that are no member; for showing people a record keeps, including those who left.
+- `users.Service`: `Invite(ctx, name, email, role) (linkSent bool, err error)`, `Rename`,
+  `ChangeRole`, `Deactivate`, `Reactivate`, `MakeOwner`, `SignOutEverywhere`, `List`, `Detail`,
+  `Me`, `Names`.
+- `users.MaxNameLength` (80); `users.StatusActive`, `users.StatusDeactivated`; `users.NotFound()` (404 "No such user");
+  `users.BasePath` (`/api/roux/users`).
+- Permissions, granted to `OWNER` by roux: `users.read` (`users.UsersRead`), `users.invite`
+  (`users.UsersInvite`), `users.manage` (`users.UsersManage`), `users.owners`
+  (`users.UsersOwners`). The template grants `users.read` to `USER`.
+- `roux_user_directory` (a view): `id`, `version`, `display_name`, `email` (the oldest address),
+  `role`, `status` (`ACTIVE` or `DEACTIVATED`), `joined_at`, `invited`.
+- Endpoints under `/api/roux/users`: `GET /me`, `PUT /me` (rename yourself); `GET /` (page; `search`,
+  `role`, `status`; sorts `NAME`, `EMAIL`, `ROLE`, `JOINED`); `GET /{id}`; `GET /{id}/activities`;
+  `POST /invitations` (`{ name, email, role }`, `202 { linkSent }`); `POST /{id}/invitation`
+  (resend); `PUT /{id}/name`; `PUT /{id}/role`; `POST /{id}/deactivate`; `POST /{id}/reactivate`;
+  `POST /{id}/sign-out`; `POST /{id}/owner` (needs `users.owners` and a sign-in within 10 minutes).
+- Activities recorded against a user: `user.invited` (`users.UserInvited`), `user.signed_up`
+  (`users.UserSignedUp`), `user.renamed` (`users.UserRenamed`), `user.deactivated`
+  (`users.UserDeactivated`), `user.reactivated` (`users.UserReactivated`), `user.role_changed`
+  (`users.UserRoleChanged`).
+- `users.ListConfig`: the user list's sorts and page sizes, for `api.PageRequest` in an app's own
+  endpoint over `users.Service.List`.
 
-| Endpoint | Permission | Does |
-| --- | --- | --- |
-| `GET /me`, `PUT /me` | signed in | the caller (`Me`: `id, displayName, email, version`); rename (`NameChange`) |
-| `GET /` | `users.read` | page of `UserRow` (`id, displayName, email, role, status`); `search`, `role`, `status` (`UserStatus`, `ACTIVE` default); `UserSort` `NAME`, `EMAIL`, `ROLE`, `JOINED` |
-| `GET /{id}` | `users.read` | `UserDetail` (+ `joinedAt`, `invited`, `version`) |
-| `POST /invitations` | `users.invite` | `InvitationRequest` `{ name, email, role }` → 202 `InvitationResult` `{ linkSent }` |
-| `POST /{id}/invitation` | `users.invite` | resend |
-| `PUT /{id}/name`, `PUT /{id}/role` | `users.manage` | rename; replace their one role (`RoleChange`) |
-| `POST /{id}/deactivate`, `/reactivate`, `/sign-out` | `users.manage` | |
-| `POST /{id}/owner` | `users.owners` + recent sign-in | make an owner |
+## Example: a table that shares the user's id
 
-Refusals: unknown id 404 "No such user" (`UserNotFoundException`); address taken → field error on
-`email`; role not invitable → field error on `role`; deactivate yourself 400; already deactivated /
-active / signed in → 409; last owner → 409 `last-admin`.
+```sql
+create table coach (
+    id      uuid primary key references roux_user (id) on delete cascade,
+    belt    text not null default '',
+    version bigint not null default 0
+);
+```
 
-Java: `Users` (the service), `UsersController`, `MeController`, `AppUser` (`MAX_NAME` 80),
-`AppUserRepository`, `AppUsers` (roux's `UserJoined` listener, runs first), `UserDirectory` and
-`UserDirectoryEntry` (view `roux_user_directory`: name, status, joined, role, oldest email),
-`UserFilter(search, role, status)` with `specification(join)`.
+roux has no hook when a user joins, so make the row when it is first needed:
 
-Activities recorded for you: `UserInvited`, `UserRenamed`, `UserDeactivated`, `UserReactivated`,
-`UserRoleChanged`; the actor named by `AppUserActorNames` unless the app declares `ActorNames`.
-
-## Example: an entity that always signs in
-
-```java
-@Entity
-public class Coach {
-  @Id private UUID id;
-
-  @MapsId
-  @OneToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "id")
-  private AppUser user;
-
-  private String belt;
-
-  protected Coach() {}
-
-  public Coach(AppUser user) {
-    this.user = user;
-  }
-}
-
-@Component
-class Coaches {
-  private final CoachRepository coaches;
-  private final AppUserRepository users;
-
-  Coaches(CoachRepository coaches, AppUserRepository users) {
-    this.coaches = coaches;
-    this.users = users;
-  }
-
-  @EventListener
-  void on(UserJoined joined) {
-    if (Roles.COACH.equals(joined.role())) {
-      coaches.save(new Coach(users.getReferenceById(joined.identityId())));
-    }
-  }
+```go
+if _, err := tx.Exec(ctx, `insert into coach (id) values ($1) on conflict (id) do nothing`, coachID); err != nil {
+	return err
 }
 ```
 
-**Its own list** (columns of its own, filtered by the user's fields): add
-`@OneToOne(fetch = FetchType.LAZY) @JoinColumn(name = "id", insertable = false, updatable = false)
-UserDirectoryEntry entry;`, make the repository also a `JpaSpecificationExecutor<Coach>`, sort on
-`"entry.displayName"`, and filter with `filter.specification(root -> root.join("entry"))`; rows are
-`new CoachRow(UserRow.of(coach.getEntry()), coach.getBelt())`.
+A list of coaches with their names joins the directory in a view (`create view coach_list as select
+d.id, d.display_name, d.email, d.status, c.belt from coach c join roux_user_directory d on d.id =
+c.id`) and pages it with `page.New` (`lists.md`), filtered by
+`page.Where("status = ?", users.StatusActive)`.
 
-## Steps: an app's own invite endpoint
+## Example: assigning people
 
-`UserInvitations.invite(name, email, role, identity -> ...)` checks the role is invitable, publishes
-`UserJoined`, and runs the callback in the invitation's transaction:
-
-```java
-Invitation invitation = invitations.invite(request.name(), request.email(), Roles.INSTRUCTOR,
-    identity -> coaches.save(new Coach(identity.id(), request.belt())));
+```go
+err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
+	if err := users.MustBeActive(ctx, tx, "assigneeIds", in.Assignees); err != nil {
+		return err
+	}
+	// ...insert the task and its assignees...
+	return nil
+})
 ```
-
-- Call it outside a transaction; the callback's writes join the invitation's (same transaction
-  manager, no `REQUIRES_NEW`), and an exception from them must not be swallowed: everything rolls
-  back and nothing is sent.
-- The `Identity` carries no address: take it from the request. who's `EmailAddressTakenException`
-  means the address is registered: turn it into `InvalidFieldException("email", ...)`.
-- A policy check on every invitation is an `@EventListener` for who's `IdentityInvited`.
-- who-admin's `POST /who/invitations` publishes no `UserJoined`: invite through roux's or the app's
-  endpoint.
-
-who odds and ends: a public path is a `WhoPublicPathContributor` bean (never a replaced
-`WhoPublicPaths`); a passkey label is 1–64 characters (`PASSKEY_LABEL_MAX`); errors under `/who/**`
-are who's own Problem Details.
 
 ## In the browser
 
-The signed-in person's name and email: `useSession().profile` (`Profile`: `displayName`, `email`,
-`version`); after a rename, `refreshProfile()` (as the mutation's `onSettled`). See `app-setup.md`.
+`@jwcarman/roux-web/users` is the client for roux's endpoints: `usersApi` (`list`, `get`,
+`invite`, `changeStatus`, `renameMe`); queries `usersPage(filters)` (`UserFilters`; rows are
+`User`), `userQuery(id)` (`UserDetail`), `userActivitiesPage(id)`, `invitableRolesQuery`, keyed
+under `userKeys`; mutations `inviteUser` (an `Invitation`, answering an `InvitationResult`),
+`changeUserStatus(id)` (a `UserStatusAction`), `renameMe(version)`; schemas `invitationSchema`,
+`renameSchema`; `MAX_NAME` (80). The signed-in person's name and
+email: `useSession().profile` (`Profile`: `displayName`, `email`, `version`); after a rename,
+`refreshProfile()` (as the mutation's `onSettled`). See `app-setup.md`.
+
+## Check
+
+A Go test that stores an id of someone deactivated (`a.Deactivate(id)`) gets the `400` on the field
+(`tests.md`).
 
 ## Pitfalls
 
-- Without `@JoinColumn(name = "id")`, `@MapsId`'s key column is `user_id`.
-- A listener that ignores `role` makes an entity for every user.
-- `POST /{id}/owner` needs a sign-in within `who.security.recent-sign-in` (10 minutes); older gets
-  who's 401.
+- `users.MustBeActive` called with the pool outside the transaction that stores the ids: someone
+  deactivated in between is kept.
+- A table that shares the user's id but has `not null` columns without defaults: the row cannot be
+  made with just the id when it is first needed.
+- `POST /{id}/owner` from a sign-in older than 10 minutes is `401`: the person signs in again.
+- Changing a role with SQL of your own skips the last-administrator rule (`permissions.md`).

@@ -1,53 +1,46 @@
 # Email
 
-who sends five emails; roux (`roux-email`, in the starter) ships them finished, naming the app and
-in its brand colour. Delivery is the app's: `who-email-smtp` (with `spring-boot-starter-mail`,
-`who.email.from`), or its own `WhoEmailSender` bean that only delivers the rendered `OutgoingEmail`
-(send `text` as `text/plain`).
+roux sends the emails sign-in needs, finished: each names the app, uses its brand colour, and comes
+as plain text and HTML. The app writes none of them and cannot yet change their wording. Delivery
+is SMTP, set by the environment.
 
 ## Rules
 
-- Don't write templates just to name the app: it's already named. Replace only an email that needs
-  other wording.
-- `{{ }}`, never `{{{ }}}`, in `.html` (the app's name is typed by the owner).
-- Never hard-code the app's name or colour: read `extra.roux`.
-- No images or web fonts: many mail clients block them.
+- Don't send sign-in links or codes from the app's own code: ask roux (the sign-in page; an
+  invitation through `POST /api/roux/users/invitations` or `users.Service.Invite`).
+- Never put a password or a token in an email of the app's own.
+- The emails are English, in roux's words: say so if the user asks for other wording or language,
+  rather than inventing an API.
 
 ## Names
 
-| Template | Subject |
-| --- | --- |
-| `sign-in` | Sign in to *App* |
-| `invitation` | You've been invited to *App* |
-| `address-confirmation` | Confirm your email address for *App* |
-| `address-changed` | Your *App* email address was changed |
-| `passkey-added` | A passkey was added to your *App* account |
+| Email | Sent when | Subject |
+| --- | --- | --- |
+| Sign-in | someone asks for a link | `Sign in to Acme Gym` |
+| Invitation | someone is invited (`users.md`) | `You've been invited to Acme Gym` |
+| Address confirmation | an address is added or changed | `Confirm your email address for Acme Gym` |
+| Address changed | to the old address | `Your Acme Gym email address was changed` |
+| Notices | a passkey or API key added, a provider's account linked | a notice naming it |
 
-Values from `RouxEmailModelContributor`: `extra.roux.appName`, `extra.roux.brandColor` (`#rrggbb`),
-`extra.roux.buttonText` (white or near-black for contrast). who adds `email.*` (`email.link`,
-`email.formattedCode`, `email.expiresIn`) and `app.*`. A variable the model lacks fails the render.
-
-Where roux's live: `RouxEmail.TEMPLATES` (`classpath:/org/jwcarman/roux/email/`) and
-`RouxEmail.MESSAGES` (subjects).
-
-## Steps
-
-- **Replace one email:** put `sign-in.txt` and/or `sign-in.html` in `classpath:/templates/who/email/`
-  (`who.email.templates`). Files not given stay roux's. `card-start.html`/`card-end.html` replace
-  all five frames.
-
-  ```html
-  <p><a href="{{email.link}}" style="background-color:{{extra.roux.brandColor}};color:{{extra.roux.buttonText}}">Sign in</a></p>
-  ```
-- **Replace one subject:** in the app's `messages.properties` (`spring.messages.basename`):
-  `who.email.sign-in.subject=Your {{extra.roux.appName}} sign-in link`.
-- **Add a value:** a `WhoEmailModelContributor` bean of the app's (`extra.displayName`, say).
+- Settings: `SMTP_ADDR` (default `localhost:1025`, Mailpit), `MAIL_FROM` (default
+  `no-reply@localhost`), `SMTP_ALLOW_PLAINTEXT` (`true` to send without STARTTLS to a server off
+  this machine), `EMAIL_RESEND_INTERVAL` (`60s`), `EMAIL_TOKEN_TTL` (`5m`), `PUBLIC_URL` (links
+  point to `PUBLIC_URL/signin/link#token=...`).
+- The app's name is `APP_NAME`, or the owner's saved theme's; the colour is the theme's brand
+  colour.
+- Package `github.com/jwcarman/roux/authn/emaillink`: `Message` (`To`, `Subject`, `Text`, `HTML`),
+  `Sender` (`Send(ctx, m)`), `SenderFunc`, `SMTPSender`, `Config`. `app.EmailLinkFromEnv` builds it
+  from the environment; an app rarely names these.
+- An email goes after the change that causes it commits: an invitation stands even if its email
+  fails, and the answer says so (`linkSent`). Emails accepted just before shutdown still go out.
 
 ## Check
 
-A Java test with `RecordingWhoEmailSender` (`tests.md`) sees the send; `TestMail` reads the rendered
-mail end to end.
+In development, Mailpit (<http://localhost:8025>) shows every email; the Playwright suite reads the
+sign-in link from Mailpit's API.
 
 ## Pitfalls
 
-- Templates added under `classpath:` need their own native-image resource hints.
+- Without `CODE_SECRET`, sign-in is off and no email is sent.
+- A mail server off this machine without STARTTLS refuses to send unless `SMTP_ALLOW_PLAINTEXT=true`.
+- A `PUBLIC_URL` that browsers cannot reach makes every link in every email dead.

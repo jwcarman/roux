@@ -236,6 +236,11 @@ An error type of the app's own can say how it is answered by having a method
 fn)` map an error type or a sentinel the app does not own. Most apps need neither: return a
 problem.
 
+A feature that must tell one constraint from another inspects the error after its transaction
+ended: `pgdb.IsViolation(err, pgdb.CodeUniqueViolation)` (or `pgdb.CodeForeignKeyViolation`). A
+transaction opened by hand with `pool.Begin` is closed with `defer pgdb.Rollback(ctx, tx)`, which
+rolls back unless it committed; `pgx.BeginFunc` needs neither.
+
 ## Don't
 
 - Don't write a refusal to the response yourself (`w.WriteHeader(400)`): the answer would not be
@@ -248,7 +253,7 @@ problem.
 
 ## In the browser: reading a problem
 
-From `@jwcarman/roux-web/problem`:
+From `@jwcarman/roux-web/problem` (`Problem`, and `FieldProblem` for each entry of `errors`):
 
 ```ts
 interface FieldProblem {

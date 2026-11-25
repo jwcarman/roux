@@ -125,6 +125,16 @@ All notable changes to this project are documented in this file. The format foll
 - **A docs site**, built with MkDocs Material and published to GitHub Pages
   (<https://jwcarman.github.io/roux/>), with `llms.txt` and `llms-full.txt` for coding agents and
   a page on the Agent Skill.
+- **The Agent Skill is rewritten for the Go server.** Its recipe builds a feature end to end (the
+  migration, module, input, service, handlers and Go test, then the browser's module, dialog, page,
+  route and tests), every block copied from code CI builds into the template and checks.
+  `scripts/check.sh` runs an app's checks in the order the build needs (gofmt, the permissions
+  file, vet, golangci-lint, the Go tests when a database is reachable, the frontend's tests and
+  build) and names what it skipped. The cards (errors, forms, lists, permissions, users, tests, app
+  setup, money, dates, the activity log, email) name the Go API. CI checks that every public name,
+  Go and TypeScript, is in the guides and the skill, and that every Go name they write exists.
+- **`@jwcarman/roux-web/auth` and `@jwcarman/roux-web/users` are documented** (The shell, Users),
+  as are colour mode's `ColorModeProvider`, `ColorModeButton` and `ColorModeSwitch`.
 
 ## [0.3.0] - 2026-11-24
 

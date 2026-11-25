@@ -77,8 +77,10 @@ for the input's `validate`:
 v = append(v, money.Check("price", b.Price, money.Positive, money.In(s.Currency))...)
 ```
 
-- `money.In(cur)`: `Must be in USD` (the app's currency).
-- `money.Positive`: `Must be more than 0`. `money.PositiveOrZero`: `Must not be negative`.
+- `money.In(cur)`: `Must be in USD` (the app's currency; the words are `money.MustBeIn(cur)`).
+- `money.Positive`: `Must be more than 0` (`money.MustBeMoreThanZero`). `money.PositiveOrZero`:
+  `Must not be negative`.
+- A rule of your own is a `money.Rule`, `func(money.Money) string`, answering `""` when it passes.
 
 A body member that is an amount is a `money.Money` (or a `*money.Money` when it may be missing).
 
@@ -88,8 +90,7 @@ A body member that is an amount is a `money.Money` (or a `*money.Money` when it 
 
 - `Money` (the wire shape);
 - `formatMoney(money)`: `"$150.00"` in the organization's locale, right-aligned in a table cell; the
-  app's own currency with the server's digits (`digitsOf(currency)`; `organizationCurrency()` is the
-  app's currency from the context);
+  app's own currency, with the digits the server sent in the organization's context;
 - `timesMoney(money, n)`: `n` periods' price, in minor units, for a total shown before saving;
 - `currencySymbol(currency)`: `"$"`.
 

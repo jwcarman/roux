@@ -33,8 +33,10 @@ title. It replaces `ChakraProvider`. Mount no other Chakra provider, and no Emot
   `colorPalette="red"`, whatever the theme.
 - `ThemeProvider theme={...}` starts from another theme: a test's, or a storybook's.
 - Light or dark mode is the visitor's own (a visitor's choice is not part of the owner's theme).
-  An app with a mode switch passes `cspNonce()` to it (next-themes' `nonce` prop) and sets the mode
-  before first paint in `index.html`.
+  `ColorModeProvider` (inside `ThemeProvider`, around the app) follows the system's mode until the
+  visitor picks one, kept in `localStorage`, and passes the page's nonce to next-themes.
+  `ColorModeButton` is a sun-or-moon icon button (the template puts it in the sign-in frame's
+  `tools`); `ColorModeSwitch` is "Dark mode" in the account menu.
 
 ## The appearance page
 
@@ -56,8 +58,8 @@ export const Route = createFileRoute("/_signedIn/appearance")({
 `AppearanceSettings` is the whole form, in two sections: Name (the app's name), then Look (five
 ready-made looks, the one in use ringed, then a colour and a shape, with the owner's own colour and
 the lettering under "More options"). The owner's own screen previews the draft (through
-`useShellTheme().preview`) until it is saved. It reads and saves through roux-theme's
-`/api/theme` (a built-in `useSchemaForm`: a refusal from the server is under its field, a `409` starts
+`useShellTheme().preview`) until it is saved. It reads and saves through
+`/api/roux/theme` (a built-in `useSchemaForm`: a refusal from the server is under its field, a `409` starts
 the form over from the other owner's look), toasts `The new look is saved` with an Undo that puts the
 earlier look back, and `Cancel` drops the draft. It takes no props. Its page is the app's, and so
 is the route guard: guard it with `theme.manage`, which the server enforces too.
@@ -121,6 +123,43 @@ The pieces, for a page of the app's own:
   The route guard that sends a signed-out visitor to sign in calls `rememberSignInReturn(path)`
   (`isReturnable` says which paths count: never Home, sign-in or `/api`; `takeSignInReturn` reads it once).
   After a sign-in of your own, call `useSignInReturn()()`.
+
+## The sign-in client: `@jwcarman/roux-web/auth`
+
+The sign-in components talk to the server through `createAuthClient()`, a typed client for
+everything under `/api/roux/auth` (`AuthClientOptions` moves it). An app calls it directly only for a
+page of its own the components do not cover (an account page listing sessions, say):
+
+```ts
+import { createAuthClient, unwrap } from "@jwcarman/roux-web/auth";
+
+const auth = createAuthClient();
+const sessions = unwrap(await auth.me.sessions.list());
+```
+
+- Every call answers an `AuthResult<T, R, D>`: `{ ok: true, value }`, or `{ ok: false, reason,
+  status, detail }` with a typed `reason`. `unwrap(result)` returns the value or throws an
+  `AuthError` carrying the reason; a query function uses it.
+- `AuthClient`: `signInOptions()` (a `SignInOptions`: `email`, `passkey`, `providers` as
+  `SignInProvider`s), `signOut()`, and four groups:
+  - `me` (`MyAccount`): `get()` (the caller, a `Me`, with `CredentialCounts`); `sessions`
+    (`Sessions`: `list`, `end`, `endOthers`; each a `Session`); `passkeys` (`MyPasskeys`: `list`,
+    `register`, `remove`; each a `Passkey`); `emailAddresses` (`EmailAddresses`: `list`, `add`,
+    `confirm`, `confirmFromLocation`; each an `EmailAddress`, a confirmed one a
+    `ConfirmedAddress`); `accounts` (`Accounts`: `list`, `link`, `unlink`; each a
+    `LinkedAccount`); `apiKeys` (`ApiKeys`: `list`, `create` with an `ApiKeyRequest` answering a
+    `NewApiKey` whose secret shows once, `rotate`, `revoke`, `current`; each an `ApiKey`).
+  - `email` (`Email`): `send(address)`, `signIn({ email, code } | { token })`, `signInFromLocation()`;
+    a sign-in answers `SignedIn`.
+  - `passkeys` (`Passkeys`): `supported()`, `signIn()`.
+  - `oidc` (`Oidc`): `authorizeUrl(id)`, `pending()` (a `PendingSignUp`), `signUp()`, `link()`.
+- The reasons: `SignInRequired` (`signed-out`, `reauthentication-required`, `sign-in-required`),
+  `BrowserSessionRequired`, `InvalidRequest`, `LastCredential` (the last way to sign in stays),
+  `EmailSignInFailure` (`rejected`, `HumanCheckFailed`), `ConfirmAddressFailure`,
+  `ApiKeyCallerRefused` (`ApiKeyCannotManageKeys` or a browser session required). A browser
+  prompt the person dismissed is a `PromptFailure`: `Cancelled`, or `AlreadyRegistered` for a
+  passkey this device holds already. `HumanCheckOptions` passes a bot check's token, when the server
+  asks for one.
 
 ## The session and route guards
 

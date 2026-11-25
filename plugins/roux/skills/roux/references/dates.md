@@ -5,26 +5,32 @@ this month, default dates and "not in the future" are the organization's on both
 
 ## Rules
 
-- Never a business date from `new Date()` (browser) or `LocalDate.now()` (server): use `today()` and
-  `OrganizationCalendar`.
-- Time comes from the injected `Clock`; never `now()` without it.
-- Never store a date computed from the clock and a zone: store the `Instant`, or the date the person
-  picked.
+- Never a business date from `new Date()` (browser) or `time.Now()` (server): use `today()` in the
+  browser and the service's `today()` (below) on the server.
+- Time comes from the module's clock (`Clock func() time.Time`, `time.Now` when nil), never
+  `time.Now()` in a service: tests move the clock.
+- Never store a date computed from the clock and a zone: store the moment (`timestamptz`), or the
+  date the person picked (`date`).
 - Never pass a locale or zone to a formatter, or use `Intl`/`toLocaleString`: use roux's formatters,
   which use the organization's locale and zone so every viewer sees the same date.
-- `@NotInFuture`, never `@PastOrPresent`, for a picked date: `@PastOrPresent` uses the server's
-  zone, so near midnight it refuses the organization's today.
+- "Not in the future" compares with the organization's today (`problem.MustNotBeInFuture`), never
+  the server's zone: near midnight they differ.
 - Date arithmetic with date-fns (`addDays`, `isAfter`); no hand-written date math.
 
 ## Names
 
-Settings (required, `RouxOrganizationProperties`): `roux.organization.time-zone` (an IANA zone, not
-an offset), `roux.organization.locale` (`en-US`).
+Settings: `ORG_TIME_ZONE` (an IANA zone, default `UTC`; an offset is refused), `ORG_LOCALE`
+(BCP 47, default `en-US`).
 
-Server, `OrganizationCalendar` (inject it): `today()` (`LocalDate`), `thisMonth()` (`YearMonth`),
-`now()` (`ZonedDateTime`), `todayEndsAt()`, `zone()`, `locale()`. `@NotInFuture` checks against
-its `today()`. The page's context is an `OrganizationContext` (`timeZone`, `locale`, `today`,
-`todayEndsAt`, `currency`, `fractionDigits`), also at `GET /api/organization`.
+Server: `k.Organization()` → `organization.Context` (in the browser, `OrganizationContext`) (`TimeZone`, `Locale`, `Today`, `TodayEndsAt`,
+`Currency`, `FractionDigits`); it is UTC and `en-US` until the users module mounts, so call it per
+request (as below), not once at `Mount` in a module listed earlier. The same context is in every
+page and at `GET /api/roux/organization` (`organization.Path`, signed in), built by the users
+module's `organization.Calendar`.
+
+Columns and wire: a date is a `date` column, a `time.Time` at midnight UTC, answered `"2026-11-17"`
+(`d.Format(time.DateOnly)`); a time of day is a `time` column, `pgtype.Time`, answered `"18:30"`, a
+wall-clock time in the organization's zone; a moment is `timestamptz` and `time.Time`, an ISO string.
 
 Browser, `@jwcarman/roux-web/organization`: `loadOrganization()` and `startDayWatch(queryClient)` in
 `main.tsx` (`app-setup.md`); `today()` (`"2026-11-20"`), `useToday()` in a component;
@@ -46,26 +52,32 @@ Browser, `@jwcarman/roux-web/dates` (organization's locale, `""` for `null`):
 Plus `parseIsoDate`, `formatIsoDate`, `parseIsoTime`, `formatIsoTime` to go between ISO strings and
 `Date` (strict: `2026-02-30` is `undefined`). Money: `formatMoney` (`money.md`).
 
-Wire: `LocalDate` `2026-11-17`; `LocalTime` `18:30` (server writes `18:30:00`; start a form with
-`timeInputOf`); `Instant` an ISO string.
+A time from the server starts a form through `timeInputOf`.
 
 ## Example
 
-```java
-@Service
-class PaymentsService {
-  private final OrganizationCalendar calendar;
+```go
+// Service is the payments' operations.
+type Service struct {
+	Pool  *pgxpool.Pool
+	Clock func() time.Time
+	// Zone is the organization's time zone, for "today" and "this month".
+	Zone func() string
+}
 
-  PaymentsService(OrganizationCalendar calendar) {
-    this.calendar = calendar;
-  }
-
-  MonthlyTotals totals() {
-    YearMonth month = calendar.thisMonth();
-    // ...
-  }
+// today is the organization's date now, at midnight UTC (how a Postgres date travels).
+func (s Service) today() (time.Time, error) {
+	zone, err := time.LoadLocation(s.Zone())
+	if err != nil {
+		return time.Time{}, err
+	}
+	y, m, d := s.Clock().In(zone).Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC), nil
 }
 ```
+
+The module passes `Zone: func() string { return k.Organization().TimeZone }`. A date's arithmetic is
+`d.AddDate(0, 0, n)`; the Monday of its week is `d.AddDate(0, 0, -(int(d.Weekday())+6)%7)`.
 
 ```ts
 defaultValues: { takenOn: today() },
@@ -77,14 +89,15 @@ formatIsoDate(previousTuesday(parseIsoDate(today())!));
 
 - Browser tests run in `testOrganization()`: New York, `en-US`, USD, today `2026-06-15` (a Monday).
   Another day: `setOrganization(testOrganization({ today: "2026-11-17" }))`. Never fake the device
-  clock or answer `/api/organization`.
-- Server tests set `TestClock`; today is that instant's date in the organization's zone
-  (`2026-04-15T03:00:00Z` is April 14 in New York).
+  clock or answer `/api/roux/organization`.
+- Go tests pass `a.Clock.Now` as the clock and move it with `a.At(moment)`; today is that moment's
+  date in the organization's zone (`2026-04-15T03:00:00Z` is April 14 in New York).
 
 ## Pitfalls
 
-- Moving the clock hours or weeks signs everyone out (who's sessions use it): the next request is
-  401. Sign in again after moving it.
-- who stamps its rows with PostgreSQL's `now()`, not the clock: set such a column with SQL in a test.
-- Without the context loaded, `today()`, the formatters and the money rule throw.
-- A missing or offset-style zone, or a mis-cased locale (`en-us`), fails startup naming the setting.
+- `time.Now()` in a service: the test's `a.At` changes nothing, and a test that passes today fails
+  near midnight.
+- `time.Now().Format(time.DateOnly)` for today: the server's zone, not the organization's.
+- A `date` scanned into a `time.Time` and formatted in a zone other than UTC: off by a day.
+- Without the context loaded, `today()`, the formatters and the money rule throw (browser).
+- An offset-style zone (`-05:00`) or a mis-cased locale (`en-us`) stops startup naming the setting.

@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // Guide and reference coverage check. Exits 1 (one line per problem) unless
-//  (a) every public roux name (web entry-point exports and public top-level Java types) appears in
-//      backticks in some docs/guides/*.md,
+//  (a) every public roux name (web entry-point exports, and the exported top-level names of the Go
+//      packages an app uses, from `go doc -short`) appears in backticks in some docs/guides/*.md,
 //  (b) every public roux name appears in backticks in some plugins/roux/skills/roux/references/*.md,
-//  (c) every name a reference imports from "@jwcarman/roux-web/<sub>" is an export of that subpath, and
-//  (d) every org.jwcarman.roux type a reference imports is a public roux type, and
+//  (c) every name a reference imports from "@jwcarman/roux-web/<sub>" is an export of that subpath,
+//  (d) every `pkg.Name` the guides and references write, for those Go packages, exists, so a rename
+//      breaks this check instead of the agents, and
 //  (e) SKILL.md's index names every reference with its size, "(~N tokens)", within 20% of the
 //      file's bytes / 4, so an agent can tell a whole read from a grep before it opens one.
+import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,8 +21,20 @@ const webEntries = Object.keys(JSON.parse(readFileSync(join(root, "web/roux-web/
   (subpath) => subpath.replace(/^\.\//, ""),
 );
 
-// Public but not API: wiring that users never reference by name.
-const excludedJava = new Set(["ProblemsRuntimeHints", "ValidationRuntimeHints", "RouxProblemsAutoConfiguration", "RouxAuditingAutoConfiguration", "RouxSpaAutoConfiguration", "RouxThemeAutoConfiguration", "RouxThemePersistenceAutoConfiguration", "RouxEmailAutoConfiguration", "RouxRolesAutoConfiguration", "RouxMoneyAutoConfiguration", "RouxOrganizationAutoConfiguration", "RouxActivityLogAutoConfiguration", "RouxActivityLogPersistenceAutoConfiguration", "RouxUsersAutoConfiguration", "RouxUsersPersistenceAutoConfiguration"]);
+// The Go packages an app imports, by import path under the module, and the name it is written
+// with. Their exported top-level names are the Go API the docs must cover.
+const goPackages = [
+  "app", "problem", "api", "page", "users", "authz", "activity", "money", "organization", "pgdb",
+  "rouxtest", "authn/authntest",
+];
+// Exported but not for apps: wiring app.Main does, and helpers roux's own packages share.
+const excludedGo = new Set([
+  "app.SecureCookies", "app.Server", "app.APIKeys", "app.EmailLink", "app.JWT", "app.OIDC", "app.Users",
+  "problem.ContentType", "problem.Write", "problem.Internal", "problem.MethodNotAllowed",
+  "api.ErrorRenderer", "api.HandlerFunc", "api.Prefix", "api.Recoverer", "api.RouxPrefix", "api.NewMux",
+  "authz.Service", "page.DefaultTiebreak", "organization.NewCalendar", "organization.NewContext",
+  "pgdb.RegisterErrors", "pgdb.Order", "authntest.NewClock", "authntest.NewWith", "authntest.NewWithConfig",
+]);
 
 const problems = [];
 const rel = (file) => relative(root, file);
@@ -47,15 +61,26 @@ function webExports(file) {
   return names;
 }
 
-function javaFiles(dir) {
-  return readdirSync(dir).flatMap((entry) => {
-    const path = join(dir, entry);
-    if (statSync(path).isDirectory()) return javaFiles(path);
-    return path.endsWith(".java") ? [path] : [];
-  });
+function goNames(pkg) {
+  // `go doc -all` prints every exported declaration at the start of a line: funcs and types, and
+  // the members of `const (` and `var (` groups indented by one tab. Methods and fields are not
+  // top-level names.
+  const out = execFileSync("go", ["doc", "-all", `./${pkg}`], { cwd: root, encoding: "utf8" });
+  const names = new Set();
+  let group = false;
+  for (const line of out.split("\n")) {
+    if (/^(const|var) \($/.test(line)) group = true;
+    else if (group && line === ")") group = false;
+    else if (group) {
+      const member = /^\t([A-Z]\w*)/.exec(line);
+      if (member) names.add(member[1]);
+    } else {
+      const decl = /^(?:func|type|const|var) ([A-Z]\w*)/.exec(line);
+      if (decl) names.add(decl[1]);
+    }
+  }
+  return [...names];
 }
-
-const javaType = /^public\s+(?:(?:final|abstract|sealed|non-sealed|static)\s+)*(?:class|interface|record|enum|@interface)\s+(\w+)/m;
 
 const publicNames = []; // { name, file }
 for (const entry of webEntries) {
@@ -66,12 +91,13 @@ for (const entry of webEntries) {
   }
   for (const name of webExports(file)) publicNames.push({ name, file });
 }
-for (const module of readdirSync(join(root, "runtime")).sort()) {
-  const src = join(root, "runtime", module, "src/main/java");
-  if (!existsSync(src)) continue;
-  for (const file of javaFiles(src).sort()) {
-    const match = javaType.exec(readFileSync(file, "utf8"));
-    if (match && !excludedJava.has(match[1])) publicNames.push({ name: match[1], file });
+const goExports = new Map(); // short package name → its exported names
+for (const pkg of goPackages) {
+  const short = pkg.split("/").pop();
+  const names = goNames(pkg);
+  goExports.set(short, new Set(names));
+  for (const name of names) {
+    if (!excludedGo.has(`${short}.${name}`)) publicNames.push({ name, file: join(root, pkg) });
   }
 }
 
@@ -79,7 +105,10 @@ function backtickNames(dir) {
   const names = new Set();
   for (const file of markdownFiles(dir)) {
     const text = readFileSync(join(dir, file), "utf8");
-    for (const [, span] of text.matchAll(/`([^`\n]+)`/g)) {
+    // A name counts when it is in a backtick span on one line, or in a fenced code block.
+    const spans = [...text.matchAll(/^```[\w-]*\n([\s\S]*?)^ *```/gm)].map(([, block]) => block);
+    for (const [, span] of text.replace(/^```[\w-]*\n[\s\S]*?^ *```/gm, "").matchAll(/`([^`\n]+)`/g)) spans.push(span);
+    for (const span of spans) {
       for (const [identifier] of span.matchAll(/[A-Za-z_$][\w$]*/g)) names.add(identifier);
     }
   }
@@ -103,7 +132,6 @@ for (const entry of webEntries) {
   const file = join(root, "web/roux-web/src", entry, "index.ts");
   if (existsSync(file)) webNames.set(entry, new Set(webExports(file)));
 }
-const javaNames = new Set(publicNames.filter(({ file }) => file.endsWith(".java")).map(({ name }) => name));
 for (const reference of markdownFiles(referencesDir)) {
   const text = readFileSync(join(referencesDir, reference), "utf8");
   for (const [, body, sub] of text.matchAll(/import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+["']@jwcarman\/roux-web\/([\w/-]+)["']/g)) {
@@ -113,8 +141,12 @@ for (const reference of markdownFiles(referencesDir)) {
       if (name && !exported?.has(name)) problems.push(`unknown import in ${reference}: ${name} from ${sub}`);
     }
   }
-  for (const [, fqcn, type] of text.matchAll(/import\s+(?:static\s+)?(org\.jwcarman\.roux\.[\w.]*?\.([A-Z]\w*))(?:\.\w+)?\s*;/g)) {
-    if (!javaNames.has(type) && !excludedJava.has(type)) problems.push(`unknown import in ${reference}: ${fqcn}`);
+}
+for (const [dir, file] of [...markdownFiles(guidesDir).map((f) => [guidesDir, f]), ...markdownFiles(referencesDir).map((f) => [referencesDir, f])]) {
+  const text = readFileSync(join(dir, file), "utf8");
+  for (const [, pkg, name] of text.matchAll(/\b([a-z]+)\.([A-Z]\w*)/g)) {
+    const exported = goExports.get(pkg);
+    if (exported && !exported.has(name)) problems.push(`unknown Go name in ${rel(join(dir, file))}: ${pkg}.${name}`);
   }
 }
 

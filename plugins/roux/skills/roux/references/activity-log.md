@@ -1,79 +1,104 @@
 # The activity log
 
-A record's history: who did what to it, and when. The app says what happened as a typed record, in
-the transaction that makes the change; roux stores it with the actor and time and serves it a page
-at a time. For column-by-column auditing use Hibernate Envers instead.
+A record's history: who did what to it, and when. The app says what happened as a typed Go struct,
+in the transaction that makes the change; roux stores it with the actor and time, and the browser
+shows it with `ActivityList`.
 
 ## Rules
 
-- Append in the transaction that makes the change, after anything that can still fail.
-- Never rename a `type()` once rows exist; a new meaning is a new type.
-- Never put secrets (passwords, tokens, card numbers) in a record's components: rows are kept forever.
-- Never turn `details` back into the app's records: old rows have old shapes.
+- Append in the transaction that makes the change (`pgx.BeginFunc`), after the change can no longer
+  fail: the activity commits or rolls back with it.
+- Never rename a `Type()` once rows exist: stored rows keep the old code. A new meaning is a new
+  type.
+- Never put what must not be kept forever in its fields (a password, a token): rows are never
+  updated.
+- `Describe()` cannot read the request or the organization: text that depends on the locale (an
+  amount) is formatted by the service and passed in as a field.
+- Not for column-by-column change tracking.
 
-## Names
+## Names (package `github.com/jwcarman/roux/activity`)
 
-- `BusinessActivity`: a Java record with `type()` (lower-case, dotted, ≤ 100 chars, `"plan.renamed"`)
-  and `describe()` (a sentence ≤ 500 chars). Components are stored as JSON; locale-dependent text is
-  formatted by the service and passed in as a component.
-- `ActivityLog.append(anchor, activity, related...)`: anchor = the record's `UUID` (no foreign key,
-  so history outlives the record); related ids put it in their histories too. Needs a transaction
-  (else `IllegalTransactionStateException`).
-- `ActivityLog.history(id, params)` → `PageDto<Activity>`, newest first, anchored or related.
-- `Activity` `{ id, occurredAt, type, description, actorId, actorName, details }`;
-  `Activity.UNKNOWN`, `Activity.SYSTEM`.
-- `ActorNames` (`namesOf(Set<UUID>)` → `Map<UUID, String>`): declare one to replace roux-users'
-  `AppUserActorNames`.
-- Table `roux_activity` (`ActivityEntry`, `ActivityRepository`), from roux's own changelog; emptied
-  by `users.reset()`. `BusinessActivityAotProcessor` registers native hints for every kind.
+- `activity.Activity`: a struct with `Type() string` (lower-case, dotted, ≤ 100 characters,
+  `"plan.renamed"`) and `Describe() string` (≤ 500 characters). Its fields are stored as JSON: give
+  them `json` tags.
+- `activity.Append(ctx, tx, now, anchor, a, related...)`: one row; the actor is whoever is signed
+  in (from `ctx`). `anchor` is the record's id, a bare `uuid.UUID` with no foreign key (the history
+  outlives the record); `related` ids put it in their histories too. A mistake in the code (no
+  anchor, not a struct, a bad type, a blank description) is an error, answered `500`.
+- `activity.History(ctx, db, names, id, req)` → `page.Page[activity.Entry]`, newest first, anchored
+  or related. `activity.Entry` is `{ id, occurredAt, type, description, actorId, actorName,
+  details }`.
+- `activity.Names` (`func(ctx, ids) (map[uuid.UUID]string, error)`): pass
+  `users.Service{Pool: pool}.Names`. `activity.Unknown` ("Unknown"), `activity.System` ("System").
+- Table `roux_activity`, from roux's migrations; each `rouxtest.New` starts empty.
 - Browser, `@jwcarman/roux-web/activity`: `Activity`, `historyQuery(key, url)`, `ActivityList`
   (`ActivityListProps`: `aria-label`, `query`, `emptyText?`, `now?`). `formatRelativeTime(iso, now?)`
   is in `/dates`.
 
 ## Steps
 
-1. A kind:
+1. The kind, beside the service:
 
-   ```java
-   public record PlanRenamed(String from, String to) implements BusinessActivity {
-     @Override
-     public String type() {
-       return "plan.renamed";
-     }
-
-     @Override
-     public String describe() {
-       return "Renamed from " + from + " to " + to;
-     }
+   ```go
+   // PlanRenamed is a plan given a new name.
+   type PlanRenamed struct {
+   	From string `json:"from"`
+   	To   string `json:"to"`
    }
-   ```
-2. Append it in the service:
 
-   ```java
-   plan.rename(name);
-   activityLog.append(planId, new PlanRenamed(before, plan.getName()));
+   func (PlanRenamed) Type() string       { return "plan.renamed" }
+   func (a PlanRenamed) Describe() string { return "Renamed from " + a.From + " to " + a.To }
    ```
-3. The endpoint, with the record's own read permission:
+2. Append it in the change's transaction:
 
-   ```java
-   @GetMapping("/{id}/activities")
-   @RequiresPermission(Permissions.PLANS_READ)
-   public PageDto<Activity> activities(@PathVariable UUID id, @ModelAttribute PageParams params) {
-     return plans.activities(id, params); // 404 for an unknown plan, then activityLog.history(id, params)
-   }
+   ```go
+   err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
+   	var before string
+   	if err := tx.QueryRow(ctx, `select name from plan where id = $1 for update`, id).Scan(&before); err != nil {
+   		return err
+   	}
+   	if _, err := tx.Exec(ctx, `update plan set name = $2, version = version + 1 where id = $1`, id, name); err != nil {
+   		return err
+   	}
+   	return activity.Append(ctx, tx, s.Clock(), id, PlanRenamed{From: before, To: name})
+   })
    ```
+3. The endpoint, with the record's read permission:
+
+   ```go
+   k.Handle("GET "+BasePath+"/{id}/activities", PlansRead, func(w http.ResponseWriter, r *http.Request) error {
+   	id, err := planID(r)
+   	if err != nil {
+   		return err
+   	}
+   	req, err := api.PageRequestUnsorted(r)
+   	if err != nil {
+   		return err
+   	}
+   	out, err := svc.Activities(r.Context(), id, req) // 404 for an unknown plan, then activity.History
+   	if err != nil {
+   		return err
+   	}
+   	return api.JSON(w, http.StatusOK, out)
+   })
+   ```
+
+   with `svc.Activities` calling `activity.History(ctx, s.Pool, s.Names, id, req)` after it checked
+   the plan exists, and the module building the service with `Names: users.Service{Pool: k.Pool}.Names`.
 4. Query key under the record: `activities: (id: string) => [...queryKeys.plans.detail(id), "activities"] as const`.
 5. Module: `export const planHistory = (id: string) => historyQuery(queryKeys.plans.activities(id), path\`plans/${id}/activities\`);`
 6. Page: `<ActivityList aria-label="History" query={planHistory(plan.id)} />`.
 
 ## Check
 
-Controller test: after the change, `GET /api/plans/{id}/activities` has the entry's `type` and
-`description`; an unknown id is 404. Vitest: answer with `pageOf([...])`; pass `now` for stable
-"3 days ago" text.
+Go test: after the change, `GET /api/plans/{id}/activities` has the entry's `type` and
+`description`, and `actorName` is the person's name; an unknown id is 404. Vitest: answer with
+`pageOf([...])`; pass `now` for stable "3 days ago" text.
 
 ## Pitfalls
 
 - A history showing something only some may see (an amount) needs that permission on its endpoint.
-- `append` with a non-record, a malformed type, a blank description or a `null` related id throws
-  `IllegalArgumentException`.
+- `activity.Append` with the pool instead of the transaction: the activity stays if the change rolls
+  back.
+- Turning `details` back into the app's structs: old rows have old shapes.
+- `Names` left nil: every actor reads "Unknown".

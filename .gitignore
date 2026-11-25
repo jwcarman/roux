@@ -23,3 +23,6 @@ logs/
 
 # The docs site build (mkdocs build)
 /site/
+
+# The skill recipe check's app (plugins/roux/scripts/check-recipe.sh)
+/recipe-app/

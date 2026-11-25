@@ -1,26 +1,31 @@
 # Add a feature: the recipe
 
-A new resource end to end: table, entity, API, permission, resource module, page, form, tests,
-checks. The example is `ranks` (a name and a belt colour) in an app whose package is `app`; replace
-`rank`/`Rank`/`ranks` with the feature's names throughout.
+A new resource end to end: table, module, input, service, handlers, permissions, tests, then the
+browser's module, form, page and route. The example is `ranks` (a name and a belt colour) in an app
+whose Go module is `roux-app`; replace `rank`/`Rank`/`ranks` with the feature's names throughout,
+and `roux-app` with the module line of the app's `go.mod`.
 
 ## First: find the nearest feature
 
-In a grown app, open the existing feature most like the new one (same list type, same kind of form)
-and copy its files' shape: its package, folder, file names, imports and tests. Use this recipe for
-the order, the exact roux names and the checks. In a new app there is none: follow the recipe as
-written (`frontend/src/users/` shows the frontend shape).
+In a grown app, open the existing feature most like the new one (`internal/<feature>/` and
+`frontend/src/<feature>/`) and copy its files' shape: package, file names, imports and tests. Use
+this recipe for the order, the exact roux names and the checks. In a new app there is none: follow
+the recipe as written (`frontend/src/users/` shows the frontend shape).
 
 ## Rules
 
-- Records over the wire, never entities: `Rank` answers, `RankRequest` is sent, and both carry
-  `version` (an entity leaks lazy fields and Hibernate's state; `version` is how a stale save is
-  refused).
-- Refusals are exceptions from `org.jwcarman.roux.problems`; no `@ExceptionHandler`, no error
-  `ResponseEntity`: roux turns them into Problem Details the browser's form and toasts already read.
-  Messages are shown verbatim: write them for people.
-- Every endpoint has `@RequiresPermission(Permissions.X)`, a permission, never a role: roles are
-  data the owner can change, permissions are code.
+- A feature is one Go package, `internal/<feature>/`, with its SQL in `migrations/` beside it. No
+  ORM, no code generator: the SQL is constant text in the package, values are always `$1`
+  arguments (SQL built from what a request sent is an injection).
+- What the API answers is a struct with JSON tags (`Rank`) carrying `version`; an edit sends the
+  `version` it was made from, which is how a stale save becomes a `409`.
+- Refusals are `*problem.Problem` values returned as the error (`problem.NotFound`,
+  `problem.InvalidField`, `problem.Validation`, `problem.StaleVersion`, `problem.Conflict`,
+  `problem.BadRequest`). Never write an error response yourself: roux answers a problem as itself
+  and anything else as a `500`, and the browser's forms read those problems. Messages are shown
+  verbatim: write them for people.
+- Every route is `k.Handle(pattern, permission, fn)`, a permission, never a role: roles are data
+  the owner can change, permissions are code. `k.Mux.Handle` would leave the route open.
 - The browser's rules come from roux's helpers (`text()`, `oneOf()`...), never
   `z.string().min(1, "...")`: the helpers carry the server's messages word for word.
 - Pages never call the API or `fetch`; they use the module's queries and mutations, which add the
@@ -30,329 +35,567 @@ written (`frontend/src/users/` shows the frontend shape).
 - Query keys only from `src/queryKeys.ts`, so a refresh names the same key the query used.
 - Import roux-web only from its subpaths (`@jwcarman/roux-web/api`, `/form`, `/table`, ...): the
   package has no root export.
-- Never edit a Liquibase changeset that has run (every existing database refuses to start); add
-  one. Never hand-edit `permissions.gen.ts` or `routeTree.gen.ts`: the build rewrites them.
-- Time comes from the injected `Clock`, today from `OrganizationCalendar` (see `dates.md`), so tests
-  can set the time.
+- Never edit a migration that has run (roux keeps a checksum, and an edited file stops startup);
+  add a new one. Never hand-edit `permissions.gen.ts` or `routeTree.gen.ts`: tests and the build
+  rewrite them.
+- Time comes from the module's clock (`time.Now` when nil), today from the organization's zone
+  (`dates.md`), so tests set the time.
 
 ## Steps
 
-### 1. The table: `src/main/resources/db/changelog/ranks.xml`
+### 1. The table: `internal/ranks/migrations/001_rank.sql`
 
-<!-- fragment: changelog -->
-```xml
-<changeSet id="rank" author="app">
-  <createTable tableName="rank">
-    <column name="id" type="uuid"><constraints primaryKey="true" nullable="false"/></column>
-    <column name="version" type="bigint"><constraints nullable="false"/></column>
-    <column name="name" type="varchar(40)"><constraints nullable="false"/></column>
-    <column name="colour" type="varchar(16)"><constraints nullable="false"/></column>
-    <column name="created_date" type="timestamptz"/>
-    <column name="modified_date" type="timestamptz"/>
-    <column name="created_by" type="varchar(64)"/>
-    <column name="modified_by" type="varchar(64)"/>
-  </createTable>
-  <sql>create unique index rank_name_key on rank (lower(name))</sql>
-</changeSet>
+<!-- file: internal/ranks/migrations/001_rank.sql -->
+```sql
+-- The school's ranks. Names are unique ignoring case.
+create table rank (
+    id          uuid        primary key default gen_random_uuid(),
+    name        text        not null check (char_length(name) between 1 and 40),
+    colour      text        not null,
+    version     bigint      not null default 0,
+    created_at  timestamptz not null,
+    created_by  uuid        not null references roux_identity (id),
+    modified_at timestamptz not null,
+    modified_by uuid        not null references roux_identity (id)
+);
+
+create unique index rank_name_key on rank (lower(name));
+
+-- Every member may see the ranks; only an owner may change them.
+insert into roux_role_permission (role_id, permission)
+select r.id, 'ranks.read' from roux_role r where r.name in ('USER', 'OWNER')
+on conflict do nothing;
+
+insert into roux_role_permission (role_id, permission)
+select r.id, 'ranks.manage' from roux_role r where r.name = 'OWNER'
+on conflict do nothing;
 ```
 
-Wrap it in `<databaseChangeLog>` (copy the header of an existing changelog) and add
-`<include file="classpath:db/changelog/ranks.xml"/>` at the end of `db.changelog-master.xml`.
+- Files run in name order, each once, in its own transaction. A later change is a new file
+  (`002_rank_order.sql`).
+- The `check` repeats the Go limit (`MaxName`); the unique index on `lower(name)` guards the race
+  the service's own check cannot see (roux answers it `409`).
+- The grants are here, in the feature's own migration, by role **name**, never id (ids differ
+  between databases). Grant to `OWNER` every permission; to `USER` (the app's role) what members
+  may do.
 
-- The six `AuditableEntity` columns above, always, with those names and types.
-- Columns are the fields in snake case (`startsOn` → `starts_on`). Types: `String` → `varchar(n)`;
-  enum → `varchar(n)`; `int` → `int`; `long` → `bigint`; `boolean` → `boolean`; `UUID` → `uuid`;
-  `LocalDate` → `date`; `LocalTime` → `time`; `Instant` → `timestamptz`; `Money` → see `money.md`.
-- Required → `nullable="false"`. Another row → `uuid` with
-  `foreignKeyName="student_rank_fk" references="rank(id)"`.
-- A table name that is a SQL word (`event`, `order`, `user`) is fine quoted by Liquibase, but
-  prefer the feature's name as is; the entity's `@Table(name = ...)` must match it exactly.
+### 2. The module: `internal/ranks/ranks.go`
 
-### 2. The entity: `app/ranks/RankEntity.java`, and its enum
+<!-- file: internal/ranks/ranks.go -->
+```go
+// Package ranks is the school's ranks: the belts a student can hold. Everyone may see them; only
+// an owner may change them.
+package ranks
 
-<!-- file: src/main/java/app/ranks/BeltColour.java -->
-```java
-package app.ranks;
+import (
+	"context"
+	"embed"
+	"time"
 
-/** A rank's belt colour; the constants are the browser's BELT_COLOURS. */
-public enum BeltColour {
-  WHITE, YELLOW, ORANGE, GREEN, BLUE, BROWN, BLACK
-}
-```
+	"github.com/jwcarman/roux/app"
+	"github.com/jwcarman/roux/pgdb"
+)
 
-<!-- file: src/main/java/app/ranks/RankEntity.java -->
-```java
-package app.ranks;
+// The ranks' permissions (migrations/001_rank.sql grants them).
+const (
+	RanksRead   = "ranks.read"
+	RanksManage = "ranks.manage"
+)
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Table;
+// Permissions is every permission ranks checks, for the app's list of them.
+var Permissions = []string{RanksRead, RanksManage}
 
-import org.jwcarman.jpa.spring.audit.AuditableEntity;
+//go:embed migrations/*.sql
+var migrations embed.FS
 
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-
-@Entity
-@Table(name = "rank")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class RankEntity extends AuditableEntity {
-
-  public static final int MAX_NAME = 40;
-
-  private String name;
-
-  @Enumerated(EnumType.STRING)
-  private BeltColour colour;
-
-  public RankEntity(String name, BeltColour colour) {
-    this.name = name.strip();
-    this.colour = colour;
-  }
-
-  public void change(String name, BeltColour colour) {
-    this.name = name.strip();
-    this.colour = colour;
-  }
-}
-```
-
-- `AuditableEntity` is `org.jwcarman.jpa.spring.audit.AuditableEntity`: it has `id` (UUID, set on
-  construction), `version`, and the audit fields. Declare none of them.
-- `@Enumerated(EnumType.STRING)` on every enum. No setters; methods named for what they do.
-- Limits are constants (`MAX_NAME`) used by the request's `@Size`.
-- Hibernate validates the entity against the table at startup (`ddl-auto: validate`); a mismatch
-  fails every `@AppTest` with `Schema-validation: missing column [...]`.
-
-### 3. Repository, records, not-found
-
-One file per type, each with the package line and the imports it uses (no star imports):
-
-<!-- files: src/main/java/app/ranks/ -->
-```java
-package app.ranks;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
-
-import org.jwcarman.roux.problems.NotFoundException;
-import org.springframework.data.jpa.repository.JpaRepository;
-
-public interface RankRepository extends JpaRepository<RankEntity, UUID> {
-  List<RankEntity> findAllByOrderByNameAsc();
-  Optional<RankEntity> findByNameIgnoreCase(String name);
+// Module is the ranks feature: its table and its endpoints.
+type Module struct {
+	// Clock is the time changes are stamped with; time.Now when nil.
+	Clock func() time.Time
 }
 
-public record Rank(UUID id, String name, BeltColour colour, long version) {
-  public static Rank of(RankEntity entity) {
-    return new Rank(entity.getId(), entity.getName(), entity.getColour(), entity.getVersion());
-  }
+func (Module) Name() string { return "ranks" }
+
+func (Module) Migrations() []pgdb.Migration {
+	return []pgdb.Migration{{Name: "ranks", FS: migrations, Dir: "migrations", After: []string{"roux-users", "app-roles"}}}
 }
 
-public record RankRequest(
-    @NotBlank @Size(max = RankEntity.MAX_NAME) String name, @NotNull BeltColour colour, Long version) {}
-
-public class RankNotFoundException extends NotFoundException {
-  public RankNotFoundException(UUID id) {
-    super("No rank %s", id);
-  }
+func (m Module) Mount(_ context.Context, k *app.Kit) error {
+	now := m.Clock
+	if now == nil {
+		now = time.Now
+	}
+	Register(k, Service{Pool: k.Pool, Clock: now})
+	return nil
 }
 ```
 
-- Write no `message =` on the annotations: roux's messages (`Must not be blank`,
-  `Must be between 0 and 40 characters`) are the ones the browser's helpers show.
-- `version` is a nullable `Long` with no annotation: one record for create and edit.
-- A rule between two fields is `@After(field = "endsOn", other = "startsOn")` on the record
-  (`org.jwcarman.roux.validation.After`), never a service check: see `forms.md`. Equal is not after:
-  an event that ends the day it starts is refused.
-- A long list's repository extends `SearchableRepository<RankEntity, UUID>` instead: see "A long
-  list" below.
+- `After` must name `app-roles` (the migration that creates `USER`): without it the grant to `USER`
+  may run first, finds no role, and grants nothing, silently.
+- A module that reads `k.Organization()` (the zone, today) at `Mount` is listed after the users
+  module in `modules.go` (step 6): before the users module mounts, it is UTC and `en-US`, not the
+  `ORG_*` settings.
 
-### 4. The service: `app/ranks/RankService.java`
+### 3. The input: `internal/ranks/input.go`
 
-<!-- file: src/main/java/app/ranks/RankService.java -->
-```java
-package app.ranks;
+<!-- file: internal/ranks/input.go -->
+```go
+package ranks
 
-import java.util.List;
-import java.util.UUID;
+import (
+	"slices"
+	"strings"
+	"unicode/utf8"
 
-import org.jwcarman.roux.jpa.Versions;
-import org.jwcarman.roux.problems.InvalidFieldException;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+	"github.com/jwcarman/roux/problem"
+)
 
-@Service
-@Transactional
-public class RankService {
+// MaxName is the longest name, in characters (migrations/001_rank.sql checks it too).
+const MaxName = 40
 
-  private final RankRepository ranks;
+// Colours are the belts a rank may be.
+var Colours = []string{"white", "yellow", "orange", "green", "blue", "brown", "black"}
 
-  public RankService(RankRepository ranks) {
-    this.ranks = ranks;
-  }
+// body is a write as it arrives; pointers tell "missing" from empty.
+type body struct {
+	Name    *string `json:"name"`
+	Colour  *string `json:"colour"`
+	Version *int64  `json:"version"`
+}
 
-  @Transactional(readOnly = true)
-  public List<Rank> list() {
-    return ranks.findAllByOrderByNameAsc().stream().map(Rank::of).toList();
-  }
+// Input is a valid write.
+type Input struct {
+	Name, Colour string
+}
 
-  public Rank create(RankRequest request) {
-    requireUniqueName(request.name(), null);
-    return Rank.of(ranks.saveAndFlush(new RankEntity(request.name(), request.colour())));
-  }
+// validate checks every field and answers every mistake at once; an edit must say which version
+// it was made from.
+func (b body) validate(edit bool) (Input, error) {
+	var in Input
+	var v []problem.Violation
+	bad := func(field, message string) { v = append(v, problem.Violation{Field: field, Message: message}) }
 
-  public Rank update(UUID id, RankRequest request) {
-    RankEntity rank = find(id);
-    Versions.require(rank, request.version()); // first: a stale version is a 409
-    requireUniqueName(request.name(), id);
-    rank.change(request.name(), request.colour());
-    return Rank.of(ranks.saveAndFlush(rank));
-  }
+	in.Name = strings.TrimSpace(deref(b.Name))
+	switch n := utf8.RuneCountInString(in.Name); {
+	case n == 0:
+		bad("name", problem.MustNotBeBlank)
+	case n > MaxName:
+		bad("name", problem.MustBeBetween(1, MaxName))
+	}
+	in.Colour = deref(b.Colour)
+	if !slices.Contains(Colours, in.Colour) {
+		bad("colour", problem.MustBeOneOf(Colours...))
+	}
+	if edit && b.Version == nil {
+		bad("version", problem.MustNotBeEmpty)
+	}
+	if len(v) > 0 {
+		return Input{}, problem.Validation(v...)
+	}
+	return in, nil
+}
 
-  public void remove(UUID id) {
-    ranks.delete(find(id));
-  }
-
-  private RankEntity find(UUID id) {
-    return ranks.findById(id).orElseThrow(() -> new RankNotFoundException(id));
-  }
-
-  private void requireUniqueName(String name, UUID self) {
-    ranks.findByNameIgnoreCase(name.strip())
-        .filter(other -> !other.getId().equals(self))
-        .ifPresent(other -> {
-          throw new InvalidFieldException("name", "Another rank has this name");
-        });
-  }
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 ```
 
-- `Versions` is `org.jwcarman.roux.jpa.Versions`; `InvalidFieldException` is
-  `org.jwcarman.roux.problems.InvalidFieldException`. Other refusals: `errors.md`.
-- `saveAndFlush`, so the answer carries the new `version`.
-- Don't catch `DataIntegrityViolationException`: roux answers the race 409.
+- Pointers tell a missing member from an empty one. `validate` collects every mistake and answers
+  them at once (`problem.Validation`): the form shows each under its field.
+- The words are roux's constants and functions (`problem.MustNotBeBlank`,
+  `problem.MustBeBetween`, `problem.MustBeOneOf`), the same the browser's helpers show. A message of
+  the feature's own is a constant, so a test can name it.
+- Trim before checking; count characters with `utf8.RuneCountInString`, never `len` (bytes).
 
-### 5. The controller and its permission
+### 4. The service: `internal/ranks/service.go`
 
-<!-- file: src/main/java/app/ranks/RanksController.java -->
-```java
-package app.ranks;
+<!-- file: internal/ranks/service.go -->
+```go
+package ranks
 
-import java.util.List;
-import java.util.UUID;
+import (
+	"context"
+	"errors"
+	"time"
 
-import jakarta.validation.Valid;
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
-import org.jwcarman.who.spring.security.RequiresPermission;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+	"github.com/jwcarman/roux/authn"
+	"github.com/jwcarman/roux/problem"
+)
 
-import app.identity.Permissions;
+// NameTaken is what a clash of names says, under the name field.
+const NameTaken = "Another rank has this name"
 
-@RestController
-@RequestMapping("/api/ranks")
-public class RanksController {
+// Rank is a rank as the API answers it.
+type Rank struct {
+	ID      uuid.UUID `json:"id"`
+	Name    string    `json:"name"`
+	Colour  string    `json:"colour"`
+	Version int64     `json:"version"`
+}
 
-  private final RankService ranks;
+// Service is the ranks' operations.
+type Service struct {
+	Pool  *pgxpool.Pool
+	Clock func() time.Time
+}
 
-  public RanksController(RankService ranks) {
-    this.ranks = ranks;
-  }
+const columns = `id, name, colour, version`
 
-  @GetMapping
-  @RequiresPermission(Permissions.RANKS_READ)
-  public List<Rank> list() {
-    return ranks.list();
-  }
+// List is every rank, by name.
+func (s Service) List(ctx context.Context) ([]Rank, error) {
+	rows, err := s.Pool.Query(ctx, `select `+columns+` from rank order by lower(name), id`)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[Rank])
+}
 
-  @PostMapping
-  @ResponseStatus(HttpStatus.CREATED)
-  @RequiresPermission(Permissions.RANKS_MANAGE)
-  public Rank create(@Valid @RequestBody RankRequest request) {
-    return ranks.create(request);
-  }
+// Get is one rank.
+func (s Service) Get(ctx context.Context, id uuid.UUID) (Rank, error) {
+	rows, err := s.Pool.Query(ctx, `select `+columns+` from rank where id = $1`, id)
+	if err != nil {
+		return Rank{}, err
+	}
+	r, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Rank])
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Rank{}, notFound()
+	}
+	return r, err
+}
 
-  @PutMapping("/{id}")
-  @RequiresPermission(Permissions.RANKS_MANAGE)
-  public Rank update(@PathVariable UUID id, @Valid @RequestBody RankRequest request) {
-    return ranks.update(id, request);
-  }
+// Create adds a rank.
+func (s Service) Create(ctx context.Context, caller *authn.Principal, in Input) (Rank, error) {
+	var out Rank
+	err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
+		if err := uniqueName(ctx, tx, in.Name, uuid.Nil); err != nil {
+			return err
+		}
+		rows, err := tx.Query(ctx, `
+			insert into rank (name, colour, created_at, created_by, modified_at, modified_by)
+			values ($1, $2, $3, $4, $3, $4) returning `+columns,
+			in.Name, in.Colour, s.Clock(), caller.IdentityID)
+		if err != nil {
+			return err
+		}
+		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Rank])
+		return err
+	})
+	return out, err
+}
 
-  @DeleteMapping("/{id}")
-  @ResponseStatus(HttpStatus.NO_CONTENT)
-  @RequiresPermission(Permissions.RANKS_MANAGE)
-  public void remove(@PathVariable UUID id) {
-    ranks.remove(id);
-  }
+// Update changes a rank, from the version the caller last saw.
+func (s Service) Update(ctx context.Context, caller *authn.Principal, id uuid.UUID, version int64, in Input) (Rank, error) {
+	var out Rank
+	err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
+		var current int64
+		err := tx.QueryRow(ctx, `select version from rank where id = $1 for update`, id).Scan(&current)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return notFound()
+		}
+		if err != nil {
+			return err
+		}
+		// First, before anything changes: a stale version is a 409.
+		if current != version {
+			return problem.StaleVersion()
+		}
+		if err := uniqueName(ctx, tx, in.Name, id); err != nil {
+			return err
+		}
+		rows, err := tx.Query(ctx, `
+			update rank set name = $2, colour = $3, version = version + 1, modified_at = $4, modified_by = $5
+			 where id = $1 returning `+columns,
+			id, in.Name, in.Colour, s.Clock(), caller.IdentityID)
+		if err != nil {
+			return err
+		}
+		out, err = pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[Rank])
+		return err
+	})
+	return out, err
+}
+
+// Delete removes a rank.
+func (s Service) Delete(ctx context.Context, id uuid.UUID) error {
+	tag, err := s.Pool.Exec(ctx, `delete from rank where id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return notFound()
+	}
+	return nil
+}
+
+func notFound() error { return problem.NotFound("This rank no longer exists") }
+
+// uniqueName refuses a name another rank has, ignoring case, under the name field.
+func uniqueName(ctx context.Context, tx pgx.Tx, name string, self uuid.UUID) error {
+	var taken bool
+	if err := tx.QueryRow(ctx, `select exists (select 1 from rank where lower(name) = lower($1) and id <> $2)`,
+		name, self).Scan(&taken); err != nil {
+		return err
+	}
+	if taken {
+		return problem.InvalidField("name", NameTaken)
+	}
+	return nil
 }
 ```
 
-`RequiresPermission` is `org.jwcarman.who.spring.security.RequiresPermission`. Without the
-permission a caller gets 403, signed out 401.
+- A write is one `pgx.BeginFunc` (commits on nil, rolls back otherwise); `for update` holds the row
+  while the edit is checked.
+- The version is compared **first**, before anything changes, and the update raises it.
+- `pgx.RowToStructByPos[Rank]` reads columns in order into the struct's fields: keep `columns` and
+  the struct in the same order.
+- A missing row is `problem.NotFound(...)`; a clash on what the person typed is
+  `problem.InvalidField(field, message)`. Anything else returned is a `500` that logs the cause.
 
-The permission, in three places:
+### 5. The handlers: `internal/ranks/handlers.go`
 
-1. `src/main/java/app/identity/Permissions.java`: one constant per permission. A new app has no
-   `Permissions` class yet: create it, and add `Permissions.class` to the front of
-   `PermissionClasses.ALL` in `src/test/java/app/identity/PermissionClasses.java` (roux checks only
-   the classes listed there).
+<!-- file: internal/ranks/handlers.go -->
+```go
+package ranks
 
-   <!-- file: src/main/java/app/identity/Permissions.java -->
-   ```java
-   package app.identity;
+import (
+	"net/http"
 
-   /** The app's permissions: what a role may do. */
-   public final class Permissions {
-     public static final String RANKS_READ = "ranks.read";
-     public static final String RANKS_MANAGE = "ranks.manage";
+	"github.com/google/uuid"
 
-     private Permissions() {}
-   }
-   ```
-2. A **new** changeset in `db/changelog/roles.xml` granting it ("only the owner" = granted to
-   `OWNER` alone). It goes inside the file's `<databaseChangeLog>`, just before the closing tag:
-   anything after `</databaseChangeLog>` is not well-formed XML, and the app (and every test) fails
-   to start.
+	"github.com/jwcarman/roux/api"
+	"github.com/jwcarman/roux/app"
+	"github.com/jwcarman/roux/authn"
+)
 
-   <!-- fragment: roles -->
-   ```xml
-     <!-- ...the changesets already here, unchanged... -->
-     <changeSet id="ranks-permissions" author="app">
-       <sql>
-         INSERT INTO who_role_permission (role_id, permission)
-           SELECT r.id, p.permission FROM who_role r
-           CROSS JOIN (VALUES ('ranks.read'), ('ranks.manage')) AS p(permission)
-           WHERE r.name = 'OWNER'
-           ON CONFLICT DO NOTHING;
-       </sql>
-     </changeSet>
-   </databaseChangeLog>
-   ```
-3. `frontend/src/permissions.gen.ts`, written by a test, never by hand:
-   `./mvnw test -Dskip.npm -Dtest=PermissionsListTest`. The first run rewrites the file and fails;
-   run it again until it passes. No Docker needed; the check script does it for you.
+// BasePath is where the ranks' endpoints live.
+const BasePath = "/api/ranks"
 
-`PermissionsTest` (which checks the grants against the constants) needs Docker, so without it
-check by hand: every constant is granted to `OWNER` in `roles.xml`, and every grant names a constant.
+// Register serves the ranks' endpoints. Each is a kit route: the CSRF token, a sign-in and the
+// permission are checked before the handler runs.
+//
+//	GET    /api/ranks       every rank, by name               ranks.read
+//	POST   /api/ranks       add a rank                        ranks.manage
+//	GET    /api/ranks/{id}  one rank                          ranks.read
+//	PUT    /api/ranks/{id}  change it, from its version (409) ranks.manage
+//	DELETE /api/ranks/{id}  delete it                         ranks.manage
+func Register(k *app.Kit, svc Service) {
+	k.Handle("GET "+BasePath, RanksRead, func(w http.ResponseWriter, r *http.Request) error {
+		out, err := svc.List(r.Context())
+		if err != nil {
+			return err
+		}
+		return api.JSON(w, http.StatusOK, out)
+	})
+	k.Handle("POST "+BasePath, RanksManage, func(w http.ResponseWriter, r *http.Request) error {
+		in, _, err := decode(r, false)
+		if err != nil {
+			return err
+		}
+		out, err := svc.Create(r.Context(), authn.PrincipalFrom(r.Context()), in)
+		if err != nil {
+			return err
+		}
+		return api.JSON(w, http.StatusCreated, out)
+	})
+	k.Handle("GET "+BasePath+"/{id}", RanksRead, func(w http.ResponseWriter, r *http.Request) error {
+		id, err := rankID(r)
+		if err != nil {
+			return err
+		}
+		out, err := svc.Get(r.Context(), id)
+		if err != nil {
+			return err
+		}
+		return api.JSON(w, http.StatusOK, out)
+	})
+	k.Handle("PUT "+BasePath+"/{id}", RanksManage, func(w http.ResponseWriter, r *http.Request) error {
+		id, err := rankID(r)
+		if err != nil {
+			return err
+		}
+		in, version, err := decode(r, true)
+		if err != nil {
+			return err
+		}
+		out, err := svc.Update(r.Context(), authn.PrincipalFrom(r.Context()), id, version, in)
+		if err != nil {
+			return err
+		}
+		return api.JSON(w, http.StatusOK, out)
+	})
+	k.Handle("DELETE "+BasePath+"/{id}", RanksManage, func(w http.ResponseWriter, r *http.Request) error {
+		id, err := rankID(r)
+		if err != nil {
+			return err
+		}
+		if err := svc.Delete(r.Context(), id); err != nil {
+			return err
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	})
+}
 
-### 6. Query keys: `frontend/src/queryKeys.ts`
+// decode reads and checks a write: a body that is not JSON, or has a member the API does not
+// know, is a 400; so is every mistake validate finds.
+func decode(r *http.Request, edit bool) (Input, int64, error) {
+	var b body
+	if err := api.Decode(r, &b); err != nil {
+		return Input{}, 0, err
+	}
+	in, err := b.validate(edit)
+	if err != nil {
+		return Input{}, 0, err
+	}
+	var version int64
+	if b.Version != nil {
+		version = *b.Version
+	}
+	return in, version, nil
+}
+
+// rankID is the {id} in the path; one that is not a UUID names no rank.
+func rankID(r *http.Request) (uuid.UUID, error) {
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		return uuid.Nil, notFound()
+	}
+	return id, nil
+}
+```
+
+- `k.Handle` checks the CSRF token, a sign-in and the permission before `fn` runs: `401` signed
+  out, `403` without it. `k.HandleSignedIn` is for any signed-in caller, `k.HandlePublic` for
+  anybody.
+- The pattern is Go's `net/http` one: method, space, path; `r.PathValue("id")` reads `{id}`.
+- `api.Decode` refuses a body that is not one JSON object, or has a member the struct lacks
+  (`400`); `api.JSON(w, status, v)` answers. Create `201`, edit `200`, delete `204`.
+- The caller is `authn.PrincipalFrom(r.Context())`; pass it to the service.
+
+### 6. Turn it on: `cmd/server/modules.go`
+
+The import, beside the file's other imports:
+
+<!-- fragment: modules-import -->
+```go
+"roux-app/internal/ranks"
+```
+
+The module, at the end of the line that adds `email` and `members` (after them, so
+`k.Organization()` holds the `ORG_*` settings):
+
+<!-- fragment: modules-append -->
+```go
+mods = append(mods, email, members, ranks.Module{})
+```
+
+Its permissions, in `permissions()`:
+
+<!-- fragment: permissions -->
+```go
+return append(app.RouxPermissions(), ranks.Permissions...)
+```
+
+Then run `go test ./cmd/server` **twice**: the first run rewrites
+`frontend/src/permissions.gen.ts` (adding `RANKS_READ` and `RANKS_MANAGE`) and fails so the change
+is noticed; the second passes. The check script (below) does this for you. Its other test fails,
+naming it, if `OWNER` lacks a permission or a migration grants one nobody declared.
+
+### 7. The Go test: `internal/ranks/ranks_test.go`
+
+<!-- file: internal/ranks/ranks_test.go -->
+```go
+package ranks_test
+
+import (
+	"testing"
+
+	"github.com/google/uuid"
+
+	"github.com/jwcarman/roux/authn/authntest"
+	"github.com/jwcarman/roux/rouxtest"
+
+	"roux-app/internal/ranks"
+)
+
+// setup is the ranks API over a fresh schema, with Olive (OWNER) and Ada (USER) signed in.
+func setup(t *testing.T) (owner, user *authntest.Browser) {
+	t.Helper()
+	a := rouxtest.New(t, "ranks")
+	a.Role("USER") // the app's own role, before ranks grants to it
+	a.Migrate(ranks.Module{}.Migrations()...)
+	ranks.Register(a.Kit(), ranks.Service{Pool: a.Pool, Clock: a.Clock.Now})
+	a.Serve()
+	return a.SignedIn(a.Person("Olive Owner", "OWNER")), a.SignedIn(a.Person("Ada Lovelace", "USER"))
+}
+
+func TestAnOwnerAddsARankThatEveryoneSees(t *testing.T) {
+	owner, user := setup(t)
+	added := owner.Post("/api/ranks", map[string]any{"name": " Yellow belt ", "colour": "yellow"}).
+		Want(t, 201, "add").JSON(t)
+	if added["name"] != "Yellow belt" || added["version"] != float64(0) {
+		t.Fatalf("added %v", added)
+	}
+	var list []ranks.Rank
+	user.Get("/api/ranks").Want(t, 200, "list").Decode(t, &list)
+	if len(list) != 1 || list[0].Name != "Yellow belt" {
+		t.Fatalf("list %v", list)
+	}
+}
+
+func TestOnlyAnOwnerChangesRanks(t *testing.T) {
+	_, user := setup(t)
+	user.Post("/api/ranks", map[string]any{"name": "Yellow", "colour": "yellow"}).Want(t, 403, "a USER")
+}
+
+func TestARankNeedsANameAndAColourItKnows(t *testing.T) {
+	owner, _ := setup(t)
+	got := owner.Post("/api/ranks", map[string]any{"name": " ", "colour": "mauve"}).Want(t, 400, "bad").JSON(t)
+	errs, _ := got["errors"].([]any)
+	if len(errs) != 2 {
+		t.Fatalf("errors %v", got)
+	}
+}
+
+func TestTwoRanksMayNotShareANameIgnoringCase(t *testing.T) {
+	owner, _ := setup(t)
+	owner.Post("/api/ranks", map[string]any{"name": "Yellow", "colour": "yellow"}).Want(t, 201, "first")
+	got := owner.Post("/api/ranks", map[string]any{"name": "YELLOW", "colour": "green"}).Want(t, 400, "second").JSON(t)
+	if errs := got["errors"].([]any); errs[0].(map[string]any)["message"] != ranks.NameTaken {
+		t.Fatalf("got %v", got)
+	}
+}
+
+func TestAnEditFromAnOldVersionIsRefused(t *testing.T) {
+	owner, _ := setup(t)
+	id := owner.Post("/api/ranks", map[string]any{"name": "Yellow", "colour": "yellow"}).Want(t, 201, "add").JSON(t)["id"]
+	path := "/api/ranks/" + id.(string)
+	owner.Put(path, map[string]any{"name": "Gold", "colour": "yellow", "version": 0}).Want(t, 200, "edit")
+	owner.Put(path, map[string]any{"name": "Amber", "colour": "yellow", "version": 0}).Want(t, 409, "stale")
+	owner.Put(path, map[string]any{"name": "Amber", "colour": "yellow"}).Want(t, 400, "no version")
+	owner.Delete(path).Want(t, 204, "delete")
+	owner.Get(path).Want(t, 404, "gone")
+	owner.Get("/api/ranks/"+uuid.NewString()).Want(t, 404, "never was")
+}
+```
+
+- `rouxtest.New(t, "ranks")` is a fresh schema with roux's tables. `a.Role("USER")` creates the
+  app's role before the feature's migration grants to it (`OWNER` exists already).
+- `a.Person(name, role)` makes a member of the team and returns their id; `a.SignedIn(id)` is a browser
+  signed in as them, with the CSRF token. `Want(t, status, what)` fails with the body when the
+  status differs; `.JSON(t)` and `.Decode(t, &v)` read the answer.
+- One test per behaviour: a success, the permission (`403`), the field rules (`400`), the
+  uniqueness, the stale edit (`409`), the missing version, delete and `404`.
+- The tests need PostgreSQL: `TEST_DATABASE_URL` if set, else a container per run (Docker).
+
+### 12. Query keys: `frontend/src/queryKeys.ts`
 
 One more entry in `queryKeys`:
 
@@ -365,7 +608,7 @@ ranks: {
 },
 ```
 
-### 7. The resource module: `frontend/src/ranks/ranks.ts`
+### 11. The resource module: `frontend/src/ranks/ranks.ts`
 
 <!-- file: frontend/src/ranks/ranks.ts -->
 ```ts
@@ -375,7 +618,7 @@ import { oneOf, text } from "@jwcarman/roux-web/form";
 import { z } from "zod";
 import { queryKeys } from "../queryKeys";
 
-export const BELT_COLOURS = ["WHITE", "YELLOW", "ORANGE", "GREEN", "BLUE", "BROWN", "BLACK"] as const;
+export const BELT_COLOURS = ["white", "yellow", "orange", "green", "blue", "brown", "black"] as const;
 export type BeltColour = (typeof BELT_COLOURS)[number];
 
 export interface Rank {
@@ -385,7 +628,7 @@ export interface Rank {
   version: number;
 }
 
-/** RankRequest's rules, without the version. */
+/** The server's validate, in the browser: the same rules and words, without the version. */
 export const rankRequestSchema = z.object({
   name: text().max(40),
   colour: oneOf(BELT_COLOURS),
@@ -419,11 +662,14 @@ export const updateRank = (id: string, version: number) =>
 - Only what a page uses: every line must run in some test (the 100% gate). A remove button adds
   `remove` to `ranksApi` and a `removeRank` mutation, with its tests.
 - Paths are relative to `/api/` (`"ranks"`, ``path`ranks/${id}` ``). `path` encodes the values.
-- Helpers mirror the annotations: `text()` ↔ `@NotBlank`, `.max(n)` ↔ `@Size(max = n)`,
-  `oneOf(values)` ↔ `@NotNull` enum, `date()` ↔ `@NotNull LocalDate`, `id()` ↔ `@NotNull UUID`,
-  `.optional()` when the server has no `@NotBlank`/`@NotNull`. Full table: `forms.md`.
+- Helpers mirror `validate` (step 3): `text()` ↔ trimmed and `problem.MustNotBeBlank`,
+  `.max(n)` ↔ `problem.MustBeBetween(1, n)`, `oneOf(values)` ↔ `problem.MustBeOneOf(values...)`
+  (the same values, spelled the same), `date()` ↔ a required date, `id()` ↔ a required UUID,
+  `.optional()` when the server lets it be empty. Full table: `forms.md`.
 - Two fields in order: `after(z.object({...}), { field: "endsOn", other: "startsOn" })`, called
-  last, matching `@After`.
+  last, matching the server's own check of the two (`forms.md`).
+- `update` sends the request and `version`, nothing else: `api.Decode` refuses a member the server
+  does not take (`id`, say) with a `400`.
 
 ### 8. The form dialog: `frontend/src/ranks/RankFormDialog.tsx`
 
@@ -541,144 +787,7 @@ import { LuMedal } from "react-icons/lu"; // beside nav.ts's other icon imports
 { label: "Ranks", to: "/ranks", icon: LuMedal, permission: "ranks.read", description: "The belts a student can hold." },
 ```
 
-### 11. The Java test: `src/test/java/app/ranks/RanksControllerTest.java`
-
-The app's Java coverage gate is 100%, lines and branches: these tests reach every line of the
-service and controller above, and both sides of `requireUniqueName`'s filter. Keep one test per
-behaviour when you adapt them.
-
-<!-- file: src/test/java/app/ranks/RanksControllerTest.java -->
-```java
-package app.ranks;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.util.UUID;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayNameGeneration;
-import org.junit.jupiter.api.DisplayNameGenerator;
-import org.junit.jupiter.api.Test;
-import org.jwcarman.roux.test.AppTest;
-import org.jwcarman.roux.test.TestUser;
-import org.jwcarman.roux.test.TestUsers;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-
-import app.identity.Roles;
-import tools.jackson.databind.ObjectMapper;
-
-@AppTest
-@DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores.class)
-class RanksControllerTest {
-
-  private static final String RANKS = "/api/ranks";
-
-  @Autowired TestUsers users;
-  @Autowired ObjectMapper json;
-
-  private TestUser owner;
-
-  @BeforeEach
-  void clean_slate() {
-    users.reset(); // every user gone, the app's tables emptied; names no tables
-    owner = users.owner();
-  }
-
-  @Test
-  void the_owner_adds_lists_edits_and_removes_a_rank() throws Exception {
-    String id = create("White", "WHITE");
-    owner.perform(get(RANKS)).andExpect(status().isOk()).andExpect(jsonPath("$[0].name").value("White"));
-    owner.perform(send(put(RANKS + "/" + id), "Snow", "WHITE", 0L))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.version").value(1));
-    owner.perform(delete(RANKS + "/" + id)).andExpect(status().isNoContent());
-  }
-
-  @Test
-  void an_edit_that_keeps_its_own_name_is_saved() throws Exception {
-    // requireUniqueName finds the rank itself: the filter's other side, which the gate needs.
-    String id = create("White", "WHITE");
-    owner.perform(send(put(RANKS + "/" + id), "White", "YELLOW", 0L)).andExpect(status().isOk());
-  }
-
-  @Test
-  void a_name_another_rank_has_is_a_400_on_the_name_field() throws Exception {
-    create("White", "WHITE");
-    owner.perform(send(post(RANKS), "white", "BLACK", null))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.errors[0].field").value("name"))
-        .andExpect(jsonPath("$.errors[0].message").value("Another rank has this name"));
-  }
-
-  @Test
-  void a_blank_name_is_a_400_on_the_name_field() throws Exception {
-    owner.perform(send(post(RANKS), " ", "WHITE", null))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.errors[0].field").value("name"))
-        .andExpect(jsonPath("$.errors[0].message").value("Must not be blank"));
-  }
-
-  @Test
-  void an_edit_at_a_stale_version_is_a_409() throws Exception {
-    String id = create("White", "WHITE");
-    // The first edit must change something: an edit that changes nothing leaves the version at 0.
-    owner.perform(send(put(RANKS + "/" + id), "Snow", "WHITE", 0L)).andExpect(status().isOk());
-    owner.perform(send(put(RANKS + "/" + id), "Ivory", "WHITE", 0L)).andExpect(status().isConflict());
-  }
-
-  @Test
-  void an_unknown_rank_is_a_404() throws Exception {
-    owner.perform(delete(RANKS + "/" + UUID.randomUUID())).andExpect(status().isNotFound());
-  }
-
-  @Test
-  void a_user_without_the_permission_is_a_403() throws Exception {
-    // One sign-in per address: signing the same address in twice throws EmailAddressTakenException.
-    TestUser uma = users.signedIn("Uma User", "uma@example.org", Roles.USER);
-    uma.perform(get(RANKS)).andExpect(status().isForbidden());
-    uma.perform(send(post(RANKS), "White", "WHITE", null)).andExpect(status().isForbidden());
-  }
-
-  @Test
-  void signed_out_is_a_401() throws Exception {
-    users.anonymous().perform(get(RANKS)).andExpect(status().isUnauthorized());
-  }
-
-  private String create(String name, String colour) throws Exception {
-    String body = owner.perform(send(post(RANKS), name, colour, null))
-        .andExpect(status().isCreated())
-        .andReturn().getResponse().getContentAsString();
-    return json.readTree(body).get("id").asString();
-  }
-
-  private MockHttpServletRequestBuilder send(
-      MockHttpServletRequestBuilder request, String name, String colour, Long version) {
-    return request.contentType(MediaType.APPLICATION_JSON)
-        .content(json.writeValueAsString(new Body(name, colour, version)));
-  }
-
-  private record Body(String name, String colour, Long version) {}
-}
-```
-
-- `AppTest`, `TestUser`, `TestUsers` are in `org.jwcarman.roux.test`; role names are the app's
-  `Roles` constants (a new app has `USER`, without the feature's permission).
-- Build request bodies from a record through `ObjectMapper`, not hand-written JSON: a typo in a
-  string is a 400 your test reads as the rule it meant to check.
-- Every value a test sends must satisfy the rules it isn't testing (a name within the limit, an end
-  after its start): without Docker you cannot run these, so read each body against the request
-  record's annotations.
-- Assert `$.detail` and field messages word for word. Sign in only through `TestUsers`; no
-  `csrf()`, no `user(...)`. More: `tests.md`.
-
-### 12. The Vitest tests: beside the code
+### 13. The Vitest tests: beside the code
 
 <!-- file: frontend/src/ranks/RankFormDialog.test.tsx -->
 ```tsx
@@ -706,7 +815,7 @@ describe("RankFormDialog", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Open" }));
     await user.type(screen.getByLabelText(/^Name/), "White");
-    await user.selectOptions(screen.getByLabelText(/^Colour/), "WHITE");
+    await user.selectOptions(screen.getByLabelText(/^Colour/), "white");
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByText("Another rank has this name")).toBeInTheDocument();
   });
@@ -716,10 +825,10 @@ describe("RankFormDialog", () => {
     server.use(
       http.put("/api/ranks/r1", async ({ request }) => {
         sent = await request.json();
-        return HttpResponse.json({ id: "r1", name: "Snow", colour: "WHITE", version: 4 });
+        return HttpResponse.json({ id: "r1", name: "Snow", colour: "white", version: 4 });
       }),
     );
-    const rank = { id: "r1", name: "White", colour: "WHITE" as const, version: 3 };
+    const rank = { id: "r1", name: "White", colour: "white" as const, version: 3 };
     renderWithProviders(
       <>
         <RankFormDialog rank={rank} trigger={<Button>Edit</Button>} />
@@ -732,7 +841,7 @@ describe("RankFormDialog", () => {
     await user.type(screen.getByLabelText(/^Name/), "Snow");
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByText("Snow was saved")).toBeInTheDocument();
-    expect(sent).toEqual({ name: "Snow", colour: "WHITE", version: 3 });
+    expect(sent).toEqual({ name: "Snow", colour: "white", version: 3 });
   });
 });
 ```
@@ -752,7 +861,7 @@ import { renderRoute } from "../../testing/route";
 
 describe("/ranks", () => {
   it("lists the ranks", async () => {
-    server.use(http.get("/api/ranks", () => HttpResponse.json([{ id: "r1", name: "White", colour: "WHITE", version: 0 }])));
+    server.use(http.get("/api/ranks", () => HttpResponse.json([{ id: "r1", name: "White", colour: "white", version: 0 }])));
     renderRoute("/ranks", { permissions: [RANKS_READ] });
     const table = await screen.findByRole("table", { name: "Ranks" });
     expect(await within(table).findByText("White")).toBeInTheDocument();
@@ -767,7 +876,7 @@ describe("/ranks", () => {
 ```
 
 - A toast is seen only with `<Toaster />` rendered beside the component.
-- Answer with MSW (`server.use`), never by mocking roux, who, the module or the query client.
+- Answer with MSW (`server.use`), never by mocking roux, the module or the query client.
   `invalidFields`, `notFound`, `stale`, `serverError` build the server's problems.
 - The fake server is strict: a request no handler answers fails the test. A page that starts
   calling a new endpoint breaks every test that renders it:
@@ -780,59 +889,55 @@ describe("/ranks", () => {
 
 ## A long list (paged by the server)
 
-Instead of steps 3, 7 and 9's list: a sort enum `RankSort implements SortPropertyProvider`
-(constants = column ids), a `SearchableRepository`, `Paginator.of(RankEntity.class, RankSort.class,
-cfg -> cfg.defaultSort(RankSort.NAME).defaultPageSize(25))` in the service, `@ModelAttribute
-PageParams params` in the controller answering `PageDto<Rank>`, `pageQuery(...)` in the module, and
-`QueryTable` with its state in the URL (`tableSearchOf`). All of it: `lists.md`.
+Instead of `List` and the whole-list page: a view (`create view rank_list as ...`), a
+`page.New(page.ListConfig[Sort, Row]{...})` list in the service, `api.PageRequest` in the handler
+answering a page, `pageQuery(...)` in the module, and `QueryTable` with its state in the URL
+(`tableSearchOf`). All of it: `lists.md`.
 
 ## Add a field to an existing feature
 
-1. A **new** changeset in the feature's changelog: `<addColumn tableName="rank">` (a required
-   column on a table with rows needs a `defaultValue`, or add it nullable).
-2. The entity's field, its constructor and change method; the request's annotated component; the
-   answer record and its `of`.
-3. The module: the interface, the schema rule, and both `defaultValues` in the dialog.
-4. The dialog's `form.AppField`.
-5. Tests: the server refusal for the new rule; the request body in the dialog test; every MSW
+1. A **new** migration file: `alter table rank add column ...` (a `not null` column on a table with
+   rows needs a `default`).
+2. Go: the `body` member, `Input` field and its rule in `validate`; the `Rank` field, `columns`, and
+   every `insert`/`update` (same order as the struct).
+3. The browser: the interface, the schema rule, and both `defaultValues` in the dialog; the dialog's
+   `form.AppField`.
+4. Tests: the server refusal for the new rule; the request body in the dialog test; every MSW
    answer that builds the record gets the field.
 
 ## Check
 
 From the app's root, run the skill's check script (`bash <skill base directory>/scripts/check.sh`)
-and fix what it reports until it ends `check: ok`. It runs, in the order the build needs: every
-changelog parsed as XML; `./mvnw spotless:apply` (every later Maven run fails on unformatted Java);
-`PermissionsListTest`, which rewrites `permissions.gen.ts` (the frontend fails to build against a
-stale one); `./mvnw test-compile`, which also runs the frontend's tests with the 100% gate and its
-type-checked build. While iterating on the frontend alone, `cd frontend && npm test` is quicker.
+and fix what it reports until it ends `check: ok`. In the order the build needs, it runs `gofmt -w`
+(formatting is checked later), the permissions test (rewrites `permissions.gen.ts`, which the
+frontend build needs), `go vet`, `golangci-lint` if installed, the Go tests when a database is
+reachable, then the frontend's tests with the 100% coverage gate and its type-checked build. While
+iterating on the frontend alone, `cd frontend && npm test` is quicker.
 
-With Docker, `./mvnw verify` runs all of it plus the Java tests, the Java coverage gate (100%),
-`PermissionsTest` and Playwright (`-DskipITs` leaves out Playwright). Without Docker the Java tests
-cannot run: read each test against step 11 (role names exist in `Roles`, bodies satisfy the rules,
-one sign-in per address, the stale edit changes a value, every service branch has a test).
+When it says the Go tests were skipped (no `TEST_DATABASE_URL` and no Docker), say so to the user,
+and read each test against step 7: role names exist, bodies satisfy `validate`, `a.Role` comes
+before `a.Migrate`.
 
 ## Pitfalls
 
-- Test data that breaks your own rules (an end equal to its start, a name over the limit, a role
-  without the permission): without Docker the Java tests cannot run, so read every request body in
-  your tests against the request record's annotations before you finish.
-- A changeset written after `</databaseChangeLog>`: the file is not XML, and nothing starts.
-- A stale-version test whose first edit changes nothing: the version stays at 0, so the "stale"
-  edit is a 200. Change a value in the first edit.
-- `users.signedIn(...)` twice with the same address in one test: the second throws
-  `EmailAddressTakenException`. Sign in once and keep the `TestUser`.
-- No test of an edit that keeps the record's own unique name: half of `requireUniqueName`'s branch
-  is never run and the 100% gate fails.
-- A changeset edited after it ran: every existing database refuses to start. Add a new one.
-- `@Table` name and changelog `tableName` differ, or a column type is off: every `@AppTest` fails
-  at startup.
-- `permissions.gen.ts` stale: the frontend build fails. Run `PermissionsListTest`, don't edit it.
-- A permission constant not granted in `roles.xml`, or a grant with no constant: `PermissionsTest`
-  fails. A new app's first permission also needs `Permissions.class` in `PermissionClasses.ALL`.
+- Test data that breaks your own rules (a blank name in a success test, a colour not in
+  `Colours`): read each body against `validate`.
+- A migration without `After: []string{"roux-users", "app-roles"}`: the grant to `USER` finds no
+  role and silently grants nothing; members get `403`.
+- `rouxtest.New` without `a.Role("USER")` before `a.Migrate(...)`: the same silent missing grant
+  in tests.
+- A migration edited after it ran: startup stops on the checksum. Add a new file.
+- `permissions.gen.ts` stale: the frontend's route imports `RANKS_READ` and fails to compile. Run
+  `go test ./cmd/server` (twice) or the check script; never edit the file.
+- The module listed before `members` while reading `k.Organization()` at mount: it gets UTC, not
+  `ORG_TIME_ZONE`, and "today" is wrong in other zones.
+- Colours (or any enum) spelled differently in Go and TypeScript: every save is a `400`.
+- The update sending `id` or other members the server lacks: `api.Decode` answers `400`.
+- SQL built with `+` from a value: always `$n` arguments; only constant text is concatenated.
 - Columns defined inside the component: a dialog in a row closes by itself.
 - A new endpoint called by an existing page: that page's tests fail on the unanswered request.
 - Retyping a server message in the browser, or a `.refine` for a two-field order rule: use the
   helper or `after()`.
 - `new QueryClient()` anywhere (tests included): `meta.refreshes` stops working; use
   `createQueryClient()` / `testQueryClient()`.
-- Skipping `spotless:apply` after the last Java edit: the build fails on format alone.
+- Skipping `gofmt` after the last Go edit: the check fails on format alone.

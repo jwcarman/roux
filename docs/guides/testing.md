@@ -69,7 +69,8 @@ func setup(t *testing.T) (owner, user *authntest.Browser) {
 
 ### Signed-in browsers
 
-A browser (`*authntest.Browser`) keeps its cookies, and sends the CSRF token on every unsafe
+`rouxtest.App` embeds an `authntest.Env` (the pool, the clock, the test server). A browser
+(`*authntest.Browser`) keeps its cookies, and sends the CSRF token on every unsafe
 request, as roux-web's client does:
 
 ```go
@@ -80,7 +81,7 @@ added := owner.Post("/api/ranks", map[string]any{"name": " Yellow belt ", "colou
 - `Get(path)`, `Post(path, body)`, `Put(path, body)` and `Delete(path)` send JSON;
   `Do(method, path, body, csrf)` sends one without the CSRF token, to test that refusal.
 - `Want(t, status, what)` fails the test, naming `what` and showing the answer, unless the status is
-  the one wanted, and returns the reply.
+  the one wanted, and returns the reply (an `authntest.Reply`).
 - `JSON(t)` is the body as a `map[string]any` (numbers are `float64`); `Decode(t, &v)` reads it
   into a struct.
 

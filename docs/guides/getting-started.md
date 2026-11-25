@@ -142,10 +142,18 @@ dependency does not compile. roux's stock modules:
 | `app.OIDCFromEnv(email, members)` | Sign-in with Google, GitHub or any OpenID Connect provider. Nil without `OIDC_PROVIDERS_FILE`. |
 | `app.JWTFromEnv(email)` | Bearer tokens from an authorization server, for API-only callers. Nil without `JWT_ISSUER`. |
 
-An app's own feature is a module too: a type with `Name()`, and any of `Migrations()`,
-`Mount(ctx, k)` and `Start(ctx, k)`. [A feature's server side](features.md) builds one.
+An app's own feature is a module too: a type with `Name()`, and any of these, each an interface
+in `app`:
 
-`app.Assemble` runs every module's migrations together (ordered by each migration's `After` and
+- `app.Migrator`: `Migrations() []pgdb.Migration`, its SQL;
+- `app.Mounter`: `Mount(ctx, k) error`, its routes;
+- `app.Starter`: `Start(ctx, k) error`, run after every module has mounted (checking a list's SQL);
+- `app.Drainer`: `Drain()`, work in flight (an email) to finish before the process exits.
+
+[A feature's server side](features.md) builds one. A module's own setting is read with
+`app.Getenv(key, fallback)`, `os.Getenv` with a default.
+
+`app.Main` opens the database with `pgdb.Connect`. `app.Assemble` runs every module's migrations together (ordered by each migration's `After` and
 `Before`), registers sign-in with every module's method, then mounts the modules and starts them,
 in the order listed. A failure names the module.
 

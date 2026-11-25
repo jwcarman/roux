@@ -164,8 +164,13 @@ func scanRow(row pgx.CollectableRow) (Row, error) {
   no value first (they come last otherwise, ascending).
 - **`From`, `Columns`, each term and each search field must be constants** in the code: their type
   is unexported, so a string built at run time does not compile. Values never go in them.
-- **`DefaultPageSize: 25`** matches the browser's `DEFAULT_PAGE_SIZE`; the maximum is 100 unless
-  `MaxPageSize` says otherwise.
+- **`DefaultPageSize: 25`** matches the browser's `DEFAULT_PAGE_SIZE` (without it, 20); the
+  maximum is `page.DefaultMaxSize` (100) unless `MaxPageSize` says otherwise.
+- `page.New` returns a `*page.Paginator`; its `Page` takes a `page.Querier` (the pool, or a
+  transaction). The direction is `page.Asc` or `page.Desc` (a `page.Direction`); a request's offset
+  stops at `page.MaxOffset`, and a search term at `page.MaxSearchLength` characters. The answer is
+  a `page.Page[T]`: `data`, and `pagination` (a `page.Pagination`). An unknown sort is a
+  `page.UnknownSortError`, which `api.PageRequest` answers as the `400` on `sortBy`.
 - **Search fields** say how a word matches: `page.Contains(col)` anywhere in the column,
   `page.Prefix(col)` at its start (it can use an index on `lower(col) text_pattern_ops`), and
   `page.Exact(col)` the whole value, ignoring case. A search matches when every word of the term is
@@ -235,8 +240,8 @@ func filterOf(r *http.Request) (Filter, error) {
 
 A list whose order is fixed (a history, newest first) reads its request with
 `api.PageRequestUnsorted(r)`, which ignores any `sortBy`. A list already in memory pages with
-`page.Slice(sorted, req)`, and a page fetched some other way is wrapped with `page.Of(rows, req,
-total)`.
+`page.Slice(sorted, req)`, and a page fetched some other way is wrapped with
+`page.Of(rows, req, total)`.
 
 ## The list's query
 
