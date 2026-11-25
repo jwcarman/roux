@@ -2,7 +2,7 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "../testing/server";
-import { historyQuery } from "./history";
+import { activityQuery } from "./activityQuery";
 
 const PAGE = {
   data: [],
@@ -16,9 +16,9 @@ const PAGE = {
   },
 };
 
-describe("historyQuery", () => {
+describe("activityQuery", () => {
   it("keeps the app's key, so the history refreshes with its record", () => {
-    expect(historyQuery(["students", "detail", "s1", "activities"], "students/s1/activities").queryKey).toEqual([
+    expect(activityQuery(["students", "detail", "s1", "activities"], "students/s1/activities").queryKey).toEqual([
       "students",
       "detail",
       "s1",
@@ -34,7 +34,7 @@ describe("historyQuery", () => {
         return HttpResponse.json(PAGE);
       }),
     );
-    const query = historyQuery(["history"], "students/s1/activities");
+    const query = activityQuery(["history"], "students/s1/activities");
 
     expect(await query.fetch({ pageIndex: 2 }, new AbortController().signal)).toEqual(PAGE);
     await query.fetch({}, new AbortController().signal);

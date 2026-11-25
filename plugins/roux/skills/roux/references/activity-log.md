@@ -1,8 +1,8 @@
 # The activity log
 
-A record's history: who did what to it, and when. The app says what happened as a typed Go struct,
-in the transaction that makes the change; roux stores it with the actor and time, and the browser
-shows it with `ActivityList`.
+A record's history, or a feed across records: who did what, and when. The app says what happened as
+a typed Go struct, in the transaction that makes the change; roux stores it with the actor and time,
+and the browser shows it with `ActivityList`.
 
 ## Rules
 
@@ -15,6 +15,9 @@ shows it with `ActivityList`.
 - `Describe()` cannot read the request or the organization: text that depends on the locale (an
   amount) is formatted by the service and passed in as a field.
 - Not for column-by-column change tracking.
+- An activity page (across records) is `activity.Feed` with a scope, never SQL of your own on
+  `roux_activity`. Whoever a feed filters by is the anchor or a `related` id when appended (an
+  allowance entry is related to the kid).
 
 ## Names (package `github.com/jwcarman/roux/activity`)
 
@@ -28,10 +31,23 @@ shows it with `ActivityList`.
 - `activity.History(ctx, db, names, id, req)` → `page.Page[activity.Entry]`, newest first, anchored
   or related. `activity.Entry` is `{ id, occurredAt, type, description, actorId, actorName,
   details }`.
+- `activity.Feed(ctx, db, names, req, scope)` → the same page, across records. `scope` is
+  `activity.Everything()` or `activity.About(ids...)` (anchored to or related to any); `activity.Scope{}`
+  never set, `About()` with no ids, or an empty id is an error, never everything. The app's endpoint
+  picks the scope by permission:
+
+  ```go
+  scope := activity.Everything()
+  if me := authn.PrincipalFrom(r.Context()); !me.Has(AllowancesManage) {
+  	scope = activity.About(me.IdentityID) // a kid: only what concerns them
+  }
+  out, err := activity.Feed(r.Context(), svc.Pool, svc.Names, req, scope)
+  ```
 - `activity.Names` (`func(ctx, ids) (map[uuid.UUID]string, error)`): pass
   `users.Service{Pool: pool}.Names`. `activity.Unknown` ("Unknown"), `activity.System` ("System").
 - Table `roux_activity`, from roux's migrations; each `rouxtest.New` starts empty.
-- Browser, `@jwcarman/roux-web/activity`: `Activity`, `historyQuery(key, url)`, `ActivityList`
+- Browser, `@jwcarman/roux-web/activity`: `Activity`, `activityQuery(key, url)` (a history's or a
+  feed's endpoint), `ActivityList`
   (`ActivityListProps`: `aria-label`, `query`, `emptyText?`, `now?`). `formatRelativeTime(iso, now?)`
   is in `/dates`.
 
@@ -86,7 +102,8 @@ shows it with `ActivityList`.
    with `svc.Activities` calling `activity.History(ctx, s.Pool, s.Names, id, req)` after it checked
    the plan exists, and the module building the service with `Names: users.Service{Pool: k.Pool}.Names`.
 4. Query key under the record: `activities: (id: string) => [...queryKeys.plans.detail(id), "activities"] as const`.
-5. Module: `export const planHistory = (id: string) => historyQuery(queryKeys.plans.activities(id), path\`plans/${id}/activities\`);`
+5. Module: `export const planHistory = (id: string) => activityQuery(queryKeys.plans.activities(id), path\`plans/${id}/activities\`);`
+   (a feed: `export const activityFeed = activityQuery(queryKeys.activity.all(), "activity");`)
 6. Page: `<ActivityList aria-label="History" query={planHistory(plan.id)} />`.
 
 ## Check

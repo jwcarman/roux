@@ -6,7 +6,22 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Breaking changes
+
+- **roux-web's `historyQuery` is `activityQuery`** (`@jwcarman/roux-web/activity`), the same
+  `(key, url)`: it now serves a feed's endpoint as well as a record's history. Rename the import and
+  the calls. `ActivityList`'s error line reads "Could not load the activity."
+
 ### Added
+
+- **An activity feed across records: `activity.Feed(ctx, db, names, req, scope)`**, newest first, a
+  page at a time, with a scope that must be said: `activity.Everything()` or
+  `activity.About(ids...)` (the activity anchored to or related to any of them, such as everything
+  about one person). A scope never set, `About()` with no ids, or an empty id is an error, never the
+  whole log. The app's endpoint picks the scope by its own permissions, and roux-web's
+  `activityQuery` and `ActivityList` show it. Before, an activity page meant SQL of the app's own on
+  `roux_activity`. `activity.History` is unchanged.
+
 
 - **The organization's week start.** `ORG_WEEK_START` names the first day of the week (`Monday`, in
   any case); without it, the week starts where `ORG_LOCALE`'s region starts it (CLDR's data: Sunday

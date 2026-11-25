@@ -1,7 +1,7 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getJson, sendJson } from "../api/client";
 import { path } from "../api/url";
-import { historyQuery } from "../activity/history";
+import { activityQuery } from "../activity/activityQuery";
 import { email, text } from "../form/rules";
 import { pageQuery, type PageDto, type PageParams } from "../paging/paging";
 import type { Profile } from "../session/session";
@@ -105,7 +105,7 @@ export function usersPage(filters: UserFilters) {
 
 /** A user's history, newest first, as an ActivityList takes it. */
 export function userActivitiesPage(id: string) {
-  return historyQuery(userKeys.activities(id), path`roux/users/${id}/activities`);
+  return activityQuery(userKeys.activities(id), path`roux/users/${id}/activities`);
 }
 
 /** Invites someone; the directory refreshes. */

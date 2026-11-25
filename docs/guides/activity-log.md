@@ -3,7 +3,7 @@
 A record's history: who did what to it, and when. A user renamed, an item done, a payment
 taken and then removed. The app says what happened, in its own terms, as a small struct, in the
 transaction that makes the change; roux stores it with who did it and when, and serves a record's
-history a page at a time to `ActivityList` in the browser.
+history, or a feed across records, a page at a time to `ActivityList` in the browser.
 
 This is a **business** activity log: the app decides what is worth saying. It is not change
 auditing (every column's before and after, written automatically).
@@ -116,6 +116,45 @@ An `activity.Entry` is `{ id, occurredAt, type, description, actorId, actorName,
 still reads after its struct changes or is deleted. A history that holds something only some
 people may see (a payment's amount) gets that permission.
 
+## A feed
+
+An activity page, everything that happened across records or only what concerns someone, is
+`activity.Feed(ctx, db, names, req, scope)`, newest first, a page at a time, the same
+`page.Page[activity.Entry]`. The scope says which activity, and must be said:
+
+- `activity.Everything()`: the whole log.
+- `activity.About(ids...)`: the activity anchored to, or related to, any of the ids (a person, a
+  record).
+
+A scope never set (`activity.Scope{}`), `About()` with no ids, or an empty id is an error, never the
+whole log: a feed that forgot its scope shows nothing.
+
+Who may see which scope is the app's, in its endpoint, under its own permission:
+
+```go
+k.Handle("GET /api/activity", ActivityRead, func(w http.ResponseWriter, r *http.Request) error {
+	req, err := api.PageRequestUnsorted(r)
+	if err != nil {
+		return err
+	}
+	me := authn.PrincipalFrom(r.Context())
+	scope := activity.Everything()
+	if !me.Has(AllowancesManage) { // a kid sees only what concerns them
+		scope = activity.About(me.IdentityID)
+	}
+	out, err := activity.Feed(r.Context(), svc.Pool, svc.Names, req, scope)
+	if err != nil {
+		return err
+	}
+	return api.JSON(w, http.StatusOK, out)
+})
+```
+
+`About` finds an activity through its anchor and its related ids, so whoever a feed is filtered by
+must be one of them when it is appended: an allowance entry for Ada is anchored to the entry and
+related to Ada (`activity.Append(ctx, tx, now, entryID, EntryRecorded{...}, adaID)`). Never read
+`roux_activity` with SQL of your own.
+
 ## Who did it
 
 `names` (an `activity.Names`, `func(ctx, ids) (map[uuid.UUID]string, error)`) names a page's
@@ -130,8 +169,9 @@ An actor `names` does not name is `activity.Unknown` ("Unknown"); an activity wi
 
 ## The browser: `ActivityList`
 
-`@jwcarman/roux-web/activity` has the wire type, `Activity`, `historyQuery` and `ActivityList`.
-`historyQuery(key, url)` is the page query for the app's history endpoint, which `ActivityList` takes.
+`@jwcarman/roux-web/activity` has the wire type, `Activity`, `activityQuery` and `ActivityList`.
+`activityQuery(key, url)` is the page query for the app's history or feed endpoint, which
+`ActivityList` takes.
 `ActivityList` shows each entry's
 description, who did it and when ("3 days ago", with the moment in the organization's zone as its
 title), "Show more" for the next page, and a line when there is nothing yet.
@@ -139,11 +179,15 @@ title), "Show more" for the next page, and a line when there is nothing yet.
 ```ts
 // items.ts, the resource module
 export const itemHistory = (id: string) =>
-  historyQuery(queryKeys.items.activities(id), path`items/${id}/activities`);
+  activityQuery(queryKeys.items.activities(id), path`items/${id}/activities`);
+
+// activity.ts: the feed
+export const activityFeed = activityQuery(queryKeys.activity.all(), "activity");
 ```
 
 ```tsx
 <ActivityList aria-label="History" query={itemHistory(item.id)} />
+<ActivityList aria-label="Activity" query={activityFeed} />
 ```
 
 `ActivityListProps`: `aria-label`, `query`, `emptyText` ("Nothing has happened yet." unless given) and
@@ -173,3 +217,4 @@ schema.
   on something the activity does not know.
 - Don't use it for column-by-column change tracking.
 - Don't turn `details` back into the app's structs: old rows have old shapes.
+- Don't query `roux_activity` yourself for a feed: `activity.Feed` with a scope.

@@ -7,7 +7,7 @@ import type { Activity } from "./Activity";
 
 export interface ActivityListProps {
   "aria-label": string;
-  /** The history's query, from its resource module (`pageQuery(keys.activities(id), ...)`). */
+  /** The activity's query, from its resource module (`activityQuery(key, url)`). */
   query: PageQuery<Activity>;
   /** What it says with no history; "Nothing has happened yet." unless given. */
   emptyText?: string;
@@ -15,7 +15,7 @@ export interface ActivityListProps {
   now?: Date;
 }
 
-/** A record's history, newest first, a page at a time: what happened, who did it, and when. */
+/** Activity, newest first, a page at a time (a record's history, or a feed): what happened, who did it, and when. */
 export function ActivityList({
   "aria-label": label,
   query,
@@ -28,7 +28,7 @@ export function ActivityList({
       query={query}
       getItemKey={(entry) => entry.id}
       emptyText={emptyText}
-      errorText="Could not load the history."
+      errorText="Could not load the activity."
       renderItem={(entry) => (
         <Box px="4" py="3">
           <Text>{entry.description}</Text>

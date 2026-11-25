@@ -242,3 +242,79 @@ func TestAppendBelongsToTheCallersTransaction(t *testing.T) {
 		t.Fatalf("a rolled-back change left its record behind: %+v", h.Data)
 	}
 }
+
+// feedOf is the descriptions a feed shows, newest first.
+func feedOf(t *testing.T, pool *pgxpool.Pool, scope activity.Scope, index, size int) (page.Page[activity.Entry], []string) {
+	t.Helper()
+	f, err := activity.Feed(context.Background(), pool, nil, req(t, index, size), scope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, e := range f.Data {
+		got = append(got, e.Description)
+	}
+	return f, got
+}
+
+func TestAFeedIsTheActivityAcrossRecordsNewestFirst(t *testing.T) {
+	pool := setup(t)
+	ctx := context.Background()
+	ada, lin, chore, payment := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	for i, a := range []struct {
+		anchor  uuid.UUID
+		text    string
+		related []uuid.UUID
+	}{
+		{chore, "Chore added", nil},
+		{payment, "Ada earned $5", []uuid.UUID{ada}},
+		{payment, "Lin earned $3", []uuid.UUID{lin}},
+		{ada, "Ada renamed", nil},
+		{chore, "Chore shared", []uuid.UUID{ada, lin}},
+	} {
+		if err := activity.Append(ctx, pool, t0.Add(time.Duration(i)*time.Minute), a.anchor, custom{"thing.done", a.text}, a.related...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	all, got := feedOf(t, pool, activity.Everything(), 0, 20)
+	if strings.Join(got, "|") != "Chore shared|Ada renamed|Lin earned $3|Ada earned $5|Chore added" || all.Pagination.TotalElementCount != 5 {
+		t.Fatalf("everything: %v", got)
+	}
+	// Anchored to Ada, or naming her in related; each once.
+	aboutAda, got := feedOf(t, pool, activity.About(ada), 0, 20)
+	if strings.Join(got, "|") != "Chore shared|Ada renamed|Ada earned $5" || aboutAda.Pagination.TotalElementCount != 3 {
+		t.Fatalf("about Ada: %v", got)
+	}
+	if _, got := feedOf(t, pool, activity.About(lin, chore, lin), 0, 20); strings.Join(got, "|") != "Chore shared|Lin earned $3|Chore added" {
+		t.Fatalf("about Lin and the chore: %v", got)
+	}
+	if none, _ := feedOf(t, pool, activity.About(uuid.New()), 0, 20); none.Data == nil || len(none.Data) != 0 {
+		t.Fatalf("about a stranger: an empty list, not null: %+v", none)
+	}
+	second, got := feedOf(t, pool, activity.Everything(), 1, 2)
+	if strings.Join(got, "|") != "Lin earned $3|Ada earned $5" || !second.Pagination.HasNext || !second.Pagination.HasPrevious {
+		t.Fatalf("page 1: %v %+v", got, second.Pagination)
+	}
+}
+
+func TestAFeedWithoutAScopeShowsNothingAndSaysWhy(t *testing.T) {
+	pool := setup(t)
+	ctx := context.Background()
+	if err := activity.Append(ctx, pool, t0, uuid.New(), created{}); err != nil {
+		t.Fatal(err)
+	}
+	for name, c := range map[string]struct {
+		scope activity.Scope
+		want  string
+	}{
+		"never set":    {activity.Scope{}, "pass activity.Everything() or activity.About(ids...)"},
+		"about nobody": {activity.About(), "About needs at least one id"},
+		"an empty id":  {activity.About(uuid.New(), uuid.Nil), "About was given an empty id"},
+	} {
+		f, err := activity.Feed(ctx, pool, nil, req(t, 0, 20), c.scope)
+		if err == nil || !strings.Contains(err.Error(), c.want) || len(f.Data) != 0 {
+			t.Errorf("%s: %v, %d rows; want an error containing %q", name, err, len(f.Data), c.want)
+		}
+	}
+}

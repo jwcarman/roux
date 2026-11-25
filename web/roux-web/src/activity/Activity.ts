@@ -1,4 +1,4 @@
-/** One activity in a record's history, as the server's `ActivityLog.history` answers it. */
+/** One activity, as roux's server answers it (Go's `activity.Entry`, from `History` or `Feed`). */
 export interface Activity {
   id: string;
   /** When it happened: an instant (`2026-11-05T12:00:00Z`). */

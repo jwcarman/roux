@@ -92,6 +92,6 @@ describe("ActivityList", () => {
     renderWithProviders(
       <ActivityList aria-label="History" query={pageQuery(["broken"], () => Promise.reject(new Error("down")))} />,
     );
-    expect(await screen.findByText("Could not load the history.")).toBeInTheDocument();
+    expect(await screen.findByText("Could not load the activity.")).toBeInTheDocument();
   });
 });

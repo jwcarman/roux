@@ -81,7 +81,7 @@ name anything wrong. The TypeScript language server may not start (TypeScript 7 
 | A new app, modules, environment settings, `main.tsx`, the session and guards, navigation, theme, sign-in, CSP | `references/app-setup.md` (~2,800 tokens) |
 | Money | `references/money.md` (~1,000 tokens) |
 | Today, the organization's zone and week, dates and times in columns, a date in the URL, formatting | `references/dates.md` (~1,500 tokens) |
-| A record's history | `references/activity-log.md` (~1,200 tokens) |
+| A record's history, an activity feed | `references/activity-log.md` (~1,200 tokens) |
 | The emails roux sends, rewording one, SMTP settings | `references/email.md` (~1,100 tokens) |
 
 ## Before you finish

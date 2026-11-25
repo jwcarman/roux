@@ -1,6 +1,7 @@
 // Package activity is the business activity log: Append says what happened to a
-// record, in the transaction that changes it; History reads a record's story a page
-// at a time. An activity is a struct whose fields are the facts kept (a rename's old
+// record, in the transaction that changes it; History reads a record's story and Feed
+// the activity across records (everything, or what concerns some people or records), a
+// page at a time. An activity is a struct whose fields are the facts kept (a rename's old
 // and new names), with its kind's code and its sentence:
 //
 //	type MemberRenamed struct{ From, To string `json:"..."` }
@@ -132,21 +133,70 @@ type Names func(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, err
 
 // History is every activity anchored to the record or related to it, newest first,
 // a page at a time (the request's index and size; its sort is ignored).
-func History(ctx context.Context, db interface {
+func History(ctx context.Context, db Querier, names Names, id uuid.UUID, req page.Request) (page.Page[Entry], error) {
+	return read(ctx, db, names, req, "anchor_id = $1 or $1 = any(related_ids)", id)
+}
+
+// Querier is what History and Feed read with: a pool, a transaction or a connection.
+type Querier interface {
 	authn.DBTX
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-}, names Names, id uuid.UUID, req page.Request) (page.Page[Entry], error) {
+}
+
+// Scope is which activity a feed shows: Everything(), or About(ids...). A Scope never set is
+// refused, so a feed that forgot its scope shows nothing rather than everything.
+type Scope struct {
+	everything bool
+	about      []uuid.UUID
+}
+
+// Everything is the whole activity log, for someone who may see all of it.
+func Everything() Scope { return Scope{everything: true} }
+
+// About is the activity anchored to, or related to, any of ids: what concerns them (a person, a
+// record). Append's related ids are what puts an activity in a person's feed.
+func About(ids ...uuid.UUID) Scope {
+	about := []uuid.UUID{}
+	for _, id := range ids {
+		if !contains(about, id) {
+			about = append(about, id)
+		}
+	}
+	return Scope{about: about}
+}
+
+// Feed is the activity in scope, newest first, a page at a time (the request's index and size;
+// its sort is ignored), across records: an app's activity page. Who may see which scope is the
+// app's to decide, in its endpoint. A Scope never set, or About with no ids or an empty one, is an
+// error, never the whole log.
+func Feed(ctx context.Context, db Querier, names Names, req page.Request, scope Scope) (page.Page[Entry], error) {
+	switch {
+	case scope.everything:
+		return read(ctx, db, names, req, "true")
+	case scope.about == nil:
+		return page.Page[Entry]{}, errors.New("activity: the feed has no scope: pass activity.Everything() or activity.About(ids...)")
+	case len(scope.about) == 0:
+		return page.Page[Entry]{}, errors.New("activity: About needs at least one id (Everything() is the whole log)")
+	case contains(scope.about, uuid.Nil):
+		return page.Page[Entry]{}, errors.New("activity: About was given an empty id")
+	}
+	return read(ctx, db, names, req, "anchor_id = any($1) or related_ids && $1", scope.about)
+}
+
+// read is a page of the activity matching where (a constant, its value $1), newest first, its
+// actors named.
+func read(ctx context.Context, db Querier, names Names, req page.Request, where string, args ...any) (page.Page[Entry], error) {
 	var total int64
-	if err := db.QueryRow(ctx,
-		`select count(*) from roux_activity where anchor_id = $1 or $1 = any(related_ids)`, id).Scan(&total); err != nil {
+	if err := db.QueryRow(ctx, `select count(*) from roux_activity where `+where, args...).Scan(&total); err != nil {
 		return page.Page[Entry]{}, err
 	}
-	rows, err := db.Query(ctx, `
+	n := len(args)
+	rows, err := db.Query(ctx, fmt.Sprintf(`
 		select id, occurred_at, actor_id, type, description, details
 		  from roux_activity
-		 where anchor_id = $1 or $1 = any(related_ids)
+		 where %s
 		 order by occurred_at desc, id desc
-		 limit $2 offset $3`, id, req.Size, req.Offset())
+		 limit $%d offset $%d`, where, n+1, n+2), append(args, req.Size, req.Offset())...)
 	if err != nil {
 		return page.Page[Entry]{}, err
 	}
