@@ -71,6 +71,26 @@ func TestSecureCookiesFollowPublicURLUnlessSaid(t *testing.T) {
 	wantError(t, err, "COOKIE_SECURE", `"yes"`)
 }
 
+func TestPlainHTTPForARealHostMustBeOnPurpose(t *testing.T) {
+	t.Setenv("PUBLIC_URL", "http://team.example.com")
+	t.Setenv("COOKIE_SECURE", "")
+	_, err := app.SecureCookies()
+	wantError(t, err, "PUBLIC_URL", "http://team.example.com", "https://", "COOKIE_SECURE=false")
+	// Loopback is development: plain HTTP is fine there.
+	for _, url := range []string{"http://localhost:8080", "http://127.0.0.1:8080", "http://[::1]:8080"} {
+		t.Setenv("PUBLIC_URL", url)
+		if secure, err := app.SecureCookies(); err != nil || secure {
+			t.Errorf("%s: %v %v", url, secure, err)
+		}
+	}
+	// Said on purpose, it runs.
+	t.Setenv("PUBLIC_URL", "http://team.example.com")
+	t.Setenv("COOKIE_SECURE", "false")
+	if secure, err := app.SecureCookies(); err != nil || secure {
+		t.Fatalf("%v %v", secure, err)
+	}
+}
+
 func TestEmailLinkIsOffWithoutACodeSecret(t *testing.T) {
 	t.Setenv("CODE_SECRET", "")
 	if e, err := app.EmailLinkFromEnv("Acme"); e != nil || err != nil {

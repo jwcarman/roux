@@ -27,6 +27,9 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- **Plain HTTP for a real host must be on purpose.** A `PUBLIC_URL` of `http://` for a host other
+  than this machine stops startup, saying to serve over HTTPS, unless `COOKIE_SECURE=false` says
+  so; then a warning is logged. Localhost is unaffected.
 - **API answers are `nosniff` and `no-store`** unless their handler sets its own caching, and a
   static file opened on its own (a stray `.html` or `.svg`) is sandboxed by its own CSP.
 - **Managing users no longer reaches owners.** Changing an owner's role or deactivating an owner

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -67,17 +69,43 @@ func duration(key string) (time.Duration, error) {
 //
 // Behind a load balancer or ingress that ends TLS the server sees plain HTTP, so it cannot tell
 // by itself that the browser is on HTTPS: set PUBLIC_URL to the https address (or COOKIE_SECURE=true).
+// A PUBLIC_URL of http:// for a host other than this machine is refused unless COOKIE_SECURE=false
+// says plain HTTP is on purpose.
 func SecureCookies() (bool, error) {
+	public := os.Getenv("PUBLIC_URL")
 	switch v := os.Getenv("COOKIE_SECURE"); v {
 	case "":
-		return strings.HasPrefix(strings.ToLower(os.Getenv("PUBLIC_URL")), "https://"), nil
+		if plainHTTPOffThisMachine(public) {
+			return false, fmt.Errorf("PUBLIC_URL is %s: sign-in links and cookies would travel unencrypted. "+
+				"Serve the app over HTTPS and set PUBLIC_URL to its https:// address, or set COOKIE_SECURE=false "+
+				"to run on plain HTTP on purpose", public)
+		}
+		return strings.HasPrefix(strings.ToLower(public), "https://"), nil
 	case "true":
 		return true, nil
 	case "false":
+		if plainHTTPOffThisMachine(public) {
+			slog.Warn("serving on plain HTTP (COOKIE_SECURE=false): sign-in links and cookies travel unencrypted", "publicUrl", public)
+		}
 		return false, nil
 	default:
 		return false, fmt.Errorf("COOKIE_SECURE must be true or false, not %q", v)
 	}
+}
+
+// plainHTTPOffThisMachine says whether the address is http:// for a host other than this
+// machine: development is on localhost, anything else is people's sign-ins on the wire.
+func plainHTTPOffThisMachine(address string) bool {
+	u, err := url.Parse(address)
+	if err != nil || !strings.EqualFold(u.Scheme, "http") {
+		return false
+	}
+	host := u.Hostname()
+	if strings.EqualFold(host, "localhost") {
+		return false
+	}
+	ip := net.ParseIP(host)
+	return ip == nil || !ip.IsLoopback()
 }
 
 // EmailLink is sign-in by an emailed link or typed code.
