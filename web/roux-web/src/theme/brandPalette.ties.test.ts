@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 /*
  * The places brandPalette compares two numbers that no real color makes equal, so a mutation of the
@@ -22,9 +22,14 @@ vi.mock("culori", async (importOriginal) => {
   };
 });
 
-// Test files share modules: drop a brandPalette another file loaded with the real library.
+// Test files share modules: drop a brandPalette another file loaded with the real library, and take
+// this file's mocked one away when it ends.
 vi.resetModules();
 const { brandPalette } = await import("./brandPalette");
+afterAll(() => {
+  vi.doUnmock("culori");
+  vi.resetModules();
+});
 
 describe("brandPalette at a tie", () => {
   beforeEach(() => {

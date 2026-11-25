@@ -33,6 +33,12 @@ export default defineConfig({
     // seventy-odd files was most of the run. A test leaves the shared document as it found it (see
     // testing/head.ts); the setup file resets what tests change between files.
     isolate: false,
+    // Shared environments also mean shared globals: every spy and stubbed global is undone after each test.
+    restoreMocks: true,
+    unstubGlobals: true,
+    // A fake clock fakes only what tests drive. Faking setInterval too leaked: a library the files share
+    // kept the fake one after the test that installed it.
+    fakeTimers: { toFake: ["setTimeout", "clearTimeout", "Date"] },
     // A Chakra page test clicking through a form takes about a second here and can pass five on a
     // shared CI runner under coverage; a hung test still fails, just later.
     testTimeout: 15_000,
