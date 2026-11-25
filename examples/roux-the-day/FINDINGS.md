@@ -54,3 +54,21 @@ it, and where in the app it shows. What more than one app would need is extracte
 - **No lint gate in the app.** roux's lint config (`web/lint-tools`) expects roux-web's tsconfig
   layout and skips `template/`, so neither the template nor this app is linted.
   *roux could:* give the template (and so every app) the same lint gate roux-web has.
+- **End-to-end specs share one database.** The template's specs find people by name ("ada"), so
+  this app's spec had to pick a name none of them search for. *roux could:* say in the e2e
+  guide that each spec's people carry a stamp, and stamp the template's own.
+- **Duplicate detection and a copied template.** The app is mostly the template, so Sonar's
+  duplicate detection skips `examples/**` (`sonar-project.properties`); everything else is
+  checked there as it is anywhere.
+
+## Extract into roux (next, in order)
+
+1. **The paginator** (`internal/paging`) into roux's `page` package: `Where`/`WhereIf`, sorts
+   with a tiebreaker, jpa-utils-style search, and `Check` at start. Proven by the items list; its
+   docs say why columns may not quote.
+2. **Civil dates and times**, with the organization's "today" and week.
+3. **A rouxtest package**: a team with people and roles, for an app's own tests.
+4. **Active members by id**, in users, for any feature that assigns people.
+5. **A checkbox group field** in roux-web's form kit.
+6. **The app's permissions generated**, as roux's own are.
+7. **A lint gate in the template**, and so in every app.
