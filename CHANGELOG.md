@@ -144,6 +144,8 @@ All notable changes to this project are documented in this file. The format foll
 - **Comments and messages name roux, not its Java ancestors:** no more `who`, Spring or
   `roux.money.currency` (the money error now says to set `ORG_CURRENCY`); sign-in's errors say
   "the server answered". `feature.md`'s steps are numbered in reading order.
+- **`list.Check` checks `Scan`:** a `Scan` that reads a different number of values than `Columns`
+  lists stops startup, naming both.
 - **The users list is a `page.New` list:** its sorts are logical names mapped to their SQL, its
   search is `page.Contains` on name and email, and the users module checks its queries against
   the database at startup (`users.CheckList`).

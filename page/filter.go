@@ -26,7 +26,8 @@ type Filter struct {
 
 // Where is a condition with ? placeholders, one per argument; a slice is one argument (use
 // `col = any(?)` or `arr && ?`). It panics on a mismatch or a forbidden fragment: both are
-// mistakes in the code, found the first time it runs.
+// mistakes in the code, found the first time it runs. Write frag as a string literal: a variable
+// or an fmt.Sprintf result does not compile ("cannot use ... as page.sqlText value"); pass values as args.
 func Where(frag sqlText, args ...any) Filter {
 	mustBeSafe("page.Where", frag)
 	if n := strings.Count(string(frag), "?"); n != len(args) {

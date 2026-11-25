@@ -126,7 +126,9 @@ func filterOf(r *http.Request) (Filter, error) {
 ```
 
 The module's `Start(ctx, k) error` runs `list.Check(ctx, k.Pool)`: every sort, both ways, with a
-search, so a misspelled column stops startup instead of a request.
+search, so a misspelled column stops startup instead of a request; and a `Scan` that reads a
+different number of values than `Columns` lists. Two columns of one type read in the wrong order
+it cannot see: the list's Go test reads a row and checks each field.
 
 Wire: `pageIndex` (0-based), `pageSize` (≤ 100), `sortBy`, `sortDirection` (`ASC`/`DESC`); answer
 `{ data, pagination: { pageIndex, pageSize, totalElementCount, totalPageCount, hasNext, hasPrevious } }`.
@@ -227,6 +229,9 @@ search, filter and sort each return the right rows. Route test (`renderRoute`) f
 - `page.New` without `DefaultPageSize: 25`: the server's default differs from the browser's
   `DEFAULT_PAGE_SIZE`.
 - A `?` count in `page.Where` that differs from the arguments: it panics the first time it runs.
+- `cannot use ... as page.sqlText value`: `From`, `Columns`, `page.By`, the search fields and
+  `page.Where` take string literals only, never a variable or `fmt.Sprintf`. Write the SQL out; a
+  value goes in as an argument, a choice between two fragments is two literals.
 - A view changed with `create or replace` that drops or retypes a column: refused; `drop view` and
   `create view` in a new migration.
 - A selection outlives a filter change; clear it in the page.

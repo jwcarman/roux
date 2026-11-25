@@ -3,11 +3,13 @@ package page
 import (
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // Term is one expression a sort orders by.
@@ -16,7 +18,8 @@ type Term struct {
 	nullsFirst bool
 }
 
-// By is a sort term: a column or an expression of the list's view, such as lower(title).
+// By is a sort term: a column or an expression of the list's view, such as lower(title). Write it as a string literal: a variable or an fmt.Sprintf result does not compile
+// ("cannot use ... as page.sqlText value"), so a value never becomes SQL.
 func By(expr sqlText) Term { return Term{expr: expr} }
 
 // NullsFirst puts rows without a value first when ascending, and so last when descending.
@@ -177,8 +180,14 @@ func orderBy(terms []Term, dir Direction) string {
 }
 
 // Check runs the list's queries against db, matching nothing, for every sort in both directions
-// and with a search: a misspelled column fails here, when the app starts, not on a request.
+// and with a search: a misspelled column fails here, when the app starts, not on a request. It
+// also hands Scan a row of Columns' shape, holding no values, and fails if Scan reads a different
+// number of values than Columns lists. It cannot tell two columns of one type read in the wrong
+// order; the list's own test can.
 func (p *Paginator[S, T]) Check(ctx context.Context, db Querier) error {
+	if err := p.checkScan(ctx, db); err != nil {
+		return err
+	}
 	for _, name := range p.page.SortFields {
 		for _, dir := range []Direction{Asc, Desc} {
 			q := query{conds: []string{"false"}}
@@ -195,3 +204,44 @@ func (p *Paginator[S, T]) Check(ctx context.Context, db Querier) error {
 	}
 	return nil
 }
+
+// checkScan runs Scan over a row of Columns' shape. Only a count mismatch fails: Scan's other
+// errors come from the empty values, not from a mistake.
+func (p *Paginator[S, T]) checkScan(ctx context.Context, db Querier) error {
+	rows, err := db.Query(ctx, "select "+string(p.cfg.Columns)+" from "+string(p.cfg.From)+" where false")
+	if err != nil {
+		return fmt.Errorf("page: %s: %w", p.cfg.From, err)
+	}
+	fields := rows.FieldDescriptions()
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("page: %s: %w", p.cfg.From, err)
+	}
+	_, err = p.cfg.Scan(shapeRow{fields: fields})
+	var mismatch *scanCountError
+	if errors.As(err, &mismatch) {
+		return fmt.Errorf("page: %s's Columns lists %d (%s) but Scan reads %d: read every column, in order",
+			p.cfg.From, len(fields), p.cfg.Columns, mismatch.read)
+	}
+	return nil
+}
+
+// shapeRow is a row with Columns' fields and no values, for checkScan.
+type shapeRow struct{ fields []pgconn.FieldDescription }
+
+type scanCountError struct{ read int }
+
+func (e *scanCountError) Error() string { return fmt.Sprintf("scan of %d values", e.read) }
+
+func (r shapeRow) FieldDescriptions() []pgconn.FieldDescription { return r.fields }
+
+func (r shapeRow) Scan(dest ...any) error {
+	if len(dest) != len(r.fields) {
+		return &scanCountError{read: len(dest)}
+	}
+	return nil
+}
+
+func (r shapeRow) Values() ([]any, error) { return make([]any, len(r.fields)), nil }
+
+func (r shapeRow) RawValues() [][]byte { return make([][]byte, len(r.fields)) }

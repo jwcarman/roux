@@ -190,7 +190,13 @@ func scanRow(row pgx.CollectableRow) (Row, error) {
   column list that is empty), so it stops the program when the package loads.
 - **Check it at startup.** A module's `Start` runs `list.Check(ctx, k.Pool)`, which runs the list's
   queries for every sort, both ways and with a search, matching nothing: a misspelled column stops
-  the app there, not on a request.
+  the app there, not on a request. It also refuses a `Scan` that reads a different number of values
+  than `Columns` lists. Two columns of one type read in the wrong order it cannot see; the list's
+  Go test, reading a real row, does.
+- **SQL is written as string literals.** `From`, `Columns`, `page.By`, the search fields and
+  `page.Where` take only literals: a string variable or an `fmt.Sprintf` result does not compile
+  (`cannot use ... as page.sqlText value`), so a value can never be pasted into SQL. Values go in as
+  `page.Where`'s arguments; a choice between two fragments is two literals.
 
 ### The filters
 

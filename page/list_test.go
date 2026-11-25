@@ -264,6 +264,35 @@ func TestCheckFindsAMisspelledColumn(t *testing.T) {
 	}
 }
 
+func TestCheckFindsAScanThatReadsTooFewOrTooManyColumns(t *testing.T) {
+	pool := setup(t)
+	cfg := things()
+	cfg.Columns = "name, code"
+	err := page.New(cfg).Check(context.Background(), pool)
+	want := "page: thing's Columns lists 2 (name, code) but Scan reads 1: read every column, in order"
+	if err == nil || err.Error() != want {
+		t.Errorf("got %v, want %q", err, want)
+	}
+}
+
+func TestCheckIgnoresScansOtherErrorsOnTheEmptyRow(t *testing.T) {
+	pool := setup(t)
+	cfg := things()
+	cfg.Scan = func(row pgx.CollectableRow) (thing, error) {
+		var name string
+		if err := row.Scan(&name); err != nil {
+			return thing{}, err
+		}
+		if name == "" {
+			return thing{}, errors.New("a name is required")
+		}
+		return thing{}, nil
+	}
+	if err := page.New(cfg).Check(context.Background(), pool); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestAListWithoutSearchFieldsIgnoresTheTerm(t *testing.T) {
 	pool := setup(t)
 	cfg := things()
