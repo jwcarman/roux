@@ -16,7 +16,7 @@ func routes(t *testing.T) *authntest.Env {
 	k := &app.Kit{Mux: env.Mux, Host: env.Host}
 	answer := func(w http.ResponseWriter, r *http.Request) error {
 		who := "nobody"
-		if p := authn.PrincipalFrom(r.Context()); p != nil {
+		if authn.PrincipalFrom(r.Context()) != nil {
 			who = "someone"
 		}
 		return api.JSON(w, http.StatusOK, map[string]string{"who": who})

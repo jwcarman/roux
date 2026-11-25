@@ -153,6 +153,9 @@ func notice(app, brandColor, to, subject, text, htmlLead, htmlTip string) Messag
 	return Message{To: to, Subject: subject, Text: text, HTML: page}
 }
 
+// yourAccount is how a notice's subject names the account: "your Acme account".
+func yourAccount(app string) string { return "your " + app + " account" }
+
 // passkeyAddedMessage tells the owner that a passkey was added, so that someone who did
 // not add one notices. The wording is roux's.
 func passkeyAddedMessage(app, brandColor, to, label string) Message {
@@ -162,7 +165,7 @@ A passkey named "%[2]s" was added to your account. If you did not add it, remove
 
 You got this email from %[1]s.
 `, app, label)
-	return notice(app, brandColor, to, "A passkey was added to your "+app+" account", text,
+	return notice(app, brandColor, to, "A passkey was added to "+yourAccount(app), text,
 		"A passkey named <strong>"+html.EscapeString(label)+"</strong> was added to your account.",
 		"If you did not add it, remove it and secure your account.")
 }
@@ -176,7 +179,7 @@ A %[2]s account was linked to your account. If you did not link it, unlink it an
 
 You got this email from %[1]s.
 `, app, provider)
-	return notice(app, brandColor, to, "A "+provider+" account was linked to your "+app+" account", text,
+	return notice(app, brandColor, to, "A "+provider+" account was linked to "+yourAccount(app), text,
 		"A <strong>"+html.EscapeString(provider)+"</strong> account was linked to your account.",
 		"If you did not link it, unlink it and secure your account.")
 }
@@ -190,7 +193,7 @@ A secret for the API key "%[2]s" was made on your account. If you did not make i
 
 You got this email from %[1]s.
 `, app, name)
-	return notice(app, brandColor, to, "An API key was made for your "+app+" account", text,
+	return notice(app, brandColor, to, "An API key was made for "+yourAccount(app), text,
 		"A secret for the API key <strong>"+html.EscapeString(name)+"</strong> was made on your account.",
 		"If you did not make it, revoke it and secure your account.")
 }
@@ -235,7 +238,7 @@ func addressAddedMessage(app, brandColor, to, newAddress string) Message {
 
 You got this email from %[1]s.
 `, app, masked)
-	return notice(app, brandColor, to, "An email address was added to your "+app+" account", text,
+	return notice(app, brandColor, to, "An email address was added to "+yourAccount(app), text,
 		"<strong>"+html.EscapeString(masked)+"</strong> was added to your account and can now sign in.",
 		"If you did not add it, remove it and secure your account.")
 }
