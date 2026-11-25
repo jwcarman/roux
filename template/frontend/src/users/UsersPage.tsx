@@ -9,10 +9,11 @@ import {
   FilterChips,
   QueryTable,
 } from "@jwcarman/roux-web/table";
-import { type User } from "../api";
+import { type User } from "@jwcarman/roux-web/users";
 import { useMe } from "../routes/_signedIn";
 import { USERS_INVITE } from "../permissions.gen";
-import { usersPage, ROLE_LABELS } from "./users";
+import { usersPage } from "@jwcarman/roux-web/users";
+import { roleLabel } from "./users";
 import { InviteForm } from "./InviteForm";
 
 /** The directory's sorts: the column ids, and `UserSort`'s values on the server (roux). */
@@ -68,7 +69,7 @@ const COLUMNS: ColumnDef<User, unknown>[] = [
   column.accessor("role", {
     id: "ROLE" satisfies UserSort,
     header: "Role",
-    cell: (info) => ROLE_LABELS[info.getValue()],
+    cell: (info) => roleLabel(info.getValue()),
   }),
 ];
 

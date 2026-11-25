@@ -3,9 +3,9 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { UserDetail } from "../api";
+import type { UserDetail } from "@jwcarman/roux-web/users";
 import { ConfirmProvider, Toaster, toaster } from "@jwcarman/roux-web/feedback";
-import { queryKeys } from "../queryKeys";
+import { userKeys } from "@jwcarman/roux-web/users";
 import {
   invariantViolation,
   pageOf,
@@ -23,6 +23,8 @@ const GRACE: UserDetail = {
   role: "USER",
   status: "ACTIVE",
   joinedAt: "2026-11-01T09:00:00Z",
+  invited: false,
+  version: 0,
 };
 
 /** An empty history, and `response` to a status change; returns the status changes asked for. */
@@ -108,13 +110,13 @@ describe("UserDetailView", () => {
     ).toBeInTheDocument();
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalledWith({
-        queryKey: queryKeys.users.detail("g1"),
+        queryKey: userKeys.detail("g1"),
       });
       expect(invalidate).toHaveBeenCalledWith({
-        queryKey: queryKeys.users.lists(),
+        queryKey: userKeys.lists(),
       });
       expect(invalidate).toHaveBeenCalledWith({
-        queryKey: queryKeys.users.activities("g1"),
+        queryKey: userKeys.activities("g1"),
       });
     });
   });

@@ -4,7 +4,7 @@ import { USERS_READ } from "../../../permissions.gen";
 import { NotFoundPage } from "@jwcarman/roux-web/feedback";
 import { requirePermission } from "@jwcarman/roux-web/session";
 import { UserDetail } from "../../../users/UserDetail";
-import { userQuery } from "../../../users/users";
+import { userQuery } from "@jwcarman/roux-web/users";
 
 /** A user's page. The loader fetches the user first; a user that does not exist is a 404. */
 export const Route = createFileRoute("/_signedIn/users/$userId")({

@@ -9,14 +9,14 @@ import {
 import { LuUserCheck, LuUserX } from "react-icons/lu";
 import { useServerAction } from "@jwcarman/roux-web/api";
 import { notify, useConfirm } from "@jwcarman/roux-web/feedback";
-import type { UserDetail } from "../api";
+import type { UserDetail } from "@jwcarman/roux-web/users";
 import { ActivityList } from "@jwcarman/roux-web/activity";
 import {
-  activitiesPage,
   changeUserStatus,
-  ROLE_LABELS,
+  userActivitiesPage,
   type UserStatusAction,
-} from "./users";
+} from "@jwcarman/roux-web/users";
+import { roleLabel } from "./users";
 import { formatDateTime } from "@jwcarman/roux-web/dates";
 
 export interface UserDetailViewProps {
@@ -98,7 +98,7 @@ export function UserDetailView({
         </DataList.Item>
         <DataList.Item>
           <DataList.ItemLabel>Role</DataList.ItemLabel>
-          <DataList.ItemValue>{ROLE_LABELS[user.role]}</DataList.ItemValue>
+          <DataList.ItemValue>{roleLabel(user.role)}</DataList.ItemValue>
         </DataList.Item>
         <DataList.Item>
           <DataList.ItemLabel>Status</DataList.ItemLabel>
@@ -120,7 +120,7 @@ export function UserDetailView({
       <Heading as="h3" size="md">
         History
       </Heading>
-      <ActivityList aria-label="History" query={activitiesPage(user.id)} />
+      <ActivityList aria-label="History" query={userActivitiesPage(user.id)} />
     </Stack>
   );
 }

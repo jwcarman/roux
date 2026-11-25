@@ -4,7 +4,7 @@ import { getRouteApi, Link as RouterLink } from "@tanstack/react-router";
 import { LuArrowLeft } from "react-icons/lu";
 import { useMe } from "../routes/_signedIn";
 import { USERS_MANAGE } from "../permissions.gen";
-import { userQuery } from "./users";
+import { userQuery } from "@jwcarman/roux-web/users";
 import { UserDetailView } from "./UserDetailView";
 
 const route = getRouteApi("/_signedIn/users/$userId");

@@ -7,7 +7,8 @@ import {
   type PageParams,
 } from "@jwcarman/roux-web/paging";
 import { z } from "zod";
-import type { ItemDetail, ItemRow, User } from "../api";
+import type { ItemDetail, ItemRow } from "../api";
+import type { User } from "@jwcarman/roux-web/users";
 import { queryKeys } from "../queryKeys";
 
 /** The list's sorts: the column ids, and the server's `items.Sort` values. */

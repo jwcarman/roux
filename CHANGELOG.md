@@ -8,6 +8,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **`@jwcarman/roux-web/users`: the users API client.** roux's server shapes (`User`,
+  `UserDetail`, with `email` and `role` nullable as the server sends them), its rules
+  (`invitationSchema`, `renameSchema`), `usersApi`, the queries (`userQuery`, `usersPage`,
+  `userActivitiesPage`, `invitableRolesQuery`) and mutations (`inviteUser`, `changeUserStatus`,
+  `renameMe`), with their keys in `userKeys` under `["roux", ...]`. The template's pages and forms
+  stay the app's own and use it; its `users.ts` keeps only the role labels (`roleLabel`), and
+  `api.ts` and the users and roles keys are gone. An app made before this can do the same.
 - **The front end's permissions generated from the server's, and the grants checked.**
   `rouxtest.PermissionsFile(t, path, permissions...)` writes `frontend/src/permissions.gen.ts`
   (a constant per permission, and `PERMISSIONS`), failing once when it was stale so the change

@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Toaster, toaster } from "@jwcarman/roux-web/feedback";
-import { queryKeys } from "../queryKeys";
+import { userKeys } from "@jwcarman/roux-web/users";
 import {
   invalidFields,
   renderWithProviders,
@@ -35,7 +35,7 @@ function invitable(roles: string[]) {
 
 /** A list of users on the page: the invitation refreshes it. `load` answers each fetch. */
 function UserList({ load }: { load: () => Promise<string> }) {
-  const list = useQuery({ queryKey: queryKeys.users.list({}), queryFn: load });
+  const list = useQuery({ queryKey: userKeys.list({}), queryFn: load });
   return <p>{list.data}</p>;
 }
 
@@ -94,7 +94,7 @@ describe("InviteForm", () => {
     );
     await waitFor(() => expect(dialog).toHaveAttribute("data-state", "closed"));
     expect(invalidate).toHaveBeenCalledWith({
-      queryKey: queryKeys.users.lists(),
+      queryKey: userKeys.lists(),
     });
   });
 
@@ -231,7 +231,7 @@ describe("InviteForm", () => {
       "Ask them to sign in from the sign-in page with ada@example.com.",
     );
     expect(invalidate).toHaveBeenCalledWith({
-      queryKey: queryKeys.users.lists(),
+      queryKey: userKeys.lists(),
     });
   });
 

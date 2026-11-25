@@ -7,8 +7,8 @@ import {
   invitableRolesQuery,
   invitationSchema,
   inviteUser,
-  ROLE_LABELS,
-} from "./users";
+} from "@jwcarman/roux-web/users";
+import { ROLE_LABELS } from "./users";
 
 /** The button; it passes on what a dialog trigger gives it. */
 function InviteButton(props: ButtonProps) {

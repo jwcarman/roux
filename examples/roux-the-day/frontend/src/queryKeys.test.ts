@@ -1,36 +1,34 @@
 import { describe, expect, it } from "vitest";
+import { userKeys } from "@jwcarman/roux-web/users";
 import { queryKeys } from "./queryKeys";
 
 describe("queryKeys", () => {
-  it("puts every users list under one prefix, so one invalidation refreshes them all", () => {
-    const prefix = queryKeys.users.lists();
+  it("puts every items list under one prefix, so one invalidation refreshes them all", () => {
+    const prefix = queryKeys.items.lists();
     expect(
-      queryKeys.users.list({ search: "ada" }).slice(0, prefix.length),
+      queryKeys.items.list({ search: "agenda" }).slice(0, prefix.length),
     ).toEqual(prefix);
-    expect(queryKeys.users.list({}).slice(0, prefix.length)).toEqual(prefix);
+    expect(queryKeys.items.list({}).slice(0, prefix.length)).toEqual(prefix);
   });
 
   it("keys each search on its own", () => {
-    expect(queryKeys.users.list({ search: "ada" })).not.toEqual(
-      queryKeys.users.list({ search: "grace" }),
+    expect(queryKeys.items.list({ search: "agenda" })).not.toEqual(
+      queryKeys.items.list({ search: "venue" }),
     );
   });
 
-  it("gives each feature its own prefix", () => {
-    expect([queryKeys.users.all, queryKeys.roles.all]).toEqual([
-      ["users"],
-      ["roles"],
+  it("keys each item's detail under the items prefix, one per item", () => {
+    expect(queryKeys.items.detail("i-1")).toEqual(["items", "detail", "i-1"]);
+    expect(queryKeys.items.detail("i-1")).not.toEqual(
+      queryKeys.items.detail("i-2"),
+    );
+  });
+
+  it("keeps the app's keys apart from roux's", () => {
+    expect([queryKeys.items.all, queryKeys.team.active()]).toEqual([
+      ["items"],
+      ["team", "active"],
     ]);
-  });
-
-  it("keys each user's detail under the users prefix, one per user", () => {
-    expect(queryKeys.users.detail("u-1")).toEqual(["users", "detail", "u-1"]);
-    expect(queryKeys.users.detail("u-1")).not.toEqual(
-      queryKeys.users.detail("u-2"),
-    );
-  });
-
-  it("keys the roles an invitation may give under the roles prefix", () => {
-    expect(queryKeys.roles.invitable()).toEqual(["roles", "invitable"]);
+    expect(userKeys.all[0]).toBe("roux");
   });
 });

@@ -4,7 +4,7 @@ import { LuPlus } from "react-icons/lu";
 import { notify } from "@jwcarman/roux-web/feedback";
 import { FormDialog, useSchemaForm } from "@jwcarman/roux-web/form";
 import { useToday } from "@jwcarman/roux-web/organization";
-import type { User } from "../api";
+import type { User } from "@jwcarman/roux-web/users";
 import { useMe } from "../routes/_signedIn";
 import { choicesOf } from "./AssigneesField";
 import { ItemFields } from "./ItemFields";

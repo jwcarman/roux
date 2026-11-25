@@ -73,6 +73,10 @@
       "types": "./dist/activity/index.d.ts",
       "import": "./dist/activity/index.js"
     },
+    "./users": {
+      "types": "./dist/users/index.d.ts",
+      "import": "./dist/users/index.js"
+    },
     "./organization": {
       "types": "./dist/organization/index.d.ts",
       "import": "./dist/organization/index.js"
