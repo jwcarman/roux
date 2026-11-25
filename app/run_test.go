@@ -6,12 +6,16 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/jwcarman/roux/api"
 	"github.com/jwcarman/roux/app"
+	"github.com/jwcarman/roux/pgtest"
 )
 
 // freeAddr is a loopback address nothing listens on.
@@ -100,5 +104,84 @@ func TestRunStopsAtAModuleThatFails(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), io.ErrUnexpectedEOF.Error()) {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+// runApp runs the app until the test ends, and answers its address.
+func runApp(t *testing.T, cfg app.Config) string {
+	t.Helper()
+	addr := freeAddr(t)
+	t.Setenv("ADDR", addr)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- app.Run(ctx, cfg) }()
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Errorf("Run after its context ended: %v", err)
+		}
+	})
+	return addr
+}
+
+// shell is an index.html with every placeholder spa fills, and the words to find.
+func shell(words string) string {
+	return `<html><title>__APP_NAME__</title><script nonce="__CSP_NONCE__">__APP_THEME__ __APP_CONTEXT__</script>` + words + `</html>`
+}
+
+func noModules(*app.Kit) ([]app.Module, error) { return nil, nil }
+
+func TestRunWithADatabaseReportsItInReadiness(t *testing.T) {
+	t.Setenv("DATABASE_URL", pgtest.URL(t))
+	t.Setenv("FRONTEND_DIR", "")
+	t.Setenv("LOG_FORMAT", "text")
+	t.Setenv("SHUTDOWN_DELAY", "1ms")
+
+	addr := runApp(t, app.Config{Name: "acme", DisplayName: "Acme", Modules: noModules})
+
+	if code, body := get(t, addr, "/api/roux/readyz"); code != 200 || !strings.Contains(body, "database") {
+		t.Fatalf("readyz %d %s", code, body)
+	}
+}
+
+func TestRunServesTheFrontEndFromDiskOrFromTheBinary(t *testing.T) {
+	t.Setenv("DATABASE_URL", "")
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte(shell("from disk")), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	built := func() (fs.FS, bool) {
+		return fstest.MapFS{"index.html": {Data: []byte(shell("built in"))}}, true
+	}
+
+	t.Run("FRONTEND_DIR wins", func(t *testing.T) {
+		t.Setenv("FRONTEND_DIR", dir)
+		addr := runApp(t, app.Config{Name: "acme", DisplayName: "Acme", Frontend: built, Modules: noModules})
+		if code, body := get(t, addr, "/"); code != 200 || !strings.Contains(body, "from disk") {
+			t.Fatalf("%d %.120s", code, body)
+		}
+	})
+	t.Run("else the built-in one", func(t *testing.T) {
+		t.Setenv("FRONTEND_DIR", "")
+		addr := runApp(t, app.Config{Name: "acme", DisplayName: "Acme", Frontend: built, Modules: noModules})
+		if code, body := get(t, addr, "/"); code != 200 || !strings.Contains(body, "built in") {
+			t.Fatalf("%d %.120s", code, body)
+		}
+	})
+}
+
+func TestRunRefusesSettingsItCannotUse(t *testing.T) {
+	t.Setenv("ADDR", freeAddr(t))
+	cfg := app.Config{Name: "acme", DisplayName: "Acme", Modules: noModules}
+
+	t.Setenv("DATABASE_URL", "not a url")
+	if err := app.Run(context.Background(), cfg); err == nil || !strings.Contains(err.Error(), "pgdb") {
+		t.Fatalf("a bad DATABASE_URL: %v", err)
+	}
+
+	t.Setenv("DATABASE_URL", "")
+	t.Setenv("COOKIE_SECURE", "maybe")
+	if err := app.Run(context.Background(), cfg); err == nil || !strings.Contains(err.Error(), "COOKIE_SECURE") {
+		t.Fatalf("a bad COOKIE_SECURE: %v", err)
 	}
 }
