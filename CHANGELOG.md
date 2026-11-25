@@ -8,6 +8,11 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **An app's whole `main` in one call.** `app.Main(app.Config{Name, DisplayName, Frontend,
+  Modules})` sets up logging and telemetry, the health probes, the database, the modules, the
+  front end and a bounded server, and shuts down gracefully; `app.Run(ctx, cfg)` is the same
+  without the signals and the exit. The template's `main.go` is that one call: an app made before
+  this can replace its `run` with it, keeping `modules`.
 - **Guarded routes in one call.** `kit.Handle(pattern, permission, fn)` mounts an application
   route behind the CSRF check, a sign-in and the permission, so no route is mounted half
   guarded; an empty permission panics at startup. `kit.HandleSignedIn` is for anyone signed in,
