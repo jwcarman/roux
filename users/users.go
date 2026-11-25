@@ -30,6 +30,7 @@ import (
 	"github.com/jwcarman/roux/authn"
 	"github.com/jwcarman/roux/authn/emaillink"
 	"github.com/jwcarman/roux/authz"
+	"github.com/jwcarman/roux/internal/activitylog"
 	"github.com/jwcarman/roux/page"
 	"github.com/jwcarman/roux/pgdb"
 	"github.com/jwcarman/roux/problem"
@@ -270,12 +271,15 @@ func (s Service) Names(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]stri
 	return out, rows.Err()
 }
 
-// Activities is a user's history, newest first.
+// Activities is a user's history, newest first: roux's own user.* kinds only (invited, renamed,
+// role changed, ...). An app's activity about a person (an allowance related to a kid) is never in
+// it: anyone with users.read sees this history, and the app's rows belong to the app's own feed,
+// under its own permission.
 func (s Service) Activities(ctx context.Context, id uuid.UUID, req page.Request) (page.Page[activity.Entry], error) {
 	if _, err := s.entry(ctx, s.Pool, id); err != nil {
 		return page.Page[activity.Entry]{}, err
 	}
-	return activity.History(ctx, s.Pool, s.Names, id, req)
+	return activitylog.Read(ctx, s.Pool, s.Names, req, `(anchor_id = $1 or $1 = any(related_ids)) and type like 'user.%'`, id)
 }
 
 // Invite makes someone a user with the role and sends their invitation. The person,

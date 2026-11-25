@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/jwcarman/roux/activity"
 	"github.com/jwcarman/roux/authn/authntest"
 )
 
@@ -339,6 +340,36 @@ func TestAUsersHistory(t *testing.T) {
 	// The order is fixed: a sort parameter is ignored, not refused.
 	owner.Get("/api/roux/users/"+ada.String()+"/activities?sortBy=NOPE&sortDirection=DESC").Want(t, 200, "sort ignored")
 	owner.Get("/api/roux/users/"+uuid.NewString()+"/activities").Want(t, 404, "unknown")
+}
+
+type allowanceRecorded struct{}
+
+func (allowanceRecorded) Type() string     { return "allowance.recorded" }
+func (allowanceRecorded) Describe() string { return "Recorded $5.00 earned by Ada: a secret note" }
+
+func TestAUsersHistoryHasOnlyRoux_sUserActivityNeverTheApps(t *testing.T) {
+	f := setup(t)
+	ada := f.person("Ada", "ada@example.test", "USER")
+	ctx := context.Background()
+	// An app's rows about Ada, anchored to her or related to her: for the app's own feed, under its
+	// own permission. Whoever may read users must not read them here.
+	if err := activity.Append(ctx, f.Pool, f.Clock.Now(), uuid.New(), allowanceRecorded{}, ada); err != nil {
+		t.Fatal(err)
+	}
+	if err := activity.Append(ctx, f.Pool, f.Clock.Now(), ada, allowanceRecorded{}); err != nil {
+		t.Fatal(err)
+	}
+	owner := f.SignedIn(f.owner)
+	owner.Put("/api/roux/users/"+ada.String()+"/name", map[string]any{"displayName": "Ada King", "version": 0}).Want(t, 200, "rename")
+	p := decodePage(t, owner.Get("/api/roux/users/"+ada.String()+"/activities"))
+	for _, e := range p.Data {
+		if !strings.HasPrefix(e["type"].(string), "user.") {
+			t.Fatalf("an app's activity in roux's user history: %v", e)
+		}
+	}
+	if len(p.Data) != 1 || p.Data[0]["type"] != "user.renamed" || p.Pagination["totalElementCount"] != float64(1) {
+		t.Fatalf("Ada's own user activity, her rename, and only it: %v %v", p.Data, p.Pagination)
+	}
 }
 
 func TestMakingTheFirstOwner(t *testing.T) {

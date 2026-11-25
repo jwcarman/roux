@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/jwcarman/roux/authn"
+	"github.com/jwcarman/roux/internal/activitylog"
 	"github.com/jwcarman/roux/page"
 	"github.com/jwcarman/roux/pgdb"
 )
@@ -112,21 +113,14 @@ func contains(ids []uuid.UUID, id uuid.UUID) bool {
 // The names an entry shows for people who are not named.
 const (
 	// System is the actor of what happened with no one signed in.
-	System = "System"
+	System = activitylog.System
 	// Unknown is the actor whose name no one can give.
-	Unknown = "Unknown"
+	Unknown = activitylog.Unknown
 )
 
-// Entry is one activity in a record's history, as the browser gets it.
-type Entry struct {
-	ID          uuid.UUID       `json:"id"`
-	OccurredAt  time.Time       `json:"occurredAt"`
-	Type        string          `json:"type"`
-	Description string          `json:"description"`
-	ActorID     *uuid.UUID      `json:"actorId"`
-	ActorName   string          `json:"actorName"`
-	Details     json.RawMessage `json:"details"`
-}
+// Entry is one activity in a record's history, as the browser gets it:
+// { id, occurredAt, type, description, actorId, actorName, details }.
+type Entry = activitylog.Entry
 
 // Names says what to call people: the display name of each id it knows.
 type Names func(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error)
@@ -134,7 +128,7 @@ type Names func(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, err
 // History is every activity anchored to the record or related to it, newest first,
 // a page at a time (the request's index and size; its sort is ignored).
 func History(ctx context.Context, db Querier, names Names, id uuid.UUID, req page.Request) (page.Page[Entry], error) {
-	return read(ctx, db, names, req, "anchor_id = $1 or $1 = any(related_ids)", id)
+	return activitylog.Read(ctx, db, names, req, "anchor_id = $1 or $1 = any(related_ids)", id)
 }
 
 // Querier is what History and Feed read with: a pool, a transaction or a connection.
@@ -172,7 +166,7 @@ func About(ids ...uuid.UUID) Scope {
 func Feed(ctx context.Context, db Querier, names Names, req page.Request, scope Scope) (page.Page[Entry], error) {
 	switch {
 	case scope.everything:
-		return read(ctx, db, names, req, "true")
+		return activitylog.Read(ctx, db, names, req, "true")
 	case scope.about == nil:
 		return page.Page[Entry]{}, errors.New("activity: the feed has no scope: pass activity.Everything() or activity.About(ids...)")
 	case len(scope.about) == 0:
@@ -180,61 +174,5 @@ func Feed(ctx context.Context, db Querier, names Names, req page.Request, scope 
 	case contains(scope.about, uuid.Nil):
 		return page.Page[Entry]{}, errors.New("activity: About was given an empty id")
 	}
-	return read(ctx, db, names, req, "anchor_id = any($1) or related_ids && $1", scope.about)
-}
-
-// read is a page of the activity matching where (a constant, its value $1), newest first, its
-// actors named.
-func read(ctx context.Context, db Querier, names Names, req page.Request, where string, args ...any) (page.Page[Entry], error) {
-	var total int64
-	if err := db.QueryRow(ctx, `select count(*) from roux_activity where `+where, args...).Scan(&total); err != nil {
-		return page.Page[Entry]{}, err
-	}
-	n := len(args)
-	rows, err := db.Query(ctx, fmt.Sprintf(`
-		select id, occurred_at, actor_id, type, description, details
-		  from roux_activity
-		 where %s
-		 order by occurred_at desc, id desc
-		 limit $%d offset $%d`, where, n+1, n+2), append(args, req.Size, req.Offset())...)
-	if err != nil {
-		return page.Page[Entry]{}, err
-	}
-	entries, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (Entry, error) {
-		var e Entry
-		var details []byte
-		if err := row.Scan(&e.ID, &e.OccurredAt, &e.ActorID, &e.Type, &e.Description, &details); err != nil {
-			return e, err
-		}
-		e.OccurredAt = e.OccurredAt.UTC()
-		e.Details = json.RawMessage(details)
-		return e, nil
-	})
-	if err != nil {
-		return page.Page[Entry]{}, err
-	}
-
-	var actors []uuid.UUID
-	for _, e := range entries {
-		if e.ActorID != nil && !contains(actors, *e.ActorID) {
-			actors = append(actors, *e.ActorID)
-		}
-	}
-	named := map[uuid.UUID]string{}
-	if len(actors) > 0 && names != nil {
-		if named, err = names(ctx, actors); err != nil {
-			return page.Page[Entry]{}, err
-		}
-	}
-	for i := range entries {
-		switch a := entries[i].ActorID; {
-		case a == nil:
-			entries[i].ActorName = System
-		case named[*a] != "":
-			entries[i].ActorName = named[*a]
-		default:
-			entries[i].ActorName = Unknown
-		}
-	}
-	return page.Of(entries, req, total), nil
+	return activitylog.Read(ctx, db, names, req, "anchor_id = any($1) or related_ids && $1", scope.about)
 }

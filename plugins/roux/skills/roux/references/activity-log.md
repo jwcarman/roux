@@ -17,7 +17,8 @@ and the browser shows it with `ActivityList`.
 - Not for column-by-column change tracking.
 - An activity page (across records) is `activity.Feed` with a scope, never SQL of your own on
   `roux_activity`. Whoever a feed filters by is the anchor or a `related` id when appended (an
-  allowance entry is related to the kid).
+  allowance entry is related to the kid). That is safe: roux's user history shows only its own
+  `user.*` kinds, never the app's. Never name an app's kinds `user.*`.
 
 ## Names (package `github.com/jwcarman/roux/activity`)
 

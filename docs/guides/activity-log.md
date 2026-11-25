@@ -155,6 +155,10 @@ must be one of them when it is appended: an allowance entry for Ada is anchored 
 related to Ada (`activity.Append(ctx, tx, now, entryID, EntryRecorded{...}, adaID)`). Never read
 `roux_activity` with SQL of your own.
 
+Relating an activity to a person is safe: roux's user history (`GET /api/roux/users/{id}/activities`,
+open to anyone with `users.read`) shows only roux's own `user.*` kinds, never the app's. Who sees
+the app's rows is decided by the app's own endpoints. Never name an app's kinds `user.*`.
+
 ## Who did it
 
 `names` (an `activity.Names`, `func(ctx, ids) (map[uuid.UUID]string, error)`) names a page's
@@ -218,3 +222,5 @@ schema.
 - Don't use it for column-by-column change tracking.
 - Don't turn `details` back into the app's structs: old rows have old shapes.
 - Don't query `roux_activity` yourself for a feed: `activity.Feed` with a scope.
+- Don't name an app's kinds `user.*`: that prefix is roux's, and its user history shows them to
+  anyone with `users.read`.

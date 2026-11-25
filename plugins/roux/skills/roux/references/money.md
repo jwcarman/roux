@@ -27,8 +27,11 @@ database, the wire and the browser. An app has one currency, `ORG_CURRENCY`.
   `money.PositiveOrZero` (`Must not be negative`). A rule is a `money.Rule` (`func(Money) string`, ""
   when it passes); the messages are `money.MustBeMoreThanZero` and the others, and
   `money.MustBeIn(cur)`.
-- Browser, `/money`: `Money`, `formatMoney(money)` (`"$150.00"`, organization's locale),
-  `timesMoney(money, n)`, `currencySymbol(currency)`.
+- Browser, `/money`: `Money`, `formatMoney(money)` (`"$150.00"`, organization's locale; a negative
+  amount too), `timesMoney(money, n)`, `currencySymbol(currency)`.
+- The browser's currency: `organization().currency` (`"USD"`, or `null` without `ORG_CURRENCY`) and
+  `organization().fractionDigits` (`2`), from `@jwcarman/roux-web/organization`. A zero to show
+  before there are amounts is `{ minorUnits: 0, currency: organization().currency }`.
 - Browser, `/form`: `money()` (a `MoneyRule`; `.positive()` ↔ `money.Positive`, `.optional()`),
   `f.MoneyField` (`MoneyField`, `MoneyFieldProps`: `label`), `moneyInputOf(money)` for defaults.
 

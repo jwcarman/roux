@@ -85,7 +85,7 @@ template grants `users.read` to `USER`).
 | `PUT /me` | signed in | Renames the caller: `{ displayName, version }` |
 | `GET /` | `users.read` | A page of `users.Row` (`id, displayName, email, role, status`); `search`, `role`, `status` (`ACTIVE` by default, or `DEACTIVATED`), sorted by `NAME` (the default), `EMAIL`, `ROLE` or `JOINED` |
 | `GET /{id}` | `users.read` | `users.Detail`: the row plus `joinedAt`, `invited` (never signed in) and `version` |
-| `GET /{id}/activities` | `users.read` | The user's history, newest first ([The activity log](activity-log.md)) |
+| `GET /{id}/activities` | `users.read` | The user's history (roux's `user.*` kinds only), newest first ([The activity log](activity-log.md)) |
 | `POST /invitations` | `users.invite` | Invites `{ name, email, role }`; `202 { linkSent }` |
 | `POST /{id}/invitation` | `users.invite` | Sends the invitation again; `202 { linkSent }`, `false` within the resend interval |
 | `PUT /{id}/name` | `users.manage` | Renames them: `{ displayName, version }` |
@@ -190,6 +190,11 @@ Every change is recorded against the user, in its transaction: `user.invited`
 `user.deactivated` (`users.UserDeactivated`), `user.reactivated` (`users.UserReactivated`) and
 `user.role_changed` (`users.UserRoleChanged`, from and to). The actor is the
 signed-in user, named from `roux_user`.
+
+A user's history (`GET /{id}/activities`) is these `user.*` kinds only. Anyone with `users.read`
+sees it, so an app's activity about a person (an allowance entry related to a kid) is never in it:
+it belongs in the app's own feed (`activity.Feed` with `activity.About(personID)`), under the app's
+own permission. Never name an app's kinds `user.*`.
 
 ## In the browser: `@jwcarman/roux-web/users`
 

@@ -40,7 +40,7 @@ them. An app adds what its own people are, never a second user table.
 - `roux_user_directory` (a view): `id`, `version`, `display_name`, `email` (the oldest address),
   `role`, `status` (`ACTIVE` or `DEACTIVATED`), `joined_at`, `invited`.
 - Endpoints under `/api/roux/users`: `GET /me`, `PUT /me` (rename yourself); `GET /` (page; `search`,
-  `role`, `status`; sorts `NAME`, `EMAIL`, `ROLE`, `JOINED`); `GET /{id}`; `GET /{id}/activities`;
+  `role`, `status`; sorts `NAME`, `EMAIL`, `ROLE`, `JOINED`); `GET /{id}`; `GET /{id}/activities` (roux's `user.*` kinds only: an app's rows about a person never show there; never name an app's kinds `user.*`);
   `POST /invitations` (`{ name, email, role }`, `202 { linkSent }`); `POST /{id}/invitation`
   (resend); `PUT /{id}/name`; `PUT /{id}/role`; `POST /{id}/deactivate`; `POST /{id}/reactivate`;
   `POST /{id}/sign-out`; `POST /{id}/owner` (needs `users.owners` and a sign-in within 10 minutes).

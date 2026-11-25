@@ -8,6 +8,12 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Breaking changes
 
+- **A user's history shows only roux's own `user.*` kinds.** `GET /api/roux/users/{id}/activities`
+  (guarded by `users.read`) used to show every activity related to the user, so an app's private
+  rows about a person, such as a kid's allowance entries, could be read by anyone with
+  `users.read`, other kids included. An app's activity about a person now shows only in the app's
+  own feed (`activity.Feed` with `activity.About(personID)`), under the app's own permission. Don't
+  name an app's kinds `user.*`. Found by an agent's final review of an allowance feature.
 - **roux-web's `historyQuery` is `activityQuery`** (`@jwcarman/roux-web/activity`), the same
   `(key, url)`: it now serves a feed's endpoint as well as a record's history. Rename the import and
   the calls. `ActivityList`'s error line reads "Could not load the activity."
