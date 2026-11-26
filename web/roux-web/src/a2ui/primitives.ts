@@ -129,7 +129,7 @@ const DataTable = component("DataTable")
     "A paged, sortable table of records. rows binds to a page of records in the data model; paging writes pageIndex. " +
       "Each column shows one field; a column with sort is sortable: clicking its header writes sortBy (the column's sort) and sortDirection. " +
       'link makes the column\'s cells links to an app route whose $params are row fields: {to: "/jobs/$id", params: {id: "id"}}. ' +
-      "format: date for ISO dates (yyyy-mm-dd), time for a time of day, money for {minorUnits, currency}, " +
+      "format: date for ISO dates (yyyy-mm-dd), time for a time of day as HH:mm (10:30), money for {minorUnits, currency}, " +
       'badge for a short status word, list for an array of strings shown joined with ", ". ' +
       'tones colors badges by value: {"Unassigned": "warning", "Done": "success"} (neutral, info, success, warning, danger).',
   )
