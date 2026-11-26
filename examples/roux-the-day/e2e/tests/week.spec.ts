@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { openDialog, ownerEmail, signInByLink } from "./helpers";
+import { ownerEmail, signInByLink } from "./helpers";
 
 test("an item added for today is in today's column of the week, and a link to the item", async ({
   page,
@@ -11,10 +11,12 @@ test("an item added for today is in today's column of the week, and a link to th
   await signInByLink(page, request, ownerEmail);
   const nav = page.getByRole("navigation", { name: "Main" });
   await nav.getByRole("link", { name: "Items" }).click();
-  const dialog = await openDialog(page, "Add item", "Add an item");
-  await dialog.getByLabel("Title").fill(title);
-  await dialog.getByRole("button", { name: "Add item" }).click();
-  await expect(dialog).toBeHidden();
+  // Day left blank: the item is for today.
+  await page.getByRole("textbox", { name: "Title" }).fill(title);
+  await page.getByRole("button", { name: "Add item" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Item added" }),
+  ).toBeVisible();
 
   await nav.getByRole("link", { name: "Week" }).click();
   const today = page

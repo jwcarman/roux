@@ -1,19 +1,11 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { getJson, path, sendJson } from "@jwcarman/roux-web/api";
 import { date, text, time } from "@jwcarman/roux-web/form";
-import { pageQuery, type PageDto, type PageParams } from "@jwcarman/roux-web/paging";
+import type { PageDto, PageParams } from "@jwcarman/roux-web/paging";
 import { z } from "zod";
 import type { ItemDetail, ItemRow } from "../api";
 import type { User } from "@jwcarman/roux-web/users";
 import { queryKeys } from "../queryKeys";
-
-/** The list's sorts: the column ids, and the server's `items.Sort` values. */
-export const ITEM_SORTS = ["DAY", "TITLE", "ASSIGNEE"] as const;
-export type ItemSort = (typeof ITEM_SORTS)[number];
-
-/** The list's day filters (the server's `items.When`), and its status filters. */
-export const ITEM_WHENS = ["overdue", "today", "week"] as const;
-export const ITEM_STATUSES = ["open", "done"] as const;
 
 /** The list's filters, as `/api/items` takes them. `assignee` is `me` or a user's id. */
 export type ItemFilters = {
@@ -47,15 +39,9 @@ export const itemsApi = {
   list: (params: PageParams & ItemFilters, signal?: AbortSignal) =>
     getJson<PageDto<ItemRow>>("items", { params, signal }),
   get: (id: string, signal?: AbortSignal) => getJson<ItemDetail>(path`items/${id}`, { signal }),
-  add: (body: ItemBody) => sendJson<ItemDetail>("POST", "items", body),
   update: (id: string, body: ItemBody) => sendJson<ItemDetail>("PUT", path`items/${id}`, body),
   remove: (id: string) => sendJson<undefined>("DELETE", path`items/${id}`),
 };
-
-/** The list under `filters`, as a QueryTable takes it. */
-export function itemsPage(filters: ItemFilters) {
-  return pageQuery(queryKeys.items.list(filters), (params, signal) => itemsApi.list({ ...params, ...filters }, signal));
-}
 
 /** The most items a week shows: one page, the most the server sends at once. */
 export const WEEK_LIMIT = 100;
@@ -122,19 +108,6 @@ export const itemSchema = z
 export type ItemValues = z.input<typeof itemSchema>;
 type ItemOutput = z.output<typeof itemSchema>;
 
-/** A new item's blanks: all day, today, assigned to whoever adds it. */
-export function blankItem(day: string, me: string): ItemValues {
-  return {
-    title: "",
-    notes: "",
-    day,
-    allDay: true,
-    at: "",
-    assigneeIds: [me],
-    done: false,
-  };
-}
-
 /** An item's values, to edit it. */
 export function valuesOf(item: ItemDetail): ItemValues {
   return {
@@ -161,12 +134,6 @@ export function bodyOf(values: ItemOutput, version?: number): ItemBody {
   };
 }
 
-/** Adds an item; the lists refresh. */
-export const addItem = mutationOptions({
-  mutationFn: (values: ItemOutput) => itemsApi.add(bodyOf(values)),
-  meta: { refreshes: [queryKeys.items.lists()] },
-});
-
 /** Changes item `id` from `version`; a change made since answers 409. The lists and it refresh. */
 export const updateItem = (id: string, version: number) =>
   mutationOptions({
@@ -182,16 +149,3 @@ export const deleteItem = (id: string) =>
     mutationFn: () => itemsApi.remove(id),
     meta: { refreshes: [queryKeys.items.lists()] },
   });
-
-const DAY = new Intl.DateTimeFormat("en-US", {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  timeZone: "UTC",
-});
-
-/** When an item is, as the list shows it: `Tue, Nov 24 · 10:30`, or `Tue, Nov 24 · All day`. */
-export function whenOf(item: Pick<ItemRow, "day" | "at">): string {
-  // A date alone ("2026-11-24") is read as midnight UTC, which DAY formats in UTC.
-  return `${DAY.format(new Date(item.day))} · ${item.at ?? "All day"}`;
-}

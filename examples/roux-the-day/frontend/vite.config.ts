@@ -40,7 +40,22 @@ export default defineConfig({
   // than to its real path makes its imports of React and the other peers find this app's
   // node_modules, so there is one React; from npm it changes nothing. Vitest reads this too.
   resolve: { preserveSymlinks: true },
-  build: { outDir: "dist", emptyOutDir: true },
+  build: {
+    outDir: "dist",
+    emptyOutDir: true,
+    // A surface's runtime (the A2UI SDK and the Zod 3 its schemas are built on) is large: it loads in chunks of its
+    // own, beside the page's, rather than as one chunk over the size browsers fetch well.
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            { name: "a2ui", test: /node_modules[\\/]@a2ui[\\/]web_core[\\/]src/ },
+            { name: "zod3", test: /node_modules[\\/](zod3|@a2ui[\\/]web_core[\\/]node_modules[\\/]zod)[\\/]/ },
+          ],
+        },
+      },
+    },
+  },
   // Every script and style tag Vite writes carries this placeholder, and a <meta property="csp-nonce">
   // holds it for the app's own use. The server replaces it with a fresh nonce on each response
   // (roux serves the shell), matching its Content-Security-Policy header.

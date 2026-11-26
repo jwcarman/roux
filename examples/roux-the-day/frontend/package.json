@@ -9,6 +9,8 @@
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "mutate": "stryker run",
+    "surfaces": "roux-surface-types src/**/*.surface.json",
+    "surfaces:check": "roux-surface-types --check src/**/*.surface.json",
     "preformat": "test -d lint-tools/node_modules || npm ci --prefix lint-tools --no-audit --no-fund",
     "preformat:check": "test -d lint-tools/node_modules || npm ci --prefix lint-tools --no-audit --no-fund",
     "prelint": "test -d lint-tools/node_modules || npm ci --prefix lint-tools --no-audit --no-fund",
@@ -17,6 +19,8 @@
     "lint": "lint-tools/node_modules/.bin/eslint -c lint-tools/eslint.config.mjs ."
   },
   "dependencies": {
+    "@a2ui/react": "^0.16.1",
+    "@a2ui/web_core": "^0.16.1",
     "@chakra-ui/react": "^3.38.0",
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
@@ -34,7 +38,8 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-icons": "^5.7.0",
-    "zod": "4.6.7"
+    "zod": "4.6.7",
+    "zod3": "npm:zod@^3.25.76"
   },
   "devDependencies": {
     "@stryker-mutator/core": "10.1.1",

@@ -50,7 +50,7 @@ function ItemForm({ item, people }: Readonly<{ item: ItemDetail; people: ReturnT
     <form.AppForm>
       <form.Form>
         <Stack gap="4" maxW="lg">
-          <ItemFields form={form} people={people} editing />
+          <ItemFields form={form} people={people} />
           <form.SubmitButton>Save item</form.SubmitButton>
         </Stack>
       </form.Form>

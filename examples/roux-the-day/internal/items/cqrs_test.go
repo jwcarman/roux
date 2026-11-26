@@ -85,6 +85,26 @@ func TestAddItemAssignsTheCaller(t *testing.T) {
 	}
 }
 
+func TestAddItemWithoutADayIsForTheTeamsToday(t *testing.T) {
+	f := setup(t)
+	f.zone = "Pacific/Auckland" // the clock's 2026-11-24 12:00 UTC is already Wednesday the 25th there
+	for name, body := range map[string]item{
+		"no day":    {"title": "No day"},
+		"null day":  {"title": "Null day", "day": nil},
+		"blank day": {"title": "Blank day", "day": "  "},
+	} {
+		var out struct {
+			Result struct {
+				ID uuid.UUID `json:"id"`
+			} `json:"result"`
+		}
+		f.asG.Post("/api/commands/addItem", body).Want(t, 200, name).Decode(t, &out)
+		if got := f.asG.Get("/api/items/"+out.Result.ID.String()).Want(t, 200, "GET "+name).JSON(t); got["day"] != "2026-11-25" {
+			t.Errorf("%s: day %v", name, got["day"])
+		}
+	}
+}
+
 func TestAddItemValidates(t *testing.T) {
 	f := setup(t)
 	for name, c := range map[string]struct {
@@ -95,7 +115,6 @@ func TestAddItemValidates(t *testing.T) {
 		"no title":    {item{"day": "2026-11-25"}, "title"},
 		"long title":  {item{"title": strings.Repeat("x", 121), "day": "2026-11-25"}, "title"},
 		"day format":  {item{"title": "X", "day": "24-11-2026"}, "day"},
-		"no day":      {item{"title": "X"}, "day"},
 	} {
 		r := f.asAda.Post("/api/commands/addItem", c.body).Want(t, 400, name)
 		if !strings.Contains(string(r.Body), `"field":"`+c.field+`"`) {

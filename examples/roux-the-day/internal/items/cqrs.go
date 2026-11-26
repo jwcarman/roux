@@ -60,13 +60,17 @@ func (a ItemsArgs) filter(caller *authn.Principal, search string) Filter {
 	return f
 }
 
-// AddItem is the addItem command's input: a quick add, all day, for the caller.
+// AddItem is the addItem command's input: a quick add, all day, for the caller. No day is today,
+// in the team's zone.
 type AddItem struct {
 	Title *string `json:"title"`
 	Day   *string `json:"day"`
+
+	day time.Time // Day, parsed by Validate; zero when no day was given
 }
 
-// Validate is the cqrs.Input rule: a title of 1 to MaxTitle characters and a day (2026-11-24).
+// Validate is the cqrs.Input rule: a title of 1 to MaxTitle characters and, when there is a day,
+// a date (2026-11-24).
 func (a AddItem) Validate() (AddItem, error) {
 	var v []problem.Violation
 	title := strings.TrimSpace(deref(a.Title))
@@ -76,16 +80,18 @@ func (a AddItem) Validate() (AddItem, error) {
 	case n > MaxTitle:
 		v = append(v, problem.Violation{Field: "title", Message: problem.MustBeBetween(1, MaxTitle)})
 	}
-	day := strings.TrimSpace(deref(a.Day))
-	if _, err := time.Parse(time.DateOnly, day); day == "" {
-		v = append(v, problem.Violation{Field: "day", Message: problem.MustNotBeBlank})
-	} else if err != nil {
-		v = append(v, problem.Violation{Field: "day", Message: problem.InvalidValue})
+	var day time.Time
+	if text := strings.TrimSpace(deref(a.Day)); text != "" {
+		parsed, err := time.Parse(time.DateOnly, text)
+		if err != nil {
+			v = append(v, problem.Violation{Field: "day", Message: problem.InvalidValue})
+		}
+		day = parsed
 	}
 	if len(v) > 0 {
 		return AddItem{}, problem.Validation(v...)
 	}
-	return AddItem{Title: &title, Day: &day}, nil
+	return AddItem{Title: &title, Day: a.Day, day: day}, nil
 }
 
 // Added is what addItem answers.
@@ -120,9 +126,13 @@ func Endpoints(s Service) []cqrs.Endpoint {
 		cqrs.Command[AddItem, Added]{
 			Name: "addItem", Permission: ItemsWrite, Emits: []string{itemsChanged},
 			Run: func(ctx context.Context, tx pgx.Tx, caller *authn.Principal, in AddItem) (Added, error) {
-				day, err := time.Parse(time.DateOnly, *in.Day)
-				if err != nil {
-					return Added{}, err
+				day := in.day
+				if day.IsZero() {
+					today, err := s.today()
+					if err != nil {
+						return Added{}, err
+					}
+					day = today
 				}
 				d, err := s.create(ctx, tx, caller, Input{
 					Title: *in.Title, Day: day, At: pgtype.Time{}, Assignees: []uuid.UUID{caller.IdentityID},

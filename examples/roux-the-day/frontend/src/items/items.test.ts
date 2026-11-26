@@ -3,19 +3,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "@jwcarman/roux-web/testing";
 import { choicesOf } from "./AssigneesField";
-import {
-  addItem,
-  blankItem,
-  bodyOf,
-  deleteItem,
-  itemQuery,
-  itemSchema,
-  teamQuery,
-  updateItem,
-  valuesOf,
-  whenOf,
-  type ItemValues,
-} from "./items";
+import { bodyOf, deleteItem, itemQuery, itemSchema, teamQuery, updateItem, valuesOf, type ItemValues } from "./items";
 
 type Fetch = (context: { signal: AbortSignal }) => Promise<unknown>;
 
@@ -95,18 +83,6 @@ describe("what a save sends", () => {
 });
 
 describe("an item's values", () => {
-  it("starts a new item today, all day, assigned to whoever adds it", () => {
-    expect(blankItem("2026-11-24", "me")).toEqual({
-      title: "",
-      notes: "",
-      day: "2026-11-24",
-      allDay: true,
-      at: "",
-      assigneeIds: ["me"],
-      done: false,
-    });
-  });
-
   it("edits an item as it was saved", () => {
     const item = {
       id: "i-1",
@@ -134,13 +110,6 @@ describe("an item's values", () => {
       allDay: false,
       at: "09:15",
     });
-  });
-});
-
-describe("when an item is", () => {
-  it("shows its day and its time, or all day", () => {
-    expect(whenOf({ day: "2026-11-24", at: "10:30" })).toBe("Tue, Nov 24 · 10:30");
-    expect(whenOf({ day: "2026-11-24", at: null })).toBe("Tue, Nov 24 · All day");
   });
 });
 
@@ -212,7 +181,6 @@ describe("the items queries", () => {
 
 describe("what a change refreshes", () => {
   it("is the lists, and a changed item's own page", () => {
-    expect(addItem.meta).toEqual({ refreshes: [["items", "list"]] });
     expect(updateItem("i-1", 2).meta).toEqual({
       refreshes: [
         ["items", "list"],

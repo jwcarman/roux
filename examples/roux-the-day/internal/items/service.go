@@ -170,7 +170,9 @@ func (s Service) create(ctx context.Context, tx pgx.Tx, caller *authn.Principal,
 type ItemCounts struct {
 	Open    int `json:"open"`    // not done
 	Overdue int `json:"overdue"` // open, and before today
-	Today   int `json:"today"`   // open, and today
+	// Today is a to-do count: open, and today. It differs from the items query's when=today,
+	// which lists today's done items too.
+	Today int `json:"today"`
 }
 
 // Counts is how many items are open, overdue and due today, in the team's zone.
