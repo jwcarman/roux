@@ -1,5 +1,13 @@
 # Forms
 
+!!! note "Forms on surfaces"
+    An app's forms are drawn on its surfaces: `Form`, `InputField` and `SelectField` bound to a draft,
+    a button whose event runs a command, and the command's `Validate` as the gate
+    ([Surfaces](surfaces.md)). This guide is the React form layer those catalog components and roux's
+    built-in pages (sign-in, users, appearance) are built on; it matters when
+    [adding a primitive](adding-a-primitive.md). Its rule helpers' words are the same the server's
+    `Validate` answers.
+
 `@jwcarman/roux-web/form` is TanStack Form with Chakra fields, validated by Zod. A create or edit form
 is four pieces, each written once:
 

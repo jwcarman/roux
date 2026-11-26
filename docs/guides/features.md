@@ -1,5 +1,13 @@
 # A feature's server side
 
+!!! note "Queries and commands"
+    A feature's endpoints are its typed queries and commands, served by `cqrs.Mount`
+    ([Queries and commands](cqrs.md)), and its screens are surfaces ([Surfaces](surfaces.md)). The
+    migrations, the module and the service below are written as this guide shows; the hand-written
+    handlers (`k.Handle`) are how roux's own endpoints are served, and what a feature needs only for
+    an endpoint that is not a query or a command. The skill's recipe builds a whole feature the
+    current way.
+
 A feature is a Go package in `internal/<feature>/`: its tables, made by its own SQL migrations; a
 service that reads and writes them with pgx; handlers that check the request and answer JSON; and a
 module that brings them into the app. There is no ORM and no code generator: the SQL is in the

@@ -1,5 +1,10 @@
 # API client
 
+!!! note "Surfaces"
+    A surface's binding runs its queries and commands itself, through this client and TanStack Query
+    ([Surfaces](surfaces.md)): a feature's screen writes no resource module. This guide is the layer
+    roux's built-in pages and the surface runtime are built on.
+
 `@jwcarman/roux-web/api` is a thin layer over `fetch` for calling the app's own Go API: relative
 paths under `/api`, the session cookie, roux's CSRF header on every write, and every
 refusal turned into an `ApiError` carrying the server's Problem Detail. An app writes one API module

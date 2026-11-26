@@ -1,6 +1,6 @@
 # The A2UI catalog
 
-Screens can be data: [A2UI](https://a2ui.org) JSON that names components and binds their props to a data model.
+An app's feature screens are data: [A2UI](https://a2ui.org) JSON that names components and binds their props to a data model.
 roux's catalog says which components exist and what each prop takes. It is written once, in a typed format, in
 `@jwcarman/roux-web/a2ui`, and everything the A2UI SDK (`@a2ui/web_core`) needs is generated from it.
 
@@ -9,9 +9,9 @@ column names a field of `T`. A2UI only knows "any value" and "a string". The pre
 screen's data apart (which queries it reads, which commands its buttons send); the translation lowers it to what A2UI
 understands.
 
-To use it, install the SDK beside roux-web: `@a2ui/web_core` and Zod 3 under the alias `zod3`
-(`"zod3": "npm:zod@3.25.76"`). Zod 3 appears only in the generated schemas, because web_core is built on it; the
-format itself is plain TypeScript.
+To use it, install the SDK beside roux-web: `@a2ui/react`, `@a2ui/web_core` and Zod 3 under the alias `zod3`
+(`"zod3": "npm:zod@^3.25.76"`), as [Surfaces](surfaces.md#setting-up-an-app) shows. Zod 3 appears only in the
+generated schemas, because web_core is built on it; the format itself is plain TypeScript.
 
 ## roux's catalog
 
@@ -111,52 +111,8 @@ It needs `@a2ui/react` and `@a2ui/web_core` (optional peers). A `DataTable` show
 to, writes `pageIndex` when the person pages, and writes `sortBy` and `sortDirection` when they click a sortable
 header; its `link` columns are TanStack Router links, so render it inside the app's router.
 
-## A surface's types
+## Surfaces
 
-A surface is an A2UI JSON screen drawn only from this catalog, committed as `<id>.surface.json`: a `SurfaceJson`,
-`{ id, components }`, whose components are `SurfaceComponent`s (`{ id, component, ...props }`). From it and the typed
-definitions, `surfaceTypes(surface, defs)` returns the TypeScript text of what the surface needs from outside: an
-`<Id>SurfaceData` interface (the data it shows, by top-level path: each bound prop types its path, and a table's
-columns type the fields of its rows, `T | null` for an empty cell) and an `<Id>SurfaceEvents` interface (each
-button event's context). Two uses of one path with different types throw, naming the path.
-
-The `roux-surface-types` command (`bin` of the package) writes `<id>.surface.gen.ts` beside each
-`<id>.surface.json` it is given; `roux-surface-types --check <file>...` writes nothing and exits 1 naming each file
-that is stale, with the command that fixes it, so an app's CI can run it. Run it from the app after building roux-web.
-`runSurfaceTypes(args, io)` is the command's logic, with its file access passed in as a `SurfaceTypesIo`.
-
-## Running a surface
-
-`surfaces<Queries, Commands>(contract)`, from `@jwcarman/roux-web/surface`, is made once with the app's generated
-contract (`contract.gen.ts`: its `Queries` and `Commands` types and its `contract` object, a `ContractEvents`) and
-gives `bind`. `bind<ItemsSurfaceData, ItemsSurfaceEvents>(({ d, query, local, command, none }) => ({ data, events }))`
-binds one surface and returns a `Binding`; `<Surface surface={itemsSurface} binding={itemsBinding} />` renders it live.
-
-```ts
-const { bind } = surfaces<Queries, Commands>(contract);
-export const itemsBinding = bind<ItemsSurfaceData, ItemsSurfaceEvents>(({ d, query, local, command }) => ({
-  data: {
-    items: query("items", { status: d.itemsArgs.status, pageIndex: d.itemsArgs.pageIndex }),
-    itemsArgs: local({ status: "open", pageIndex: 0 }),
-    draft: local({ title: "", day: "" }),
-    errors: local({ title: "", day: "" }),
-  },
-  events: {
-    addItem: command("addItem", (item) => ({ title: item.title, day: item.day }), {
-      errors: d.errors,
-      onSuccess: [{ reset: d.draft }, { toast: "Item added" }],
-    }),
-  },
-}));
-```
-
-`d` is the surface's data as typed paths (a `Ref`): `d.itemsArgs.pageIndex` is `/itemsArgs/pageIndex`. Every
-top-level path is a `query(name, args?)` or a `local(initial)`; every event is a `command(name, build, { errors,
-onSuccess })` or `none()`, which says it is not bound yet when clicked. It does not compile when a query's answer
-lacks a field the surface shows, a path or an event is left out, or a command's input misses a member. An arg read
-from a path refetches when the path changes; any change but the page's sets the page back to 0. A command sends an
-`Idempotency-Key` header (reused when it is retried), runs once at a time, refetches the queries that depend on what
-it emits, then runs `onSuccess` in order (`{reset}`, `{set, value}`, `{toast}`). Field problems are written under
-`errors`; any other refusal is roux's error toast, and the form keeps what was typed. A skeleton shows until each
-query's first answer, the last page stays while the next loads, and a failed query shows an inline error with Retry.
-The generated types name `IsoDate`, `Money` and `Pagination`, exported beside them.
+A screen drawn from this catalog is a surface: its JSON, the types generated from it, the binding that
+makes it live and `<Surface>`, which renders it, are in [Surfaces](surfaces.md). A component the catalog
+lacks is added as described in [Adding a primitive](adding-a-primitive.md).

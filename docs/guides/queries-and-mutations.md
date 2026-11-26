@@ -1,5 +1,10 @@
 # Queries and mutations
 
+!!! note "Surfaces"
+    A surface's binding runs its queries and commands itself, through this client and TanStack Query
+    ([Surfaces](surfaces.md)): a feature's screen writes no resource module. This guide is the layer
+    roux's built-in pages and the surface runtime are built on.
+
 A roux app reads and writes through TanStack Query. Each resource has one module holding its API
 functions ([API client](api-client.md)), its queries (`queryOptions`) and its mutations
 (`mutationOptions`); pages and forms use those, never the API functions directly. roux adds three

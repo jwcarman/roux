@@ -69,8 +69,9 @@ plugins:
       markdown_description: |
         roux is the base a Go + React application is built on. The server side is the Go module
         github.com/jwcarman/roux: an app's main is app.Main, its features are modules (a package
-        with SQL migrations, a pgx service and handlers mounted with kit.Handle behind a
-        permission), and roux brings sign-in (emailed links and codes, passkeys, OpenID Connect,
+        with SQL migrations, a pgx domain service, and typed queries and commands mounted
+        with cqrs.Mount behind a permission; its screens are A2UI surfaces drawn from roux's
+        catalog and bound to them), and roux brings sign-in (emailed links and codes, passkeys, OpenID Connect,
         API keys, JWTs), roles and permissions, the users directory, Problem Details errors,
         paging (page.New), money, dates and the activity log. The web side is the npm package
         @jwcarman/roux-web (React 19, Chakra UI v3, TanStack Router, Query, Form and Table, Zod 4).
@@ -82,6 +83,9 @@ plugins:
           - index.md: what roux is and how an app is put together
           - guides/getting-started.md: making an app, app.Main and its modules, every environment variable, the web side, the shell
           - guides/features.md: a feature's server side, its migrations, the module, the input, the service, the handlers, the test
+          - guides/cqrs.md: a feature's queries and commands (cqrs), the app's ports; args, events, the contract, idempotency
+          - guides/surfaces.md: an app's feature screens as A2UI surfaces; generated types, bind, Surface, the runtime, known limits
+          - guides/adding-a-primitive.md: what to do when a screen needs something roux's catalog can't draw
         The server and the browser:
           - guides/errors.md: refusing a request with a problem, what roux answers for you, showing refusals in the browser
           - guides/roles.md: permissions as constants, roles as data, the permissions tests, keeping an administrator
@@ -98,7 +102,7 @@ plugins:
           - guides/shell.md: the theme, sign-in pages, the session and route guards, navigation
         Operating:
           - guides/email.md: the emails roux sends and how they are delivered
-          - guides/a2ui-catalog.md: roux's typed A2UI catalog, defining a component, translating for the A2UI SDK
+          - guides/a2ui-catalog.md: roux's typed A2UI catalog, its components, defining a component, translating for the A2UI SDK
           - guides/testing.md: Go tests with rouxtest, Vitest with MSW, Playwright
           - guides/upgrading.md: moving an app to a new roux release, its packages and its template files
         Optional:
@@ -113,6 +117,9 @@ nav:
   - Guides:
       - Getting Started: guides/getting-started.md
       - A Feature's Server Side: guides/features.md
+      - Queries and Commands: guides/cqrs.md
+      - Surfaces: guides/surfaces.md
+      - Adding a Primitive: guides/adding-a-primitive.md
       - Errors: guides/errors.md
       - Roles and Permissions: guides/roles.md
       - Users: guides/users.md

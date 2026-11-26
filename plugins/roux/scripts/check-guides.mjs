@@ -25,7 +25,7 @@ const webEntries = Object.keys(JSON.parse(readFileSync(join(root, "web/roux-web/
 // with. Their exported top-level names are the Go API the docs must cover.
 const goPackages = [
   "app", "problem", "api", "page", "users", "authz", "activity", "money", "organization", "pgdb",
-  "rouxtest", "authn/authntest",
+  "rouxtest", "authn/authntest", "cqrs",
 ];
 // Exported but not for apps: wiring app.Main does, and helpers roux's own packages share.
 const excludedGo = new Set([

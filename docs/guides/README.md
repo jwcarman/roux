@@ -2,6 +2,9 @@
 
 - [Getting started](getting-started.md)
 - [A feature's server side](features.md)
+- [Queries and commands](cqrs.md)
+- [Surfaces](surfaces.md)
+- [Adding a primitive](adding-a-primitive.md)
 - [Errors](errors.md)
 - [Roles and permissions](roles.md)
 - [Users](users.md)

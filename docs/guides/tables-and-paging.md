@@ -1,5 +1,11 @@
 # Tables and paging
 
+!!! note "Lists on surfaces"
+    An app's lists are `cqrs` queries over a `page.New` paginator ([Queries and commands](cqrs.md)),
+    drawn as a `DataTable` on a surface ([Surfaces](surfaces.md)). The server side below (`page.New`,
+    its views, sorts and search) is how every list is paged; the browser side (`QueryTable` and the
+    rest) is the React layer the catalog's `DataTable` and roux's built-in pages are built on.
+
 A roux list is paged by the server. The endpoint takes the page parameters (`pageIndex`,
 `pageSize`, `sortBy`, `sortDirection`) plus its own filters, and answers a `PageDto`: one page of rows
 and where it sits in the whole. In the browser, `@jwcarman/roux-web/table` draws a paged, sortable

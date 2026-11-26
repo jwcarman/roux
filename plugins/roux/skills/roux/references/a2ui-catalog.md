@@ -1,8 +1,9 @@
 # The A2UI catalog
 
-roux's A2UI components are defined once, typed, in `@jwcarman/roux-web/a2ui`; the A2UI SDK's schemas, the catalog
-document and the drawing prompt's entries are generated from them. Needs `@a2ui/web_core` and
-`"zod3": "npm:zod@3.25.76"` installed beside roux-web.
+The catalog is what a feature's screens (surfaces, `surfaces.md`) are drawn from. roux's A2UI
+components are defined once, typed, in `@jwcarman/roux-web/a2ui`; the A2UI SDK's schemas, the
+catalog document and the drawing prompt's entries are generated from them. Needs `@a2ui/react`,
+`@a2ui/web_core` and `"zod3": "npm:zod@^3.25.76"` installed beside roux-web (`feature.md` step 0).
 
 ## Rules
 
@@ -60,42 +61,12 @@ A bindable text-like type, `oneOf` or `fieldOf` → `DynamicString`; `number`/`i
 shows the page `rows` is bound to; paging writes `pageIndex`, a sortable header writes `sortBy`/`sortDirection`;
 `link` columns are TanStack Router links, so render inside the app's router.
 
-## A surface's types
+## Surfaces
 
-`SurfaceJson` (`{ id, components }`, committed as `<id>.surface.json`) holds `SurfaceComponent`s
-(`{ id, component, ...props }`). `surfaceTypes(surface, defs)` returns the TypeScript of what the surface needs: an
-`<Id>SurfaceData` (data by top-level path; a table column's field is `T | null`) and an `<Id>SurfaceEvents` (each
-button event's context). A path used as two types throws. Don't call it: run
-`roux-surface-types <id>.surface.json` (writes `<id>.surface.gen.ts`); `--check` exits 1 naming stale files, for CI.
-`runSurfaceTypes(args, io: SurfaceTypesIo)` is that command's logic.
-
-## Running a surface
-
-```ts
-import { Surface, surfaces } from "@jwcarman/roux-web/surface";
-
-const { bind } = surfaces<Queries, Commands>(contract); // once, from contract.gen.ts (a ContractEvents)
-const itemsBinding = bind<ItemsSurfaceData, ItemsSurfaceEvents>(({ d, query, local, command, none }) => ({
-  data: {
-    items: query("items", { pageIndex: d.itemsArgs.pageIndex }),
-    itemsArgs: local({ pageIndex: 0 }),
-    draft: local({ title: "" }),
-    errors: local({ title: "" }),
-  },
-  events: {
-    addItem: command("addItem", (item) => item, { errors: d.errors, onSuccess: [{ reset: d.draft }] }),
-    saveSupplier: none(),
-  },
-}));
-<Surface surface={itemsSurface} binding={itemsBinding} />;
-```
-
-- Every top-level path: `query` or `local`; every event: `command` or `none()`. A `Binding` that misses one, or a
-  query lacking a shown field, does not compile. `d` paths are `Ref`s.
-- Arg paths refetch on change; a change to any but the page resets the page to 0.
-- Commands: `Idempotency-Key` header, one in flight, refetch by the contract, then `onSuccess` steps in order. Field
-  problems go under `errors`; others toast and keep the draft.
-- The generated types import `IsoDate`, `Money`, `Pagination` from `@jwcarman/roux-web/surface`.
+A screen drawn from this catalog is a surface: its JSON (`SurfaceJson`), its generated types
+(`surfaceTypes`, the `roux-surface-types` bin), its binding (`bind`) and `<Surface>` are
+`surfaces.md`. A component the catalog lacks is added as a primitive (`surfaces.md`, "Adding a
+primitive").
 
 ## Pitfalls
 

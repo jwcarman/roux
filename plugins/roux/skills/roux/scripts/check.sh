@@ -4,12 +4,14 @@
 #
 #   1. gofmt -w formats the Go (the build's format check fails on any unformatted file).
 #   2. The permissions test rewrites frontend/src/permissions.gen.ts from permissions() in
-#      cmd/server/modules.go (the frontend fails to compile against a stale one); it runs twice,
-#      since the run that rewrites the file fails.
+#      cmd/server/modules.go, and the contract test (when there is one) rewrites
+#      frontend/src/contract.gen.ts from the cqrs endpoints (the frontend fails to compile against a
+#      stale one); each runs twice, since the run that rewrites its file fails.
 #   3. go vet, then golangci-lint (`make lint`: the app's pinned version, built into bin/ the first time).
 #   4. The Go tests, when a database is reachable: TEST_DATABASE_URL, or Docker for a container.
-#   5. The frontend: npm ci when node_modules is missing, Prettier (writing) and ESLint if it has them,
-#      its tests with the 100% coverage gate, and its type-checked build.
+#   5. The frontend: npm ci when node_modules is missing, Prettier (writing) if it has it, the
+#      surfaces' types (npm run surfaces, writing) if it has surfaces, its tests with the 100%
+#      coverage gate, its type-checked build, and ESLint if it has it.
 #
 # It stops at the first failure with what to do, and ends by naming every step it skipped: a
 # skipped step has not passed.
@@ -53,6 +55,14 @@ if [ -f cmd/server/permissions_test.go ]; then
 else
   skipped+=("permissions.gen.ts (no cmd/server/permissions_test.go)")
 fi
+if [ -f cmd/server/contract_test.go ]; then
+  step "contract.gen.ts"
+  contract="TestTheFrontEndContractIsCurrent"
+  if ! go test ./cmd/server -run "$contract" >"$log" 2>&1; then
+    go test ./cmd/server -run "$contract" >"$log" 2>&1 \
+      || fail "contract" "the contract test fails twice: read it; it must compile and list each feature's Endpoints, and every type they name needs json tags"
+  fi
+fi
 
 # 3. Vet and lint.
 step "go vet"
@@ -84,6 +94,11 @@ if [ -f frontend/package.json ]; then
   if has format; then
     step "npm run format"
     (cd frontend && npm run -s format) >"$log" 2>&1 || fail "npm run format" "Prettier could not parse a file below"
+  fi
+  # A surface's types are generated from its JSON, as gofmt fixes the Go: written, not only reported.
+  if has surfaces; then
+    step "npm run surfaces"
+    (cd frontend && npm run -s surfaces) >"$log" 2>&1 || fail "npm run surfaces" "a surface can't be typed: fix the JSON as the message below says"
   fi
   if has coverage; then
     step "npm run coverage"

@@ -1,134 +1,120 @@
-# Forms beyond the recipe
+# Forms: fields on a surface, rules in Validate
 
-The common create/edit dialog is `feature.md` step 10. This card covers the rule helpers, every
-field, a form on a page, 409s, and forms that don't save through a mutation.
+A form is part of a surface (`feature.md` step 7): a `Form` holding `InputField`s and `SelectField`s
+bound to a `local` draft, and a `Button` whose event runs a command. The server's `Validate` is the
+gate; a field's `@checks` repeat its rules in the browser, in roux's words. This card is the
+fields, the rules on both sides, and the names of the React form layer the catalog is built on.
 
 ## Rules
 
-- Schemas come from `@jwcarman/roux-web/form`'s helpers; their messages are the server's, word for
-  word. Never `z.string().min(1, "...")` where a helper exists.
-- Call `.max()` and `.optional()` before any `.refine()`; keep `.transform`/`.pipe` out of form
-  schemas (they hide `required` and `maxLength`).
-- Build `defaultValues` and `mutation` from the current record on every render; never hold them in
-  state, `useMemo` or a ref, or a 409 repeats forever.
-- The form catches nothing, toasts nothing, resets nothing: `useSchemaForm` and `FormDialog` do it.
+- A form's values live in a `local` (`/draft`), its server errors in another (`/errors`) with the
+  same members; the button's event `context` carries each value, and the binding's `command(...,
+  { errors: d.errors, onSuccess: [{ reset: d.draft }] })` places field problems and clears the
+  draft.
+- `Validate` (the command's `cqrs.Input`) checks every rule and answers every mistake at once with
+  `problem.Validation`, each violation's `Field` the input's JSON member: the surface shows it under
+  the field whose `serverError` is bound to `/errors/<member>`.
+- Messages are roux's words, never retyped variations: in Go the `problem` constants and functions,
+  in a check's `message` the same text (`Must not be blank`).
+- Client checks show on blur but don't block a submit (this round): the server's answer is what
+  stops a bad save.
+- A rule about stored data (a unique name, a state) is the domain service's, raised as
+  `problem.InvalidField(field, message)`; it shows under the field the same way.
 
-## Names: rule helpers
+## Fields
 
-Each helper's words are the server's; the server's `validate` (`feature.md` step 3) checks the same
-rule:
-
-| Helper | Input | The server's check in `validate` |
-| --- | --- | --- |
-| `text()` | trimmed string | trimmed, then `problem.MustNotBeBlank` when empty |
-| `email()` | trimmed | `net/mail.ParseAddress`, else `problem.ValidEmail` |
-| `url()` | trimmed, http(s) | `net/url.Parse` with an `http`/`https` scheme and a host, else `problem.ValidURL` |
-| `phone()` | trimmed, ≥ 7 digits | no Go helper yet: the pattern in roux's `contracts/phone.json` as a `regexp`, else `problem.BadFormat` |
-| `date()` | `YYYY-MM-DD` | `time.Parse(time.DateOnly, s)`, else `problem.BadFormat`; missing `problem.MustNotBeEmpty` |
-| `time()` | `HH:mm` | `time.Parse("15:04", s)`, else `problem.BadFormat` |
-| `number()` / `integer()` | `number \| undefined` | a `*float64` / `*int64` that is not nil |
-| `oneOf(values)` | select value, `""` placeholder | `slices.Contains(values, v)`, else `problem.MustBeOneOf(values...)` |
-| `id()` | select over loaded ids | `uuid.Parse`, and that the row exists |
-| `money()` | see `money.md` | `money.Check` |
-
-Methods: `.max(n)` (text: `problem.MustBeBetween(1, n)` when required, `(0, n)` when optional;
-numbers: `problem.MustBeAtMost(n)`), `.min(n)` (`problem.MustBeAtLeast(n)`), `.notInFuture()` on
-`date` (the server compares with the organization's today, `problem.MustNotBeInFuture`; never
-`time.Now()`), `.optional()` (empty → `null`; on the server a nil pointer passes).
-Rule types for your own helpers: `TextRule`, `DateRule`, `TimeRule`, `ChoiceRule`, `NumberRule`,
-`AfterRule`.
-
-**Two fields in order:** in the browser, last:
-
-```ts
-export const termSchema = after(z.object({ startsOn: date(), endsOn: date() }), {
-  field: "endsOn",
-  other: "startsOn",
-  otherLabel: "the start date",
-});
-```
-
-and in `validate`, when both sides are present and valid (an empty field is left to its own rule):
-
-```go
-if !in.EndsOn.IsZero() && !in.StartsOn.IsZero() && !in.EndsOn.After(in.StartsOn) {
-	bad("endsOn", problem.MustBeAfter("the start date"))
+```json
+{
+  "id": "draftDay",
+  "component": "InputField",
+  "label": "Day",
+  "type": "date",
+  "required": true,
+  "helperText": "The day it is due",
+  "value": { "@path": "/draft/day" },
+  "serverError": { "@path": "/errors/day" },
+  "@checks": [
+    { "condition": { "@call": "required", "args": { "value": { "@path": "/draft/day" } } }, "message": "Must not be empty" }
+  ]
 }
 ```
 
-The message is `Must be after {other}` (`startsOn` → `Must be after starts on` without a label);
-give both sides the same label. Equal is not after. Works for dates, times, instants and numbers.
+- `InputField`: `type` `text` (default), `email`, `tel`, `date` (`yyyy-mm-dd` in the draft), `time`
+  (`HH:mm`). `SelectField`: `options` `[{ value, label }]` (values spelled as the Go side spells
+  them), `placeholder`. Both: `label`, `value`, `required`, `helperText`, `serverError`, `@checks`.
+- Every field is inside a `Form`; the button is in the same `Form`.
+- A value is text in the draft: a blank field sends `""`. The input type takes pointers
+  (`*string`), so `Validate` treats `""` and a missing member alike, and parses what it needs
+  (`time.Parse(time.DateOnly, s)`).
+- Checks (`@call`): `required`, `length` (`min`, `max`), `regex` (`pattern`), `email`, `numeric`
+  (`min`, `max`); each `args` names the `value` path it checks.
 
-**A rule no helper covers:** write Zod in the server's words and register it in `fieldRules`:
+## The rules on both sides
 
-```ts
-export const code = z.string().trim()
-  .min(1, { error: "Must not be blank", abort: true })
-  .regex(/^[A-Z]{3}$/, { error: "Is not in the expected format" })
-  .register(fieldRules, { required: true });
+| `Validate` (Go) | Its words | A field's `@checks` |
+| --- | --- | --- |
+| trimmed, empty → `problem.MustNotBeBlank` | `Must not be blank` | `required` |
+| over the limit → `problem.MustBeBetween(1, n)` | `Must be between 1 and n characters` | `length` with `max` |
+| `slices.Contains(values, v)`, else `problem.MustBeOneOf(values...)` | `Must be one of a, b` | (a `SelectField` offers only those) |
+| `net/mail.ParseAddress`, else `problem.ValidEmail` | `Must be a valid email address` | `email` |
+| `time.Parse(time.DateOnly, s)`, else `problem.BadFormat` | `Is not in the expected format` | `type: "date"` |
+| a required date missing → `problem.MustNotBeEmpty` | `Must not be empty` | `required` |
+| two fields in order → `problem.MustBeAfter("the start date")` | `Must be after the start date` | none: the server's |
+| a value it can't read → `problem.InvalidValue` | `Invalid value` | none |
+
+Two fields in order, in `Validate`, when both are present and valid (an empty field is left to its
+own rule):
+
+```go
+if !in.endsOn.IsZero() && !in.startsOn.IsZero() && !in.endsOn.After(in.startsOn) {
+	v = append(v, problem.Violation{Field: "endsOn", Message: problem.MustBeAfter("the start date")})
+}
 ```
- `fieldRules` holds a
-`FieldRule` (`{ required, maxLength? }`). A checkbox is `z.boolean()`.
 
-## Names: fields
+## Editing a record
 
-Inside `form.AppField name="..."`, the child gets `f` with: `f.InputField` (`type` `date`,
-`time`, `email`, `tel`, `datetime-local`...), `f.TextAreaField`, `f.NumberField` (`min`, `max`,
-`step` limit the stepper only), `f.SelectField` (`options`: bare values humanized, or objects `{ value, label }` typed `Option`; `labels`; `placeholder`), `f.RadioGroupField` (`options`, `orientation`),
-`f.CheckboxField`, and `MoneyField` (`money.md`). All take `label` (required), `helperText`,
-`required`. Props types: `InputFieldProps`, `TextAreaFieldProps`, `NumberFieldProps`,
-`SelectFieldProps` (values are `SelectValue`: string, number or boolean), `RadioGroupFieldProps`,
-`CheckboxFieldProps`, `FormFieldProps`. The same components are exported by name (`InputField`,
-`TextAreaField`, `NumberField`, `SelectField`, `RadioGroupField`, `CheckboxField`) for tests.
+Not this round on a surface: there are no detail surfaces (route parameters) or modals yet, so a
+form that edits one record stays out of surfaces until they come. When it comes, the command's input
+carries the `version` it was read at and the service answers `problem.StaleVersion()` (`409`) when
+it no longer matches (`cqrs.md`, "Stale writes").
 
-`defaultValues` from a record: `inputOf(v)` (null → `""`), `numberInputOf(v)` (null → `undefined`),
-`timeInputOf(iso)` (`18:30:00` → `18:30`), `dateTimeInputOf(iso)`. A create's blanks: `""`,
-`undefined` for numbers, `false` for a checkbox.
+## The React form layer
 
-## Names: hooks and components
+`@jwcarman/roux-web/form` is what the catalog's `Form`, `InputField` and `SelectField` and roux's
+built-in pages (sign-in, users, appearance) are built with. A feature's screen does not use it:
+it matters when adding a primitive (`surfaces.md`).
 
+- Rule helpers, each in the server's words: `text()`, `email()`, `url()`, `phone()`, `date()`,
+  `time()`, `number()`, `integer()`, `oneOf(values)`, `id()`, `money()` (`money.md`), with `.max(n)`,
+  `.min(n)`, `.notInFuture()`, `.optional()`; `after(schema, { field, other, otherLabel })` for two
+  in order. Rule types: `TextRule`, `DateRule`, `TimeRule`, `ChoiceRule`, `NumberRule`, `AfterRule`;
+  `fieldRules` holds each schema's `FieldRule` (`{ required, maxLength? }`).
 - `useSchemaForm({ schema, defaultValues, mutation, onSuccess?, failure? })` (`SchemaFormOptions`)
-  returns a `SchemaForm<S>`: TanStack Form plus `restart()` and `onSaved(listener)`.
-- `FormDialog` (`FormDialogProps`: `form`, `title`, `trigger`, `submitLabel?`, `open?`,
-  `onOpenChange?`). It takes a `DialogForm`. Controlled only when the page opens it from code; still
-  needs `trigger`.
-- On a page: `form.AppForm` › `form.Form` › fields, `form.SubmitButton`, `form.ResetButton`,
-  `form.SubmittingIndicator` (also exported as `Form`, `SubmitButton`, `ResetButton`,
-  `SubmittingIndicator`).
-- A long form: pass the form to sections typed `SchemaForm<typeof schema>` (not `withForm`, which
-  takes only `useAppForm` forms).
-- Not a save (a sign-in link, a filter): `useAppForm({ defaultValues, validators: { onBlur: schema,
-  onSubmit: schema }, onSubmit })`. Place a 400's field errors with `fieldErrorsOf(problem)` and
-  `form.setFieldMeta(name, (m) => ({ ...m, errorMap: { ...m.errorMap, onServer: message } }))`.
-- A custom control: `FormField` (`label`, `helperText`, `required`, `controlLabelled`) with
-  `useFieldContext<T>()` inside `form.AppField`; `useFormContext()` reads the form;
-  `errorMessages(errors)` when drawing errors yourself. `fieldContext` and `formContext` are the
-  contexts; never build another hook with `createFormHook`.
-
-## Dates and times in forms
-
-Wire: `LocalDate` `2026-11-17`, `LocalTime` `18:30` (server writes `18:30:00`). Convert with
-`parseIsoDate`, `formatIsoDate`, `parseIsoTime`, `formatIsoTime` (`/dates`; `undefined` for an
-unreal date). Arithmetic with date-fns. Today is the organization's `today()` (`dates.md`).
-
-## 409s
-
-The edit mutation carries the `version` it was built with and refreshes the record's queries. On
-a 409 the form toasts `This record changed since you loaded it`, refetches, and starts over from
-the newer record. For that, `meta.refreshes` must name the query the form's record came from: a
-dialog opened from a list row needs `lists()`.
+  returns a `SchemaForm<S>` (`restart()`, `onSaved(listener)`); `FormDialog` (`FormDialogProps`)
+  takes a `DialogForm`; `useAppForm` for a form that doesn't save; `fieldErrorsOf(problem)`. A
+  long form's sections take a `SchemaForm<typeof schema>`, not `withForm` (which takes only
+  `useAppForm` forms).
+- Fields: `InputField`, `TextAreaField`, `NumberField`, `SelectField` (values are `SelectValue`,
+  options `Option`), `RadioGroupField`, `CheckboxField`, `MoneyField`, with `InputFieldProps`,
+  `TextAreaFieldProps`, `NumberFieldProps`, `SelectFieldProps`, `RadioGroupFieldProps`,
+  `CheckboxFieldProps`, `FormFieldProps`; `Form`, `SubmitButton`, `ResetButton`,
+  `SubmittingIndicator`.
+- A custom control: `FormField` with `useFieldContext<T>()`; `useFormContext()`;
+  `errorMessages(errors)`; `fieldContext` and `formContext`.
+- Inputs from records: `inputOf(v)`, `numberInputOf(v)`, `timeInputOf(iso)`, `dateTimeInputOf(iso)`.
+- Dates on the wire: `parseIsoDate`, `formatIsoDate`, `parseIsoTime`, `formatIsoTime` (`/dates`).
 
 ## Check
 
-`npm test` with a form test per dialog: client rule in the server's words and nothing sent; the
-request body (trimmed, `""` as `null`); a server field error under its field; `stale()` toasts.
+Go: a test per rule of `Validate` (`400` naming the field), and per service rule. Vitest, through
+the route: the command's body (`added`), a server field error under its field (`invalidFields`),
+the draft cleared and the toast after a success (`feature.md` step 10).
 
 ## Pitfalls
 
-- `email: contact.email` where it may be `null` doesn't compile: use `inputOf`.
-- A schema key with no field refuses every submit.
-- A field whose schema is plain Zod (`z.string()`), or a rule behind `.transform`/`.pipe`, throws
-  when it renders, naming the field; only a checkbox's `z.boolean()` may be plain.
-- `url()` rejects `http://localhost:8080`, `email()` rejects `ann@localhost`: write that field's Zod
-  and register it where those are valid.
-- `integer()`'s `Must be a whole number` exists only in the browser.
+- A field whose `serverError` isn't bound, or `errors` without that member: the server's message
+  becomes a toast instead of showing under the field.
+- A violation's `Field` that differs from the input's JSON member (`Name` for `name`): the same.
+- A draft member the event's `context` doesn't send: the command never gets it.
+- `@checks` words that differ from the server's: the person sees two messages for one rule.
+- A `SelectField` option spelled differently from Go's list: every save is a `400`.
