@@ -138,3 +138,65 @@ func TestTypeScriptRefusesAnUnsupportedType(t *testing.T) {
 	}()
 	cqrs.TypeScript([]cqrs.Endpoint{cqrs.Lookup[cqrs.NoArgs, Thing]{Name: "things"}})
 }
+
+type NoArgs struct {
+	Name string `json:"name"`
+}
+
+type Money struct {
+	Cents int `json:"cents"`
+}
+
+type clash struct {
+	Label *string `json:"label"`
+}
+
+type clashInput struct {
+	Other string `json:"other"`
+}
+
+type clashCommand struct {
+	Clash      clash      `json:"clash"`
+	ClashInput clashInput `json:"clashInput"`
+}
+
+func (c clashCommand) Validate() (clashCommand, error) { return c, nil }
+
+type clashRow struct {
+	Clash clash `json:"clash"`
+}
+
+type moneyRow struct {
+	Price money.Money `json:"price"`
+	Mine  Money       `json:"mine"`
+}
+
+func TestTypeScriptRefusesTwoTypesWithOneName(t *testing.T) {
+	cases := map[string]struct {
+		endpoints []cqrs.Endpoint
+		want      string
+	}{
+		"same name in two packages": {
+			[]cqrs.Endpoint{cqrs.Lookup[cqrs.NoArgs, contractAdded]{Name: "a"}, cqrs.Lookup[NoArgs, contractAdded]{Name: "b"}},
+			`cqrs: two types would both be named "NoArgs" in the contract (github.com/jwcarman/roux/cqrs.NoArgs and github.com/jwcarman/roux/cqrs_test.NoArgs); rename one`,
+		},
+		"the input suffix meets a Go type": {
+			[]cqrs.Endpoint{cqrs.Command[clashCommand, clashRow]{Name: "add"}},
+			`cqrs: two types would both be named "clashInput" in the contract (github.com/jwcarman/roux/cqrs_test.clash and github.com/jwcarman/roux/cqrs_test.clashInput); rename one`,
+		},
+		"a type named Money": {
+			[]cqrs.Endpoint{cqrs.Lookup[cqrs.NoArgs, moneyRow]{Name: "a"}},
+			`cqrs: two types would both be named "Money" in the contract (github.com/jwcarman/roux/cqrs_test.Money and github.com/jwcarman/roux/money.Money); rename one`,
+		},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			defer func() {
+				if got := recover(); got != c.want {
+					t.Errorf("panic = %v, want %q", got, c.want)
+				}
+			}()
+			cqrs.TypeScript(c.endpoints)
+		})
+	}
+}

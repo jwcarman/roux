@@ -84,10 +84,20 @@ func (g *tsGen) generate(endpoints []Endpoint) string {
 		sort.Slice(rows, func(i, j int) bool { return rows[i].name < rows[j].name })
 	}
 
+	keys := make([]tsKey, 0, len(g.texts))
+	for k := range g.texts {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool { return qualified(keys[i].t) < qualified(keys[j].t) })
 	named := map[string]string{}
-	for k, text := range g.texts {
+	owner := map[string]reflect.Type{}
+	for _, k := range keys {
 		n := g.name(k.t, k.input)
-		named[n] = strings.ReplaceAll(text, "\x00", n)
+		if prior, taken := owner[n]; taken && prior != k.t {
+			panic(fmt.Sprintf("cqrs: two types would both be named %q in the contract (%s and %s); rename one", n, qualified(prior), qualified(k.t)))
+		}
+		owner[n] = k.t
+		named[n] = strings.ReplaceAll(g.texts[k], "\x00", n)
 	}
 	names := make([]string, 0, len(named))
 	for n := range named {
@@ -229,3 +239,5 @@ func (g *tsGen) members(t reflect.Type, input, nullable bool, out *[]string) {
 func lowerFirst(s string) string {
 	return strings.ToLower(s[:1]) + s[1:]
 }
+
+func qualified(t reflect.Type) string { return t.PkgPath() + "." + t.Name() }
