@@ -116,6 +116,13 @@ export const attempts = [
       data: { counts: t.query("counts", { pageIndex: 0 }), items: t.query("items"), ...locals(t) },
       events: { addItem: t.none() },
     })),
+  // A lookup with no args takes none, not even from a path.
+  () =>
+    bind<ItemsSurfaceData, ItemsSurfaceEvents>((t) => ({
+      // @ts-expect-error counts takes no args
+      data: { counts: t.query("counts", { bogus: t.d.draft.title }), items: t.query("items"), ...locals(t) },
+      events: { addItem: t.none() },
+    })),
   // A name the contract does not have.
   () =>
     bind<ItemsSurfaceData, ItemsSurfaceEvents>((t) => ({

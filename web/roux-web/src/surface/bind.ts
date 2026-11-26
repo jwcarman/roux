@@ -51,7 +51,8 @@ type Answer<Q, N extends keyof Q> = Q[N] extends { kind: "query"; row: infer R }
     : never;
 
 /** An arg's value: written, or read from a path. A word from a set (a string union) may be read from any text path. */
-type ArgValue<V> = V | Ref<V> | ([NonNullable<V>] extends [string] ? Ref<string> : never);
+// never (an arg of NoArgs, Record<string, never>) takes nothing: without the first guard it would take a text path.
+type ArgValue<V> = [V] extends [never] ? never : V | Ref<V> | ([NonNullable<V>] extends [string] ? Ref<string> : never);
 type PageArgs = {
   pageIndex?: ArgValue<number>;
   pageSize?: ArgValue<number>;

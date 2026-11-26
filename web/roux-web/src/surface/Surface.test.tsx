@@ -478,6 +478,42 @@ describe("Surface", () => {
     expect(screen.queryByText("Pick a start")).not.toBeInTheDocument();
   });
 
+  it("aFieldProblemWithNoPlaceOnTheSurfaceIsAToast", async () => {
+    answerQueries();
+    server.use(
+      http.post("/api/commands/addItem", () =>
+        invalidFields({ title: "Title is required", "assignee.id": "No such person" }),
+      ),
+    );
+    renderItems();
+    await screen.findByText("Apples");
+
+    await userEvent.click(screen.getByRole("button", { name: "Add item" }));
+
+    expect(await screen.findByText("Could not save")).toBeInTheDocument();
+    expect(screen.getByText("The request has invalid fields")).toBeInTheDocument();
+    expect(screen.getByText("Title is required")).toBeInTheDocument();
+  });
+
+  it("refetchesOnlyTheQueriesOnScreen", async () => {
+    const asked = answerQueries();
+    server.use(http.post("/api/commands/addItem", () => HttpResponse.json({ result: { id: "i1" }, events: [] })));
+    renderItems();
+    await screen.findByText("Apples");
+    await userEvent.selectOptions(screen.getByLabelText("Status"), "done");
+    await screen.findByText("Nothing yet");
+    await userEvent.selectOptions(screen.getByLabelText("Status"), "open");
+    await screen.findByText("Apples");
+    const before = asked.length;
+
+    await userEvent.click(screen.getByRole("button", { name: "Add item" }));
+
+    expect(await screen.findByText("Item added")).toBeInTheDocument();
+    const after = asked.slice(before);
+    expect(after.length).toBeGreaterThan(0);
+    expect(after.every((params) => params.get("status") === "open")).toBe(true);
+  });
+
   it("fieldProblemsWithNoErrorsPathAreAToast", async () => {
     answerQueries();
     server.use(http.post("/api/commands/addItem", () => invalidFields({ title: "Title is required" })));

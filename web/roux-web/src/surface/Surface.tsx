@@ -44,13 +44,13 @@ const argPaths = (port: Port): string[] =>
     .filter(isPath)
     .map((arg) => arg.path);
 
-/** The queries that depend on what `command` emits, refetched and waited for. */
+/** The queries that depend on what `command` emits: marked stale, and those on screen refetched and waited for. */
 async function refetchAfter(command: string, wiring: Wiring, client: QueryClient): Promise<void> {
   const emitted = wiring.contract.commands[command].emits;
   const stale = Object.entries(wiring.contract.queries)
     .filter(([, query]) => query.dependsOn.some((event) => emitted.includes(event)))
     .map(([name]) => name);
-  await Promise.all(stale.map((name) => client.refetchQueries({ queryKey: ["queries", name] })));
+  await Promise.all(stale.map((name) => client.invalidateQueries({ queryKey: ["queries", name] })));
 }
 
 /** Writes a query's answer to its path once it comes; a path keeps its last answer while the next loads or fails. */
@@ -127,12 +127,15 @@ export function Surface({ surface, binding }: Readonly<{ surface: SurfaceJson; b
         headers: { "Idempotency-Key": key },
       });
     } catch (error) {
+      // A field problem goes under errors when the surface has a place for it; any other refusal, or a field problem
+      // with no place, is roux's error toast, so nothing the server said goes unseen.
       const fields = error instanceof ApiError ? (error.problem.errors ?? []) : [];
-      if (errors !== undefined && fields.length > 0) {
-        for (const field of fields) write(`${errors}/${field.field.replaceAll(".", "/")}`, field.message);
-      } else {
-        refusalToast(error, "Could not save");
-      }
+      // A place is a path the errors local starts with; with no errors path there is none (no local is "undefined").
+      const placed = fields
+        .map((field) => ({ path: `${errors}/${field.field.replaceAll(".", "/")}`, message: field.message }))
+        .filter(({ path }) => first.get(path) !== undefined);
+      for (const { path, message } of placed) write(path, message);
+      if (fields.length === 0 || placed.length < fields.length) refusalToast(error, "Could not save");
       return;
     }
     keys.current.delete(action.name);
