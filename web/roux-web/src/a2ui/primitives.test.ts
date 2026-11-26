@@ -114,4 +114,37 @@ describe("roux's primitives", () => {
       optional: false,
     });
   });
+
+  it("let a DataTable page, sort and link on the server's terms", () => {
+    const roux = (rouxCatalog.document.metadata as { extensions: { roux: { components: typeof PRIMITIVES } } })
+      .extensions.roux;
+    const props = roux.components.find((def) => def.name === "DataTable")?.props;
+    expect(props?.pageIndex).toEqual({ kind: "bindable", type: { kind: "scalar", scalar: "integer" }, optional: true });
+    expect(props?.sortBy).toEqual({ kind: "bindable", type: { kind: "scalar", scalar: "text" }, optional: true });
+    expect(props?.sortDirection).toEqual({
+      kind: "bindable",
+      type: { kind: "oneOf", values: ["ASC", "DESC"] },
+      optional: true,
+    });
+    const columns = JSON.stringify(props?.columns);
+    expect(columns).toContain('"values":["text","money","date","time","badge","list"]');
+    expect(columns).toContain('"sort"');
+    expect(columns).toContain('"link"');
+    expect(columns).toContain('"kind":"map","of":{"kind":"fieldOf","param":"T"}');
+  });
+
+  it("lower a DataTable's paging, sorting and column link", () => {
+    const column = { header: "Name", field: "name", sort: "name", link: { to: "/jobs/$id", params: { id: "id" } } };
+    const table = { rows: { "@path": "/jobs" }, columns: [column], pageIndex: { "@path": "/page" } };
+    expect(accepts("DataTable", table)).toBe(true);
+    expect(accepts("DataTable", { ...table, pageIndex: 2 })).toBe(true);
+    expect(accepts("DataTable", { ...table, sortBy: "name", sortDirection: "DESC" })).toBe(true);
+    expect(accepts("DataTable", { ...table, pageIndex: "two" })).toBe(false);
+    expect(accepts("DataTable", { ...table, columns: [{ ...column, format: "time" }] })).toBe(true);
+    expect(accepts("DataTable", { ...table, columns: [{ ...column, format: "list" }] })).toBe(true);
+    expect(accepts("DataTable", { ...table, columns: [{ ...column, format: "html" }] })).toBe(false);
+    expect(accepts("DataTable", { ...table, columns: [{ ...column, link: { to: "/x", params: { id: 1 } } }] })).toBe(
+      false,
+    );
+  });
 });

@@ -9,6 +9,7 @@ import {
   component,
   event,
   fieldOf,
+  integer,
   literal,
   list,
   map,
@@ -110,18 +111,26 @@ const DataTable = component("DataTable")
         record({
           header: text,
           field: fieldOf(TableRow),
-          format: optional(oneOf(["text", "money", "date", "badge"])),
+          sort: optional(text),
+          format: optional(oneOf(["text", "money", "date", "time", "badge", "list"])),
           tones: optional(map(tone)),
+          link: optional(record({ to: text, params: map(fieldOf(TableRow)) })),
         }),
       ),
     ),
   )
   .prop("rows", bindable(list(TableRow)))
+  .prop("pageIndex", optional(bindable(integer)))
+  .prop("sortBy", optional(bindable(text)))
+  .prop("sortDirection", optional(bindable(oneOf(["ASC", "DESC"]))))
   .prop("emptyText", optional(literal(text)))
   .rule("a column's format fits its field's type: money for a money field, date for a date field")
   .describe(
-    "A paged, sortable table of records. rows binds to an array in the data model; each column shows one field. " +
-      "format: date for ISO dates (yyyy-mm-dd), money for {minorUnits, currency}, badge for a short status word. " +
+    "A paged, sortable table of records. rows binds to a page of records in the data model; paging writes pageIndex. " +
+      "Each column shows one field; a column with sort is sortable: clicking its header writes sortBy (the column's sort) and sortDirection. " +
+      'link makes the column\'s cells links to an app route whose $params are row fields: {to: "/jobs/$id", params: {id: "id"}}. ' +
+      "format: date for ISO dates (yyyy-mm-dd), time for a time of day, money for {minorUnits, currency}, " +
+      'badge for a short status word, list for an array of strings shown joined with ", ". ' +
       'tones colors badges by value: {"Unassigned": "warning", "Done": "success"} (neutral, info, success, warning, danger).',
   )
   .build();

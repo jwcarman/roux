@@ -244,9 +244,12 @@
               "field": {
                 "type": "string"
               },
+              "sort": {
+                "type": "string"
+              },
               "format": {
                 "type": "string",
-                "enum": ["text", "money", "date", "badge"]
+                "enum": ["text", "money", "date", "time", "badge", "list"]
               },
               "tones": {
                 "type": "object",
@@ -254,6 +257,22 @@
                   "type": "string",
                   "enum": ["neutral", "info", "success", "warning", "danger"]
                 }
+              },
+              "link": {
+                "type": "object",
+                "properties": {
+                  "to": {
+                    "type": "string"
+                  },
+                  "params": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["to", "params"],
+                "additionalProperties": false
               }
             },
             "required": ["header", "field"],
@@ -263,6 +282,18 @@
         "rows": {
           "$ref": "common_types.json#/$defs/DynamicValue",
           "description": "A value that can be a literal, a path, or a function call returning any type."
+        },
+        "pageIndex": {
+          "$ref": "common_types.json#/$defs/DynamicNumber",
+          "description": "Represents a value that can be either a literal number, a path to a number in the data model, or a function call returning a number."
+        },
+        "sortBy": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "sortDirection": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
         },
         "emptyText": {
           "type": "string"
