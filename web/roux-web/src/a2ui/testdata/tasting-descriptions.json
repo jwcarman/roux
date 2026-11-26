@@ -1,0 +1,14 @@
+{
+  "SelectField": "A labelled drop-down of choices, bound to a data-model path. options is a list of {value, label} (literal, or bound to a list in the data). Must be inside a Form.",
+  "CardList": "The phone-friendly list: one card per record. Use instead of DataTable on phone moments. rows binds to an array in the data model; title is the field shown as each card's heading; lines are further fields shown under it (format: text, money, date); badge shows one field as a status word, with tones mapping value to neutral, info, success, warning or danger.",
+  "Column": "Stacks its children vertically. The usual root of a screen.",
+  "Row": "Lays its children side by side; wraps on narrow screens. Children share the width equally.",
+  "Heading": "A heading. Use size xl for the screen's title (one per screen).",
+  "Text": "A paragraph. muted for secondary text such as a screen's one-line explanation.",
+  "Card": "A bordered panel with an optional title; groups related content. tone colors the border: warning or danger for \"needs attention\" groups.",
+  "Stat": "One headline number with a label, e.g. \"Customers 42\". format money expects {minorUnits, currency}. Put each Stat in its own Card inside a Row.",
+  "Button": "A button. Its action is an event the app handles (name it as a verb: saveCustomer, sendInvoice).",
+  "DataTable": "A paged, sortable table of records. rows binds to an array in the data model; each column shows one field. format: date for ISO dates (yyyy-mm-dd), money for {minorUnits, currency}, badge for a short status word. tones colors badges by value: {\"Unassigned\": \"warning\", \"Done\": \"success\"} (neutral, info, success, warning, danger).",
+  "Form": "Holds input fields and the button that saves them. Every InputField must be inside a Form.",
+  "InputField": "A labelled text input bound to a data-model path. serverError binds to where the app writes the server's message for this field. @checks are the field's rules (required, email, regex, length), each with the message to show."
+}

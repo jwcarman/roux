@@ -1,0 +1,535 @@
+{
+  "protocolVersion": "1.0",
+  "catalogId": "https://jwcarman.github.io/roux/a2ui/catalog-v1.json",
+  "components": {
+    "SelectField": {
+      "type": "object",
+      "properties": {
+        "component": {
+          "const": "SelectField"
+        },
+        "label": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "value": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "options": {
+          "$ref": "common_types.json#/$defs/DynamicValue",
+          "description": "A value that can be a literal, a path, or a function call returning any type."
+        },
+        "placeholder": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "helperText": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "serverError": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "@checks": {
+          "type": "array",
+          "items": {
+            "$ref": "common_types.json#/$defs/CheckRule",
+            "description": "A single validation check rule applied to an input component. The condition function or path evaluates to a structured validation result object or a boolean (which is coerced to a validation result object)."
+          },
+          "description": "A list of validation check rules to perform on the component."
+        }
+      },
+      "required": ["component", "label", "value", "options"]
+    },
+    "CardList": {
+      "type": "object",
+      "properties": {
+        "component": {
+          "const": "CardList"
+        },
+        "rows": {
+          "$ref": "common_types.json#/$defs/DynamicValue",
+          "description": "A value that can be a literal, a path, or a function call returning any type."
+        },
+        "title": {
+          "type": "string"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "format": {
+                "type": "string",
+                "enum": ["text", "money", "date"]
+              }
+            },
+            "required": ["field"],
+            "additionalProperties": false
+          }
+        },
+        "badge": {
+          "type": "object",
+          "properties": {
+            "field": {
+              "type": "string"
+            },
+            "tones": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": ["neutral", "info", "success", "warning", "danger"]
+              }
+            }
+          },
+          "required": ["field"],
+          "additionalProperties": false
+        },
+        "emptyText": {
+          "type": "string"
+        }
+      },
+      "required": ["component", "rows", "title", "lines"]
+    },
+    "Column": {
+      "type": "object",
+      "properties": {
+        "component": {
+          "const": "Column"
+        },
+        "children": {
+          "$ref": "common_types.json#/$defs/ChildList"
+        },
+        "gap": {
+          "type": "number"
+        }
+      },
+      "required": ["component", "children"]
+    },
+    "Row": {
+      "type": "object",
+      "properties": {
+        "component": {
+          "const": "Row"
+        },
+        "children": {
+          "$ref": "common_types.json#/$defs/ChildList"
+        },
+        "gap": {
+          "type": "number"
+        }
+      },
+      "required": ["component", "children"]
+    },
+    "Heading": {
+      "type": "object",
+      "properties": {
+        "component": {
+          "const": "Heading"
+        },
+        "text": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "size": {
+          "type": "string",
+          "enum": ["sm", "md", "lg", "xl", "2xl"]
+        }
+      },
+      "required": ["component", "text"]
+    },
+    "Text": {
+      "type": "object",
+      "properties": {
+        "component": {
+          "const": "Text"
+        },
+        "text": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "muted": {
+          "type": "boolean"
+        }
+      },
+      "required": ["component", "text"]
+    },
+    "Card": {
+      "type": "object",
+      "properties": {
+        "component": {
+          "const": "Card"
+        },
+        "title": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "tone": {
+          "type": "string",
+          "enum": ["neutral", "warning", "danger"]
+        },
+        "children": {
+          "$ref": "common_types.json#/$defs/ChildList"
+        }
+      },
+      "required": ["component", "children"]
+    },
+    "Stat": {
+      "type": "object",
+      "properties": {
+        "component": {
+          "const": "Stat"
+        },
+        "label": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "value": {
+          "$ref": "common_types.json#/$defs/DynamicValue",
+          "description": "A value that can be a literal, a path, or a function call returning any type."
+        },
+        "format": {
+          "type": "string",
+          "enum": ["number", "money"]
+        }
+      },
+      "required": ["component", "label", "value"]
+    },
+    "Button": {
+      "type": "object",
+      "properties": {
+        "component": {
+          "const": "Button"
+        },
+        "label": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "action": {
+          "$ref": "common_types.json#/$defs/Action",
+          "description": "Defines an interaction handler that can either trigger an agent-side event or execute a local renderer-side function."
+        },
+        "variant": {
+          "type": "string",
+          "enum": ["solid", "outline", "ghost"]
+        },
+        "disabled": {
+          "$ref": "common_types.json#/$defs/DynamicBoolean",
+          "description": "A boolean value that can be a literal, a path, or a function call returning a boolean or a validation result object (coerced to its 'valid' boolean)."
+        }
+      },
+      "required": ["component", "label", "action"]
+    },
+    "DataTable": {
+      "type": "object",
+      "properties": {
+        "component": {
+          "const": "DataTable"
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "header": {
+                "type": "string"
+              },
+              "field": {
+                "type": "string"
+              },
+              "format": {
+                "type": "string",
+                "enum": ["text", "money", "date", "badge"]
+              },
+              "tones": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string",
+                  "enum": ["neutral", "info", "success", "warning", "danger"]
+                }
+              }
+            },
+            "required": ["header", "field"],
+            "additionalProperties": false
+          }
+        },
+        "rows": {
+          "$ref": "common_types.json#/$defs/DynamicValue",
+          "description": "A value that can be a literal, a path, or a function call returning any type."
+        },
+        "emptyText": {
+          "type": "string"
+        }
+      },
+      "required": ["component", "columns", "rows"]
+    },
+    "Form": {
+      "type": "object",
+      "properties": {
+        "component": {
+          "const": "Form"
+        },
+        "children": {
+          "$ref": "common_types.json#/$defs/ChildList"
+        }
+      },
+      "required": ["component", "children"]
+    },
+    "InputField": {
+      "type": "object",
+      "properties": {
+        "component": {
+          "const": "InputField"
+        },
+        "label": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "value": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["text", "email", "tel", "date", "time"]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "helperText": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "serverError": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "@checks": {
+          "type": "array",
+          "items": {
+            "$ref": "common_types.json#/$defs/CheckRule",
+            "description": "A single validation check rule applied to an input component. The condition function or path evaluates to a structured validation result object or a boolean (which is coerced to a validation result object)."
+          },
+          "description": "A list of validation check rules to perform on the component."
+        }
+      },
+      "required": ["component", "label", "value"]
+    }
+  },
+  "functions": {
+    "required": {
+      "type": "object",
+      "description": "Checks that the value is not null, undefined, or empty.",
+      "returnType": "validationResult",
+      "properties": {
+        "@call": {
+          "const": "required"
+        },
+        "args": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "description": "The value to check."
+            }
+          },
+          "required": ["value"],
+          "unevaluatedProperties": false
+        }
+      },
+      "required": ["@call", "args"]
+    },
+    "regex": {
+      "type": "object",
+      "description": "Checks that the value matches a regular expression string.",
+      "returnType": "validationResult",
+      "properties": {
+        "@call": {
+          "const": "regex"
+        },
+        "args": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "$ref": "common_types.json#/$defs/DynamicString"
+            },
+            "pattern": {
+              "type": "string",
+              "description": "The regular expression to search for in the value. Uses the A2UI regex dialect: a portable subset of ECMAScript pattern syntax in Unicode mode with no flags. Matching is case-sensitive, '.' excludes line terminators, and '^' and '$' match only at the ends of the value. Backreferences, lookbehind, named groups and '\\p{...}' are not allowed. Patterns longer than 256 code points or that could backtrack catastrophically are rejected."
+            }
+          },
+          "required": ["value", "pattern"],
+          "unevaluatedProperties": false
+        }
+      },
+      "required": ["@call", "args"]
+    },
+    "length": {
+      "type": "object",
+      "description": "Checks string length constraints.",
+      "returnType": "validationResult",
+      "properties": {
+        "@call": {
+          "const": "length"
+        },
+        "args": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "$ref": "common_types.json#/$defs/DynamicString"
+            },
+            "min": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "The minimum allowed length."
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "The maximum allowed length."
+            }
+          },
+          "required": ["value"],
+          "unevaluatedProperties": false,
+          "anyOf": [
+            {
+              "required": ["min"]
+            },
+            {
+              "required": ["max"]
+            }
+          ]
+        }
+      },
+      "required": ["@call", "args"]
+    },
+    "numeric": {
+      "type": "object",
+      "description": "Checks numeric range constraints.",
+      "returnType": "validationResult",
+      "properties": {
+        "@call": {
+          "const": "numeric"
+        },
+        "args": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "$ref": "common_types.json#/$defs/DynamicNumber"
+            },
+            "min": {
+              "type": "number",
+              "description": "The minimum allowed value."
+            },
+            "max": {
+              "type": "number",
+              "description": "The maximum allowed value."
+            }
+          },
+          "required": ["value"],
+          "unevaluatedProperties": false,
+          "anyOf": [
+            {
+              "required": ["min"]
+            },
+            {
+              "required": ["max"]
+            }
+          ]
+        }
+      },
+      "required": ["@call", "args"]
+    },
+    "email": {
+      "type": "object",
+      "description": "Checks that the value is a valid email address.",
+      "returnType": "validationResult",
+      "properties": {
+        "@call": {
+          "const": "email"
+        },
+        "args": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "$ref": "common_types.json#/$defs/DynamicString"
+            }
+          },
+          "required": ["value"],
+          "unevaluatedProperties": false
+        }
+      },
+      "required": ["@call", "args"]
+    }
+  },
+  "$defs": {
+    "anyComponent": {
+      "oneOf": [
+        {
+          "$ref": "#/components/SelectField"
+        },
+        {
+          "$ref": "#/components/CardList"
+        },
+        {
+          "$ref": "#/components/Column"
+        },
+        {
+          "$ref": "#/components/Row"
+        },
+        {
+          "$ref": "#/components/Heading"
+        },
+        {
+          "$ref": "#/components/Text"
+        },
+        {
+          "$ref": "#/components/Card"
+        },
+        {
+          "$ref": "#/components/Stat"
+        },
+        {
+          "$ref": "#/components/Button"
+        },
+        {
+          "$ref": "#/components/DataTable"
+        },
+        {
+          "$ref": "#/components/Form"
+        },
+        {
+          "$ref": "#/components/InputField"
+        }
+      ],
+      "discriminator": {
+        "propertyName": "component"
+      }
+    },
+    "anyFunction": {
+      "oneOf": [
+        {
+          "$ref": "#/functions/required"
+        },
+        {
+          "$ref": "#/functions/regex"
+        },
+        {
+          "$ref": "#/functions/length"
+        },
+        {
+          "$ref": "#/functions/numeric"
+        },
+        {
+          "$ref": "#/functions/email"
+        }
+      ]
+    }
+  }
+}
