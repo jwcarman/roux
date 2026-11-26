@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jwcarman/roux/authn/authntest"
+	"github.com/jwcarman/roux/cqrs"
 	"github.com/jwcarman/roux/rouxtest"
 
 	"roux-the-day/internal/items"
@@ -23,9 +24,12 @@ func setup(t *testing.T) *fx {
 	t.Helper()
 	a := rouxtest.New(t, "items")
 	a.Role("USER") // the app's own role (cmd/server's migration), before items grants to it
+	a.Migrate(cqrs.Module{}.Migrations()...)
 	a.Migrate(items.Module{}.Migrations()...)
 	f := &fx{App: a, zone: "America/New_York"}
-	items.Register(a.Kit(), items.Service{Pool: a.Pool, Clock: a.Clock.Now, Zone: func() string { return f.zone }})
+	svc := items.Service{Pool: a.Pool, Clock: a.Clock.Now, Zone: func() string { return f.zone }}
+	items.Register(a.Kit(), svc)
+	cqrs.Mount(a.Kit(), items.Endpoints(svc)...)
 	a.Serve()
 	f.olive = a.Person("Olive Owner", "OWNER")
 	f.ada = a.Person("Ada Lovelace", "USER")

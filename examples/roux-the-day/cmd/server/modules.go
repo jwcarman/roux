@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/jwcarman/roux/app"
+	"github.com/jwcarman/roux/cqrs"
 	"github.com/jwcarman/roux/pgdb"
 
 	"roux-the-day/internal/items"
@@ -42,7 +43,7 @@ func modules(k *app.Kit) ([]app.Module, error) {
 	if err != nil {
 		return nil, err
 	}
-	mods = append(mods, email, members, items.Module{})
+	mods = append(mods, email, members, cqrs.Module{}, items.Module{})
 	if passkeys != nil {
 		mods = append(mods, passkeys)
 	}

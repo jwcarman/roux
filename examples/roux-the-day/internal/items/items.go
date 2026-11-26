@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jwcarman/roux/app"
+	"github.com/jwcarman/roux/cqrs"
 	"github.com/jwcarman/roux/page"
 	"github.com/jwcarman/roux/pgdb"
 )
@@ -45,11 +46,13 @@ func (m Module) Mount(_ context.Context, k *app.Kit) error {
 	if now == nil {
 		now = time.Now
 	}
-	Register(k, Service{
+	svc := Service{
 		Pool:  k.Pool,
 		Clock: now,
 		Zone:  func() string { return k.Organization().TimeZone },
-	})
+	}
+	Register(k, svc)
+	cqrs.Mount(k, Endpoints(svc)...)
 	return nil
 }
 

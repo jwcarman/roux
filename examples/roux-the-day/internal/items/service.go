@@ -55,6 +55,11 @@ func (s Service) today() (time.Time, error) {
 
 // List is a page of items.
 func (s Service) List(ctx context.Context, req page.Request, f Filter) (page.Page[Row], error) {
+	return s.list(ctx, s.Pool, req, f)
+}
+
+// list is List over whichever connection the caller holds.
+func (s Service) list(ctx context.Context, db page.Querier, req page.Request, f Filter) (page.Page[Row], error) {
 	today, err := s.today()
 	if err != nil {
 		return page.Page[Row]{}, err
@@ -77,7 +82,7 @@ func (s Service) List(ctx context.Context, req page.Request, f Filter) (page.Pag
 	if f.To != nil {
 		filters = append(filters, page.Where("day <= ?", *f.To))
 	}
-	return list.Page(ctx, s.Pool, req, f.Search, filters...)
+	return list.Page(ctx, db, req, f.Search, filters...)
 }
 
 // Detail is an item as its dialog shows it.
@@ -134,25 +139,64 @@ func mayDelete(caller *authn.Principal, author uuid.UUID) bool {
 func (s Service) Create(ctx context.Context, caller *authn.Principal, in Input) (Detail, error) {
 	var out Detail
 	err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
-		if err := users.MustBeActive(ctx, tx, "assigneeIds", in.Assignees); err != nil {
-			return err
-		}
-		now := s.Clock()
-		var id uuid.UUID
-		if err := tx.QueryRow(ctx, `
-			insert into item (title, notes, day, at_time, done, created_at, created_by, modified_at, modified_by)
-			values ($1, $2, $3, $4, $5, $6, $7, $6, $7) returning id`,
-			in.Title, in.Notes, in.Day, in.At, in.Done, now, caller.IdentityID).Scan(&id); err != nil {
-			return err
-		}
-		if err := assign(ctx, tx, id, in.Assignees); err != nil {
-			return err
-		}
 		var err error
-		out, err = get(ctx, tx, caller, id)
+		out, err = s.create(ctx, tx, caller, in)
 		return err
 	})
 	return out, err
+}
+
+// create adds the item inside the caller's transaction: the REST handler and the addItem
+// command share it.
+func (s Service) create(ctx context.Context, tx pgx.Tx, caller *authn.Principal, in Input) (Detail, error) {
+	if err := users.MustBeActive(ctx, tx, "assigneeIds", in.Assignees); err != nil {
+		return Detail{}, err
+	}
+	now := s.Clock()
+	var id uuid.UUID
+	if err := tx.QueryRow(ctx, `
+		insert into item (title, notes, day, at_time, done, created_at, created_by, modified_at, modified_by)
+		values ($1, $2, $3, $4, $5, $6, $7, $6, $7) returning id`,
+		in.Title, in.Notes, in.Day, in.At, in.Done, now, caller.IdentityID).Scan(&id); err != nil {
+		return Detail{}, err
+	}
+	if err := assign(ctx, tx, id, in.Assignees); err != nil {
+		return Detail{}, err
+	}
+	return get(ctx, tx, caller, id)
+}
+
+// ItemCounts is what the day's summary shows.
+type ItemCounts struct {
+	Open    int `json:"open"`    // not done
+	Overdue int `json:"overdue"` // open, and before today
+	Today   int `json:"today"`   // open, and today
+}
+
+// Counts is how many items are open, overdue and due today, in the team's zone.
+func (s Service) Counts(ctx context.Context, db page.Querier) (ItemCounts, error) {
+	today, err := s.today()
+	if err != nil {
+		return ItemCounts{}, err
+	}
+	var c ItemCounts
+	rows, err := db.Query(ctx, `
+		select count(*) filter (where not done),
+		       count(*) filter (where not done and day < $1),
+		       count(*) filter (where not done and day = $1)
+		  from item_list`, today)
+	if err != nil {
+		return c, err
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		return c, rows.Err()
+	}
+	if err := rows.Scan(&c.Open, &c.Overdue, &c.Today); err != nil {
+		return c, err
+	}
+	rows.Close()
+	return c, rows.Err()
 }
 
 // Update changes an item, from the version the caller last saw.

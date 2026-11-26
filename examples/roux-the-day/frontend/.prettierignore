@@ -6,3 +6,4 @@ lint-tools/node_modules
 # Written by tools, checked by their own tests: never reformat them.
 src/routeTree.gen.ts
 src/permissions.gen.ts
+src/contract.gen.ts
