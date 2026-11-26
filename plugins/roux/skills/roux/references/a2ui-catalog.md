@@ -69,6 +69,34 @@ button event's context). A path used as two types throws. Don't call it: run
 `roux-surface-types <id>.surface.json` (writes `<id>.surface.gen.ts`); `--check` exits 1 naming stale files, for CI.
 `runSurfaceTypes(args, io: SurfaceTypesIo)` is that command's logic.
 
+## Running a surface
+
+```ts
+import { Surface, surfaces } from "@jwcarman/roux-web/surface";
+
+const { bind } = surfaces<Queries, Commands>(contract); // once, from contract.gen.ts (a ContractEvents)
+const itemsBinding = bind<ItemsSurfaceData, ItemsSurfaceEvents>(({ d, query, local, command, none }) => ({
+  data: {
+    items: query("items", { pageIndex: d.itemsArgs.pageIndex }),
+    itemsArgs: local({ pageIndex: 0 }),
+    draft: local({ title: "" }),
+    errors: local({ title: "" }),
+  },
+  events: {
+    addItem: command("addItem", (item) => item, { errors: d.errors, onSuccess: [{ reset: d.draft }] }),
+    saveSupplier: none(),
+  },
+}));
+<Surface surface={itemsSurface} binding={itemsBinding} />;
+```
+
+- Every top-level path: `query` or `local`; every event: `command` or `none()`. A `Binding` that misses one, or a
+  query lacking a shown field, does not compile. `d` paths are `Ref`s.
+- Arg paths refetch on change; a change to any but the page resets the page to 0.
+- Commands: `Idempotency-Key` header, one in flight, refetch by the contract, then `onSuccess` steps in order. Field
+  problems go under `errors`; others toast and keep the draft.
+- The generated types import `IsoDate`, `Money`, `Pagination` from `@jwcarman/roux-web/surface`.
+
 ## Pitfalls
 
 - `fieldOf(U)` without `.generic(U)` throws at `.build()`, naming the fix; so do duplicate props and a missing

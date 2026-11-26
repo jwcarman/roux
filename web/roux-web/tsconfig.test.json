@@ -3,7 +3,9 @@
   "compilerOptions": {
     "noEmit": true,
     "rootDir": ".",
-    "types": ["node"]
+    "types": ["node"],
+    // A surface's generated types import from the package (src/a2ui/testdata/items.surface.gen.ts); here that is the source.
+    "paths": { "@jwcarman/roux-web/surface": ["./src/surface/index.ts"] }
   },
   "include": ["src", "vite.config.ts"],
   "exclude": []

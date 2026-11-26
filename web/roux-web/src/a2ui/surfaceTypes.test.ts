@@ -45,7 +45,7 @@ describe("surfaceTypes", () => {
   it("typesTheItemsSurface", () => {
     const read = (name: string) => readFileSync(new URL(`testdata/${name}`, import.meta.url), "utf8");
     const items = JSON.parse(read("items.surface.json")) as SurfaceJson;
-    expect(surfaceTypes(items, PRIMITIVES)).toBe(read("items.surface.gen.ts.golden"));
+    expect(surfaceTypes(items, PRIMITIVES)).toBe(read("items.surface.gen.ts"));
   });
 
   it("aColumnFieldIsNullable", () => {

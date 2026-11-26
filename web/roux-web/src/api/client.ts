@@ -61,10 +61,12 @@ async function csrfHeader(): Promise<Record<string, string>> {
   return token === undefined ? {} : { "X-XSRF-TOKEN": token };
 }
 
-/** Options for a read: query `params` and an abort `signal`. */
+/** Options for a read: query `params`, an abort `signal` and extra `headers`; a write takes only `headers`. */
 export interface RequestOptions {
   params?: QueryParams;
   signal?: AbortSignal;
+  /** Sent beside roux's own (Accept, and a write's CSRF and Content-Type), which they cannot replace. */
+  headers?: Record<string, string>;
 }
 
 /** GETs `path`, under `baseUrl`. */
@@ -72,7 +74,7 @@ export async function get(path: string, options: RequestOptions = {}): Promise<R
   const url = resolveUrl(path, options.params);
   const response = await fetch(url, {
     credentials: "same-origin",
-    headers: { Accept: "application/json" },
+    headers: { ...options.headers, Accept: "application/json" },
     signal: options.signal,
   });
   return notice(url, response);
@@ -83,9 +85,10 @@ export async function send(
   method: "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
   body?: unknown,
+  options: Pick<RequestOptions, "headers"> = {},
 ): Promise<Response> {
   const url = resolveUrl(path);
-  const headers: Record<string, string> = { Accept: "application/json", ...(await csrfHeader()) };
+  const headers: Record<string, string> = { ...options.headers, Accept: "application/json", ...(await csrfHeader()) };
   if (body !== undefined) {
     headers["Content-Type"] = "application/json";
   }
@@ -115,8 +118,9 @@ export async function sendJson<T>(
   method: "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
   body?: unknown,
+  options?: Pick<RequestOptions, "headers">,
 ): Promise<T> {
-  const response = await send(method, path, body);
+  const response = await send(method, path, body, options);
   if (!response.ok) {
     throw new ApiError(response.status, await problemOf(response));
   }

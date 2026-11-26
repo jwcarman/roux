@@ -10,6 +10,8 @@
     "!src/testing/{contracts,css,fakeServer,location,router,validationMessages}.*",
     "!src/surface/testSurface.tsx",
     "!src/**/*.test.*",
+    "!src/**/*.test-d.ts",
+    "!src/**/testdata/**",
     "!src/**/index.ts"
   ],
   "reporters": ["clear-text", "progress", "html"],
@@ -17,6 +19,7 @@
     "break": 100
   },
   "tsconfigFile": "tsconfig.stryker-skip.json",
+  "disableTypeChecks": "src/**/!(*.gen).{ts,tsx}",
   "incremental": true,
   "incrementalFile": "../../.mutation-history/stryker-incremental.json"
 }

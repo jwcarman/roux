@@ -241,6 +241,69 @@ describe("api", () => {
     expect((error as ApiError).problem.detail).toBe("Edited elsewhere");
   });
 
+  it("sends the headers a write is given, beside its own", async () => {
+    let request: Request | undefined;
+    server.use(
+      http.post("/api/commands/addItem", ({ request: sent }) => {
+        request = sent.clone();
+        return HttpResponse.json({ result: { id: "1" } });
+      }),
+    );
+
+    const answer = await sendJson(
+      "POST",
+      "commands/addItem",
+      { title: "Milk" },
+      { headers: { "Idempotency-Key": "k1" } },
+    );
+
+    expect(answer).toEqual({ result: { id: "1" } });
+    expect(request?.headers.get("Idempotency-Key")).toBe("k1");
+    expect(request?.headers.get("X-XSRF-TOKEN")).toBe("a+b");
+    expect(request?.headers.get("Accept")).toBe("application/json");
+    expect(request?.headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("keeps the CSRF header when a write's headers name it too", async () => {
+    let token: string | null = null;
+    server.use(
+      http.post("/api/thing", ({ request }) => {
+        token = request.headers.get("X-XSRF-TOKEN");
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await send("POST", "thing", undefined, { headers: { "X-XSRF-TOKEN": "forged" } });
+
+    expect(token).toBe("a+b");
+  });
+
+  it("sends the headers a read is given, beside its own", async () => {
+    let request: Request | undefined;
+    server.use(
+      http.get("/api/things", ({ request: sent }) => {
+        request = sent.clone();
+        return HttpResponse.json([]);
+      }),
+    );
+
+    await getJson("things", { headers: { "X-Trace": "t1" } });
+
+    expect(request?.headers.get("X-Trace")).toBe("t1");
+    expect(request?.headers.get("Accept")).toBe("application/json");
+  });
+
+  it("reports a 401 from a write with headers as a lost session", async () => {
+    respond(401);
+
+    const error = await sendJson("POST", "commands/addItem", {}, { headers: { "Idempotency-Key": "k1" } }).catch(
+      (e: unknown) => e,
+    );
+
+    expect(lost).toHaveBeenCalledOnce();
+    expect(isSessionLost(error)).toBe(true);
+  });
+
   it("sends PATCH with the CSRF header", async () => {
     let method = "";
     let token: string | null = null;
