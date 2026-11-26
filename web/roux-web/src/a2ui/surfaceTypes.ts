@@ -261,10 +261,16 @@ export function surfaceTypes(surface: SurfaceJson, defs: readonly ComponentDef[]
 
   const events = new Map<string, TypeNode>();
   for (const { name, context = {} } of sent) {
-    const fields = Object.entries(context).map(([key, value]): [string, TypeNode] => [
-      key,
-      isBinding(value) ? (lookup(data, value["@path"]) ?? leaf("unknown")) : literalType(value),
-    ]);
+    const fields = Object.entries(context).map(([key, value]): [string, TypeNode] => {
+      if (!isBinding(value)) return [key, literalType(value)];
+      const found = lookup(data, value["@path"]);
+      if (found === undefined) {
+        throw new Error(
+          `${name}'s context reads ${value["@path"]}, which nothing on the surface shows or edits; bind it to a path a component uses.`,
+        );
+      }
+      return [key, found];
+    });
     const node = objectOf(new Map(fields));
     const earlier = events.get(name);
     if (earlier !== undefined && render(earlier, "") !== render(node, "")) {
@@ -274,15 +280,21 @@ export function surfaceTypes(surface: SurfaceJson, defs: readonly ComponentDef[]
   }
 
   const name = surface.id.charAt(0).toUpperCase() + surface.id.slice(1);
-  return [
-    `// Generated from ${surface.id}.surface.json and the typed catalog. Do not edit.`,
-    `import type { IsoDate, Money, Pagination } from "@jwcarman/roux-web/surface";`,
-    ``,
+  const body = [
     `/** What the ${surface.id} surface shows, by top-level path: each is bound to a query or kept locally. */`,
     declaration(`${name}SurfaceData`, data.fields),
     ``,
     `/** What each of the ${surface.id} surface's events carries. */`,
     declaration(`${name}SurfaceEvents`, events),
     ``,
+  ].join("\n");
+  // Only the names the text uses are imported: an unused type import fails an app's lint.
+  const used = ["IsoDate", "Money", "Pagination"].filter((word) => new RegExp(`\\b${word}\\b`).test(body));
+  const imports = used.length === 0 ? [] : [`import type { ${used.join(", ")} } from "@jwcarman/roux-web/surface";`];
+  return [
+    `// Generated from ${surface.id}.surface.json and the typed catalog. Do not edit.`,
+    ...imports,
+    ``,
+    body,
   ].join("\n");
 }

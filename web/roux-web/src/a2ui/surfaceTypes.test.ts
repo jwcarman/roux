@@ -138,9 +138,6 @@ describe("surfaceTypes", () => {
             name: "save",
             context: {
               name: at("/draft/name"),
-              missing: at("/nowhere"),
-              deeper: at("/nowhere/deeper"),
-              past: at("/draft/name/x"),
               fixed: "x",
               count: 2,
               on: true,
@@ -151,8 +148,37 @@ describe("surfaceTypes", () => {
       },
     );
     expect(out).toContain(
-      "export interface DemoSurfaceEvents {\n  save: {\n    name: string;\n    missing: unknown;\n    deeper: unknown;\n    past: unknown;\n    fixed: string;\n    count: number;\n    on: boolean;\n    odd: unknown;\n  };\n}\n",
+      "export interface DemoSurfaceEvents {\n  save: {\n    name: string;\n    fixed: string;\n    count: number;\n    on: boolean;\n    odd: unknown;\n  };\n}\n",
     );
+  });
+
+  it("anEventContextReadingAnUntypedPathIsAnError", () => {
+    const name = { id: "name", component: "InputField", label: "N", value: at("/draft/name") };
+    const send = (path: string): SurfaceComponent => ({
+      id: "go",
+      component: "Button",
+      label: "Go",
+      action: { event: { name: "save", context: { x: at(path) } } },
+    });
+    for (const path of ["/draft/nme", "/nowhere/deeper", "/draft/name/x"]) {
+      expect(() => types(column("root", ["name", "go"]), name, send(path))).toThrow(
+        `save's context reads ${path}, which nothing on the surface shows or edits; bind it to a path a component uses.`,
+      );
+    }
+  });
+
+  it("onlyTheTypesTheTextUsesAreImported", () => {
+    const first = (out: string) => out.split("\n")[1];
+    const input = { id: "i", component: "InputField", label: "D", value: at("/a") };
+    expect(first(types(column("root", ["i"]), input))).toBe("");
+    expect(first(rowsOf([{ header: "M", field: "m", format: "money" }]))).toBe(
+      'import type { Money, Pagination } from "@jwcarman/roux-web/surface";',
+    );
+    expect(first(rowsOf([{ header: "D", field: "d", format: "date" }]))).toBe(
+      'import type { IsoDate, Pagination } from "@jwcarman/roux-web/surface";',
+    );
+    const stat = { id: "s", component: "Stat", label: "S", value: at("/s"), format: "money" };
+    expect(first(types(column("root", ["s"]), stat))).toBe('import type { Money } from "@jwcarman/roux-web/surface";');
   });
 
   it("anEventNameUsedWithTwoContextsIsAnError", () => {
@@ -447,7 +473,6 @@ describe("surfaceTypes", () => {
     expect(surfaceTypes({ id: "plain", components: [] }, PRIMITIVES)).toBe(
       [
         "// Generated from plain.surface.json and the typed catalog. Do not edit.",
-        'import type { IsoDate, Money, Pagination } from "@jwcarman/roux-web/surface";',
         "",
         "/** What the plain surface shows, by top-level path: each is bound to a query or kept locally. */",
         "export type PlainSurfaceData = Record<string, never>;",

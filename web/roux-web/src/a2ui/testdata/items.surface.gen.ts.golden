@@ -1,5 +1,5 @@
 // Generated from items.surface.json and the typed catalog. Do not edit.
-import type { IsoDate, Money, Pagination } from "@jwcarman/roux-web/surface";
+import type { IsoDate, Pagination } from "@jwcarman/roux-web/surface";
 
 /** What the items surface shows, by top-level path: each is bound to a query or kept locally. */
 export interface ItemsSurfaceData {
