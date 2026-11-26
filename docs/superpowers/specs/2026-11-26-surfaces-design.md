@@ -120,8 +120,10 @@ As in the spike: `bind<Data, Events>(({ d, query, local, command, none }) => ({ 
   refetches. A command runs as a mutation with a fresh `Idempotency-Key`; on success, the queries whose
   `DependsOn` meets the command's `events` are invalidated, then `onSuccess` runs. A
   `problem.Validation` fills the `errors` path by field; any other failure is roux's error toast.
-- The runtime, not the drawing, owns the states: loading (a skeleton where a query's data goes), a
-  failed query (an inline error with retry), forbidden.
+- The runtime, not the drawing, owns the states: loading, a failed query (an error with retry), forbidden.
+  This round: the surface shows a skeleton until each of its queries has answered once, and a first-load
+  failure shows the error with retry in its place. A skeleton and error per query's place on the surface
+  come in a later round.
 - **The catalog's implementations move into roux-web**: the Chakra components tasting renders today
   (`layout`, `data`, `form`), so the surface, tasting and the spike all render with the same code.
   Paging a `DataTable` writes its `pageIndex` path.
