@@ -180,5 +180,7 @@ Guides and skill references for `cqrs`, surface types, `bind` and `<Surface>`, a
 
 ## Open (not this round)
 
+- Queries and commands are the app's ports (ports and adapters). Other adapters may drive them later: agent tools (the PM agent or an owner's assistant running `addItem` with the same validation, permission, idempotency and events), a CLI, scheduled jobs.
+
 - Detail surfaces (route parameters), modals, links between surfaces, composites, options queries.
 - Where `typed-catalog` merges: this branch is cut from it.
