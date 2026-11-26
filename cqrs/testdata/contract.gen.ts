@@ -22,6 +22,7 @@ export interface contractInput {
   optional?: part | null;
   owner?: string | null;
   ids: number[];
+  shared: sharedInput;
 }
 
 export interface contractRow {
@@ -35,10 +36,23 @@ export interface contractRow {
   note: string | null;
   tags: string[];
   parts: part[];
+  when: string;
+  blob: string;
+  editedBy: string | null;
+  reason: string | null;
+  shared: shared;
 }
 
 export interface part {
   name: string;
+}
+
+export interface shared {
+  label: string | null;
+}
+
+export interface sharedInput {
+  label?: string | null;
 }
 
 export interface Queries {

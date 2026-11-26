@@ -2,7 +2,9 @@ package cqrs_test
 
 import (
 	"os"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -27,6 +29,20 @@ type contractRow struct {
 	Tags   []string    `json:"tags"`
 	Parts  []part      `json:"parts"`
 	Secret string      `json:"-"`
+	When   time.Time   `json:"when"`
+	Blob   []byte      `json:"blob"`
+	*pointerStamp
+	Shared shared `json:"shared"`
+}
+
+type pointerStamp struct {
+	EditedBy string  `json:"editedBy"`
+	Reason   *string `json:"reason"`
+}
+
+// shared is used in an input and in a row, where its pointer member differs.
+type shared struct {
+	Label *string `json:"label"`
 }
 
 type part struct {
@@ -44,6 +60,7 @@ type contractInput struct {
 	Optional *part      `json:"optional"`
 	Owner    *uuid.UUID `json:"owner"`
 	Ids      []int      `json:"ids"`
+	Shared   shared     `json:"shared"`
 }
 
 func (c contractInput) Validate() (contractInput, error) { return c, nil }
@@ -79,6 +96,37 @@ func TestTypeScriptMatchesGolden(t *testing.T) {
 
 type Thing struct {
 	Extra map[string]int `json:"extra"`
+}
+
+func TestTypeScriptIsTheSameInAnyEndpointOrder(t *testing.T) {
+	eps := contractEndpoints()
+	rev := []cqrs.Endpoint{eps[3], eps[2], eps[1], eps[0]}
+	if a, b := cqrs.TypeScript(eps), cqrs.TypeScript(rev); a != b {
+		t.Errorf("order changed the contract:\n%s\nvs\n%s", a, b)
+	}
+}
+
+func TestTypeScriptDescribesASharedStructPerSide(t *testing.T) {
+	got := cqrs.TypeScript(contractEndpoints())
+	for _, want := range []string{"export interface sharedInput {\n  label?: string | null;", "export interface shared {\n  label: string | null;", "shared: sharedInput;", "shared: shared;"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("contract lacks %q:\n%s", want, got)
+		}
+	}
+}
+
+type untagged struct {
+	Extra string
+}
+
+func TestTypeScriptRefusesAFieldWithoutAJSONTag(t *testing.T) {
+	defer func() {
+		want := `cqrs: untagged.Extra has no json tag; tag it (json:"extra") or json:"-" to leave it out`
+		if got := recover(); got != want {
+			t.Errorf("panic = %v, want %q", got, want)
+		}
+	}()
+	cqrs.TypeScript([]cqrs.Endpoint{cqrs.Lookup[cqrs.NoArgs, untagged]{Name: "things"}})
 }
 
 func TestTypeScriptRefusesAnUnsupportedType(t *testing.T) {
