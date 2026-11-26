@@ -18,8 +18,13 @@ same type safety hand-written code gets. This design is that something, in roux:
 - **Surface (roux-web):** one generic runtime that renders the JSON with roux's catalog components and
   executes the binding.
 
-The goal of this round is to see it run in a real roux app: Roux The Day's items, drawn as a surface,
-fully working.
+**Surfaces are the way to build an app's feature screens** (decided 2026-11-26). An app's own screens
+are surface JSON plus a binding; React is written only for new catalog primitives and for roux's
+built-in pages (sign-in, users, appearance). When a screen can't be drawn from the catalog, the fix is a
+new primitive (typed, implemented, tested, added to the catalog), never a hand-written screen.
+
+The goal of this round is to see it run in a real roux app (Roux The Day's items, drawn as a surface,
+fully working) and to make roux teach it as the one way.
 
 ## Goals
 
@@ -31,10 +36,9 @@ fully working.
 ## Non-goals
 
 - noir and tasting. Neither changes this round.
-- Deciding whether surfaces become roux's "one way" to build screens. Open; see the end.
-- The template app. It stays as is until that decision.
-- Detail screens with route parameters, modals, tabs, links between surfaces, composites. Later rounds.
-- Replacing Roux The Day's hand-written items pages: the surface sits beside them.
+- The template app's own screens: it has no feature screens, only roux's built-in pages, which stay React.
+- Detail screens with route parameters, modals, tabs, composites. Later rounds; until then Roux The
+  Day's item detail page stays React (the only hand-written feature screen left, on purpose, for now).
 
 ## Anti-goals
 
@@ -121,24 +125,35 @@ As in the spike: `bind<Data, Events>(({ d, query, local, command, none }) => ({ 
 - **The catalog's implementations move into roux-web**: the Chakra components tasting renders today
   (`layout`, `data`, `form`), so the surface, tasting and the spike all render with the same code.
   Paging a `DataTable` writes its `pageIndex` path.
+- **A `DataTable` column may link** to a route of the app: `link: {to: "/items/$itemId", params:
+  {itemId: "id"}}`, the params naming row fields (typed by the generator like any `fieldOf`). The
+  runtime navigates with TanStack Router.
 
 ### 5. Proof: Roux The Day
 
 - `internal/items` gains cqrs endpoints beside its REST handlers, sharing its `Service`:
   `items` (Query; args `when`, `status`, `assignee`), `itemCounts` (Lookup; open, overdue, today) and
   `addItem` (Command; title, day; assigned to the caller; emits `itemAdded`).
+- The surface **replaces** the hand-written items list at `/items` (`ItemsPage.tsx`, `AddItem.tsx` and
+  what only they use are deleted); the nav is unchanged. Titles link to the item's detail page.
 - `frontend/src/items/items.surface.json` — drawn from the catalog: counts as Stats, the list as a
   paged DataTable (When, Title, Assignees, Status), a SelectField for "when", an add form with title
   and a date InputField.
-- `items.surface.gen.ts` (generated), `items.binding.ts` (written), a route `/surface/items` with a nav
-  entry "Items (surface)".
+- `items.surface.gen.ts` (generated), `items.binding.ts` (written).
 - Playwright: load, page, filter, add (list and counts update), a blank title (client check), a server
   error under its field.
 
 ### 6. Docs and skill
 
 Guides and skill references for `cqrs`, surface types, `bind` and `<Surface>`, as roux requires
-(`check-guides.mjs`). Both say surfaces are new and experimental.
+(`check-guides.mjs`), stating the rule: an app's feature screens are surfaces.
+
+- **The recipe is rewritten** (`references/feature.md`, `references/lists.md`, proven by
+  `check-recipe.sh`): a feature is a migration, cqrs queries and commands, a surface drawn from the
+  catalog, its generated types and its binding. No feature-specific React.
+- The guides that taught screens in React (features, lists, forms) are rewritten the same way; the React
+  components they described stay in roux-web as the catalog primitives' implementations.
+- A guide, "Adding a primitive", for the escape hatch.
 
 ## Constraints
 
@@ -155,8 +170,8 @@ Guides and skill references for `cqrs`, surface types, `bind` and `<Surface>`, a
 2. Catalog implementations into roux-web; tasting switched to them.
 3. Surface types generator and its bin.
 4. `bind` and `<Surface>`.
-5. Roux The Day's items surface, end to end.
-6. Docs and skill.
+5. Roux The Day's items surface, end to end, replacing the hand-written list.
+6. Docs and skill, including the rewritten recipe.
 
 ## Left to the builder
 
@@ -165,6 +180,5 @@ Guides and skill references for `cqrs`, surface types, `bind` and `<Surface>`, a
 
 ## Open (not this round)
 
-- Are surfaces roux's one way to build feature screens? Decide after the proof.
 - Detail surfaces (route parameters), modals, links between surfaces, composites, options queries.
 - Where `typed-catalog` merges: this branch is cut from it.
