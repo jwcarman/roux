@@ -1,5 +1,6 @@
 // The bridge between A2UI's data model and roux's TanStack Form fields. The A2UI data model owns the values;
 // the TanStack form only gives roux's fields their context, touched/blurred state and messages.
+import { type AnyFieldApi } from "@tanstack/react-form";
 import { Text, VStack } from "@chakra-ui/react";
 import { InputField as RouxInputField, SelectField as RouxSelectField, useAppForm } from "../../form";
 import { createContext, useContext, useEffect, useEffectEvent, useRef, type ReactNode, type RefObject } from "react";
@@ -37,6 +38,26 @@ type Sync = {
   serverError?: string;
 };
 
+/** The field's new value to the data model, unless the data model already holds it (it was written from there). */
+export function writeBack(value: unknown, sync: Pick<Sync, "value" | "setValue">): void {
+  const text = formatValue(value);
+  if (text !== sync.value) sync.setValue(text);
+}
+
+/** What the bridge does to a TanStack field. */
+export function opsOf(field: AnyFieldApi): FieldOps {
+  return {
+    value: (): unknown => field.state.value,
+    // A value from the data model is not the person's edit: the field stays untouched and clean.
+    fill: (value) => field.setValue(value, { dontUpdateMeta: true }),
+    // The default is the data model's value by then, and the field starts fresh: not touched, not "left empty".
+    restart: () => field.form.resetField(field.name),
+    recheck: () => void field.validate("blur"),
+    showServerError: (message) =>
+      field.setMeta((meta) => ({ ...meta, errorMap: { ...meta.errorMap, onServer: message } })),
+  };
+}
+
 /** One field of the bridge form, named by its component id, kept in step with the data model. */
 function BridgeField({ kind, sync, children }: { kind: string; sync: Sync; children: ReactNode }) {
   const form = useContext(FormBridge);
@@ -55,22 +76,10 @@ function BridgeField({ kind, sync, children }: { kind: string; sync: Sync; child
       name={id}
       defaultValue={sync.value}
       validators={{ onBlur: () => check.current }}
-      listeners={{ onChange: ({ value }) => sync.setValue(formatValue(value)) }}
+      listeners={{ onChange: ({ value }) => writeBack(value, sync) }}
     >
       {(field) => (
-        <FieldSync
-          sync={sync}
-          check={check}
-          field={{
-            value: () => field.state.value,
-            fill: (value) => field.setValue(value),
-            // The default is the data model's value by then, and the field starts fresh: not touched, not "left empty".
-            restart: () => field.form.resetField(id),
-            recheck: () => void field.validate("blur"),
-            showServerError: (message) =>
-              field.setMeta((meta) => ({ ...meta, errorMap: { ...meta.errorMap, onServer: message } })),
-          }}
-        >
+        <FieldSync sync={sync} check={check} field={opsOf(field)}>
           <div data-component-id={id}>{children}</div>
         </FieldSync>
       )}

@@ -2,7 +2,9 @@
 import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { FieldApi, FormApi, type AnyFieldApi } from "@tanstack/react-form";
 import { renderSurface } from "../testSurface";
+import { opsOf, writeBack } from "./form";
 
 const required = (path: string, message: string) => ({
   condition: { "@call": "required", args: { value: { "@path": path } } },
@@ -245,5 +247,60 @@ describe("form bridge", () => {
     );
     expect(screen.queryByText("true")).toBeNull();
     expect(document.querySelectorAll("[data-part='error-text'], [data-part='helper-text']")).toHaveLength(0);
+  });
+
+  it("does not surface a check error for a value written from outside", () => {
+    const surface = renderSurface(components, data());
+    surface.write("/draft/email", "bad");
+    expect(screen.queryByText("That doesn't look like an email")).toBeNull();
+    surface.write("/draft/email", "");
+    expect(screen.queryByText("Email is required")).toBeNull();
+  });
+
+  it("leaves a field untouched and clean after a value is written from outside", async () => {
+    const surface = renderSurface(components, data());
+    surface.write("/draft/name", "Bea");
+    // A touched or dirty field would take its next default from the field, not the data model.
+    expect(screen.getByLabelText<HTMLInputElement>("Name").value).toBe("Bea");
+    await userEvent.click(screen.getByLabelText("Name"));
+    await userEvent.tab();
+    surface.write("/draft/name", "");
+    expect(screen.queryByText("Name is required")).toBeNull();
+  });
+
+  it("writes nothing back to the data model for a value written from outside", async () => {
+    const surface = renderSurface(components, data());
+    const seen: unknown[] = [];
+    surface.watch("/draft/name", (value) => seen.push(value));
+    surface.write("/draft/name", "Bea");
+    expect(seen).toEqual(["Bea"]);
+    await userEvent.type(screen.getByLabelText("Name"), "x");
+    expect(seen).toEqual(["Bea", "Beax"]);
+  });
+});
+
+describe("the bridge's field operations", () => {
+  const fieldOf = (value: string) => {
+    const form = new FormApi({ defaultValues: { name: "" } });
+    const field = new FieldApi({ form, name: "name", defaultValue: value });
+    field.mount();
+    return field as unknown as AnyFieldApi;
+  };
+
+  it("fills a field without touching it or making it dirty", () => {
+    const field = fieldOf("");
+    opsOf(field).fill("Bea");
+    expect(field.state.value).toBe("Bea");
+    expect(field.state.meta.isTouched).toBe(false);
+    expect(field.state.meta.isDirty).toBe(false);
+  });
+
+  it("writes a field's value back only when the data model does not hold it", () => {
+    const written: string[] = [];
+    const sync = { value: "Bea", setValue: (text: string) => written.push(text) };
+    writeBack("Bea", sync);
+    expect(written).toEqual([]);
+    writeBack("Bo", sync);
+    expect(written).toEqual(["Bo"]);
   });
 });

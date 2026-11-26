@@ -27,6 +27,10 @@ export function startSurface(
   return {
     element: <A2uiSurface surface={surface} />,
     read: (path: string): unknown => surface.dataModel.get(path),
+    /** Calls `onChange` with each later change to the data at `path`. */
+    watch: (path: string, onChange: (value: unknown) => void) => {
+      surface.dataModel.subscribe(path, onChange);
+    },
     /** Replaces components, as the agent's next message would. */
     update: (changed: Record<string, unknown>[]) =>
       act(() => {
