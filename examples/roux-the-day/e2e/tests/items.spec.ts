@@ -138,10 +138,16 @@ test("a blank title is caught on the page, and the server's word on a field show
   const draftTitle = page.getByRole("textbox", { name: "Title" });
   const addForm = page.locator("[data-component-id=addForm]");
 
+  const adds: string[] = [];
+  page.on("request", (sent) => {
+    if (sent.url().includes("/api/commands/addItem")) adds.push(sent.url());
+  });
+
   // The surface's own check, on leaving the field: no request yet.
   await draftTitle.focus();
   await draftTitle.blur();
   await expect(addForm.getByText("Must not be blank")).toBeVisible();
+  expect(adds).toEqual([]);
 
   // Too long a title: only the server knows the limit, and its message goes under Title.
   await draftTitle.fill("x".repeat(121));
@@ -150,4 +156,5 @@ test("a blank title is caught on the page, and the server's word on a field show
     addForm.getByText("Must be between 1 and 120 characters"),
   ).toBeVisible();
   await expect(draftTitle).toHaveValue("x".repeat(121));
+  expect(adds).toHaveLength(1);
 });

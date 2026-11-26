@@ -180,13 +180,21 @@ describe("the items queries", () => {
 });
 
 describe("what a change refreshes", () => {
-  it("is the lists, and a changed item's own page", () => {
+  it("is the lists, the items surface's queries, and a changed item's own page", () => {
     expect(updateItem("i-1", 2).meta).toEqual({
       refreshes: [
         ["items", "list"],
         ["items", "detail", "i-1"],
+        ["queries", "items"],
+        ["queries", "itemCounts"],
       ],
     });
-    expect(deleteItem("i-1").meta).toEqual({ refreshes: [["items", "list"]] });
+    expect(deleteItem("i-1").meta).toEqual({
+      refreshes: [
+        ["items", "list"],
+        ["queries", "items"],
+        ["queries", "itemCounts"],
+      ],
+    });
   });
 });

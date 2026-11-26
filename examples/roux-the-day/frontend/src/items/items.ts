@@ -134,18 +134,27 @@ export function bodyOf(values: ItemOutput, version?: number): ItemBody {
   };
 }
 
-/** Changes item `id` from `version`; a change made since answers 409. The lists and it refresh. */
+/**
+ * The items surface's queries (its `<Surface>` keys them `["queries", name, args]`): a change here refreshes them
+ * too, so coming back to the list never shows a changed or deleted item from the cache first.
+ */
+const SURFACE_QUERIES = [
+  ["queries", "items"],
+  ["queries", "itemCounts"],
+] as const;
+
+/** Changes item `id` from `version`; a change made since answers 409. The lists, the surface and it refresh. */
 export const updateItem = (id: string, version: number) =>
   mutationOptions({
     mutationFn: (values: ItemOutput) => itemsApi.update(id, bodyOf(values, version)),
     meta: {
-      refreshes: [queryKeys.items.lists(), queryKeys.items.detail(id)],
+      refreshes: [queryKeys.items.lists(), queryKeys.items.detail(id), ...SURFACE_QUERIES],
     },
   });
 
-/** Deletes item `id`; the lists refresh. */
+/** Deletes item `id`; the lists and the surface refresh. */
 export const deleteItem = (id: string) =>
   mutationOptions({
     mutationFn: () => itemsApi.remove(id),
-    meta: { refreshes: [queryKeys.items.lists()] },
+    meta: { refreshes: [queryKeys.items.lists(), ...SURFACE_QUERIES] },
   });

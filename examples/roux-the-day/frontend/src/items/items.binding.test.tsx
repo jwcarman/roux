@@ -48,7 +48,7 @@ beforeEach(() => {
     http.post("/api/commands/addItem", async ({ request }) => {
       const body = (await request.json()) as { title: string; day: string };
       added.push(body);
-      if (body.title === "") return invalidFields({ title: "Must not be blank" });
+      if (body.title === "") return invalidFields({ title: "The server needs a title" });
       rows = [...rows, { ...AGENDA, id: "i-3", title: body.title, day: body.day || "2026-11-26", at: null }];
       return HttpResponse.json({ result: { id: "i-3" }, events: ["itemsChanged"] });
     }),
@@ -103,7 +103,7 @@ describe("the items surface", () => {
     open();
     await screen.findByRole("table", {}, { timeout: 5000 });
     await userEvent.click(screen.getByRole("button", { name: "Add item" }));
-    expect(await screen.findByText("Must not be blank")).toBeInTheDocument();
+    expect(await screen.findByText("The server needs a title")).toBeInTheDocument();
     expect(added).toEqual([{ title: "", day: "" }]);
   });
 });
