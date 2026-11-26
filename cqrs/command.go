@@ -79,8 +79,12 @@ func (c Command[I, O]) register(k *app.Kit) {
 					replayed = true
 					var stored []byte
 					var name string
-					if err := tx.QueryRow(r.Context(), `select name, result from command_log where key = $1`, *key).Scan(&name, &stored); err != nil {
+					var owner uuid.UUID
+					if err := tx.QueryRow(r.Context(), `select name, caller, result from command_log where key = $1`, *key).Scan(&name, &owner, &stored); err != nil {
 						return err
+					}
+					if owner != caller.IdentityID {
+						return problem.Conflict("This Idempotency-Key was used by someone else; send a new one (a fresh UUID per attempt)")
 					}
 					if name != c.Name {
 						return problem.Conflict("This Idempotency-Key was used for another command")
