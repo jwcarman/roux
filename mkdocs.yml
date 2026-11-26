@@ -98,6 +98,7 @@ plugins:
           - guides/shell.md: the theme, sign-in pages, the session and route guards, navigation
         Operating:
           - guides/email.md: the emails roux sends and how they are delivered
+          - guides/a2ui-catalog.md: roux's typed A2UI catalog, defining a component, translating for the A2UI SDK
           - guides/testing.md: Go tests with rouxtest, Vitest with MSW, Playwright
           - guides/upgrading.md: moving an app to a new roux release, its packages and its template files
         Optional:
@@ -126,6 +127,7 @@ nav:
       - The Shell: guides/shell.md
       - Email: guides/email.md
       - Testing: guides/testing.md
+      - The A2UI Catalog: guides/a2ui-catalog.md
       - Upgrading: guides/upgrading.md
   - Agent Skill: agent-skill.md
   - Reference:

@@ -16,4 +16,5 @@
 - [The shell: theme, sign-in and navigation](shell.md)
 - [Email](email.md)
 - [Testing](testing.md)
+- [The A2UI catalog](a2ui-catalog.md)
 - [Upgrading](upgrading.md)
