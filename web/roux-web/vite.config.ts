@@ -50,6 +50,7 @@ export default defineConfig({
       exclude: [
         "src/testing/{contracts,css,fakeServer,location,router,validationMessages}.*",
         "src/**/index.ts",
+        "src/surface/testSurface.tsx",
         "src/**/*.test.*",
       ],
       thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 },

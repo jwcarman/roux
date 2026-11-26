@@ -8,6 +8,7 @@
   "mutate": [
     "src/**/*.{ts,tsx}",
     "!src/testing/{contracts,css,fakeServer,location,router,validationMessages}.*",
+    "!src/surface/testSurface.tsx",
     "!src/**/*.test.*",
     "!src/**/index.ts"
   ],

@@ -102,3 +102,11 @@ Misuse fails at `.build()` or before, saying what to do: two props with one name
 | `children()`, `child()`, `event()`, `checks()` | `ChildList`, `Child`, `Action`, `@checks` |
 
 The full typing is kept in the document's `metadata.extensions.roux`.
+
+## Rendering it
+
+`surfaceComponents`, from `@jwcarman/roux-web/surface`, is the catalog's React implementation: every primitive
+drawn with Chakra, as a `Catalog<ReactCatalogComponent>` with `rouxCatalog`'s id and A2UI v1.0's check functions.
+It needs `@a2ui/react` and `@a2ui/web_core` (optional peers). A `DataTable` shows the page its `rows` is bound
+to, writes `pageIndex` when the person pages, and writes `sortBy` and `sortDirection` when they click a sortable
+header; its `link` columns are TanStack Router links, so render it inside the app's router.

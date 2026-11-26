@@ -53,6 +53,13 @@ A bindable text-like type, `oneOf` or `fieldOf` → `DynamicString`; `number`/`i
 `boolean` → `DynamicBoolean`; anything else bound → `DynamicValue`. A literal `fieldOf(T)` → a string. A child prop
 → an optional prop on every component.
 
+## Rendering
+
+`surfaceComponents` (`@jwcarman/roux-web/surface`) is the catalog's Chakra implementation: a
+`Catalog<ReactCatalogComponent>` with `rouxCatalog`'s id. Needs `@a2ui/react` and `@a2ui/web_core`. `DataTable`
+shows the page `rows` is bound to; paging writes `pageIndex`, a sortable header writes `sortBy`/`sortDirection`;
+`link` columns are TanStack Router links, so render inside the app's router.
+
 ## Pitfalls
 
 - `fieldOf(U)` without `.generic(U)` throws at `.build()`, naming the fix; so do duplicate props and a missing

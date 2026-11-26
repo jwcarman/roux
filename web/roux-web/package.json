@@ -77,6 +77,10 @@
       "types": "./dist/a2ui/index.d.ts",
       "import": "./dist/a2ui/index.js"
     },
+    "./surface": {
+      "types": "./dist/surface/index.d.ts",
+      "import": "./dist/surface/index.js"
+    },
     "./users": {
       "types": "./dist/users/index.d.ts",
       "import": "./dist/users/index.js"
@@ -105,6 +109,7 @@
     "lint": "../lint-tools/node_modules/.bin/eslint -c ../lint-tools/eslint.config.mjs ."
   },
   "peerDependencies": {
+    "@a2ui/react": "^0.16.1",
     "@a2ui/web_core": "^0.16.1",
     "@chakra-ui/react": "^3.38.0",
     "@emotion/cache": "^11.14.0",
@@ -129,6 +134,9 @@
     "zod3": "npm:zod@^3.25.76"
   },
   "peerDependenciesMeta": {
+    "@a2ui/react": {
+      "optional": true
+    },
     "@a2ui/web_core": {
       "optional": true
     },
@@ -149,6 +157,7 @@
     }
   },
   "devDependencies": {
+    "@a2ui/react": "0.16.1",
     "@a2ui/web_core": "0.16.1",
     "@chakra-ui/react": "3.38.0",
     "@emotion/cache": "11.14.0",

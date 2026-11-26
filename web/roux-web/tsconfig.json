@@ -21,6 +21,7 @@
     "src/testing/location.ts",
     "src/testing/router.tsx",
     "src/testing/validationMessages.ts",
+    "src/surface/testSurface.tsx",
     "src/**/*.test.ts",
     "src/**/*.test.tsx"
   ]
