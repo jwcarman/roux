@@ -13,7 +13,11 @@
   "sideEffects": [
     "./dist/form/rules.js"
   ],
+  "bin": {
+    "roux-surface-types": "bin/roux-surface-types.mjs"
+  },
   "files": [
+    "bin",
     "dist"
   ],
   "exports": {

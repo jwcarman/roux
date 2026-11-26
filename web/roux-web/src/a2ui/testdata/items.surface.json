@@ -1,0 +1,101 @@
+{
+  "id": "items",
+  "components": [
+    { "id": "root", "component": "Column", "children": ["title", "counts", "filters", "table", "addCard"] },
+    { "id": "title", "component": "Heading", "text": "Items", "size": "xl" },
+    { "id": "counts", "component": "Row", "children": ["openCard", "overdueCard", "todayCard"] },
+    { "id": "openCard", "component": "Card", "children": ["openStat"] },
+    { "id": "openStat", "component": "Stat", "label": "Open", "value": { "@path": "/counts/open" } },
+    { "id": "overdueCard", "component": "Card", "children": ["overdueStat"] },
+    { "id": "overdueStat", "component": "Stat", "label": "Overdue", "value": { "@path": "/counts/overdue" } },
+    { "id": "todayCard", "component": "Card", "children": ["todayStat"] },
+    { "id": "todayStat", "component": "Stat", "label": "Today", "value": { "@path": "/counts/today" } },
+    { "id": "filters", "component": "Card", "children": ["filterForm"] },
+    { "id": "filterForm", "component": "Form", "children": ["search", "when", "status", "assignee"] },
+    { "id": "search", "component": "InputField", "label": "Search", "value": { "@path": "/itemsArgs/search" } },
+    {
+      "id": "when",
+      "component": "SelectField",
+      "label": "When",
+      "value": { "@path": "/itemsArgs/when" },
+      "options": [
+        { "value": "all", "label": "Any time" },
+        { "value": "overdue", "label": "Overdue" },
+        { "value": "today", "label": "Today" },
+        { "value": "week", "label": "This week" }
+      ]
+    },
+    {
+      "id": "status",
+      "component": "SelectField",
+      "label": "Status",
+      "value": { "@path": "/itemsArgs/status" },
+      "options": [
+        { "value": "", "label": "Any status" },
+        { "value": "open", "label": "Open" },
+        { "value": "done", "label": "Done" }
+      ]
+    },
+    {
+      "id": "assignee",
+      "component": "SelectField",
+      "label": "Assigned to",
+      "value": { "@path": "/itemsArgs/assignee" },
+      "options": [
+        { "value": "anyone", "label": "Anyone" },
+        { "value": "me", "label": "Mine" }
+      ]
+    },
+    {
+      "id": "table",
+      "component": "DataTable",
+      "rows": { "@path": "/items" },
+      "pageIndex": { "@path": "/itemsArgs/pageIndex" },
+      "sortBy": { "@path": "/itemsArgs/sortBy" },
+      "sortDirection": { "@path": "/itemsArgs/sortDirection" },
+      "emptyText": "No items yet",
+      "columns": [
+        { "header": "Day", "field": "day", "format": "date", "sort": "DAY" },
+        { "header": "Time", "field": "at", "format": "time" },
+        {
+          "header": "Title",
+          "field": "title",
+          "sort": "TITLE",
+          "link": { "to": "/items/$itemId", "params": { "itemId": "id" } }
+        },
+        { "header": "Assigned to", "field": "assigneeNames", "format": "list", "sort": "ASSIGNEE" },
+        { "header": "Status", "field": "status", "format": "badge", "tones": { "Done": "success" } }
+      ]
+    },
+    { "id": "addCard", "component": "Card", "title": "Add item", "children": ["addForm"] },
+    { "id": "addForm", "component": "Form", "children": ["draftTitle", "draftDay", "add"] },
+    {
+      "id": "draftTitle",
+      "component": "InputField",
+      "label": "Title",
+      "required": true,
+      "value": { "@path": "/draft/title" },
+      "serverError": { "@path": "/errors/title" }
+    },
+    {
+      "id": "draftDay",
+      "component": "InputField",
+      "label": "Day",
+      "type": "date",
+      "required": true,
+      "value": { "@path": "/draft/day" },
+      "serverError": { "@path": "/errors/day" }
+    },
+    {
+      "id": "add",
+      "component": "Button",
+      "label": "Add item",
+      "action": {
+        "event": {
+          "name": "addItem",
+          "context": { "title": { "@path": "/draft/title" }, "day": { "@path": "/draft/day" } }
+        }
+      }
+    }
+  ]
+}

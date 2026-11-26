@@ -79,5 +79,7 @@ export default tseslint.config(
       "no-duplicate-imports": "error",
     },
   },
+  // Plain Node scripts (a package's bin/) are linted by the base rules; they are in no tsconfig, so no type information.
+  { files: ["**/*.mjs"], ...tseslint.configs.disableTypeChecked },
   prettier,
 );

@@ -31,3 +31,5 @@ export {
 } from "./builder";
 export { CATALOG_ID, CATALOG_VERSION, PRIMITIVES, rouxCatalog } from "./primitives";
 export { toA2ui, type A2uiCatalog, type DescribedApi, type PromptEntry } from "./translate";
+export { surfaceTypes, type SurfaceComponent, type SurfaceJson } from "./surfaceTypes";
+export { runSurfaceTypes, type SurfaceTypesIo } from "./surfaceTypesCli";

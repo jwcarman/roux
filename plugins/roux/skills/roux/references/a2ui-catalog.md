@@ -60,6 +60,15 @@ A bindable text-like type, `oneOf` or `fieldOf` → `DynamicString`; `number`/`i
 shows the page `rows` is bound to; paging writes `pageIndex`, a sortable header writes `sortBy`/`sortDirection`;
 `link` columns are TanStack Router links, so render inside the app's router.
 
+## A surface's types
+
+`SurfaceJson` (`{ id, components }`, committed as `<id>.surface.json`) holds `SurfaceComponent`s
+(`{ id, component, ...props }`). `surfaceTypes(surface, defs)` returns the TypeScript of what the surface needs: an
+`<Id>SurfaceData` (data by top-level path; a table column's field is `T | null`) and an `<Id>SurfaceEvents` (each
+button event's context). A path used as two types throws. Don't call it: run
+`roux-surface-types <id>.surface.json` (writes `<id>.surface.gen.ts`); `--check` exits 1 naming stale files, for CI.
+`runSurfaceTypes(args, io: SurfaceTypesIo)` is that command's logic.
+
 ## Pitfalls
 
 - `fieldOf(U)` without `.generic(U)` throws at `.build()`, naming the fix; so do duplicate props and a missing

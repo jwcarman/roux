@@ -110,3 +110,17 @@ drawn with Chakra, as a `Catalog<ReactCatalogComponent>` with `rouxCatalog`'s id
 It needs `@a2ui/react` and `@a2ui/web_core` (optional peers). A `DataTable` shows the page its `rows` is bound
 to, writes `pageIndex` when the person pages, and writes `sortBy` and `sortDirection` when they click a sortable
 header; its `link` columns are TanStack Router links, so render it inside the app's router.
+
+## A surface's types
+
+A surface is an A2UI JSON screen drawn only from this catalog, committed as `<id>.surface.json`: a `SurfaceJson`,
+`{ id, components }`, whose components are `SurfaceComponent`s (`{ id, component, ...props }`). From it and the typed
+definitions, `surfaceTypes(surface, defs)` returns the TypeScript text of what the surface needs from outside: an
+`<Id>SurfaceData` interface (the data it shows, by top-level path: each bound prop types its path, and a table's
+columns type the fields of its rows, `T | null` for an empty cell) and an `<Id>SurfaceEvents` interface (each
+button event's context). Two uses of one path with different types throw, naming the path.
+
+The `roux-surface-types` command (`bin` of the package) writes `<id>.surface.gen.ts` beside each
+`<id>.surface.json` it is given; `roux-surface-types --check <file>...` writes nothing and exits 1 naming each file
+that is stale, with the command that fixes it, so an app's CI can run it. Run it from the app after building roux-web.
+`runSurfaceTypes(args, io)` is the command's logic, with its file access passed in as a `SurfaceTypesIo`.
