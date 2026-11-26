@@ -22,7 +22,8 @@ document and the drawing prompt's entries are generated from them. Needs `@a2ui/
 - `CATALOG_ID` (`https://jwcarman.github.io/roux/a2ui/catalog-v1.json`), `CATALOG_VERSION`, `PRIMITIVES`: Column,
   Row, Heading, Text, Card, Stat, Button, DataTable, CardList, Form, InputField, SelectField. Row and Column take
   `gap`, `justify` (start, center, end, spaceBetween, spaceAround, spaceEvenly, stretch), `align` (start, center,
-  end, stretch); their children take `weight`.
+  end, stretch); their children take `weight`. A Row's children share its width unless `justify` is set: then each
+  takes its own width (a weighted child still grows).
 - `component(name)` → `.generic(T)`, `.prop(name, prop)`, `.childProp(name, prop)`, `.rule(text)`,
   `.describe(text)`, `.build()` → `ComponentDef`. `PropsOf<typeof def>` is the renderer's props type.
 - Types: `text`, `email`, `url`, `phone`, `date`, `time`, `number`, `integer`, `money`, `id`, `boolean`,

@@ -39,7 +39,8 @@ const prompt = rouxCatalog.promptEntries;        // each component's description
 `PRIMITIVES` is the list of definitions behind it: Column, Row, Heading, Text, Card, Stat, Button, DataTable,
 CardList, Form, InputField and SelectField. Row and Column lay out like flexbox: `gap`, `justify` (start, center,
 end, spaceBetween, spaceAround, spaceEvenly, stretch), `align` (start, center, end, stretch), and a child's
-`weight` (its share of the spare space).
+`weight` (its share of the spare space). A Row's children share its width equally; once the Row sets `justify`,
+each takes its own width and `justify` places them, while a weighted child still grows.
 
 ## Defining a component
 

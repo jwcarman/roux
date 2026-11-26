@@ -52,9 +52,10 @@ describe("roux's primitives", () => {
         "them up across it. A child's weight (1, 2, ...) gives it that many shares of the spare height.",
     );
     expect(described.Row).toBe(
-      "Lays its children side by side; wraps on narrow screens. Children share the width equally. " +
-        "justify places them along the row (spaceBetween pushes them to the edges); align lines them up vertically. " +
-        "A child's weight (1, 2, ...) gives it that many shares of the width.",
+      "Lays its children side by side; wraps on narrow screens. Children share the width equally, unless justify is " +
+        "set: then each takes its own width and justify places them (end for buttons on the right, spaceBetween to " +
+        "push them to the edges). align lines them up vertically. A child's weight (1, 2, ...) gives it that many " +
+        "shares of the width.",
     );
   });
 
