@@ -246,9 +246,7 @@ describe("AppShell", () => {
     });
 
     it("does nothing outside an AppShell", async () => {
-      await act(async () => {
-        renderInRouter(<Wide name="alone" />);
-      });
+      renderInRouter(<Wide name="alone" />);
       expect(await screen.findByText("alone")).toBeInTheDocument();
     });
   });
