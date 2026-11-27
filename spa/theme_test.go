@@ -11,7 +11,7 @@ import (
 )
 
 func TestThemeValidateRefusesUnknownDepth(t *testing.T) {
-	th := spa.StockTheme("App")
+	th := spa.Clean.Theme("App")
 	th.Depth = "deep"
 	err := th.Validate()
 	if err == nil || !strings.Contains(err.Error(), `depth "deep"`) {
@@ -19,11 +19,11 @@ func TestThemeValidateRefusesUnknownDepth(t *testing.T) {
 	}
 }
 
-func TestStockThemeIsFlat(t *testing.T) {
-	if d := spa.StockTheme("App").Depth; d != "flat" {
+func TestCleanIsFlat(t *testing.T) {
+	if d := spa.Clean.Theme("App").Depth; d != "flat" {
 		t.Fatalf("depth %q", d)
 	}
-	th := spa.StockTheme("App")
+	th := spa.Clean.Theme("App")
 	th.Depth = "raised"
 	if err := th.Validate(); err != nil {
 		t.Fatal(err)
@@ -31,7 +31,7 @@ func TestStockThemeIsFlat(t *testing.T) {
 }
 
 func TestViolationsListsDepth(t *testing.T) {
-	th := spa.StockTheme("App")
+	th := spa.Clean.Theme("App")
 	th.Depth = "deep"
 	got := th.Violations()
 	want := problem.Violation{Field: "depth", Message: problem.BadFormat}
@@ -75,8 +75,5 @@ func TestALookMakesATheme(t *testing.T) {
 	}
 	if err := th.Validate(); err != nil {
 		t.Fatal(err)
-	}
-	if spa.StockTheme("Acme") != spa.Clean.Theme("Acme") {
-		t.Fatal("the stock theme is Clean")
 	}
 }

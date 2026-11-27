@@ -179,29 +179,61 @@ describe("a DataTable alone in a Card", () => {
     expect(paddingOff()).toBe(false);
   });
 
+  /** Whether one of the Card body's rules for a table alone gives `element` a declaration matching `decl`, in the DOM the surface really made. */
+  const styledByCard = (element: Element, decl: RegExp) =>
+    [...rulesFor(body()).matchAll(/(\.css-[\w-]+:has\([^{]*)\{([^}]*)/g)].some(
+      ([, selector, declarations]) => decl.test(declarations) && element.matches(selector),
+    );
+
   it("takes the Card's background, in the rows and the headings", () => {
     renderSurface(cardWith(["table"]), rows);
-    for (const row of document.querySelectorAll("tr")) {
-      expect(getComputedStyle(row).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+    const rowEls = [...document.querySelectorAll("tr")];
+    expect(rowEls.length).toBeGreaterThan(1);
+    for (const row of rowEls) {
+      expect(styledByCard(row, /background:\s*var\(--chakra-colors-transparent\)/)).toBe(true);
     }
   });
 
   it("pads a table's empty message, which has no cells to do it", () => {
     renderSurface(cardWith(["table"]), { rows: [] });
-    expect(rulesFor(screen.getByText("Nothing yet"))).toMatch(/padding:\s*var\(--chakra-spacing-4\)/);
+    expect(styledByCard(screen.getByText("Nothing yet"), /padding:\s*var\(--chakra-spacing-4\)/)).toBe(true);
   });
 
   it("keeps the table's footer in line with the cells", () => {
     renderSurface(cardWith(["table"]), rows);
     const footer = screen.getByText("1 row").parentElement as HTMLElement;
-    expect(rulesFor(footer)).toMatch(/padding-inline:\s*var\(--chakra-spacing-4\)/);
-    expect(rulesFor(footer)).toMatch(/padding-bottom:\s*var\(--chakra-spacing-3\)/);
+    expect(styledByCard(footer, /padding-inline:\s*var\(--chakra-spacing-4\)/)).toBe(true);
+    expect(styledByCard(footer, /padding-bottom:\s*var\(--chakra-spacing-3\)/)).toBe(true);
   });
 
   it("marks the table, so a Card can tell it from other children", () => {
     renderSurface(cardWith(["note", "table"]), rows);
     expect(byId("table")).toHaveAttribute("data-data-table");
     expect(byId("note")).not.toHaveAttribute("data-data-table");
+  });
+});
+
+describe("a DataTable straight in a Column", () => {
+  const surface = (rowsPath: string) => [
+    { id: "root", component: "Column", children: ["table"] },
+    { id: "table", component: "DataTable", rows: { "@path": rowsPath }, columns: [{ header: "Name", field: "name" }] },
+  ];
+
+  it("keeps its footer flush with the page edge", () => {
+    renderSurface(surface("/rows"), {
+      rows: {
+        data: [{ name: "Ann" }],
+        pagination: { pageIndex: 0, pageSize: 10, totalElementCount: 1, totalPageCount: 1 },
+      },
+    });
+    const footer = screen.getByText("1 row").parentElement as HTMLElement;
+    expect(rulesFor(footer)).not.toMatch(/padding-inline/);
+    expect(rulesFor(footer)).not.toMatch(/padding-bottom/);
+  });
+
+  it("does not pad its empty message", () => {
+    renderSurface(surface("/rows"), { rows: [] });
+    expect(rulesFor(screen.getByText("Nothing yet"))).not.toMatch(/padding/);
   });
 });
 

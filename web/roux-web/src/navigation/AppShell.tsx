@@ -1,5 +1,6 @@
 import { Box, CloseButton, Container, Drawer, Flex, Heading, IconButton, Portal, Stack, Text } from "@chakra-ui/react";
 import { createContext, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { LuMenu } from "react-icons/lu";
 import { NavLinks, RAIL_LABELS } from "./NavLinks";
 import type { Nav, Permissions } from "./nav";
@@ -71,10 +72,11 @@ export function AppShell<Permission extends string>({
         setWide(true);
       },
       // Narrow again only if nobody is back by the end of the commit: a caller's re-render leaves and enters at once.
+      // flushSync, so the narrow column renders in this microtask, before the browser paints the next page.
       leave: () => {
         users.current--;
         queueMicrotask(() => {
-          if (users.current === 0) setWide(false);
+          if (users.current === 0) flushSync(() => setWide(false));
         });
       },
     };

@@ -229,3 +229,13 @@ func TestRunRefusesInvalidLook(t *testing.T) {
 		t.Fatalf("an invalid look: %v", err)
 	}
 }
+
+func TestRunNamesABadAppNameNotTheLook(t *testing.T) {
+	t.Setenv("ADDR", freeAddr(t))
+	t.Setenv("DATABASE_URL", "")
+	t.Setenv("APP_NAME", "")
+	err := app.Run(context.Background(), app.Config{Name: "acme", Modules: noModules})
+	if err == nil || !strings.Contains(err.Error(), "APP_NAME") || !strings.Contains(err.Error(), "1 to 60") || strings.Contains(err.Error(), "Config.Look") {
+		t.Fatalf("an empty app name: %v", err)
+	}
+}

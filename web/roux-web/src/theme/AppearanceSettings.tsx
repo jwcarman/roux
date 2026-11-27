@@ -378,10 +378,16 @@ function Part({ title, children }: Readonly<{ title: string; children: ReactNode
  */
 function DepthSample({ depth }: Readonly<{ depth: Depth }>) {
   return (
-    <Box data-swatch={depth} aria-hidden bg={depth === "raised" ? "gray.muted" : "transparent"} borderRadius="l2" p="2">
+    <Box
+      data-swatch={depth}
+      aria-hidden
+      bg={depth === "raised" ? { _light: "gray.100", _dark: "black" } : "transparent"}
+      borderRadius="l2"
+      p="2"
+    >
       <Box
         data-sample={depth}
-        bg="bg.panel"
+        bg={depth === "raised" ? { _light: "white", _dark: "gray.950" } : "bg.panel"}
         color="fg"
         borderRadius="l2"
         width="16"

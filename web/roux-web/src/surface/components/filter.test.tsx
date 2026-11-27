@@ -62,4 +62,12 @@ describe("FilterChips", () => {
     expect(pressed()).toHaveLength(0);
     expect(screen.getAllByRole("button")).toHaveLength(3);
   });
+
+  it("an unset path presses no chip, even one whose value is empty", () => {
+    const withEmpty = components.map((c) =>
+      c.id === "when" ? { ...c, options: [{ value: "", label: "Blank" }, ...(c.options ?? [])] } : c,
+    );
+    renderSurface(withEmpty, {});
+    expect(pressed()).toHaveLength(0);
+  });
 });

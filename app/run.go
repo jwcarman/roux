@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 	_ "time/tzdata" // zones must not depend on the machine the app runs on
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -64,7 +65,10 @@ func Main(cfg Config) {
 // modules finish their work in flight.
 func Run(ctx context.Context, cfg Config) error {
 	appName := Getenv("APP_NAME", cfg.DisplayName)
-	if err := cfg.Look.Theme(appName).Validate(); err != nil {
+	if n := utf8.RuneCountInString(appName); n < 1 || n > 60 {
+		return fmt.Errorf("app: the app name %q must be 1 to 60 characters; set APP_NAME or Config.DisplayName", appName)
+	}
+	if err := cfg.Look.Theme("App").Validate(); err != nil {
 		return fmt.Errorf("app: Config.Look: %w; use spa.Clean, spa.Friendly, spa.Bold, spa.Calm or spa.Classic, or a Look made of values the frontend knows", err)
 	}
 	slog.SetDefault(slog.New(telemetry.NewLogHandler(stdoutHandler()))) // until telemetry is set up
@@ -95,8 +99,8 @@ func Run(ctx context.Context, cfg Config) error {
 	if err != nil {
 		return err
 	}
-	kit := &Kit{Mux: mux, Pool: pool, AppName: Getenv("APP_NAME", cfg.DisplayName), SecureCookies: secure}
-	kit.DefaultTheme = cfg.Look.Theme(kit.AppName)
+	kit := &Kit{Mux: mux, Pool: pool, AppName: appName, SecureCookies: secure}
+	kit.DefaultTheme = cfg.Look.Theme(appName)
 	mods, err := cfg.Modules(kit)
 	if err != nil {
 		return err

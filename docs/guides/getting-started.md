@@ -208,11 +208,11 @@ running as a user who is not root.
 
 ```
 npm install @jwcarman/roux-web@0.4.0
-npm install @chakra-ui/react @emotion/cache @emotion/react @fontsource-variable/inter @fontsource-variable/lora @fontsource-variable/nunito @tanstack/react-form @tanstack/react-query @tanstack/react-router @tanstack/react-table culori date-fns next-themes react react-icons zod
+npm install @chakra-ui/react @emotion/cache @emotion/react @fontsource-variable/inter @fontsource-variable/lora @fontsource-variable/nunito @tanstack/react-form @tanstack/react-query @tanstack/react-router @tanstack/react-table culori date-fns next-themes react react-dom react-icons zod
 ```
 
 The Go and web versions must match: use the same version of `github.com/jwcarman/roux` and
-`@jwcarman/roux-web`. The second line is the peer dependencies; the app supplies them (`react`
+`@jwcarman/roux-web`. The second line is the peer dependencies; the app supplies them (`react` and `react-dom`
 `^19.3.1`, `@chakra-ui/react` `^3.38.0`, `@emotion/react` and `@emotion/cache` `^11.14.0`,
 `@tanstack/react-query` `^5.107.1`, `@tanstack/react-form` `^1.33.5`, `@tanstack/react-router`
 `^1.170.46`, `@tanstack/react-table` `^8.21.3`, `date-fns` `^4.4.0`, `zod` `^4.6.7`, `culori`

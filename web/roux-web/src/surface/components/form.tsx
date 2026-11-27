@@ -203,7 +203,7 @@ const FilterChips = defineComponent(FilterChipsApi, ({ props }) => (
       <RouxFilterChips
         label={textOf(props.label)}
         options={optionsOf(props.options) as readonly { value: string; label: string }[]}
-        value={textOf(props.value)}
+        value={props.value as string | undefined}
         onChange={props.setValue}
       />
     </Flex>

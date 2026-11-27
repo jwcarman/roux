@@ -68,9 +68,6 @@ func (l Look) Theme(appName string) Theme {
 	return Theme{AppName: appName, Palette: l.Palette, BrandColor: "#3b82f6", Shape: l.Shape, Depth: l.Depth, HeadingFont: l.HeadingFont, BodyFont: l.BodyFont}
 }
 
-// StockTheme is the default look under the given name: Clean.
-func StockTheme(appName string) Theme { return Clean.Theme(appName) }
-
 // Validate refuses a value the frontend has no look for, so a theme that would
 // render wrongly fails here instead of in the browser.
 func (t Theme) Validate() error {

@@ -37,7 +37,7 @@ title. It replaces `ChakraProvider`. Mount no other Chakra provider, and no Emot
   `colorPalette="red"`, whatever the theme.
 - `ThemeProvider theme={...}` starts from another theme: a test's, or a storybook's.
 - `depth` is `flat` (the default: bordered cards, Chakra's own look) or `raised`: the page gets a
-  light tint (`bg.page`, a darker grey in dark mode), cards stand on it (`bg.raised`) with a soft
+  light tint (`bg.page`: light grey, black in dark mode), cards stand on it (`bg.raised`: white, or `gray.950` in dark mode) with a soft
   shadow and a lighter border. A theme without a `depth` throws at startup like any other part.
 - Light or dark mode is the visitor's own (a visitor's choice is not part of the owner's theme).
   `ColorModeProvider` (inside `ThemeProvider`, around the app) follows the system's mode until the

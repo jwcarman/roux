@@ -198,6 +198,13 @@ const TextC = defineComponent(TextApi, ({ props }) => (
 
 const BORDERS: { [tone in Tone]?: string } = { warning: "orange.300", danger: "red.300" };
 
+const ALONE_IN_CARD = {
+  padding: 0,
+  "& tr": { bg: "transparent" },
+  "& [data-table-footer]": { px: "4", pb: "3" },
+  "& [data-data-table-empty]": { p: "4" },
+} as const;
+
 const CardC = defineComponent(CardApi, ({ props, buildChild }) => (
   <Card.Root data-component-id={useComponentId()} flex="1" minW="0" borderColor={props.tone && BORDERS[props.tone]}>
     {props.title && (
@@ -205,8 +212,8 @@ const CardC = defineComponent(CardApi, ({ props, buildChild }) => (
         <Card.Title>{props.title}</Card.Title>
       </Card.Header>
     )}
-    {/* A table alone in the Card runs edge to edge: its cells (and footer) carry the padding. The catalog wraps each component in an element of its own, hence the extra level. */}
-    <Card.Body css={{ "&:has(> * > :only-child > [data-data-table])": { padding: 0 } }}>
+    {/* A table alone in the Card runs edge to edge: it takes the Card's background, and its cells, footer and empty message carry the padding. The catalog wraps each component in an element of its own, hence the extra level. */}
+    <Card.Body css={{ "&:has(> * > :only-child > [data-data-table])": ALONE_IN_CARD }}>
       <VStack align="stretch" gap="4">
         {buildChildren(props.children, buildChild)}
       </VStack>

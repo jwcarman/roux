@@ -73,7 +73,7 @@ type Config struct {
 	// FS holds the built frontend: index.html at its root, hashed files in assets/.
 	FS fs.FS
 	// Theme is read for every page (so a theme the owner has just saved is in the
-	// next page served); defaults to StockTheme("App"). An error is a 500.
+	// next page served); defaults to Clean.Theme("App"). An error is a 500.
 	Theme func(ctx context.Context) (Theme, error)
 	// Context is read for every page; defaults to UTC, "en-US".
 	Context func() organization.Context
@@ -132,7 +132,7 @@ func New(cfg Config) (http.Handler, error) {
 		excluded: append(append([]string{}, defaultExcluded...), cfg.ExcludedPaths...),
 	}
 	if h.theme == nil {
-		h.theme = func(context.Context) (Theme, error) { return StockTheme("App"), nil }
+		h.theme = func(context.Context) (Theme, error) { return Clean.Theme("App"), nil }
 	}
 	if h.context == nil {
 		h.context = func() organization.Context { return organization.NewContext(time.Now(), time.UTC, "en-US") }

@@ -8,6 +8,9 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- `@jwcarman/roux-web` now lists `react-dom` as a peer dependency (the page width narrows before paint with its
+  `flushSync`); install it beside `react`. `<TableView insetFooter>` is gone: a Card around a lone `DataTable` pads the
+  table's footer and empty message itself, and a `DataTable` straight in a Column keeps its footer flush.
 - **The look, as mockup B.** A `FilterChips` shows its `label` above the chips (still the group's accessible
   name), so a chips group lines up with the fields in its Row. A Button in a Row lines up with the bottom of
   the inputs beside it, not of the space each field keeps for a message. A DataTable alone in a Card fills it
@@ -35,7 +38,7 @@ All notable changes to this project are documented in this file. The format foll
 - **The theme has a depth: `flat` or `raised`.** `spa.Theme.Depth` (`depth` in the page's theme and
   in `/api/roux/theme`, required on a save; migration `002_depth.sql`) and roux-web's `Depth`.
   `raised` tints the page and stands the cards on it with a soft shadow; `flat` is as before
-  (`spa.StockTheme` is `flat`). The Appearance page shows both on sample cards, and Friendly and
+  (Clean is `flat`). The Appearance page shows both on sample cards, and Friendly and
   Calm are `raised`. A theme written into a page without a `depth` is refused: update the server
   and the app together.
 - **A feed can show only the app's kinds: `scope.Kinds(kinds...)`.** A kind is a type or any part

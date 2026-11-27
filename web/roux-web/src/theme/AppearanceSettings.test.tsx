@@ -465,8 +465,10 @@ describe("AppearanceSettings", () => {
     expect(sample(flat)).toHaveAttribute("data-sample", "flat");
     expect(rulesFor(sample(flat))).toMatch(/border-width:1px/);
     expect(rulesFor(sample(flat))).not.toMatch(/box-shadow/);
+    expect(rulesFor(sample(flat))).toMatch(/border-color:var\(--chakra-colors-border\)/);
     expect(sample(raised)).toHaveAttribute("data-sample", "raised");
-    expect(rulesFor(sample(raised))).toMatch(/box-shadow/);
+    expect(rulesFor(sample(raised))).toMatch(/box-shadow:var\(--chakra-shadows-sm\)/);
+    expect(rulesFor(sample(raised))).toMatch(/border-color:var\(--chakra-colors-border-muted\)/);
     expect(rulesFor(raised.querySelector<HTMLElement>("[data-swatch]")!)).toMatch(/background:/);
 
     await user.click(raised);
@@ -476,6 +478,18 @@ describe("AppearanceSettings", () => {
     expect(flat).toHaveAttribute("aria-pressed", "false");
     await user.click(flat);
     expect(shownDepth()).toBe("flat");
+  });
+
+  it("draws the raised sample as the real raised page and card, in light and dark", async () => {
+    serve();
+    show();
+    const raised = await screen.findByRole("button", { name: "Raised" });
+    const page = rulesFor(raised.querySelector<HTMLElement>("[data-swatch]")!);
+    const card = rulesFor(raised.querySelector<HTMLElement>("[data-sample]")!);
+    expect(page).toMatch(/background:var\(--chakra-colors-gray-100\)/);
+    expect(page).toMatch(/\.dark[^{]*\{[^}]*background:var\(--chakra-colors-black\)/);
+    expect(card).toMatch(/background:var\(--chakra-colors-white\)/);
+    expect(card).toMatch(/\.dark[^{]*\{[^}]*background:var\(--chakra-colors-gray-950\)/);
   });
 
   it("sets the depth with a ready-made look, and presses a look only at its depth", async () => {

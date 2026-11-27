@@ -221,6 +221,32 @@ describe("AppShell", () => {
       }
     });
 
+    it("is narrow again before anything can paint once the last caller has gone", async () => {
+      const host = document.createElement("div");
+      document.body.append(host);
+      const root = createRoot(host);
+      const actEnvironment = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean };
+      actEnvironment.IS_REACT_ACT_ENVIRONMENT = false;
+      const page = (withCaller: boolean) => (
+        <ThemeProvider>
+          <AppShell nav={defineNav([] as const, [])} permissions={[]} appName="Dojo">
+            {withCaller ? <Wide name="first" /> : <p>plain</p>}
+          </AppShell>
+        </ThemeProvider>
+      );
+      try {
+        flushSync(() => root.render(page(true)));
+        flushSync(() => root.render(page(false)));
+        // Microtasks all run before the browser paints; a state update they schedule would render after it.
+        await Promise.resolve();
+        expect(rulesFor(host.querySelector("main") as Element)).toContain("max-width:var(--chakra-sizes-3xl)");
+      } finally {
+        flushSync(() => root.unmount());
+        host.remove();
+        actEnvironment.IS_REACT_ACT_ENVIRONMENT = true;
+      }
+    });
+
     it("costs the shell nothing when a caller re-renders", async () => {
       const renders = { account: 0 };
       function Typing() {

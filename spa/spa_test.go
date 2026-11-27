@@ -349,7 +349,7 @@ func TestThemeAndContextAreWrittenIntoThePage(t *testing.T) {
 	now := time.Date(2026, 11, 24, 23, 30, 0, 0, zone)
 	h := server(t, spa.Config{
 		Theme: func(context.Context) (spa.Theme, error) {
-			th := spa.StockTheme("Acme & Sons")
+			th := spa.Clean.Theme("Acme & Sons")
 			th.Palette = "teal"
 			return th, nil
 		},
@@ -391,7 +391,7 @@ func between(t *testing.T, s, start, end string) string {
 func TestHostileValuesCannotBreakOutOfThePage(t *testing.T) {
 	h := server(t, spa.Config{
 		Theme: func(context.Context) (spa.Theme, error) {
-			return spa.StockTheme(`</title><script>alert(1)</script>`), nil
+			return spa.Clean.Theme(`</title><script>alert(1)</script>`), nil
 		},
 		Context: func() organization.Context {
 			return organization.NewContext(time.Now(), time.UTC, `en</script><script>alert(2)`)
@@ -411,7 +411,7 @@ func TestHostileValuesCannotBreakOutOfThePage(t *testing.T) {
 }
 
 func TestAValueThatLooksLikeAPlaceholderIsNotFilledAgain(t *testing.T) {
-	h := server(t, spa.Config{Theme: func(context.Context) (spa.Theme, error) { return spa.StockTheme("__APP_THEME__"), nil }})
+	h := server(t, spa.Config{Theme: func(context.Context) (spa.Theme, error) { return spa.Clean.Theme("__APP_THEME__"), nil }})
 	body := do(h, "GET", "/", html).Body.String()
 	if !strings.Contains(body, "<title>__APP_THEME__</title>") {
 		t.Fatalf("name was re-expanded: %s", body)
@@ -431,7 +431,7 @@ func TestInvalidThemeIsRefused(t *testing.T) {
 		func(t *spa.Theme) { t.BodyFont = "" },
 	}
 	for i, mutate := range bad {
-		th := spa.StockTheme("App")
+		th := spa.Clean.Theme("App")
 		mutate(&th)
 		if th.Validate() == nil {
 			t.Errorf("case %d: invalid theme accepted: %+v", i, th)
@@ -440,7 +440,7 @@ func TestInvalidThemeIsRefused(t *testing.T) {
 			t.Errorf("case %d: New accepted an invalid theme", i)
 		}
 	}
-	if err := spa.StockTheme("App").Validate(); err != nil {
+	if err := spa.Clean.Theme("App").Validate(); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -451,7 +451,7 @@ func TestAFailingThemeSourceIsA500NotABrokenPage(t *testing.T) {
 		if failing {
 			return spa.Theme{}, errors.New("database is down")
 		}
-		return spa.StockTheme("App"), nil
+		return spa.Clean.Theme("App"), nil
 	}})
 	if !isShell(do(h, "GET", "/", html)) {
 		t.Fatal("the page should render while the theme source works")
