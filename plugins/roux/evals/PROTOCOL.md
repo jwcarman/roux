@@ -529,3 +529,35 @@ runs." It is a fact about the eval's sandbox, not about roux: on a machine with 
 tests run. Before, the arm with the skill learned it from `check.sh` ("SKIPPED the Go tests") and the
 arm without spent turns finding it out; both rerun failures were database tests the run could not
 run. The scoring and the support criteria are unchanged. Compared with the rerun, not pooled with it.
+
+### Third round results, 2026-11-27
+
+12 runs, every one reported. Cost as `claude plugin eval` reports it: $4.27 in all.
+
+| Arm | Succeeded | Acceptance | Build | Turns, mean (range) | Cost, mean | Time, mean | Tokens, mean |
+|---|---|---|---|---|---|---|---|
+| Sonnet with the skill | 3/3 | 3/3 | 3/3 | 17 (11–22) | $0.42 | 2.8 min | 0.5M |
+| Sonnet without | 3/3 | 3/3 | 3/3 | 29 (26–31) | $0.62 | 3.9 min | 1.5M |
+| Haiku with the skill | 3/3 | 3/3 | 3/3 | 22 (20–23) | $0.04 | 3.0 min | 1.1M |
+| Haiku without | 3/3 | 3/3 | 3/3 | 62 (41–79) | $0.34 | 5.5 min | 5.4M |
+
+The skill fired in every run that had it; check-roux-way's other checks passed in all 12. Every run
+succeeded, so success no longer separates the arms; turns, time, cost and tokens do.
+
+- **Efficiency: supported.** Sonnet with the skill succeeded as often (3/3), at a lower mean cost
+  ($0.42 against $0.62) and time (2.8 against 3.9 min), in 41% fewer turns and a third of the
+  tokens.
+- **A cheaper model: not supported, as written.** Haiku with the skill succeeded as often as Sonnet
+  without (3/3), at a fraction of the cost, but not more often than Haiku without (3/3 each), which
+  the claim asked for. Haiku without took nearly three times the turns (62 against 22), five times
+  the tokens and almost twice the time to the same result.
+
+With npm working in the sandbox, Haiku with the skill took half the rerun's turns (43 to 22) and
+`check.sh` ran clean. With the note about the machine, the runs without the skill still met the
+missing database in 4 of 6 (running `go test ./...`), but fewer times than in the rerun, and no run
+failed on a database test.
+
+**Reading the three rounds together:** the skill never made a run less correct, once its own tools
+worked; on this case every arm can reach a working app, and what the skill buys is the cost of
+getting there: about 40% fewer turns on Sonnet and about 65% fewer on Haiku. A case where success
+separates the arms needs a harder task than `app-locations`.
