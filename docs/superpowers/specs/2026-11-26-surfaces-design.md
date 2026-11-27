@@ -35,7 +35,8 @@ fully working) and to make roux teach it as the one way.
 
 ## Non-goals
 
-- noir and tasting. Neither changes this round.
+- noir. It doesn't change this round. (tasting changes only to render with roux-web's catalog
+  implementations, as §4 says.)
 - The template app's own screens: it has no feature screens, only roux's built-in pages, which stay React.
 - Detail screens with route parameters, modals, tabs, composites. Later rounds; until then Roux The
   Day's item detail page stays React (the only hand-written feature screen left, on purpose, for now).
@@ -133,7 +134,8 @@ As in the spike: `bind<Data, Events>(({ d, query, local, command, none }) => ({ 
 
 - `internal/items` gains cqrs endpoints beside its REST handlers, sharing its `Service`:
   `items` (Query; args `when`, `status`, `assignee`), `itemCounts` (Lookup; open, overdue, today) and
-  `addItem` (Command; title, day; assigned to the caller; emits `itemAdded`).
+  `addItem` (Command; title, day; assigned to the caller; emits `itemsChanged`, the event the
+  item page's changes share).
 - The surface **replaces** the hand-written items list at `/items` (`ItemsPage.tsx`, `AddItem.tsx` and
   what only they use are deleted); the nav is unchanged. Titles link to the item's detail page.
 - `frontend/src/items/items.surface.json` — drawn from the catalog: counts as Stats, the list as a
