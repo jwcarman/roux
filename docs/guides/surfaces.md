@@ -218,6 +218,9 @@ export const Route = createFileRoute("/_signedIn/items/")({
 });
 ```
 
+A surface page gets the wide column of the `AppShell` (`useWidePage`, see the shell guide); built-in pages keep
+the narrow one.
+
 `<Surface>` draws the JSON with `surfaceComponents`, the catalog's Chakra implementation, through the
 A2UI React renderer, on a data model that starts from the binding's `local` values. It belongs in a
 route: a table's `link` columns are TanStack Router links.

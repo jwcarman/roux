@@ -1,4 +1,4 @@
-export { AppShell, type AccountLayout, type AppShellProps } from "./AppShell";
+export { AppShell, useWidePage, type AccountLayout, type AppShellProps } from "./AppShell";
 export {
   defineNav,
   navItemsFor,

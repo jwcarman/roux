@@ -6,6 +6,9 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { onSessionLost } from "../api/client";
 import type { SurfaceJson } from "../a2ui";
+import { AppShell } from "../navigation/AppShell";
+import { defineNav } from "../navigation/nav";
+import { rulesFor } from "../testing/css";
 import { Toaster, toaster } from "../feedback/toaster";
 import { invalidFields, serverError, stale } from "../testing/problems";
 import { pageOf } from "../testing/pages";
@@ -168,6 +171,17 @@ describe("Surface", () => {
     expect(await screen.findByLabelText("Title")).toHaveValue("Milk");
     expect(screen.getByLabelText("Day")).toHaveValue("2026-11-27");
     expect(screen.getByLabelText("Status")).toHaveValue("open");
+  });
+
+  it("asksItsAppShellForTheWideColumn", async () => {
+    answerQueries();
+    renderWithProviders(
+      <AppShell nav={defineNav([] as const, [])} permissions={[]} appName="App">
+        <Surface surface={items} binding={itemsBinding()} />
+      </AppShell>,
+    );
+    await screen.findByLabelText("Title");
+    expect(rulesFor(screen.getByRole("main"))).toContain("max-width:var(--chakra-sizes-6xl)");
   });
 
   it("fillsAPathFromItsQuery", async () => {

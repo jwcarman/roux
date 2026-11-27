@@ -136,7 +136,7 @@ createRoot(document.getElementById("root")!).render(
 - Navigation (`/navigation`): `defineNav(PERMISSIONS, [{ label, to, icon, permission?, description, start? }])`
   → `Nav` of `NavEntry` (`to` is a `NavTo`); `navItemsFor`, `startPathFor`, `openingRedirect`;
   `AppShell` (`AppShellProps`: `nav`, `permissions`, `appName`, `logo`, `account` as an
-  `AccountLayout`), `NavLinks` (`NavLinksProps`), `RAIL_LABELS`; `AccountMenu` (`AccountMenuProps`)
+  `AccountLayout`), `useWidePage()` (the wide `6xl` column while mounted; `Surface` calls it), `NavLinks` (`NavLinksProps`), `RAIL_LABELS`; `AccountMenu` (`AccountMenuProps`)
   with `AccountMenuLink`, `AccountMenuItem`, `AccountMenuSwitch`, `AccountMenuSeparator`;
   `PageHeader` (`PageHeaderProps`: `title`, actions as children).
 - Colour mode (`/theme`): `ColorModeProvider` around the app (system mode until the visitor

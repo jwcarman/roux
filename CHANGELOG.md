@@ -8,6 +8,9 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **Surfaces get the wide column: `useWidePage()`.** While any mounted component calls it, `AppShell`'s
+  page is `6xl` wide instead of `3xl`; outside an `AppShell` it does nothing. `<Surface>` calls it, so
+  surface pages are wide and built-in pages keep the narrow column.
 - **An app names its default look: `app.Config.Look`.** `spa.Clean`, `spa.Friendly`, `spa.Bold`,
   `spa.Calm` and `spa.Classic` (a `spa.Look`: palette, shape, depth, fonts; the same five as roux-web's
   `LOOKS`, held in `contracts/looks.json`) or a `spa.Look` of your own; the zero value is `Clean`.

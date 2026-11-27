@@ -1,5 +1,5 @@
 import { Box, CloseButton, Container, Drawer, Flex, Heading, IconButton, Portal, Stack, Text } from "@chakra-ui/react";
-import { useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { LuMenu } from "react-icons/lu";
 import { NavLinks, RAIL_LABELS } from "./NavLinks";
 import type { Nav, Permissions } from "./nav";
@@ -26,6 +26,22 @@ export interface AppShellProps<Permission extends string> {
   children: ReactNode;
 }
 
+/** Counts the pages that want the wide column; absent outside an {@link AppShell}. */
+const WidePage = createContext<((delta: number) => void) | undefined>(undefined);
+
+/**
+ * Asks the enclosing {@link AppShell} for the wide column (`6xl`, not `3xl`) while the calling component is mounted.
+ * Outside an `AppShell` it does nothing. `<Surface>` calls it; built-in pages keep the narrow column.
+ */
+export function useWidePage(): void {
+  const count = useContext(WidePage);
+  // Every render, not on [count]: the two updates cancel within one commit, and the counter never changes identity.
+  useEffect(() => {
+    count?.(1);
+    return () => count?.(-1);
+  });
+}
+
 /**
  * The signed-in frame: a sidebar full from `lg`, an icon rail at `md`, and below that a top bar
  * whose menu button ("Open navigation") opens the same sidebar as a drawer. The links are
@@ -41,6 +57,8 @@ export function AppShell<Permission extends string>({
 }: Readonly<AppShellProps<Permission>>) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const close = () => setDrawerOpen(false);
+  const [wide, setWide] = useState(0);
+  const [count] = useState(() => (delta: number) => setWide((n) => n + delta));
 
   return (
     <Flex minH="100dvh" bg="bg">
@@ -67,8 +85,8 @@ export function AppShell<Permission extends string>({
             {appName}
           </Heading>
         </Flex>
-        <Container maxW="3xl" py="6" as="main">
-          {children}
+        <Container maxW={wide > 0 ? "6xl" : "3xl"} py="6" as="main">
+          <WidePage.Provider value={count}>{children}</WidePage.Provider>
         </Container>
       </Box>
       <Drawer.Root open={drawerOpen} onOpenChange={(event) => setDrawerOpen(event.open)} placement="start" size="xs">

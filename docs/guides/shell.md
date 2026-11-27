@@ -230,6 +230,10 @@ from `lg`, an icon rail at `md`, and a drawer opened by "Open navigation" below.
 (`NavLinksProps`) is the link list alone, and `RAIL_LABELS` hides labels in the rail. Needs
 `@tanstack/react-router`.
 
+The page sits in the narrow column (`3xl`). `useWidePage()` asks for the wide one (`6xl`) while the calling
+component is mounted; with two callers it stays wide until both are gone, and outside an `AppShell` it does
+nothing. Surfaces call it, so surfaces get the wide column and built-in pages keep the narrow one.
+
 `<AccountMenu>` (`AccountMenuProps`: `name`, `email`, `compact`, `children`) is that area as one button,
 "Account": the person's initials, name and email, opening a menu above it (only the initials in the rail).
 Its items are `<AccountMenuLink to icon onNavigate>` (a page; pass the layout's `close`),

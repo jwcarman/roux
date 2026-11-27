@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { LuHouse, LuUsers } from "react-icons/lu";
 import { rulesFor } from "../testing/css";
 import { renderInRouter } from "../testing/router";
-import { AppShell, type AccountLayout } from "./AppShell";
+import { AppShell, useWidePage, type AccountLayout } from "./AppShell";
 import { defineNav } from "./nav";
 
 const nav = defineNav(["members.read"] as const, [
@@ -136,5 +137,60 @@ describe("AppShell", () => {
     const drawerAccount = rulesFor(within(drawer).getByRole("region", { name: "Account" }));
     expect(drawerAccount).toContain("align-items:stretch");
     expect(drawerAccount).not.toMatch(/min-width: 48rem\)[^}]*align-items:center/);
+  });
+
+  describe("the page's width", () => {
+    const widthOf = () => rulesFor(screen.getByRole("main"));
+
+    function Wide({ name }: Readonly<{ name: string }>) {
+      useWidePage();
+      return <p>{name}</p>;
+    }
+
+    function Toggle() {
+      const [first, setFirst] = useState(true);
+      const [second, setSecond] = useState(true);
+      return (
+        <>
+          <button onClick={() => setFirst(false)}>drop first</button>
+          <button onClick={() => setSecond(false)}>drop second</button>
+          {first && <Wide name="first" />}
+          {second && <Wide name="second" />}
+        </>
+      );
+    }
+
+    const shell = (children: React.ReactNode) =>
+      renderInRouter(
+        <AppShell nav={nav} permissions={[]} appName="Dojo">
+          {children}
+        </AppShell>,
+      );
+
+    it("is the narrow column by default", async () => {
+      shell(<p>plain</p>);
+      await screen.findByText("plain");
+      expect(widthOf()).toContain("max-width:var(--chakra-sizes-3xl)");
+    });
+
+    it("is the wide column while a page asks for it, and narrow again once it leaves", async () => {
+      shell(<Toggle />);
+      await screen.findByText("first");
+      expect(widthOf()).toContain("max-width:var(--chakra-sizes-6xl)");
+      expect(widthOf()).not.toContain("max-width:var(--chakra-sizes-3xl)");
+
+      await userEvent.click(screen.getByRole("button", { name: "drop first" }));
+      expect(widthOf()).toContain("max-width:var(--chakra-sizes-6xl)");
+
+      await userEvent.click(screen.getByRole("button", { name: "drop second" }));
+      expect(widthOf()).toContain("max-width:var(--chakra-sizes-3xl)");
+    });
+
+    it("does nothing outside an AppShell", async () => {
+      await act(async () => {
+        renderInRouter(<Wide name="alone" />);
+      });
+      expect(await screen.findByText("alone")).toBeInTheDocument();
+    });
   });
 });

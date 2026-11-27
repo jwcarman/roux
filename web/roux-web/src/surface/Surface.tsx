@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CATALOG_ID, type SurfaceJson } from "../a2ui";
 import { ApiError, getJson, isSessionLost, sendJson } from "../api/client";
 import { refusalToast } from "../api/serverAction";
+import { useWidePage } from "../navigation/AppShell";
 import { ErrorMessage } from "../feedback/ErrorMessage";
 import { notify } from "../feedback/notify";
 import { wiringOf, type Arg, type Binding, type EventWiring, type Port, type Wiring } from "./bind";
@@ -66,6 +67,7 @@ function Answer({ data, path, write }: Readonly<{ data: unknown; path: string; w
  * for each event. A skeleton shows until every query's first answer; a failed query shows an inline error with Retry.
  */
 export function Surface({ surface, binding }: Readonly<{ surface: SurfaceJson; binding: Binding }>) {
+  useWidePage();
   const wiring = wiringOf(binding);
   const client = useQueryClient();
   const live = useMemo(() => start(surface, wiring), [surface, wiring]);
