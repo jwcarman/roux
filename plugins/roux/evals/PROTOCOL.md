@@ -518,3 +518,14 @@ Three probe runs on Haiku (about 2¢ in all) in the real sandbox found:
 - **A database:** none can be had. The sandbox refuses loopback TCP (EPERM) and Unix sockets, even
   one in the run's own home. So the Go database tests cannot run in any arm. A variable written to
   the home's `.zshenv` does reach the agent's shell.
+
+### The third round (written before it runs)
+
+The same protocol, case, fixture (roux at `1c5c97d`, now with `script-shell=/bin/sh`), plugin
+(`7d51e9d`) and arms, with one change to the case: its prompt ends with a line about the machine,
+which both arms read: "About this machine: it has no Docker and no database, and no network, so
+tests that need a database can't run here. Everything else (building, linting and the other tests)
+runs." It is a fact about the eval's sandbox, not about roux: on a machine with Docker the database
+tests run. Before, the arm with the skill learned it from `check.sh` ("SKIPPED the Go tests") and the
+arm without spent turns finding it out; both rerun failures were database tests the run could not
+run. The scoring and the support criteria are unchanged. Compared with the rerun, not pooled with it.

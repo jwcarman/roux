@@ -16,3 +16,5 @@ Other code and tests rely on this contract, so keep to it exactly:
 - A name that is refused (blank, too long, or another location's) is a `400` whose problem details name the field `name`.
 - The page is at `/locations`, linked as "Locations" in the main navigation. Its table is named "Locations", with the columns Name and Kind; a kind shows as Main dojo, Satellite or Outdoor.
 - A "New location" button opens a dialog titled "New location", with the fields Name and Kind and a Save button. Each row has an "Edit" button that opens the same dialog, titled "Edit" and the location's name, to change it.
+
+About this machine: it has no Docker and no database, and no network, so tests that need a database can't run here. Everything else (building, linting and the other tests) runs.
