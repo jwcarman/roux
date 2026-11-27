@@ -1,13 +1,13 @@
 # Surfaces look nicer
 
-Status: design, awaiting approval. Follows `2026-11-26-surfaces-design.md`; branch `surfaces-look`, cut from
+Status: approved 2026-11-26. Follows `2026-11-26-surfaces-design.md`; branch `surfaces-look`, cut from
 `surfaces`.
 
 ## Intent
 
 Roux The Day's items list is now a surface, and it works, but it looks plainer than the hand-written page it
 replaced, than tasting's storyboards and than Google's A2UI playground. The user chose a look (mockup "B,
-themed", 2026-11-26): a wide page, stats in one row, filters in one row, an inline add row, raised cards on a
+themed", 2026-11-26): a wide page, stats in one row, filters as chips, an inline add row, raised cards on a
 tinted page, coloured stats and badges, "All day" for an item with no time, in a teal, rounded theme.
 
 The look is earned in roux, not in Roux The Day: every piece is a theme setting, a layout rule or a catalog
@@ -24,7 +24,7 @@ redrawn.
 
 - Mockup B's two extras: overdue dates in red (a cell coloured by its row) and initials beside names (a
   "people" format). Later, if wanted.
-- Mockup C's pieces: filter chips, a side panel, gradient tiles.
+- Mockup C's other pieces: a side panel, gradient tiles. (Filter chips were added to this round, item 8.)
 - Behaviour gaps (place kept in the URL, permission gating, debounced search, busy button, blocking client
   checks). A later round.
 - Dark mode polish beyond "nothing breaks": every change must read in both modes.
@@ -47,7 +47,8 @@ putting the real page beside it sees the same page.
 │ Items ◀ │ ┌ Open ──────┐ ┌ Overdue ───┐ ┌ Today ─────┐               ← one Row, raised cards
 │         │ │ 12         │ │ 1 (red)    │ │ 3 (accent) │
 │         │ └────────────┘ └────────────┘ └────────────┘
-│         │ ┌ Search……………… │ When ⌄ │ Status ⌄ │ Assigned to ⌄ ┐      ← one Card, fields in a Row
+│         │ ┌ Search………………………… │ Assigned to (Anyone)(Mine) ┐       ← one Card: a Row,
+│         │ │ When (All)(Overdue)(Today)(This week) │ Status (Any)(Open)(Done) │   then a Row of chips
 │         │ ┌ New item: What needs doing? │ Day: Today │ [Add item] ┐ ← one Card, fields + button in a Row
 │         │ ┌ Day ↑ │ Time    │ Title │ Assigned to │ Status ┐
 │         │ │ Wed…  │ All day │ …     │ Olive Owner │ (Open)  │       ← badges: Open info, Done success
@@ -89,10 +90,18 @@ and the theme's rounding.
    the owner did choose stays. How an app declares it (an app-module option beside the app name, most
    likely) is the builder's, as one documented way. Roux The Day defaults to Friendly.
 7. **Items redrawn.** `items.surface.json`: Heading plus a muted Text; a Row of three Stats in Cards (Open
-   plain, Overdue `danger`, Today `accent`); one Card with Search and the three SelectFields in a Row (search
-   wider, using `weight`); one Card with Title, Day and the Add button in a Row; the DataTable with Time
+   plain, Overdue `danger`, Today `accent`); one filter Card holding a Row of Search (wider, using `weight`)
+   and Assigned to, then a Row of When and Status (all three as FilterChips, item 8); one Card with Title, Day and the Add button in a Row; the DataTable with Time
    `emptyText: "All day"` and status tones Open `info`, Done `success`. The binding doesn't change unless a
    path does; the e2e tests keep passing (locators by role and label).
+
+8. **Filter chips: a catalog primitive.** roux-web's `FilterChips` (`table/FilterChips.tsx`, used by Roux The
+   Day's Users and Week pages) joins the typed catalog as `FilterChips`: `label`, `value` (bound to a path, like
+   SelectField's) and literal `options` ({value, label}); one chip chosen at a time, `aria-pressed`, the group
+   labelled. Choosing a chip writes its value to the path. It needs no Form (it is not a form field: no checks,
+   no server error). The generator types its `value` as SelectField's. Items' When, Status and Assigned to
+   become chips; their values don't change, so the binding doesn't either. The e2e tests click chips by name
+   instead of choosing options.
 
 Every new prop is in the typed catalog with a description an agent can draw from; tasting's prompts and
 validator pick them up from the catalog (check tasting still builds and its drawings still validate).
@@ -122,4 +131,5 @@ validator pick them up from the catalog (check tasting still builds and its draw
 
 ## Open (not this round)
 
-- Overdue dates in red (a cell tone from a row field), initials beside names, filter chips, side panels.
+- Overdue dates in red (a cell tone from a row field), initials beside names, side panels; chips bound to a
+  data-driven list of options.
