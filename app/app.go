@@ -80,8 +80,11 @@ type Kit struct {
 	// Host guards routes (Guard, Open) and serves sign-in's endpoints. Set by Assemble
 	// before any module is mounted.
 	Host *authn.Host
+	// DefaultTheme is the theme until the owner chooses one: Config.Look under AppName. Run sets
+	// it; empty, it is spa.Clean.
+	DefaultTheme spa.Theme
 	// ShellTheme is the theme the page carries: the owner's saved one once the theme module is
-	// mounted, else the stock one.
+	// mounted, else DefaultTheme.
 	ShellTheme func(ctx context.Context) (spa.Theme, error)
 	// Organization is what the page tells the browser about the organization (zone, locale,
 	// today, currency): pass it to spa.Config.Context. The users module sets it from ORG_*
@@ -223,14 +226,17 @@ func distinct(modules []Module) ([]Module, error) {
 	return mods, nil
 }
 
-// defaults fills what the page needs until a module sets it: UTC and en-US, and the stock theme.
+// defaults fills what the page needs until a module sets it: UTC and en-US, and the default theme.
 func (k *Kit) defaults() {
+	if k.DefaultTheme == (spa.Theme{}) {
+		k.DefaultTheme = spa.Clean.Theme(k.AppName)
+	}
 	if k.Organization == nil {
 		k.Organization = func() organization.Context { return organization.NewContext(time.Now(), time.UTC, "en-US") }
 	}
 	if k.ShellTheme == nil {
-		name := k.AppName
-		k.ShellTheme = func(context.Context) (spa.Theme, error) { return spa.StockTheme(name), nil }
+		def := k.DefaultTheme
+		k.ShellTheme = func(context.Context) (spa.Theme, error) { return def, nil }
 	}
 }
 

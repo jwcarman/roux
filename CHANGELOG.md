@@ -8,6 +8,11 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **An app names its default look: `app.Config.Look`.** `spa.Clean`, `spa.Friendly`, `spa.Bold`,
+  `spa.Calm` and `spa.Classic` (a `spa.Look`: palette, shape, depth, fonts; the same five as roux-web's
+  `LOOKS`, held in `contracts/looks.json`) or a `spa.Look` of your own; the zero value is `Clean`.
+  It is the theme until the owner chooses (`Kit.DefaultTheme`, the users module's defaults), part by
+  part. `Run` refuses an invalid `Look`. Roux The Day is `Friendly`.
 - **The theme has a depth: `flat` or `raised`.** `spa.Theme.Depth` (`depth` in the page's theme and
   in `/api/roux/theme`, required on a save; migration `002_depth.sql`) and roux-web's `Depth`.
   `raised` tints the page and stands the cards on it with a soft shadow; `flat` is as before

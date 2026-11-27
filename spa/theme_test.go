@@ -1,6 +1,8 @@
 package spa_test
 
 import (
+	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 
@@ -35,5 +37,46 @@ func TestViolationsListsDepth(t *testing.T) {
 	want := problem.Violation{Field: "depth", Message: problem.BadFormat}
 	if len(got) != 1 || got[0] != want {
 		t.Fatalf("%v", got)
+	}
+}
+
+// looks.json is roux's ready-made looks; roux-web's LOOKS is checked against the same file.
+func TestLooksMatchContract(t *testing.T) {
+	raw, err := os.ReadFile("../contracts/looks.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var want map[string]spa.Look
+	if err := json.Unmarshal(raw, &want); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]spa.Look{"Clean": spa.Clean, "Friendly": spa.Friendly, "Bold": spa.Bold, "Calm": spa.Calm, "Classic": spa.Classic}
+	if len(want) != len(got) {
+		t.Fatalf("looks.json has %d looks, spa has %d", len(want), len(got))
+	}
+	for name, look := range got {
+		if want[name] != look {
+			t.Errorf("%s: spa %+v, looks.json %+v", name, look, want[name])
+		}
+	}
+}
+
+func TestZeroLookIsClean(t *testing.T) {
+	if got, want := (spa.Look{}).Theme("App"), spa.Clean.Theme("App"); got != want {
+		t.Fatalf("%+v, want %+v", got, want)
+	}
+}
+
+func TestALookMakesATheme(t *testing.T) {
+	th := spa.Friendly.Theme("Acme")
+	want := spa.Theme{AppName: "Acme", Palette: "teal", BrandColor: "#3b82f6", Shape: "round", Depth: "raised", HeadingFont: "friendly", BodyFont: "friendly"}
+	if th != want {
+		t.Fatalf("%+v", th)
+	}
+	if err := th.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if spa.StockTheme("Acme") != spa.Clean.Theme("Acme") {
+		t.Fatal("the stock theme is Clean")
 	}
 }

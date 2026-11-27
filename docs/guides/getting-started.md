@@ -375,8 +375,11 @@ another source calls `app.Assemble` and `spa.Register` itself.
 **The theme** (`spa.Theme`: `appName`, `palette`, `brandColor`, `shape`, `depth`, `headingFont`,
 `bodyFont`) is read for every page, so a theme the owner has just saved is in the next page. The
 users module keeps the owner's theme in roux's table `roux_theme`; until the owner chooses, it is
-`spa.StockTheme(appName)` (palette `gray`, brand colour `#3b82f6`, shape `medium`, depth `flat`, fonts
-`standard`).
+the app's default look: `Config.Look` in `app.Config` (`spa.Clean`, `spa.Friendly`, `spa.Bold`,
+`spa.Calm` or `spa.Classic`, or a `spa.Look{Palette, Shape, Depth, HeadingFont, BodyFont}` of your own;
+the zero value is `Clean`: palette `gray`, brand colour `#3b82f6`, shape `medium`, depth `flat`, fonts
+`standard`), under the app's name. `Run` refuses an invalid `Look` at start-up. A part the owner has
+saved wins; the rest follows the look.
 
 ### The owner's theme
 

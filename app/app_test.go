@@ -15,6 +15,7 @@ import (
 	"github.com/jwcarman/roux/authn"
 	"github.com/jwcarman/roux/pgdb"
 	"github.com/jwcarman/roux/pgtest"
+	"github.com/jwcarman/roux/spa"
 )
 
 // probe is a module that records what Assemble does to it.
@@ -218,5 +219,23 @@ func TestTheLogSaysWhatIsOn(t *testing.T) {
 	_ = app.Assemble(context.Background(), kit(), &probe{name: "broken", log: &log, fail: "mount"})
 	if strings.Contains(buf.String(), "name=broken") {
 		t.Errorf("a module that failed is logged as enabled:\n%s", buf.String())
+	}
+}
+
+func TestTheDefaultThemeIsTheKitsLookAndCleanWithoutOne(t *testing.T) {
+	k := kit()
+	k.DefaultTheme = spa.Bold.Theme("Acme")
+	if err := app.Assemble(context.Background(), k); err != nil {
+		t.Fatal(err)
+	}
+	if th, err := k.ShellTheme(context.Background()); err != nil || th != spa.Bold.Theme("Acme") {
+		t.Fatalf("%+v %v", th, err)
+	}
+	plain := kit()
+	if err := app.Assemble(context.Background(), plain); err != nil {
+		t.Fatal(err)
+	}
+	if th, err := plain.ShellTheme(context.Background()); err != nil || th != spa.Clean.Theme("Acme") {
+		t.Fatalf("%+v %v", th, err)
 	}
 }

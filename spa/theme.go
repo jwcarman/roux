@@ -40,10 +40,36 @@ func set(v ...string) map[string]bool {
 	return m
 }
 
-// StockTheme is the default look under the given name.
-func StockTheme(appName string) Theme {
-	return Theme{AppName: appName, Palette: "gray", BrandColor: "#3b82f6", Shape: "medium", Depth: "flat", HeadingFont: "standard", BodyFont: "standard"}
+// Look is a ready-made look: the parts of a Theme that are about how the app looks, not what it is
+// called. contracts/looks.json holds the five below; roux-web's LOOKS offers the same ones on the
+// Appearance page. The zero Look is Clean.
+type Look struct {
+	Palette     string `json:"palette"`
+	Shape       string `json:"shape"`
+	Depth       string `json:"depth"`
+	HeadingFont string `json:"headingFont"`
+	BodyFont    string `json:"bodyFont"`
 }
+
+// The ready-made looks. Clean is roux's own.
+var (
+	Clean    = Look{Palette: "gray", Shape: "medium", Depth: "flat", HeadingFont: "standard", BodyFont: "standard"}
+	Friendly = Look{Palette: "teal", Shape: "round", Depth: "raised", HeadingFont: "friendly", BodyFont: "friendly"}
+	Bold     = Look{Palette: "purple", Shape: "square", Depth: "flat", HeadingFont: "modern", BodyFont: "modern"}
+	Calm     = Look{Palette: "blue", Shape: "slight", Depth: "raised", HeadingFont: "standard", BodyFont: "standard"}
+	Classic  = Look{Palette: "green", Shape: "slight", Depth: "flat", HeadingFont: "classic", BodyFont: "standard"}
+)
+
+// Theme is the look under the given app name. The zero Look is Clean.
+func (l Look) Theme(appName string) Theme {
+	if l == (Look{}) {
+		l = Clean
+	}
+	return Theme{AppName: appName, Palette: l.Palette, BrandColor: "#3b82f6", Shape: l.Shape, Depth: l.Depth, HeadingFont: l.HeadingFont, BodyFont: l.BodyFont}
+}
+
+// StockTheme is the default look under the given name: Clean.
+func StockTheme(appName string) Theme { return Clean.Theme(appName) }
 
 // Validate refuses a value the frontend has no look for, so a theme that would
 // render wrongly fails here instead of in the browser.

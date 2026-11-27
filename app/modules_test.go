@@ -15,6 +15,7 @@ import (
 	"github.com/jwcarman/roux/api"
 	"github.com/jwcarman/roux/app"
 	"github.com/jwcarman/roux/pgtest"
+	"github.com/jwcarman/roux/spa"
 )
 
 const secret = "0123456789abcdef0123456789abcdef"
@@ -481,4 +482,27 @@ func TestTheDevelopmentCodeSecretIsRefusedForADeployment(t *testing.T) {
 	t.Setenv("PUBLIC_URL", "https://team.example.com")
 	_, err := app.EmailLinkFromEnv("Acme", nil)
 	wantError(t, err, "development secret", "https://team.example.com", "openssl rand -base64 32")
+}
+
+func TestTheOwnersChoicesKeepWhileTheRestFollowTheLook(t *testing.T) {
+	t.Setenv("OWNER_EMAIL", "owner@example.test")
+	t.Setenv("OWNER_NAME", "Olive Owner")
+	e := emailLink(t)
+	k := kit()
+	k.DefaultTheme = spa.Friendly.Theme("Acme")
+	k.Pool = pgtest.Pool(t, "app_theme_look")
+	if err := app.Assemble(context.Background(), k, e, app.UsersFromEnv(e)); err != nil {
+		t.Fatal(err)
+	}
+	th, err := k.ShellTheme(context.Background())
+	if err != nil || th.Palette != "teal" || th.Shape != "round" || th.Depth != "raised" {
+		t.Fatalf("until the owner chooses, the look: %+v %v", th, err)
+	}
+	if _, err := k.Pool.Exec(context.Background(), `update roux_theme set shape = 'square'`); err != nil {
+		t.Fatal(err)
+	}
+	th, err = k.ShellTheme(context.Background())
+	if err != nil || th.Shape != "square" || th.Depth != "raised" || th.Palette != "teal" {
+		t.Fatalf("the owner's shape, the look's rest: %+v %v", th, err)
+	}
 }

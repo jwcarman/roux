@@ -25,6 +25,10 @@ title. It replaces `ChakraProvider`. Mount no other Chakra provider, and no Emot
 
 - A page with no theme, or one the server has not filled in (Vite's dev server), gets Chakra's
   stock look and the name `App`.
+- The server's theme is the app's default look until the owner saves one on the Appearance page. The
+  app names it once, in `app.Config{Look: spa.Friendly}` (`spa.Clean`, `spa.Friendly`, `spa.Bold`,
+  `spa.Calm`, `spa.Classic`, or a `spa.Look` of your own; the zero value is `Clean`). A part the owner
+  has saved wins; the rest follows the look.
 - A theme with a value the app has no look for (a palette the server knows and this version of
   roux-web does not) throws at startup, naming it: the server and the app disagree.
 - `useShellTheme()` answers a `ShellThemeState`, `{ saved, shown, preview, commit }` (themes are `ShellTheme` values whose parts are the `Palette`, `Shape`, `Depth` and `Font` unions): the app's header shows

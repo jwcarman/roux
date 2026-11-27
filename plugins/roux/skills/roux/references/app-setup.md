@@ -128,7 +128,8 @@ createRoot(document.getElementById("root")!).render(
   `spa.Register` itself.
 - Theme: `spa.Theme` (`appName`, `palette`, `brandColor`, `shape`, `depth`, `headingFont`, `bodyFont`), kept
   by the users module in `roux_theme` (`GET`/`PUT /api/roux/theme`, `theme.manage`); until the owner
-  saves one, `spa.StockTheme(appName)`.
+  saves one, `Config.Look` (`spa.Clean` by default; or `spa.Friendly`, `spa.Bold`, `spa.Calm`,
+  `spa.Classic`, or your own `spa.Look`) under the app's name.
 - Browser (`/theme`): `ThemeProvider` (replaces `ChakraProvider`), `useShellTheme()` →
   `ShellThemeState` (`shown.appName`), `createThemeSystem`, `cspNonce()`, `AppearanceSettings` (the
   whole Appearance page, guarded by `theme.manage`); types `Palette`, `Shape`, `Depth`, `Font`.

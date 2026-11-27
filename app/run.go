@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -35,6 +36,10 @@ type Config struct {
 	// Frontend is the front end built into the binary, if it was (the frontend package's Dist).
 	// Nil, or false, serves FRONTEND_DIR or else a stand-in page.
 	Frontend func() (fs.FS, bool)
+	// Look is the application's default look, until the owner chooses one on the Appearance page:
+	// spa.Clean, spa.Friendly, spa.Bold, spa.Calm or spa.Classic, or a spa.Look of your own. The
+	// zero value is Clean; an invalid one stops Run at start-up.
+	Look spa.Look
 	// Modules lists what the application is made of, given the kit (whose Pool is nil without a
 	// database).
 	Modules func(k *Kit) ([]Module, error)
@@ -58,6 +63,10 @@ func Main(cfg Config) {
 // readiness, waits SHUTDOWN_DELAY so load balancers notice, stops taking requests, and lets the
 // modules finish their work in flight.
 func Run(ctx context.Context, cfg Config) error {
+	appName := Getenv("APP_NAME", cfg.DisplayName)
+	if err := cfg.Look.Theme(appName).Validate(); err != nil {
+		return fmt.Errorf("app: Config.Look: %w; use spa.Clean, spa.Friendly, spa.Bold, spa.Calm or spa.Classic, or a Look made of values the frontend knows", err)
+	}
 	slog.SetDefault(slog.New(telemetry.NewLogHandler(stdoutHandler()))) // until telemetry is set up
 	shutdownTelemetry, err := telemetry.Setup(ctx, telemetry.Config{ServiceName: cfg.Name})
 	if err != nil {
@@ -87,6 +96,7 @@ func Run(ctx context.Context, cfg Config) error {
 		return err
 	}
 	kit := &Kit{Mux: mux, Pool: pool, AppName: Getenv("APP_NAME", cfg.DisplayName), SecureCookies: secure}
+	kit.DefaultTheme = cfg.Look.Theme(kit.AppName)
 	mods, err := cfg.Modules(kit)
 	if err != nil {
 		return err

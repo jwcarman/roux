@@ -29,7 +29,6 @@ import (
 	"github.com/jwcarman/roux/money"
 	"github.com/jwcarman/roux/organization"
 	"github.com/jwcarman/roux/pgdb"
-	"github.com/jwcarman/roux/spa"
 	"github.com/jwcarman/roux/theme"
 	"github.com/jwcarman/roux/users"
 )
@@ -480,7 +479,7 @@ func (u *Users) Mount(_ context.Context, k *Kit) error {
 		}
 		calendar = calendar.WithWeekStart(day)
 	}
-	themes := theme.Service{Pool: k.Pool, Defaults: spa.StockTheme(k.AppName)}
+	themes := theme.Service{Pool: k.Pool, Defaults: k.DefaultTheme}
 	u.svc = users.Service{Pool: k.Pool, Host: k.Host, Email: u.email.Method, Invitable: invitable}
 
 	authz.RegisterInvitable(k.Mux, k.Host, invitable)

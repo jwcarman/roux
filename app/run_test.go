@@ -16,6 +16,7 @@ import (
 	"github.com/jwcarman/roux/api"
 	"github.com/jwcarman/roux/app"
 	"github.com/jwcarman/roux/pgtest"
+	"github.com/jwcarman/roux/spa"
 )
 
 // freeAddr is a loopback address nothing listens on.
@@ -195,5 +196,36 @@ func TestRunRefusesSettingsItCannotUse(t *testing.T) {
 	t.Setenv("TRACE_TRUST_INBOUND", "1")
 	if err := app.Run(context.Background(), cfg); err == nil || !strings.Contains(err.Error(), "TRACE_TRUST_INBOUND must be true or false") {
 		t.Fatalf("a TRACE_TRUST_INBOUND of 1: %v", err)
+	}
+}
+
+func TestDefaultThemeIsConfigLook(t *testing.T) {
+	t.Setenv("DATABASE_URL", "")
+	t.Setenv("FRONTEND_DIR", "")
+	addr := freeAddr(t)
+	t.Setenv("ADDR", addr)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- app.Run(ctx, app.Config{Name: "acme", DisplayName: "Acme", Look: spa.Friendly, Modules: noModules})
+	}()
+	_, body := get(t, addr, "/")
+	for _, part := range []string{`"palette":"teal"`, `"shape":"round"`, `"depth":"raised"`, `"appName":"Acme"`} {
+		if !strings.Contains(body, part) {
+			t.Errorf("the page lacks %s: %.600s", part, body)
+		}
+	}
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRunRefusesInvalidLook(t *testing.T) {
+	t.Setenv("ADDR", freeAddr(t))
+	t.Setenv("DATABASE_URL", "")
+	err := app.Run(context.Background(), app.Config{Name: "acme", DisplayName: "Acme", Look: spa.Look{Palette: "mauve"}, Modules: noModules})
+	if err == nil || !strings.Contains(err.Error(), "Config.Look") || !strings.Contains(err.Error(), "palette") {
+		t.Fatalf("an invalid look: %v", err)
 	}
 }
