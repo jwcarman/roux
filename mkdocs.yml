@@ -82,7 +82,7 @@ plugins:
         Start here:
           - index.md: what roux is and how an app is put together
           - guides/getting-started.md: making an app, app.Main and its modules, every environment variable, the web side, the shell
-          - guides/features.md: a feature end to end: its migrations, the module, the domain service, its queries and commands, its surface, the tests
+          - guides/features.md: a feature end to end (its migrations, the module, the domain service, its queries and commands, its surface, the tests)
           - guides/cqrs.md: a feature's queries and commands (cqrs), the app's ports; args, events, the contract, idempotency
           - guides/surfaces.md: an app's feature screens as A2UI surfaces; generated types, bind, Surface, the runtime, known limits
           - guides/adding-a-primitive.md: what to do when a screen needs something roux's catalog can't draw
