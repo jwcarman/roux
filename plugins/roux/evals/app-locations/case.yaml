@@ -6,8 +6,8 @@ expected_outcome: |
   unique; a duplicate is refused by the server as an error on the name field and shown under it in
   the dialog. Anyone but the owner is refused (403) by the locations API.
   Scored by script after the run, not by the graders here: eval-acceptance.sh runs the case's
-  hidden acceptance tests (acceptance/: Spring tests of the API contract the prompt pins, and
-  Playwright in the browser), and check-roux-way.sh runs the app's own build and roux's way. The one
-  grader here says whether the skill fired.
+  hidden acceptance tests (acceptance/e2e: Playwright against the running app, the API contract the
+  prompt pins over HTTP and the page in the browser), and check-roux-way.sh runs the app's own gates
+  and roux's way. The one grader here says whether the skill fired.
 context:
   scaffold_script: place-app.sh

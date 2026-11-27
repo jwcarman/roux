@@ -2,11 +2,12 @@
 # Runs eval cases with and without roux's plugin, then scores every run's work by script, on a copy
 # of its work tree carrying the fixture's untouched .git:
 #   <tag>.accept.txt  eval-acceptance.sh: the case's hidden acceptance tests (when it has acceptance/)
-#   <tag>.check.txt   check-roux-way.sh: the app's own full build, and roux's way
+#   <tag>.check.txt   check-roux-way.sh: the app's own gates, and roux's way
 #   <tag>.diff        what the run changed (git diff against the fixture, new files included)
 #   <tag>.trace.jsonl the run's transcript
-# The fixtures come from evals/fixture.local (the dojo) and evals/fixture-app.local (a new app),
-# written by eval-fixture.sh; an app-* case runs on the new app.
+# The fixture is evals/fixture-app.local's (eval-fixture.sh). The plugin is loaded from a git
+# worktree at the fixture's commit, so the skill the agent reads describes the roux its app is
+# built on; this checkout's evals/ is copied into it (the cases and their tests are today's).
 #
 # Usage: run-evals.sh [--runs N] [--model M] [--ablation with-without|none] <out dir> <case>...
 #        (defaults: 3 runs, sonnet, with-without; none runs only the arm with the plugin)
@@ -28,16 +29,25 @@ if [ "$#" -lt 2 ]; then
 fi
 OUT="$1"; shift
 PLUGIN="$(cd "$(dirname "$0")/.." && pwd -P)"
-DOJO="$(head -n 1 "$PLUGIN/evals/fixture.local")"
-APP="$(head -n 1 "$PLUGIN/evals/fixture-app.local")"
+ROOT="$(cd "$PLUGIN/../.." && pwd -P)"
+FIXTURE="$(head -n 1 "$PLUGIN/evals/fixture-app.local")"
+COMMIT="$(cat "$FIXTURE/commit")"
 mkdir -p "$OUT"
+OUT="$(cd "$OUT" && pwd -P)"
+
+worktree="$(mktemp -d)/roux"
+git -C "$ROOT" worktree add -q --detach "$worktree" "$COMMIT" || exit 1
+trap 'git -C "$ROOT" worktree remove --force "$worktree"' EXIT
+rm -rf "$worktree/plugins/roux/evals"
+rsync -a --exclude /results "$PLUGIN/evals/" "$worktree/plugins/roux/evals/"
+echo "plugin at ${COMMIT:0:7} ($worktree), fixture $FIXTURE" | tee "$OUT/setup.txt"
+
 for case in "$@"; do
-  fixture="$DOJO"; [[ "$case" == app-* ]] && fixture="$APP"
   echo "== $case $(date +%T)"
-  (cd "$PLUGIN" && claude plugin eval . --scaffold --trust-plugin --ablation "$ablation" --runs "$runs" \
-    --model "$model" --concurrency 3 --case "$case" --allow-tools Bash Write Edit --no-publish \
-    --max-cost-usd 25 --keep-temp --json "$OUT/$case.json" --output-dir "$OUT/$case-out" \
-    >"$OUT/$case.log" 2>&1)
+  (cd "$worktree/plugins/roux" && ROUX_EVAL_APP_FIXTURE="$FIXTURE" claude plugin eval . --scaffold --trust-plugin \
+    --ablation "$ablation" --runs "$runs" --model "$model" --concurrency 3 --case "$case" \
+    --allow-tools Bash Write Edit --no-publish --max-cost-usd 25 --keep-temp \
+    --json "$OUT/$case.json" --output-dir "$OUT/$case-out" >"$OUT/$case.log" 2>&1)
   echo "eval exit $?"
   python3 -c '
 import json,sys
@@ -49,10 +59,11 @@ for c in r["cases"]:
 ' "$OUT/$case.json" | while read -r arm n kept; do
     tag="$case-$arm-$n"
     chmod 700 "$kept" "$kept/sealed" 2>/dev/null
+    chmod -R u+w "$kept/sealed" 2>/dev/null
     cp "$kept/out/trace.jsonl" "$OUT/$tag.trace.jsonl" 2>/dev/null
     work="$(mktemp -d)/work"
     rsync -a --exclude /.git "$kept/sealed/home/cwd/" "$work/"
-    cp -R "$fixture/.git" "$work/.git"
+    cp -R "$FIXTURE/app/.git" "$work/.git"
     (cd "$work" && git add -A -N . && git diff -- . ':!frontend/src/routeTree.gen.ts' ':!frontend/package-lock.json') >"$OUT/$tag.diff" 2>/dev/null
     git -C "$work" reset -q
     accepted=""

@@ -9,13 +9,17 @@
 # commit, and every line of a file that is new, so the copied shell never fails a check. On an
 # untouched fixture every check passes.
 #
-#   build                 ./mvnw -B verify -DskipITs succeeds
+#   build                 the app's gates succeed, nothing applied first: make check (gofmt, vet,
+#                         golangci-lint, the Go tests, on eval-services.sh's Postgres), then the
+#                         frontend's format:check, lint, coverage and build
 #   no-fetch              no fetch( (fetch (, window.fetch(, globalThis["fetch"]) in frontend/src
 #                         outside tests: calls go through roux's client. It does not catch another
 #                         HTTP client (axios, ky, XMLHttpRequest) or fetch passed around by another name
 #   no-roux-internals     roux-web is imported only by its subpath exports, never dist/ or src/
 #   no-retyped-messages   none of roux's rule messages typed out as string literals in frontend/src
-#   no-exception-handler  no @ExceptionHandler or ResponseStatusException in src/main/java
+#   no-error-response     no added Go line outside tests writes an error response itself
+#                         (http.Error(, WriteHeader( with a 4xx or 5xx): a refusal is a *problem.Problem
+#                         returned as the error, and roux writes it
 #   schema-form           no added line makes a form another way: useAppForm(, useForm(, a <form>
 #                         element or onSubmit=, whatever else the file holds (a form is useSchemaForm's)
 #
@@ -89,11 +93,28 @@ frontend_src='^frontend/src/.*\.(ts|tsx|js|jsx)$'
 # build
 tmp="${TMPDIR:-/tmp}"
 log="$(mktemp "${tmp%/}/check-roux-way-build.XXXXXX")"
-if (cd "$dir" && ./mvnw -B verify -DskipITs) >"$log" 2>&1; then
+# shellcheck source=eval-services.sh
+. "$(dirname "$0")/eval-services.sh"
+failed_step=""
+if ! eval_services >>"$log" 2>&1; then
+  failed_step="the scoring's Postgres did not start"
+else
+  test_db="$(eval_database app_check 2>>"$log")"
+  for gate in "make check" "npm run format:check" "npm run lint" "npm run coverage" "npm run build"; do
+    where="$dir"
+    [[ "$gate" == npm* ]] && where="$dir/frontend"
+    echo "== $gate" >>"$log"
+    if ! (cd "$where" && TEST_DATABASE_URL="$test_db" $gate) >>"$log" 2>&1; then
+      failed_step="$gate"
+      break
+    fi
+  done
+fi
+if [ -z "$failed_step" ]; then
   rm -f "$log"
   report build ""
 else
-  report build "log: $log"
+  report build "$failed_step failed; log: $log"
 fi
 
 # no-fetch: fetch( on its own, as a member (window.fetch) or by index (globalThis["fetch"]), with or
@@ -118,9 +139,9 @@ report no-roux-internals "${internals%$'\n'}"
 messages='Must not be blank|Must not be empty|Is not in the expected format|Must be a valid email address|Must be a valid web address|Must be a whole number|Must be between 0 and|Must be at least|Must be at most'
 report no-retyped-messages "$(grep_added "$(files_matching "$frontend_src")" "[\"'\`]($messages)")"
 
-# no-exception-handler
-report no-exception-handler \
-  "$(grep_added "$(files_matching '^src/main/java/.*\.java$')" '@([A-Za-z0-9_]+\.)*ExceptionHandler([^A-Za-z0-9_]|$)|ResponseStatusException')"
+# no-error-response
+report no-error-response "$(grep_added "$(files_matching '\.go$' | grep -v '_test\.go$')" \
+  'http\.Error\(|WriteHeader\((http\.Status(BadRequest|Unauthorized|Forbidden|NotFound|Conflict|UnprocessableEntity|InternalServerError)|[45][0-9][0-9])')"
 
 # schema-form: an added line in a component that makes a form any way but useSchemaForm.
 report schema-form "$(grep_added "$(files_matching '^frontend/src/.*\.tsx$')" \

@@ -382,3 +382,54 @@ The two failures:
 
 None of round 1's recipe-caused failures (changeset placement, stale-version test, double sign-in,
 the untested own-name branch) recurred.
+
+## Go: the first runs on roux's Go runtime (written before it runs)
+
+Everything above ran on the Java runtime (Spring, Maven), before 0.4.0. This section starts the Go
+series; the results above are history, not a baseline: the runtime, the template, the skill and the
+scoring all changed.
+
+**Questions:** the same two as at the top. (1) Efficiency: does the skill let Sonnet reach a working
+result in fewer turns, less time and less money? (2) A cheaper model: does Haiku with the skill
+succeed about as often as Sonnet without it?
+
+- **Case:** `app-locations`, the prompt unchanged (the contract it pins is the runtime's, not
+  Java's).
+- **Fixture:** a new app from roux's template (`eval-fixture.sh <commit>`), roux at the commit the
+  run starts from, which must be pushed (the Go module proxy serves it). The plugin is loaded from a
+  worktree at that same commit (`run-evals.sh`), so the skill describes the roux the app is built
+  on. The commit is recorded in the result.
+- **Arms:** Sonnet with the skill, Sonnet without, Haiku with the skill, Haiku without
+  (`run-evals.sh --ablation with-without --model <sonnet|haiku>`), 3 runs each, 12 in all. Every run
+  is reported; none is rerun or dropped; an error or timeout is a failure, with whatever turns, time
+  and cost it used.
+- **What a run can do:** Go and Node run in the sandbox from the fixture's home (`eval-fixture.sh`
+  says how): gofmt, vet, golangci-lint, the Go build and every test that needs no database, and the
+  frontend's gates. Not the database tests: no Docker, and the sandbox refuses a local Postgres. The
+  same in every arm. `eval-preflight.sh` proves all of it on the fixture before any run.
+
+**Scoring** (by script, no LLM judge). A run **succeeds** when both gates pass on its work:
+
+1. **Acceptance:** all 10 hidden tests in `app-locations/acceptance/e2e` pass
+   (`eval-acceptance.sh`): Playwright against the running app, 8 of the API contract over HTTP and 2
+   of the page in the browser. Black box, so they hold whatever the run named its Go code. Proven
+   before any run: the untouched fixture fails all 10 (404s and no Locations link), and a reference
+   solution written by hand from the skill's recipe passes all 10.
+2. **Build:** the app's own gates pass with nothing applied after the run (`check-roux-way.sh`'s
+   `build`): `make check` (gofmt, vet, golangci-lint, the Go tests on the scorer's Postgres), then
+   the frontend's `format:check`, `lint`, `coverage` (100%) and `build`.
+
+Reported per arm: successes out of 3; each gate's pass count; mean and range of turns, time and
+cost; whether the skill fired; check-roux-way's other checks, for information only.
+
+**What would support each claim** (3 runs per arm: a signal, not proof):
+
+- **Efficiency:** Sonnet with the skill succeeds at least as often as Sonnet without, at a lower mean
+  cost and time.
+- **A cheaper model:** Haiku with the skill succeeds at least as often as Sonnet without, at a lower
+  mean cost; and more often than Haiku without.
+
+Anything else is reported as not supported.
+
+**Caveat:** as before, the skill's author wrote the case, the hidden tests and the reference
+solution.
