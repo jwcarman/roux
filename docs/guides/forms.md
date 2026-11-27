@@ -1,19 +1,19 @@
 # Forms
 
-!!! note "Forms on surfaces"
-    An app's forms are drawn on its surfaces: `Form`, `InputField` and `SelectField` bound to a draft,
-    a button whose event runs a command, and the command's `Validate` as the gate
-    ([Surfaces](surfaces.md)). This guide is the React form layer those catalog components and roux's
-    built-in pages (sign-in, users, appearance) are built on; it matters when
-    [adding a primitive](adding-a-primitive.md). Its rule helpers' words are the same the server's
-    `Validate` answers.
+**An app's forms are drawn on its surfaces**, not written in React: a `Form` holding `InputField`s
+and `SelectField`s bound to a draft, a button whose event runs a command, the command's `Validate`
+as the gate and each field's `@checks` repeating its rules in roux's words
+([Surfaces](surfaces.md)). A feature writes no form code.
 
-`@jwcarman/roux-web/form` is TanStack Form with Chakra fields, validated by Zod. A create or edit form
-is four pieces, each written once:
+This guide is the React form layer underneath: `@jwcarman/roux-web/form`, TanStack Form with Chakra
+fields, validated by Zod. The catalog's `Form`, `InputField` and `SelectField` are built on it, and
+so are roux's built-in pages (sign-in, users, appearance). It is what a person reads when
+[adding a primitive](adding-a-primitive.md) that is a field, or changing one of roux's own pages.
 
-1. A Zod schema built from roux's rule helpers, in the resource module. Its messages are the server's,
-   word for word.
-2. The mutation that saves it (`mutationOptions` with `meta.refreshes`), in the same module; see
+A form in this layer is four pieces, each written once:
+
+1. A Zod schema built from roux's rule helpers. Its messages are the server's, word for word.
+2. The mutation that saves it (`mutationOptions` with `meta.refreshes`); see
    [Queries and mutations](queries-and-mutations.md).
 3. `useSchemaForm({ schema, defaultValues, mutation })`, which validates, submits the schema's parsed
    output through the mutation, puts a 400's field errors under their fields, toasts any other refusal
@@ -24,42 +24,18 @@ The form never calls the API, catches an error, or keeps its own submitting stat
 
 ## Write the schema
 
-The schema mirrors the rules of the server's input. For a label, the server's `validate`
-([A feature's server side](features.md#the-input)) refuses a blank name, a name over 40
-characters and a colour outside its list, and an edit without a `version`:
-
-```go
-in.Name = strings.TrimSpace(deref(b.Name))
-switch n := utf8.RuneCountInString(in.Name); {
-case n == 0:
-	bad("name", problem.MustNotBeBlank)
-case n > MaxName:
-	bad("name", problem.MustBeBetween(1, MaxName))
-}
-in.Colour = deref(b.Colour)
-if !slices.Contains(Colours, in.Colour) {
-	bad("colour", problem.MustBeOneOf(Colours...))
-}
-if edit && b.Version == nil {
-	bad("version", problem.MustNotBeEmpty)
-}
-```
-
-A create sends no `version`; the update checks the one it is sent before changing anything (a
-stale one is the `409`). See [Errors](errors.md#refuse-a-stale-save).
-
-The browser's schema, in `src/labels/labels.ts`, leaves `version` out: it is not a field the user edits.
-`updateLabel(id, version)` adds it to the request (`{ ...request, version }`), and `createLabel` sends
-none:
+The schema mirrors the rules the server checks. For a server that refuses a blank name, a name over
+40 characters and a colour outside its list (as `AddLabel`'s `Validate` does in
+[A feature](features.md#the-queries-and-commands)), the schema is:
 
 ```ts
 import { oneOf, text } from "@jwcarman/roux-web/form";
 import { z } from "zod";
 
 /** The colours a label can have: the server's Colours (Chakra UI's palette names). */
-export const LABEL_COLOURS = ["gray", "red", "orange", "yellow", "green", "teal", "blue", "purple", "pink"] as const;
+export const LABEL_COLOURS = ["gray", "red", "yellow", "green", "blue"] as const;
 
-/** The label input's rules (without the version), in the server's words. */
+/** The label input's rules, in the server's words. */
 export const labelRequestSchema = z.object({
   name: text().max(40),
   colour: oneOf(LABEL_COLOURS),
@@ -69,8 +45,8 @@ export const labelRequestSchema = z.object({
 export type LabelRequest = z.output<typeof labelRequestSchema>;
 ```
 
-The whole resource module (API functions, queries, `createLabel`, `updateLabel`) is in
-[Queries and mutations](queries-and-mutations.md#write-a-resource-module).
+An edit's `version` is not a field the user edits: the mutation adds it to the request, and the server
+compares it before changing anything (a stale one is the `409`, [Errors](errors.md#refuse-a-stale-save)).
 
 ### The rule helpers
 

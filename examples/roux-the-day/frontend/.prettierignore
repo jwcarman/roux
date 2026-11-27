@@ -7,3 +7,4 @@ lint-tools/node_modules
 src/routeTree.gen.ts
 src/permissions.gen.ts
 src/contract.gen.ts
+src/**/*.surface.gen.ts

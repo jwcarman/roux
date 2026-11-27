@@ -42,7 +42,7 @@ Either way, features use roux by importing from it; no plumbing is written in th
 4. **Add a first page.** Ask your agent for it: roux's Claude Code plugin (the `roux` skill) says
    where each piece goes, and the app's `.claude/settings.json` names it, so Claude Code offers to
    install it when you trust the folder: accept. By hand, a feature is a Go package in
-   `internal/<feature>/` listed in `cmd/server/modules.go` ([A feature's server side](features.md)),
+   `internal/<feature>/` listed in `cmd/server/modules.go` ([A feature](features.md)),
    and a page is a feature folder in `frontend/src/<feature>/`, a route file in
    `frontend/src/routes/_signedIn/`, and an entry in `frontend/src/shell/nav.ts`
    ([The shell](shell.md)).
@@ -152,7 +152,7 @@ in `app`:
 - `app.Starter`: `Start(ctx, k) error`, run after every module has mounted (checking a list's SQL);
 - `app.Drainer`: `Drain()`, work in flight (an email) to finish before the process exits.
 
-[A feature's server side](features.md) builds one. A module's own setting is read with
+[A feature](features.md) builds one. A module's own setting is read with
 `app.Getenv(key, fallback)`, `os.Getenv` with a default.
 
 `app.Main` opens the database with `pgdb.Connect`. `app.Assemble` runs every module's migrations together (ordered by each migration's `After` and
@@ -190,7 +190,7 @@ has a unit (`30s`).
 | `OTEL_EXPORTER_OTLP_ENDPOINT` and the other `OTEL_*` | Where traces, metrics and logs go (`compose.yaml`'s `otel` profile runs a collector and Grafana). |
 
 roux's tables and the app's are made by the migrations the modules declare (see
-[A feature's server side](features.md#the-table)). There is nothing to run by hand: every start
+[A feature](features.md#the-table)). There is nothing to run by hand: every start
 applies the migrations it has not applied, each in its own transaction, and a migration that has
 run is never edited.
 
@@ -401,7 +401,7 @@ for the package or tree-shake it away.
 
 ## Next
 
-- [A feature's server side](features.md): a feature's table, list, service, handlers and module.
+- [A feature](features.md): a feature's table, service, queries and commands, and its screen as a surface.
 - [Errors](errors.md): refusing a request on the server and showing why in the browser.
 - [API client](api-client.md): one API module per resource.
 - [Queries and mutations](queries-and-mutations.md), [Forms](forms.md),

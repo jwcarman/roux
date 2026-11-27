@@ -13,9 +13,40 @@ All notable changes to this project are documented in this file. The format foll
   and nothing else (not roux's `user.*`, not `allowances.*`). `Kinds()` with none, or a kind that
   could not be a type, is an error. A feed without it shows every kind, as before. Found by an
   agent keeping its own SQL for a family's allowance feed.
+- **Typed queries and commands: package `cqrs`.** A feature's reads and changes are its ports:
+  `cqrs.Query[A, R]` (a paged list, `GET /api/queries/{name}`, answering `page.Page[R]`),
+  `cqrs.Lookup[A, R]` (one value) and `cqrs.Command[I, O]` (a change, `POST /api/commands/{name}`,
+  answering `{result, events}`), served by `cqrs.Mount`, each its own kit route behind its
+  permission. A query's args are `query`-tagged fields with an optional `oneof`; an unknown
+  parameter or value is a `400` on it. A command's input `Validate`s itself and its `Run` gets the
+  `pgx.Tx`. An `Idempotency-Key` header makes a command safe to repeat: the answer is stored in the
+  command log (`cqrs.Module{}`) in the command's own transaction, and a repeat replays it with
+  `Idempotent-Replayed: true`. `cqrs.TypeScript(endpoints)` writes the front end's
+  `contract.gen.ts` (an interface per type, `Queries`, `Commands`, each one's events); a type it
+  can't describe, two types of one name, or two endpoints of one name panic, naming them.
+- **Surfaces: an app's feature screens as A2UI JSON.** roux's typed A2UI catalog
+  (`@jwcarman/roux-web/a2ui`: `component(...)`, `PRIMITIVES`, `rouxCatalog`, `toA2ui`) and its
+  Chakra implementation (`surfaceComponents`, `@jwcarman/roux-web/surface`). `surfaceTypes` and the
+  `roux-surface-types` bin generate `<id>.surface.gen.ts` from a surface's JSON (the data at each
+  path, what each event carries; `--check` for CI). `surfaces<Queries, Commands>(contract)` gives
+  `bind`, which binds each path to a query or a local value and each event to a command, checked by
+  the compiler against the generated types and the contract; `<Surface>` renders it on TanStack
+  Query, refetching the queries a command's events affect, with an `Idempotency-Key` per attempt,
+  field problems under their fields, a skeleton until every query has answered once and an inline
+  error with Retry. `DataTable` pages, sorts (`sort`, writing `sortBy`/`sortDirection`), links a
+  column to a route (`link`), and formats `time` and `list` cells. Needs `@a2ui/react`,
+  `@a2ui/web_core` and `zod3` (optional peers).
+- **Roux The Day's items list is a surface**: `items.surface.json` bound to the `items` and
+  `itemCounts` queries and the `addItem` command, replacing the hand-written page and dialog.
 
 ### Documentation
 
+- **Surfaces are how a feature's screens are built.** New guides: Queries and commands (the app's
+  ports, idempotency, the contract), Surfaces (setup, drawing, generated types, the binding, the
+  runtime, known limits) and Adding a primitive. "A feature" now builds a whole feature as a
+  migration, a domain service, queries and commands, a surface and its binding; Forms and Tables and
+  paging describe the React layer under the catalog. The skill's recipe does the same, proven by
+  `check-recipe.sh`, and its check script regenerates `contract.gen.ts` and the surfaces' types.
 - **Upgrading**: a guide and a skill card for moving an app to a new roux release, one release at
   a time. Each release lists both halves: roux's packages, and the template files that became the
   app's own and never change on their own. 0.4.0 to 0.5.0 is the first.

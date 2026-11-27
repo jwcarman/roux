@@ -99,8 +99,9 @@ the right field.
   modules.
 - **`cmd/server/modules.go`** lists the modules: roux's (sign-in, users, passkeys...) and the
   app's own. Turning a feature on is a line.
-- **`internal/<feature>/`** is one feature's server side: its SQL migrations, a service over pgx,
-  and handlers mounted behind permissions ([A feature's server side](guides/features.md)).
-- **`frontend/src/<feature>/`** is its pages, built on `@jwcarman/roux-web`.
+- **`internal/<feature>/`** is one feature's server side: its SQL migrations, a domain service over
+  pgx, and its typed queries and commands, each behind a permission ([A feature](guides/features.md)).
+- **`frontend/src/<feature>/`** is its screens: surfaces drawn from roux's catalog and bound to those
+  queries and commands ([Surfaces](guides/surfaces.md)).
 
 Start with [Getting started](guides/getting-started.md).

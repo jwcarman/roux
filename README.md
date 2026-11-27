@@ -86,7 +86,7 @@ Apps, never published as they are:
 
 Every roux app is a Go server with a React SPA on one origin, and PostgreSQL. The guides, published
 at <https://jwcarman.github.io/roux/> and kept in [`docs/guides/`](docs/guides/README.md), say how
-to build one, one concern each: getting started, a feature's server side, errors, roles and
+to build one, one concern each: getting started, a feature, queries and commands, surfaces, errors, roles and
 permissions, users, the API client, queries and mutations, forms, tables and paging, money, dates
 and time, the activity log, feedback, the shell, email and testing.
 

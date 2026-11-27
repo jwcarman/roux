@@ -101,7 +101,7 @@ ends `check: ok`.
 
 It names each step it skipped. When it skipped the Go tests, tell the user, and read your Go tests
 against `feature.md` step 5: role names exist, `a.Role` comes before `a.Migrate`, and every request
-body satisfies `validate` except in the test of that rule.
+body satisfies the input's `Validate` except in the test of that rule.
 
 Then check the change against the **Pitfalls** of each reference you used. A test that fails is a
 finding to fix, not to delete. If no reference covers what the task needs, say so to the user

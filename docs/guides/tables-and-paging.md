@@ -1,23 +1,19 @@
 # Tables and paging
 
-!!! note "Lists on surfaces"
-    An app's lists are `cqrs` queries over a `page.New` paginator ([Queries and commands](cqrs.md)),
-    drawn as a `DataTable` on a surface ([Surfaces](surfaces.md)). The server side below (`page.New`,
-    its views, sorts and search) is how every list is paged; the browser side (`QueryTable` and the
-    rest) is the React layer the catalog's `DataTable` and roux's built-in pages are built on.
+A roux list is paged by the server. **An app's list is a `cqrs.Query`** over a `page.New` paginator
+([Queries and commands](cqrs.md)), **drawn as a `DataTable` on a surface** ([Surfaces](surfaces.md)):
+the table writes the page, the sort and the filters to paths its binding reads, and the query
+answers one page of rows and where it sits in the whole. A feature writes no table code.
 
-A roux list is paged by the server. The endpoint takes the page parameters (`pageIndex`,
-`pageSize`, `sortBy`, `sortDirection`) plus its own filters, and answers a `PageDto`: one page of rows
-and where it sits in the whole. In the browser, `@jwcarman/roux-web/table` draws a paged, sortable
-table over such an endpoint (`QueryTable`), with search inputs and filter chips beside it, and
-`@jwcarman/roux-web/paging` holds the page types, a list that grows a page at a time
-(`InfiniteList`), a picker over a long list (`InfiniteSelect`), and the helpers that keep a table's
-state in the URL. Queries and keys follow [Queries and mutations](queries-and-mutations.md).
+This guide is the server side every list shares (the wire, the view, `page.New`, its sorts, search
+and filters, the query), then the React layer underneath the catalog: `@jwcarman/roux-web/table`
+(`QueryTable`, search inputs, filter chips) and `@jwcarman/roux-web/paging` (the page types, a list
+that grows a page at a time, a picker over a long list, URL state). The catalog's `DataTable` and
+roux's built-in pages are built on that layer; it is what a person reads when
+[adding a primitive](adding-a-primitive.md) or changing one of roux's own pages.
 
 A list that grows as the app is used (tasks, entries, payments, events, anything with a date) is
-paged this way, even while it is short: done and past rows pile up. A list that something small
-and fixed bounds (the roles, the colours, a team's labels) is one request, shown with
-`SimpleQueryTable` ([A short list](#a-short-list)).
+paged, even while it is short: done and past rows pile up.
 
 ## The wire
 
@@ -100,8 +96,8 @@ with `tableSearchOf` (below).
 
 ## The server
 
-A list is declared once, as a package variable, with `page.New`; the handler reads the page request
-with `api.PageRequest` and asks the list for a page. The paginator writes the count, the search,
+A list is declared once, as a package variable, with `page.New`; the query reads the page request
+with its rules (`Paging: list.Config()`) and asks the list for a page. The paginator writes the count, the search,
 the `ORDER BY` (with `id` last, so rows never move between pages), `LIMIT` and `OFFSET`; the app
 writes the SQL particular to it: the view, and each filter.
 
@@ -238,56 +234,35 @@ func (s Service) List(ctx context.Context, req page.Request, f Filter) (page.Pag
   is (pgx sends the value), and dereference one only behind an `if`, as the assignee is here.
 - A `?` count that does not match the arguments panics the first time the line runs.
 
-### The handler
+### The query
 
 ```go
-k.Handle("GET "+BasePath, ItemsRead, func(w http.ResponseWriter, r *http.Request) error {
-	req, err := api.PageRequest(r, list.Config())
-	if err != nil {
-		return err
-	}
-	f, err := filterOf(r)
-	if err != nil {
-		return err
-	}
-	out, err := svc.List(r.Context(), req, f)
-	if err != nil {
-		return err
-	}
-	return api.JSON(w, http.StatusOK, out)
-})
-```
-
-`api.PageRequest(r, list.Config())` reads `pageIndex`, `pageSize`, `sortBy` and `sortDirection`,
-answering a bad one with the `400` above. `filterOf` reads the list's own parameters, and refuses a
-value it does not know as a `400` on that parameter, never ignoring it:
-
-```go
-func filterOf(r *http.Request) (Filter, error) {
-	q := r.URL.Query()
-	f := Filter{Search: q.Get("search")}
-	switch q.Get("status") {
-	case "":
-	case "open":
-		f.Done = new(false)
-	case "done":
-		f.Done = new(true)
-	default:
-		return Filter{}, problem.InvalidField("status", problem.MustBeOneOf("open", "done"))
-	}
-	return f, nil
+cqrs.Query[ItemsArgs, ItemRow]{
+	Name: "items", Permission: ItemsRead, DependsOn: []string{itemsChanged}, Paging: list.Config(),
+	Run: func(ctx context.Context, db page.Querier, caller *authn.Principal, req page.Request, search string, args ItemsArgs) (page.Page[ItemRow], error) {
+		return s.list(ctx, db, req, args.filter(caller, search))
+	},
 }
 ```
 
-`new(false)` is a `*bool` pointing at `false` (since Go 1.26, `new` takes a value): `Done` is nil
-when the request asks for neither.
+The query reads `pageIndex`, `pageSize`, `sortBy` and `sortDirection` with `list.Config()`, answering
+a bad one with the `400` above, and its args (`query`-tagged string fields, `oneof` for a word from a
+set) refuse a value they don't know as a `400` on that parameter, never ignoring it
+([Queries and commands](cqrs.md#queries)). `Run` turns the args into the service's filter and asks for
+the page; a mapping from the list's row to the type the screen shows goes there too.
 
-A list whose order is fixed (a history, newest first) reads its request with
+A hand-written handler (one of roux's own pages, or an endpoint that is not a query) reads the same
+request with `api.PageRequest(r, list.Config())`. A list whose order is fixed (a history, newest first) reads its request with
 `api.PageRequestUnsorted(r)`, which ignores any `sortBy`. A list already in memory pages with
 `page.Slice(sorted, req)`, and a page fetched some other way is wrapped with
 `page.Of(rows, req, total)`.
 
-## The list's query
+## The React layer
+
+Everything from here on is roux-web's React list layer, the one the catalog's `DataTable` and roux's
+built-in pages are drawn with. A feature's screen is a surface and does not use it directly.
+
+### The list's query
 
 A table, a growing list or a select takes the list's query: `pageQuery(queryKey, fetch)`, the list's
 key and how to fetch one page. Put it in the resource module, `src/items/items.ts`, beside
@@ -793,8 +768,8 @@ A short list whose order is the point (the labels, in the order an item shows th
 - **The table.** `position` is unique, but a swap passes through a duplicate, so make the constraint
   deferrable: `alter table label add constraint label_position_key unique (position) deferrable
   initially deferred`. It is checked at commit.
-- **One endpoint per move, answering the new list.** `POST /api/labels/{id}/move-up` and
-  `.../move-down` return the whole list. A move past either end is a `409`
+- **One command per move.** `moveLabelUp` and `moveLabelDown` take the label's id and emit the
+  list's event, so the list refetches. A move past either end is a `409`
   (`problem.Conflict("Urgent is already first")`), not a silent no-op.
 - **The service swaps two positions** in one transaction, with the order locked:
 
@@ -857,24 +832,24 @@ column.display({
 ## A column only some people see
 
 A list everyone with `items.read` may open can carry fields only some of them may see (an item's
-cost needs `costs.read`). The endpoint keeps its own permission; the column's is checked inside it,
-once:
+cost needs `costs.read`). The query keeps its own permission; the column's is checked in its `Run`,
+once, from the `caller` it is given:
 
 ```go
-caller := authn.PrincipalFrom(r.Context())
 withCost := caller.Has(CostsRead)
-if !withCost && (f.CostOver != nil || req.SortBy == string(ByCost)) {
-	return problem.Forbidden()
+if !withCost && (args.CostOver != "" || req.SortBy == string(ByCost)) {
+	return page.Page[ItemRow]{}, problem.Forbidden()
 }
-out, err := svc.List(r.Context(), req, f, withCost) // the rows' cost, or null
+return s.list(ctx, db, req, args.filter(caller, search), withCost) // the rows' cost, or null
 ```
 
 - **Refuse the filter and the sort, don't ignore them.** A caller who filters on a field they cannot
   see learns its values from which rows come back.
 - **Leave the fields `null` for such a caller**, not absent: the row's type stays one shape.
-- The page hides the column, filter and sort from the same permission
-  (`me.permissions.includes(COSTS_READ)`, from `permissions.gen.ts`); the server's check is the one
-  that counts.
+- A surface can't hide a column by permission yet ([Surfaces](surfaces.md#known-limits)): such a
+  caller sees the column with empty cells. A React page (one of roux's own) hides the column, filter
+  and sort from the same permission (`me.permissions.includes(COSTS_READ)`, from
+  `permissions.gen.ts`); the server's check is the one that counts.
 
 ## A list that grows
 

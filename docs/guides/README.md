@@ -1,7 +1,7 @@
 # roux guides
 
 - [Getting started](getting-started.md)
-- [A feature's server side](features.md)
+- [A feature](features.md)
 - [Queries and commands](cqrs.md)
 - [Surfaces](surfaces.md)
 - [Adding a primitive](adding-a-primitive.md)

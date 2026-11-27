@@ -46,7 +46,7 @@ and it passes through `fmt.Errorf("...: %w", p)` wrapping unchanged.
 | --- | --- | --- |
 | `problem.NotFound(detail)` | 404 | A record that does not exist, or that the caller may not know exists. |
 | `problem.InvalidField(field, message)` | 400 | One field the client sent is wrong, and only the server can tell (a name another record has). |
-| `problem.Validation(violations...)` | 400 | Every field's mistakes at once: what `validate` returns ([A feature's server side](features.md#the-input)). |
+| `problem.Validation(violations...)` | 400 | Every field's mistakes at once: what a command's `Validate` returns ([A feature](features.md#the-queries-and-commands)). |
 | `problem.BadRequest(detail)` | 400 | A rule about the request as a whole, with no one field to blame. |
 | `problem.Conflict(detail)` | 409 | A clash with what the server holds, with no one field to blame. |
 | `problem.StaleVersion()` | 409 | An edit made from a version that is no longer current. |
@@ -80,8 +80,8 @@ message with `fmt.Sprintf`; it is shown as it stands.
 
 ### Refuse one field the client sent
 
-The input's `validate` refuses what can be checked from the body alone
-([A feature's server side](features.md#the-input)). When a rule about one field needs the
+A command's `Validate` refuses what can be checked from the body alone
+([A feature](features.md#the-queries-and-commands)). When a rule about one field needs the
 database (or the clock), return `problem.InvalidField` naming the field as the client sent it:
 
 ```go

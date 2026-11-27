@@ -78,11 +78,13 @@ build: {
 },
 ```
 
-The contract is generated, not formatted: one more line at the end of `frontend/.prettierignore`:
+The contract and the surfaces' types are generated, not formatted: two more lines at the end of
+`frontend/.prettierignore`:
 
 <!-- fragment: prettierignore -->
 ```text
 src/contract.gen.ts
+src/**/*.surface.gen.ts
 ```
 
 The app's binder, made once from the generated contract, `frontend/src/surfaces.ts`:

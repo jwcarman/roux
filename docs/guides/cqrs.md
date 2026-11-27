@@ -171,7 +171,7 @@ func TestTheFrontEndContractIsCurrent(t *testing.T) {
 ```
 
 Each feature adds its `Endpoints` to the list. The file is generated, so it is listed in the front
-end's `.prettierignore` and never edited.
+end's `.prettierignore` (beside `src/**/*.surface.gen.ts`) and never edited.
 
 The generator reads each endpoint through `cqrs.Endpoint`'s `Describe()`, a `cqrs.Description`
 (`Kind`, `Name`, `Permission`, `Events`, `In`, `Out`). Its `cqrs.Kind` is `cqrs.KindQuery`,

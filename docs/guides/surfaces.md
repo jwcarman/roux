@@ -60,8 +60,8 @@ Once per app, before its first surface:
   ```
 
 - **The contract.** `cmd/server/contract_test.go` writes `frontend/src/contract.gen.ts` from the
-  app's endpoints ([Queries and commands](cqrs.md#the-contract)); the file goes in
-  `frontend/.prettierignore`.
+  app's endpoints ([Queries and commands](cqrs.md#the-contract)). It and the surfaces' types are
+  generated, so `frontend/.prettierignore` lists `src/contract.gen.ts` and `src/**/*.surface.gen.ts`.
 - **The binder.** `frontend/src/surfaces.ts` makes the app's `bind` once from the contract:
 
   ```ts

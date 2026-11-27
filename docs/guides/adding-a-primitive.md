@@ -71,8 +71,10 @@ to the files you changed.
 ### 4. Docs
 
 Name the component and its props in [The A2UI catalog](a2ui-catalog.md) and in the skill's
-`a2ui-catalog.md` and `surfaces.md` references (`check-guides.mjs` fails on an exported name the docs
-don't mention), and add a line to the changelog.
+`a2ui-catalog.md` and `surfaces.md` references, and add a line to the changelog. Nothing checks
+this for you: `check-guides.mjs` checks roux-web's exported names, and a new component is an entry
+in `PRIMITIVES`, not an export, so a component the docs leave out goes unnoticed until an agent
+can't find it.
 
 ### 5. Then the screen
 
