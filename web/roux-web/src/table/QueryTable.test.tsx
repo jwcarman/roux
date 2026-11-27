@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { pageQuery, type PageDto, type PageQuery } from "../paging/paging";
 import { fakeEndpoint, people, type Person } from "../testing/fakeServer";
+import { rulesFor } from "../testing/css";
 import { renderWithProviders } from "../testing/render";
 import { QueryTable } from "./QueryTable";
 
@@ -130,6 +131,12 @@ describe("QueryTable", () => {
 
     expect(query.mock.calls).toHaveLength(calls);
     expect(screen.getByText("Showing 26 to 50 of 60 rows")).toBeInTheDocument();
+  });
+
+  it("leaves its footer without the padding of a table that fills a Card", async () => {
+    show();
+    const status = await screen.findByText("Showing 1 to 25 of 60 rows");
+    expect(rulesFor(status.parentElement as HTMLElement)).not.toMatch(/padding/);
   });
 
   it("says which rows it shows", async () => {

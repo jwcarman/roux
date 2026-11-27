@@ -81,7 +81,7 @@ export function AppShell<Permission extends string>({
   });
 
   return (
-    <Flex minH="100dvh" bg="bg">
+    <Flex minH="100dvh">
       <Box
         as="aside"
         hideBelow="md"

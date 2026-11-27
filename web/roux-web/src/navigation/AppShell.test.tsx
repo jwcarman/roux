@@ -113,6 +113,13 @@ describe("AppShell", () => {
     expect(within(sidebar).getByRole("link", { name: "Home" })).toBeInTheDocument();
   });
 
+  it("leaves the page's background to the theme, so a raised theme's tinted page shows behind the content", async () => {
+    show();
+
+    const frame = (await screen.findByRole("complementary")).parentElement as HTMLElement;
+    expect(rulesFor(frame)).not.toMatch(/background/);
+  });
+
   it("is a 16-wide rail from md and a 60-wide sidebar from lg", async () => {
     show();
 

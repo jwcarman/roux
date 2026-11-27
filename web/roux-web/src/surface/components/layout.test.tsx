@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { formatValue, useComponentId } from "./layout";
 import { pageOf } from "../../testing";
+import { rulesFor } from "../../testing/css";
 import { renderSurface, startSurface } from "../testSurface";
 import { ThemeProvider } from "../../theme";
 
@@ -140,6 +141,44 @@ describe("Card and DataTable", () => {
     const table = getComputedStyle(byId("room") as HTMLElement);
     expect(table.overflowX).toBe("auto");
     expect(table.minWidth).toMatch(/^0(px)?$/);
+  });
+});
+
+describe("a DataTable alone in a Card", () => {
+  const cardWith = (children: string[]) => [
+    { id: "root", component: "Card", children },
+    {
+      id: "table",
+      component: "DataTable",
+      rows: { "@path": "/rows" },
+      columns: [{ header: "Name", field: "name" }],
+    },
+    { id: "note", component: "Text", text: "A note" },
+  ];
+  const rows = {
+    rows: {
+      data: [{ name: "Ann" }],
+      pagination: { pageIndex: 0, pageSize: 10, totalElementCount: 1, totalPageCount: 1 },
+    },
+  };
+  const bodyRules = () => rulesFor((byId("root") as HTMLElement).querySelector(".chakra-card__body") as HTMLElement);
+
+  it("fills the Card edge to edge, since its cells carry their own padding", () => {
+    renderSurface(cardWith(["table"]), rows);
+    expect(bodyRules()).toMatch(/:has\(>\s*\*\s*>\s*\[data-data-table\]:only-child\)\{[^}]*padding:0/);
+  });
+
+  it("keeps the table's footer in line with the cells", () => {
+    renderSurface(cardWith(["table"]), rows);
+    const footer = screen.getByText("1 row").parentElement as HTMLElement;
+    expect(rulesFor(footer)).toMatch(/padding-inline:\s*var\(--chakra-spacing-4\)/);
+    expect(rulesFor(footer)).toMatch(/padding-bottom:\s*var\(--chakra-spacing-3\)/);
+  });
+
+  it("marks the table, so a Card can tell it from other children", () => {
+    renderSurface(cardWith(["note", "table"]), rows);
+    expect(byId("table")).toHaveAttribute("data-data-table");
+    expect(byId("note")).not.toHaveAttribute("data-data-table");
   });
 });
 
@@ -278,6 +317,30 @@ describe("content", () => {
       expect(slot.alignSelf).toBe("flex-end");
       expect(getComputedStyle(slotOf("first")).alignSelf).not.toBe("flex-end");
       expect(getComputedStyle(slotOf("first")).flexGrow).toBe(grow);
+    });
+
+    it("lines up with the bottom of the inputs, not of the space each field keeps under its input for a message", () => {
+      renderSurface(formWithRow(), data);
+      const rules = rulesFor(byId("row") as HTMLElement);
+      // The space under an input: the message line (minH 4) and the gap above it (1.5), as FormField draws them.
+      expect(rules).toMatch(
+        /:has\(\[data-field-message\]\)>\[data-row-button\]\{[^}]*margin-bottom:calc\(var\(--chakra-spacing-4\) \+ var\(--chakra-spacing-1\\\.5\)\)/,
+      );
+      expect(slotOf("go")).toHaveAttribute("data-row-button", "");
+      expect(slotOf("first")).not.toHaveAttribute("data-row-button");
+    });
+
+    it("keeps that line-up while a field shows an error, since the message line is always there", async () => {
+      renderSurface(formWithRow(), data);
+      const line = (id: string) => slotOf(id).querySelector("[data-field-message]") as HTMLElement;
+      expect(rulesFor(line("last"))).toMatch(/min-height:\s*var\(--chakra-sizes-4\)/);
+      expect(rulesFor(line("last").parentElement as HTMLElement)).toMatch(/gap:\s*var\(--chakra-spacing-1\\\.5\)/);
+      await userEvent.type(screen.getByLabelText("Last"), "L");
+      await userEvent.clear(screen.getByLabelText("Last"));
+      await userEvent.tab();
+      expect(await screen.findByText("Last is required")).toBeTruthy();
+      expect(line("last")).toBeTruthy();
+      expect(rulesFor(line("last"))).toMatch(/min-height:\s*var\(--chakra-sizes-4\)/);
     });
 
     it("is right in the first committed render, before anything can paint", () => {

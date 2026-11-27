@@ -41,8 +41,10 @@ CardList, Form, InputField, SelectField and FilterChips. Row and Column lay out 
 end, spaceBetween, spaceAround, spaceEvenly, stretch), `align` (start, center, end, stretch), and a child's
 `weight` (its share of the spare space). A Row's children share its width equally; once the Row sets `justify`,
 each takes its own width and `justify` places them, while a weighted child still grows.
-A Button in a Row always takes its own width and lines up with the bottom of the fields beside it, so an
-"Add" button sits level with its input whatever the Row's `justify` or the fields' weights.
+A Button in a Row always takes its own width and lines up with the bottom of the inputs beside it (not of
+the space each field keeps under its input for a message), so an "Add" button sits level with its input whatever the
+Row's `justify` or the fields' weights, and while a field shows an error. A DataTable alone in a Card fills it edge to
+edge.
 
 `Stat` takes a `tone`, `accent` (the palette's text color) or `danger` (red), that colors the number when it is not
 zero; a zero, a money amount of zero minor units and a missing value stay plain, so a "Late" count is red only when
@@ -57,7 +59,7 @@ or an empty list, in any format:
 { "header": "At", "field": "at", "format": "time", "emptyText": "All day" }
 ```
 
-`FilterChips` is one filter as a row of chips, one chosen at a time: `label` names the group, `value` is bound to a
+`FilterChips` is one filter as a row of chips, one chosen at a time: `label` names the group and shows above the chips, like a field's label, `value` is bound to a
 data-model path, and `options` is a literal list of `{value, label}`. Choosing a chip writes its `value` to the
 path, and the pressed chip is the one whose value equals the bound value (none is pressed when no option matches).
 Use it for a short fixed list (up to about five) and `SelectField` for a longer or growing one. It needs no `Form`:

@@ -2,6 +2,7 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { rulesFor } from "../../testing/css";
 import { renderSurface } from "../testSurface";
 
 const components = [
@@ -27,6 +28,19 @@ describe("FilterChips", () => {
     const group = screen.getByRole("group", { name: "When" });
     expect(group.querySelectorAll("button")).toHaveLength(3);
     expect(pressed().map((b) => b.textContent)).toEqual(["This week"]);
+  });
+
+  it("shows its label above the chips, as a field's label, and the chips as tall as an input", () => {
+    renderSurface(components, { args: { when: "week" } });
+    const group = screen.getByRole("group", { name: "When" });
+    const label = screen.getByText("When");
+    expect(label.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(label).toHaveAttribute("aria-hidden", "true");
+    expect(rulesFor(label)).toMatch(/font-weight:\s*var\(--chakra-font-weights-medium\)/);
+    expect(rulesFor(label)).toMatch(/font-size:\s*var\(--chakra-font-sizes-sm\)/);
+    expect(rulesFor(group.parentElement as HTMLElement)).toMatch(/min-height:\s*var\(--chakra-sizes-10\)/);
+    expect(rulesFor(group.parentElement as HTMLElement)).toMatch(/align-items:\s*center/);
+    expect(rulesFor(label.parentElement as HTMLElement)).toMatch(/gap:\s*var\(--chakra-spacing-1\\\.5\)/);
   });
 
   it("choosing a chip writes its value to the path, and presses it", async () => {

@@ -59,3 +59,38 @@ describe("colored text on a card", () => {
     ).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+describe("a bordered control on a card", () => {
+  it.each(["light", "dark"] as const)(
+    "%s: a raised card keeps the control's border at least as visible as a flat card does",
+    (mode) => {
+      const flat = createThemeSystem({ ...DEFAULT_THEME, depth: "flat" });
+      const raised = createThemeSystem({ ...DEFAULT_THEME, depth: "raised" });
+      const border = colorOf(raised, "border", mode);
+      const onFlat = contrastRatio(border, colorOf(flat, "bg.panel", mode));
+      const onRaised = contrastRatio(border, colorOf(raised, "bg.raised", mode));
+      expect(colorOf(raised, "bg.raised", mode)).not.toBe(border);
+      expect(onRaised).toBeGreaterThanOrEqual(onFlat);
+    },
+  );
+
+  it.each(["light", "dark"] as const)("%s: the raised page differs from the card and from the sidebar", (mode) => {
+    const raised = createThemeSystem({ ...DEFAULT_THEME, depth: "raised" });
+    const page = colorOf(raised, "bg.page", mode);
+    expect(page).not.toBe(colorOf(raised, "bg.raised", mode));
+    expect(page).not.toBe(colorOf(raised, "bg.subtle", mode));
+    if (mode === "light") expect(page).not.toBe(colorOf(raised, "white", mode));
+  });
+
+  it.each(THEMES.flatMap((theme) => (["light", "dark"] as const).map((mode) => [theme, mode] as const)))(
+    "%j %s: the palette's and red's text reads on the raised page at 4.5:1",
+    (theme, mode) => {
+      const system = createThemeSystem({ ...theme, depth: "raised" });
+      for (const text of [`${theme.palette}.fg`, "red.fg"]) {
+        expect(contrastRatio(colorOf(system, text, mode), colorOf(system, "bg.page", mode))).toBeGreaterThanOrEqual(
+          4.5,
+        );
+      }
+    },
+  );
+});

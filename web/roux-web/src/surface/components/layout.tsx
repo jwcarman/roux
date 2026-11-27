@@ -11,6 +11,7 @@ import { createContext, useContext, useLayoutEffect, useState, type ComponentTyp
 import { formatDate, formatTime } from "../../dates";
 import { formatMoney, type Money } from "../../money";
 import { rouxCatalog } from "../../a2ui";
+import { MESSAGE_SPACE } from "../../form/fields/FormField";
 
 const {
   Button: ButtonApi,
@@ -159,6 +160,7 @@ function RowSlot({ children }: { children: ReactNode }) {
       flex={sharing ? "1 1 0" : isButton ? "0 0 auto" : undefined}
       flexGrow={isButton ? undefined : weight}
       alignSelf={isButton ? "flex-end" : undefined}
+      data-row-button={isButton ? "" : undefined}
     >
       <SlotWeight.Provider value={setWeight}>
         <SlotButton.Provider value={setButton}>{children}</SlotButton.Provider>
@@ -174,6 +176,7 @@ const Row = defineComponent(RowApi, ({ props, buildChild }) => (
     justify={props.justify && FLEX[props.justify]}
     gap={props.gap ?? 4}
     wrap="wrap"
+    css={{ "&:has([data-field-message]) > [data-row-button]": { marginBottom: MESSAGE_SPACE } }}
   >
     <RowJustified.Provider value={props.justify !== undefined}>
       {buildChildren(props.children, buildChild, RowSlot)}
@@ -202,7 +205,8 @@ const CardC = defineComponent(CardApi, ({ props, buildChild }) => (
         <Card.Title>{props.title}</Card.Title>
       </Card.Header>
     )}
-    <Card.Body>
+    {/* A table alone in the Card runs edge to edge: its cells (and footer) carry the padding. */}
+    <Card.Body css={{ "&:has(> * > [data-data-table]:only-child)": { padding: 0 } }}>
       <VStack align="stretch" gap="4">
         {buildChildren(props.children, buildChild)}
       </VStack>

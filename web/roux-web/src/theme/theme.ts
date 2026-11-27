@@ -98,8 +98,8 @@ const RAISED = {
   semanticTokens: {
     colors: {
       bg: {
-        page: { value: { _light: "{colors.gray.100}", _dark: "{colors.gray.900}" } },
-        raised: { value: { _light: "{colors.white}", _dark: "{colors.gray.800}" } },
+        page: { value: { _light: "{colors.gray.100}", _dark: "{colors.black}" } },
+        raised: { value: { _light: "{colors.white}", _dark: "{colors.gray.950}" } },
       },
     },
   },

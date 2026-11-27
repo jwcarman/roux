@@ -8,6 +8,14 @@ export interface ItemsSurfaceData {
     overdue: number;
     today: number;
   };
+  draft: {
+    title: string;
+    day: string;
+  };
+  errors: {
+    title: string;
+    day: string;
+  };
   itemsArgs: {
     search: string;
     assignee: string;
@@ -16,14 +24,6 @@ export interface ItemsSurfaceData {
     pageIndex: number;
     sortBy: string;
     sortDirection: string;
-  };
-  draft: {
-    title: string;
-    day: string;
-  };
-  errors: {
-    title: string;
-    day: string;
   };
   items: {
     data: {

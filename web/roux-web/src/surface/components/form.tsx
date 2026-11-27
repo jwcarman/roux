@@ -1,7 +1,7 @@
 // The bridge between A2UI's data model and roux's TanStack Form fields. The A2UI data model owns the values;
 // the TanStack form only gives roux's fields their context, touched/blurred state and messages.
 import { type AnyFieldApi } from "@tanstack/react-form";
-import { Text, VStack } from "@chakra-ui/react";
+import { Flex, Text, VStack } from "@chakra-ui/react";
 import { FilterChips as RouxFilterChips } from "../../table";
 import { InputField as RouxInputField, SelectField as RouxSelectField, useAppForm } from "../../form";
 import { createContext, useContext, useEffect, useEffectEvent, useRef, type ReactNode, type RefObject } from "react";
@@ -190,16 +190,24 @@ const SelectField = defineComponent(SelectFieldApi, ({ props }) => (
   </BridgeField>
 ));
 
-/** One filter: the chosen chip's value is written to the data model; no Form is involved. */
+/**
+ * One filter: the chosen chip's value is written to the data model; no Form is involved. Its label shows above the
+ * chips as a field's does, and the chips centre in the height of an input, so a Row lines it up with the fields beside it.
+ */
 const FilterChips = defineComponent(FilterChipsApi, ({ props }) => (
-  <div data-component-id={useComponentId()}>
-    <RouxFilterChips
-      label={textOf(props.label)}
-      options={optionsOf(props.options) as readonly { value: string; label: string }[]}
-      value={textOf(props.value)}
-      onChange={props.setValue}
-    />
-  </div>
+  <Flex data-component-id={useComponentId()} direction="column" gap="1.5">
+    <Text as="span" aria-hidden fontWeight="medium" fontSize="sm">
+      {textOf(props.label)}
+    </Text>
+    <Flex minH="10" align="center">
+      <RouxFilterChips
+        label={textOf(props.label)}
+        options={optionsOf(props.options) as readonly { value: string; label: string }[]}
+        value={textOf(props.value)}
+        onChange={props.setValue}
+      />
+    </Flex>
+  </Flex>
 ));
 
 export const formComponents = [Form, InputField, SelectField, FilterChips];

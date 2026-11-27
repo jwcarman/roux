@@ -53,11 +53,11 @@ describe("createThemeSystem", () => {
     expect(system._config.globalCss?.body).toMatchObject({ bg: "bg.page" });
     expect(system.tokens.getByName("colors.bg.page")?.extensions.conditions).toEqual({
       _light: "{colors.gray.100}",
-      _dark: "{colors.gray.900}",
+      _dark: "{colors.black}",
     });
     expect(system.tokens.getByName("colors.bg.raised")?.extensions.conditions).toEqual({
       _light: "{colors.white}",
-      _dark: "{colors.gray.800}",
+      _dark: "{colors.gray.950}",
     });
     expect(cardRoot(system)).toMatchObject({ bg: "bg.raised", boxShadow: "sm", borderColor: "border.muted" });
   });

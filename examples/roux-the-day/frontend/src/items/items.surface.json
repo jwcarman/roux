@@ -4,7 +4,7 @@
     {
       "id": "root",
       "component": "Column",
-      "children": ["title", "subtitle", "counts", "filters", "addCard", "table"]
+      "children": ["title", "subtitle", "counts", "addCard", "filters", "tableCard"]
     },
     {
       "id": "title",
@@ -240,6 +240,11 @@
       "component": "Text",
       "text": "Leave the day blank for today.",
       "muted": true
+    },
+    {
+      "id": "tableCard",
+      "component": "Card",
+      "children": ["table"]
     },
     {
       "id": "table",

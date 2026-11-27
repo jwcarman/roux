@@ -120,12 +120,12 @@ function ServerTableView({
       paging.setPageIndex(0);
     },
   });
-  return <TableView table={table} emptyText={emptyText ?? "Nothing yet"} fixedPageSize />;
+  return <TableView table={table} emptyText={emptyText ?? "Nothing yet"} fixedPageSize insetFooter />;
 }
 
 const DataTable = defineComponent(DataTableApi, ({ props }) => (
   // The table scrolls inside its box rather than spilling out of its Card.
-  <Box data-component-id={useComponentId()} width="100%" minW="0" maxW="100%" overflowX="auto">
+  <Box data-component-id={useComponentId()} data-data-table="" width="100%" minW="0" maxW="100%" overflowX="auto">
     {isServerPage(props.rows) ? (
       <ServerTableView columns={props.columns} page={props.rows} paging={props} emptyText={props.emptyText} />
     ) : (

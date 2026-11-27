@@ -5,6 +5,12 @@ import { errorMessages } from "../errors";
 import { useFieldContext } from "../formContext";
 import { rulesOfField } from "./fieldRules";
 
+/**
+ * The space a field keeps under its control for a message: the line itself (spacing 4) and the gap above it
+ * (spacing 1.5). A Row lines a Button up with the inputs by leaving this much under it.
+ */
+export const MESSAGE_SPACE = "calc({spacing.4} + {spacing.1.5})";
+
 /** What every field takes: its label, a hint, whether it is required, and the control it frames. */
 export interface FormFieldProps {
   /** The field's label, which also names its control. */
@@ -42,7 +48,7 @@ export function FormField({
   const messages = meta.isBlurred || submitted || meta.errorMap.onServer ? errorMessages(meta.errors) : [];
 
   return (
-    <Field.Root invalid={messages.length > 0} required={required}>
+    <Field.Root invalid={messages.length > 0} required={required} gap="1.5">
       {!controlLabelled && (
         <Field.Label>
           {label}
@@ -54,7 +60,7 @@ export function FormField({
           on the submit button) must not move the button out from under the pointer. */}
       {/* A column, so the line is exactly the message's height (a 12px error, 16px tall) and not the
           page's 24px line box around an inline one. */}
-      <Box display="flex" flexDirection="column" minH="4">
+      <Box data-field-message="" display="flex" flexDirection="column" minH="4">
         {messages.length > 0 ? (
           <Field.ErrorText>{messages.join(" ")}</Field.ErrorText>
         ) : (
