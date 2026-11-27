@@ -30,6 +30,9 @@ function ToneBadge({ value, tones }: { value: unknown; tones?: Tones }) {
   );
 }
 
+/** A table's rows take the background of what holds it (a Card's, the page's), not the theme's own. */
+const TAKES_ITS_BOX = { "& tr": { bg: "transparent" } } as const;
+
 type Columns = z.infer<typeof DataTableApi.schema>["columns"];
 type Column = Columns[number];
 
@@ -120,7 +123,9 @@ function ServerTableView({
       paging.setPageIndex(0);
     },
   });
-  return <TableView table={table} emptyText={emptyText ?? "Nothing yet"} fixedPageSize insetFooter />;
+  return (
+    <TableView table={table} emptyText={emptyText ?? "Nothing yet"} fixedPageSize insetFooter css={TAKES_ITS_BOX} />
+  );
 }
 
 const DataTable = defineComponent(DataTableApi, ({ props }) => (
@@ -129,7 +134,9 @@ const DataTable = defineComponent(DataTableApi, ({ props }) => (
     {isServerPage(props.rows) ? (
       <ServerTableView columns={props.columns} page={props.rows} paging={props} emptyText={props.emptyText} />
     ) : (
-      <Text color="fg.muted">{props.emptyText ?? "Nothing yet"}</Text>
+      <Text color="fg.muted" p="4">
+        {props.emptyText ?? "Nothing yet"}
+      </Text>
     )}
   </Box>
 ));

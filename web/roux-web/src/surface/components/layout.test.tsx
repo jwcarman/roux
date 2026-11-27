@@ -161,11 +161,34 @@ describe("a DataTable alone in a Card", () => {
       pagination: { pageIndex: 0, pageSize: 10, totalElementCount: 1, totalPageCount: 1 },
     },
   };
-  const bodyRules = () => rulesFor((byId("root") as HTMLElement).querySelector(".chakra-card__body") as HTMLElement);
+  const body = () => (byId("root") as HTMLElement).querySelector(".chakra-card__body") as HTMLElement;
 
-  it("fills the Card edge to edge, since its cells carry their own padding", () => {
+  /** Whether the Card body's own rule for a table alone (its padding off) selects the body, in the DOM the surface really made. */
+  const paddingOff = () => {
+    const selector = /(\.css-[\w-]+:has\([^{]*\))\{[^}]*padding:0/.exec(rulesFor(body()))?.[1];
+    return selector !== undefined && body().matches(selector);
+  };
+
+  it("fills the Card edge to edge as the surface really renders it, since its cells carry their own padding", () => {
     renderSurface(cardWith(["table"]), rows);
-    expect(bodyRules()).toMatch(/:has\(>\s*\*\s*>\s*\[data-data-table\]:only-child\)\{[^}]*padding:0/);
+    expect(paddingOff()).toBe(true);
+  });
+
+  it("leaves the Card's padding when the table has company", () => {
+    renderSurface(cardWith(["note", "table"]), rows);
+    expect(paddingOff()).toBe(false);
+  });
+
+  it("takes the Card's background, in the rows and the headings", () => {
+    renderSurface(cardWith(["table"]), rows);
+    for (const row of document.querySelectorAll("tr")) {
+      expect(getComputedStyle(row).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+    }
+  });
+
+  it("pads a table's empty message, which has no cells to do it", () => {
+    renderSurface(cardWith(["table"]), { rows: [] });
+    expect(rulesFor(screen.getByText("Nothing yet"))).toMatch(/padding:\s*var\(--chakra-spacing-4\)/);
   });
 
   it("keeps the table's footer in line with the cells", () => {

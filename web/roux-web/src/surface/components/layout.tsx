@@ -205,8 +205,8 @@ const CardC = defineComponent(CardApi, ({ props, buildChild }) => (
         <Card.Title>{props.title}</Card.Title>
       </Card.Header>
     )}
-    {/* A table alone in the Card runs edge to edge: its cells (and footer) carry the padding. */}
-    <Card.Body css={{ "&:has(> * > [data-data-table]:only-child)": { padding: 0 } }}>
+    {/* A table alone in the Card runs edge to edge: its cells (and footer) carry the padding. The catalog wraps each component in an element of its own, hence the extra level. */}
+    <Card.Body css={{ "&:has(> * > :only-child > [data-data-table])": { padding: 0 } }}>
       <VStack align="stretch" gap="4">
         {buildChildren(props.children, buildChild)}
       </VStack>

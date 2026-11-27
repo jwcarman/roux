@@ -626,10 +626,11 @@ export function OpenItemsTable() {
 - `TanstackTable` (`TanstackTableProps<T>`: `table`, `isLoading?`, `isError?`, `emptyText?`, and
   Chakra `Table.Root` props) draws the rows and the sortable headers; while it loads with no rows, three
   placeholder rows and a `status` named "Loading".
-- `TableView` (`TableViewProps<T>`: `TanstackTable`'s props plus `pageSizes?` and `fixedPageSize?`) is `TanstackTable`
+- `TableView` (`TableViewProps<T>`: `TanstackTable`'s props plus `pageSizes?`, `fixedPageSize?` and `insetFooter?`) is `TanstackTable`
   with the pager (more than one page), the status and the page size (more rows than the smallest size)
   below it, shown once there are rows. `fixedPageSize` leaves the page size out, for rows whose page size
-  the table cannot change.
+  the table cannot change. `insetFooter` pads the status row to line up with the cells, for a table that fills
+  its box edge to edge (a `DataTable` alone in a Card).
 - `TablePagination` (`{ table }`): first, previous, a page number field (`Page <n> of <count>`), next,
   last. A number typed past the end goes to the last page.
 - `TableStatus` (`{ table }`, plus Chakra `Text` props): `Showing 26 to 50 of 60 rows` (`7 rows` on one page), announced

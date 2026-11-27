@@ -11,7 +11,7 @@ All notable changes to this project are documented in this file. The format foll
 - **The look, as mockup B.** A `FilterChips` shows its `label` above the chips (still the group's accessible
   name), so a chips group lines up with the fields in its Row. A Button in a Row lines up with the bottom of
   the inputs beside it, not of the space each field keeps for a message. A DataTable alone in a Card fills it
-  edge to edge. `AppShell` leaves the page background to the theme, so a raised theme's tinted page shows; the
+  edge to edge, takes the Card's background, and pads its empty message. `AppShell` leaves the page background to the theme, so a raised theme's tinted page shows; the
   raised dark page is black and its cards `gray.950`, so inputs' borders stay visible on a card.
 
 ### Added
