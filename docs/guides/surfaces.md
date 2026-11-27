@@ -129,6 +129,11 @@ values from the data to it. A field's `@checks` are its client rules (`required`
 The catalog's components and their props are listed in [The A2UI catalog](a2ui-catalog.md). A
 misspelled prop passes A2UI's validation and draws nothing, so copy props from there.
 
+Three props shape how a screen looks: a `Stat`'s `tone` (`accent` or `danger`) colors its number unless
+it is zero or empty; a DataTable column's `emptyText` is what a cell shows, muted, when its value is
+missing (`null`, `""` or an empty list); and a Button in a Row takes its own width and lines up with
+the bottom of the fields beside it.
+
 ## The generated types
 
 `npm run surfaces` runs `roux-surface-types` on every surface, writing `<id>.surface.gen.ts` beside

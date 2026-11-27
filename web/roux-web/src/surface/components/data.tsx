@@ -41,8 +41,13 @@ type ServerPage = {
 const isServerPage = (rows: unknown): rows is ServerPage =>
   Array.isArray((rows as Partial<ServerPage> | undefined)?.data);
 
+/** A cell with nothing to show: no value, an empty string or an empty list. */
+const isEmpty = (value: unknown): boolean =>
+  value == null || value === "" || (Array.isArray(value) && value.length === 0);
+
 /** A cell's text, or, for a column with a link, a link to the app route whose params are the row's fields. */
 function Cell({ column, value, row }: { column: Column; value: unknown; row: Record }) {
+  if (column.emptyText !== undefined && isEmpty(value)) return <Text color="fg.muted">{column.emptyText}</Text>;
   if (column.format === "badge") return <ToneBadge value={value} tones={column.tones} />;
   const text = formatValue(value, column.format);
   if (!column.link) return text;

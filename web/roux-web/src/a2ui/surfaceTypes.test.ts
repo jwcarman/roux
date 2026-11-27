@@ -73,6 +73,14 @@ describe("surfaceTypes", () => {
     }
   });
 
+  it("aColumnWithEmptyTextIsStillNullable", () => {
+    const out = rowsOf([
+      { header: "T", field: "t", format: "time", emptyText: "All day" },
+      { header: "L", field: "l", format: "list", emptyText: "Nobody" },
+    ]);
+    expect(out).toContain("      t: string | null;\n      l: string[];\n");
+  });
+
   it("aLinkParamIsAStringField", () => {
     const out = rowsOf([{ header: "N", field: "n", link: { to: "/x/$k", params: { k: "key" } } }]);
     expect(out).toContain("      n: string | null;\n      key: string;\n");

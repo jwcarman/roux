@@ -40,7 +40,7 @@ describe("roux's primitives", () => {
   it("are listed in the prompt's order", () => {
     expect(PRIMITIVES.map((def) => def.name)).toEqual(Object.keys(golden.components));
     expect(rouxCatalog.catalog().id).toBe(CATALOG_ID);
-    expect(CATALOG_VERSION).toBe("0.1.0");
+    expect(CATALOG_VERSION).toBe("0.2.0");
   });
 
   it("keep tasting's descriptions, with Row and Column's layout explained", () => {
@@ -55,7 +55,7 @@ describe("roux's primitives", () => {
       "Lays its children side by side; wraps on narrow screens. Children share the width equally, unless justify is " +
         "set: then each takes its own width and justify places them (end for buttons on the right, spaceBetween to " +
         "push them to the edges). align lines them up vertically. A child's weight (1, 2, ...) gives it that many " +
-        "shares of the width.",
+        "shares of the width. A Button in a Row takes its own width and lines up with the bottom of the fields beside it.",
     );
   });
 
@@ -143,8 +143,27 @@ describe("roux's primitives", () => {
     expect(accepts("DataTable", { ...table, columns: [{ ...column, format: "time" }] })).toBe(true);
     expect(accepts("DataTable", { ...table, columns: [{ ...column, format: "list" }] })).toBe(true);
     expect(accepts("DataTable", { ...table, columns: [{ ...column, format: "html" }] })).toBe(false);
+    expect(accepts("DataTable", { ...table, columns: [{ ...column, emptyText: "All day" }] })).toBe(true);
+    expect(accepts("DataTable", { ...table, columns: [{ ...column, emptyText: 1 }] })).toBe(false);
     expect(accepts("DataTable", { ...table, columns: [{ ...column, link: { to: "/x", params: { id: 1 } } }] })).toBe(
       false,
+    );
+  });
+});
+
+describe("Stat tone and Row's buttons", () => {
+  it("lets a Stat be accent or danger, and no other tone", () => {
+    const stat = { label: "Owed", value: 3 };
+    expect(accepts("Stat", { ...stat, tone: "accent" })).toBe(true);
+    expect(accepts("Stat", { ...stat, tone: "danger" })).toBe(true);
+    expect(accepts("Stat", { ...stat, tone: "info" })).toBe(false);
+    expect(accepts("Stat", stat)).toBe(true);
+  });
+
+  it("tells an agent how a Button sits in a Row", () => {
+    const row = rouxCatalog.promptEntries.find((entry) => entry.name === "Row");
+    expect(row?.description).toContain(
+      "A Button in a Row takes its own width and lines up with the bottom of the fields beside it.",
     );
   });
 });

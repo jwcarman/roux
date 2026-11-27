@@ -45,6 +45,50 @@ const table = (extra: Record<string, unknown> = {}) => [
 ];
 
 describe("DataTable", () => {
+  describe("a column's emptyText", () => {
+    const rows = [
+      { name: "A", at: null, tag: "", crew: [] },
+      { name: "B", at: "", tag: "Done", crew: ["Cy"] },
+      { name: "C", at: "10:00", tag: null, crew: undefined },
+    ];
+    const columns = (emptyText?: string) => {
+      const extra = emptyText === undefined ? {} : { emptyText };
+      return [
+        { header: "Name", field: "name" },
+        { header: "At", field: "at", format: "time", ...extra },
+        { header: "Tag", field: "tag", format: "badge", ...extra },
+        { header: "Crew", field: "crew", format: "list", ...extra },
+      ];
+    };
+    const render = (emptyText?: string) =>
+      renderSurface([{ id: "root", component: "DataTable", rows: { "@path": "/rows" }, columns: columns(emptyText) }], {
+        rows: pageOf(rows, {}),
+      });
+
+    it("shows the text muted for a missing value, in any format", () => {
+      render("None");
+      // A: time null, badge "", list [] ; B: time ""; C: badge null, list missing.
+      const nones = screen.getAllByText("None");
+      expect(nones).toHaveLength(6);
+      for (const none of nones) expect(getComputedStyle(none).color).toBe("rgb(82, 82, 91)");
+      expect(screen.getByText(/^10:00/)).toBeTruthy();
+      expect(screen.getByText("Done").dataset.palette).toBe("gray");
+      expect(screen.getByText("Cy")).toBeTruthy();
+      expect(screen.getAllByText("None").every((none) => none.dataset.palette === undefined)).toBe(true);
+    });
+
+    it("shows no badge for an empty badge cell", () => {
+      render("None");
+      expect(document.querySelectorAll("[data-palette]")).toHaveLength(1);
+    });
+
+    it("leaves cells as they are without emptyText", () => {
+      render();
+      expect(screen.queryByText("None")).toBeNull();
+      expect(document.querySelectorAll("[data-palette]")).toHaveLength(3);
+    });
+  });
+
   it("colors badges by tone", () => {
     renderSurface(
       [

@@ -198,6 +198,10 @@
         "format": {
           "type": "string",
           "enum": ["number", "money"]
+        },
+        "tone": {
+          "type": "string",
+          "enum": ["accent", "danger"]
         }
       },
       "required": ["component", "label", "value"]
@@ -245,6 +249,9 @@
                 "type": "string"
               },
               "sort": {
+                "type": "string"
+              },
+              "emptyText": {
                 "type": "string"
               },
               "format": {

@@ -39,11 +39,17 @@ type Render<Api extends ComponentApi> = Parameters<typeof createComponentImpleme
 /** A Row slot's setter for its child's weight; only the slot's own child sees it. */
 const SlotWeight = createContext<((weight: number | undefined) => void) | undefined>(undefined);
 
-/** Tells the slot holding this component its weight (a prop every catalog component may carry). */
-function ReportWeight({ node }: { node: NodeViewProps["node"] }) {
+/** A Row slot's setter for whether its child is a Button; only the slot's own child sees it. */
+const SlotButton = createContext<((isButton: boolean) => void) | undefined>(undefined);
+
+/** Tells the slot holding this component its weight (a prop every catalog component may carry) and whether it is a Button. */
+function ReportToSlot({ node }: { node: NodeViewProps["node"] }) {
   const { weight } = useSignalValue(node.props) as { weight?: number };
   const setWeight = useContext(SlotWeight);
+  const setButton = useContext(SlotButton);
   useEffect(() => setWeight?.(weight), [setWeight, weight]);
+  const isButton = node.type === "Button";
+  useEffect(() => setButton?.(isButton), [setButton, isButton]);
   return null;
 }
 
@@ -54,9 +60,11 @@ export function defineComponent<Api extends ComponentApi>(api: Api, render: Rend
   const View = impl.view as ComponentType<NodeViewProps>;
   const WithId = ({ node, buildChild }: NodeViewProps) => (
     <ComponentId.Provider value={node.componentId}>
-      <ReportWeight node={node} />
+      <ReportToSlot node={node} />
       <SlotWeight.Provider value={undefined}>
-        <View node={node} buildChild={buildChild} />
+        <SlotButton.Provider value={undefined}>
+          <View node={node} buildChild={buildChild} />
+        </SlotButton.Provider>
       </SlotWeight.Provider>
     </ComponentId.Provider>
   );
@@ -138,18 +146,23 @@ const RowJustified = createContext<boolean | undefined>(undefined);
 function RowSlot({ children }: { children: ReactNode }) {
   const justified = useContext(RowJustified);
   const [weight, setWeight] = useState<number | undefined>(undefined);
+  const [isButton, setButton] = useState(false);
   // A justified Row's child takes its own width, unless it has a weight: then it shares the width like the rest.
-  const sharing = !justified || weight !== undefined;
+  // A Button always takes its own width and lines up with the bottom of the fields beside it.
+  const sharing = (!justified || weight !== undefined) && !isButton;
   return (
     <Box
       data-row-slot=""
       display="flex"
       flexDirection="column"
       {...ROW_SLOT}
-      flex={sharing ? "1 1 0" : undefined}
-      flexGrow={weight}
+      flex={sharing ? "1 1 0" : isButton ? "0 0 auto" : undefined}
+      flexGrow={isButton ? undefined : weight}
+      alignSelf={isButton ? "flex-end" : undefined}
     >
-      <SlotWeight.Provider value={setWeight}>{children}</SlotWeight.Provider>
+      <SlotWeight.Provider value={setWeight}>
+        <SlotButton.Provider value={setButton}>{children}</SlotButton.Provider>
+      </SlotWeight.Provider>
     </Box>
   );
 }
@@ -197,10 +210,21 @@ const CardC = defineComponent(CardApi, ({ props, buildChild }) => (
   </Card.Root>
 ));
 
+const STAT_COLORS = { accent: "colorPalette.fg", danger: "red.fg" } as const;
+
+/** Whether a Stat's value is worth a tone: not zero (a number, or money in no minor units), and not missing. */
+function isSignificant(value: unknown): boolean {
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "object" && value !== null) return (value as Money).minorUnits !== 0;
+  return false;
+}
+
 const StatC = defineComponent(StatApi, ({ props }) => (
   <Stat.Root data-component-id={useComponentId()}>
     <Stat.Label>{props.label}</Stat.Label>
-    <Stat.ValueText>{formatValue(props.value, props.format)}</Stat.ValueText>
+    <Stat.ValueText color={props.tone && isSignificant(props.value) ? STAT_COLORS[props.tone] : undefined}>
+      {formatValue(props.value, props.format)}
+    </Stat.ValueText>
   </Stat.Root>
 ));
 

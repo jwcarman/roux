@@ -212,6 +212,83 @@ describe("content", () => {
     expect(screen.getByText("$125.00")).toBeTruthy();
   });
 
+  describe("Stat tone", () => {
+    const numberColor = (stat: Record<string, unknown>, data: Record<string, unknown> = {}) => {
+      renderSurface([{ id: "root", component: "Stat", label: "L", ...stat }], data);
+      const color = getComputedStyle(document.querySelector(".chakra-stat__valueText") as HTMLElement).color;
+      cleanup();
+      return color;
+    };
+    const plain = numberColor({ value: 1 });
+
+    it("colors a non-zero number: the palette's text for accent, red for danger", () => {
+      const red = numberColor({ value: 1, tone: "danger" });
+      expect(red).toBe("rgb(153, 25, 25)");
+      expect(numberColor({ value: 3, tone: "accent" })).not.toBe(plain);
+      expect(numberColor({ value: { "@path": "/n" }, tone: "danger" }, { n: 2 })).toBe(red);
+    });
+
+    it("leaves zero, nothing and zero money plain", () => {
+      expect(numberColor({ value: 0, tone: "danger" })).toBe(plain);
+      expect(numberColor({ value: { "@path": "/n" }, tone: "danger" }, { n: null })).toBe(plain);
+      expect(numberColor({ value: { "@path": "/missing" }, tone: "danger" })).toBe(plain);
+      const money = (minorUnits: number, tone?: string) =>
+        numberColor({ value: { minorUnits, currency: "USD" }, format: "money", ...(tone ? { tone } : {}) });
+      expect(money(0, "danger")).toBe(money(0));
+      expect(money(500, "danger")).toBe("rgb(153, 25, 25)");
+    });
+  });
+
+  describe("a Button in a Row", () => {
+    const formWithRow = (rowExtra: Record<string, unknown> = {}, fieldExtra: Record<string, unknown> = {}) => [
+      { id: "root", component: "Form", children: ["row"] },
+      { id: "row", component: "Row", children: ["first", "last", "go"], ...rowExtra },
+      { id: "first", component: "InputField", label: "First", value: { "@path": "/draft/first" }, ...fieldExtra },
+      {
+        id: "last",
+        component: "InputField",
+        label: "Last",
+        value: { "@path": "/draft/last" },
+        "@checks": [
+          {
+            condition: { "@call": "required", args: { value: { "@path": "/draft/last" } } },
+            message: "Last is required",
+          },
+        ],
+      },
+      { id: "go", component: "Button", label: "Add", action: { event: { name: "add" } } },
+    ];
+    const data = { draft: { first: "", last: "" } };
+    const slotOf = (id: string) => (byId(id) as HTMLElement).closest("[data-row-slot]") as HTMLElement;
+
+    it.each([
+      ["a Row that shares the width", {}, {}],
+      ["a justified Row", { justify: "spaceBetween" }, {}],
+      ["a Row where a field has a weight", {}, { weight: 3 }],
+    ])("takes its own width and lines up with the field bottoms in %s", (_name, rowExtra, fieldExtra) => {
+      const grow = "weight" in fieldExtra ? "3" : "justify" in rowExtra ? "0" : "1";
+      renderSurface(formWithRow(rowExtra, fieldExtra), data);
+      const slot = getComputedStyle(slotOf("go"));
+      expect(slot.flexGrow).toBe("0");
+      expect(slot.flexShrink).toBe("0");
+      expect(slot.flexBasis).toBe("auto");
+      expect(slot.alignSelf).toBe("flex-end");
+      expect(getComputedStyle(slotOf("first")).alignSelf).not.toBe("flex-end");
+      expect(getComputedStyle(slotOf("first")).flexGrow).toBe(grow);
+    });
+
+    it("leaves the Form's fields working", async () => {
+      const surface = renderSurface(formWithRow(), data);
+      await userEvent.type(screen.getByLabelText("First"), "Ann");
+      await userEvent.type(screen.getByLabelText("Last"), "L");
+      await userEvent.clear(screen.getByLabelText("Last"));
+      await userEvent.tab();
+      expect(surface.read("/draft/first")).toBe("Ann");
+      expect(surface.read("/draft/last")).toBe("");
+      expect(await screen.findByText("Last is required")).toBeTruthy();
+    });
+  });
+
   it("runs a Button's action, unless it is disabled, and is solid unless told otherwise", async () => {
     const seen: unknown[] = [];
     renderSurface(

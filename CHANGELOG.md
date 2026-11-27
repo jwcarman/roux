@@ -8,6 +8,11 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **Catalog 0.2.0: `Stat` tone, a column's `emptyText`, buttons in Rows.** A `Stat` takes `tone`
+  (`accent` or `danger`) and colors a non-zero number (zero, zero money and nothing stay plain). A
+  DataTable column takes `emptyText`, shown muted when its value is `null`, `""` or an empty list, in any
+  format. A Button in a Row takes its own width and lines up with the bottom of the fields beside it.
+  `CATALOG_VERSION` is `0.2.0`.
 - **Surfaces get the wide column: `useWidePage()`.** While any mounted component calls it, `AppShell`'s
   page is `6xl` wide instead of `3xl`; outside an `AppShell` it does nothing. `<Surface>` calls it, so
   surface pages are wide and built-in pages keep the narrow column.

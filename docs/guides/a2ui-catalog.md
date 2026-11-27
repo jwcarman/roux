@@ -29,7 +29,7 @@ const prompt = rouxCatalog.promptEntries;        // each component's description
   `schema`). A renderer passes it to `createComponentImplementation`; the schema's type is the props it receives.
 - `rouxCatalog.componentApis` — the same APIs, in order.
 - `rouxCatalog.catalog()` — a new web_core `Catalog` of the components and A2UI v1.0's check functions, under
-  `CATALOG_ID` (`https://jwcarman.github.io/roux/a2ui/catalog-v1.json`). `CATALOG_VERSION` is the catalog's
+  `CATALOG_ID` (`https://jwcarman.github.io/roux/a2ui/catalog-v1.json`). `CATALOG_VERSION` (`0.2.0`) is the catalog's
   version.
 - `rouxCatalog.document` — the A2UI catalog document (JSON), with the typed definitions under
   `metadata.extensions.roux`.
@@ -41,6 +41,21 @@ CardList, Form, InputField and SelectField. Row and Column lay out like flexbox:
 end, spaceBetween, spaceAround, spaceEvenly, stretch), `align` (start, center, end, stretch), and a child's
 `weight` (its share of the spare space). A Row's children share its width equally; once the Row sets `justify`,
 each takes its own width and `justify` places them, while a weighted child still grows.
+A Button in a Row always takes its own width and lines up with the bottom of the fields beside it, so an
+"Add" button sits level with its input whatever the Row's `justify` or the fields' weights.
+
+`Stat` takes a `tone`, `accent` (the palette's text color) or `danger` (red), that colors the number when it is not
+zero; a zero, a money amount of zero minor units and a missing value stay plain, so a "Late" count is red only when
+something is late. A DataTable column takes `emptyText`, what the cell shows, muted, when its value is `null`, `""`
+or an empty list, in any format:
+
+```json
+{ "id": "late", "component": "Stat", "label": "Late", "value": { "@path": "/counts/late" }, "tone": "danger" }
+```
+
+```json
+{ "header": "At", "field": "at", "format": "time", "emptyText": "All day" }
+```
 
 ## Defining a component
 

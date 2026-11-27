@@ -24,7 +24,7 @@ import {
 import { toA2ui } from "./translate";
 
 export const CATALOG_ID = "https://jwcarman.github.io/roux/a2ui/catalog-v1.json";
-export const CATALOG_VERSION = "0.1.0";
+export const CATALOG_VERSION = "0.2.0";
 
 const tone = oneOf(["neutral", "info", "success", "warning", "danger"]);
 const justify = optional(
@@ -56,7 +56,7 @@ const Row = component("Row")
     "Lays its children side by side; wraps on narrow screens. Children share the width equally, unless justify is " +
       "set: then each takes its own width and justify places them (end for buttons on the right, spaceBetween to " +
       "push them to the edges). align lines them up vertically. A child's weight (1, 2, ...) gives it that many " +
-      "shares of the width.",
+      "shares of the width. A Button in a Row takes its own width and lines up with the bottom of the fields beside it.",
   )
   .build();
 
@@ -87,9 +87,10 @@ const Stat = component("Stat")
   .prop("label", bindable(text))
   .prop("value", bindable(StatValue))
   .prop("format", optional(literal(oneOf(["number", "money"]))))
+  .prop("tone", optional(literal(oneOf(["accent", "danger"]))))
   .rule("value is money when format is money, otherwise a number")
   .describe(
-    'One headline number with a label, e.g. "Customers 42". format money expects {minorUnits, currency}. Put each Stat in its own Card inside a Row.',
+    'One headline number with a label, e.g. "Customers 42". format money expects {minorUnits, currency}. tone colors the number: accent for the app color, danger for red; a zero or empty value stays plain, so danger on "Overdue" lights up only when something is overdue. Put each Stat in its own Card inside a Row.',
   )
   .build();
 
@@ -112,6 +113,7 @@ const DataTable = component("DataTable")
           header: text,
           field: fieldOf(TableRow),
           sort: optional(text),
+          emptyText: optional(text),
           format: optional(oneOf(["text", "money", "date", "time", "badge", "list"])),
           tones: optional(map(tone)),
           link: optional(record({ to: text, params: map(fieldOf(TableRow)) })),
@@ -131,6 +133,7 @@ const DataTable = component("DataTable")
       'link makes the column\'s cells links to an app route whose $params are row fields: {to: "/jobs/$id", params: {id: "id"}}. ' +
       "format: date for ISO dates (yyyy-mm-dd), time for a time of day as HH:mm (10:30), money for {minorUnits, currency}, " +
       'badge for a short status word, list for an array of strings shown joined with ", ". ' +
+      'emptyText is what a column shows for a missing value (null, "" or an empty list), e.g. "All day" for a time column. ' +
       'tones colors badges by value: {"Unassigned": "warning", "Done": "success"} (neutral, info, success, warning, danger).',
   )
   .build();
