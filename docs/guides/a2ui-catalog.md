@@ -37,7 +37,7 @@ const prompt = rouxCatalog.promptEntries;        // each component's description
   agent reads about each one.
 
 `PRIMITIVES` is the list of definitions behind it: Column, Row, Heading, Text, Card, Stat, Button, DataTable,
-CardList, Form, InputField and SelectField. Row and Column lay out like flexbox: `gap`, `justify` (start, center,
+CardList, Form, InputField, SelectField and FilterChips. Row and Column lay out like flexbox: `gap`, `justify` (start, center,
 end, spaceBetween, spaceAround, spaceEvenly, stretch), `align` (start, center, end, stretch), and a child's
 `weight` (its share of the spare space). A Row's children share its width equally; once the Row sets `justify`,
 each takes its own width and `justify` places them, while a weighted child still grows.
@@ -55,6 +55,16 @@ or an empty list, in any format:
 
 ```json
 { "header": "At", "field": "at", "format": "time", "emptyText": "All day" }
+```
+
+`FilterChips` is one filter as a row of chips, one chosen at a time: `label` names the group, `value` is bound to a
+data-model path, and `options` is a literal list of `{value, label}`. Choosing a chip writes its `value` to the
+path, and the pressed chip is the one whose value equals the bound value (none is pressed when no option matches).
+Use it for a short fixed list (up to about five) and `SelectField` for a longer or growing one. It needs no `Form`:
+
+```json
+{ "id": "when", "component": "FilterChips", "label": "When", "value": { "@path": "/args/when" },
+  "options": [{ "value": "today", "label": "Today" }, { "value": "week", "label": "This week" }] }
 ```
 
 ## Defining a component

@@ -192,9 +192,21 @@ const SelectField = component("SelectField")
   )
   .build();
 
+const FilterChips = component("FilterChips")
+  .prop("label", bindable(text))
+  .prop("value", bindable(text))
+  .prop("options", literal(options(text)))
+  .describe(
+    "One filter as a row of chips, one chosen at a time, bound to a data-model path; options is a list of " +
+      "{value, label}. Use for a short fixed list (up to about five); use SelectField for longer or growing " +
+      "lists. Needs no Form.",
+  )
+  .build();
+
 /** roux's primitives, in the order the drawing prompt lists them. */
 export const PRIMITIVES = [
   SelectField,
+  FilterChips,
   CardList,
   Column,
   Row,

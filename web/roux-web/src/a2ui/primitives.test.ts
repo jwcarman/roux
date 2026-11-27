@@ -167,3 +167,28 @@ describe("Stat tone and Row's buttons", () => {
     );
   });
 });
+
+describe("FilterChips", () => {
+  const chips = {
+    label: "When",
+    value: { "@path": "/args/when" },
+    options: [{ value: "today", label: "Today" }],
+  };
+
+  it("takes a label, a bound value and literal options, and nothing else is needed", () => {
+    expect(accepts("FilterChips", chips)).toBe(true);
+    expect(accepts("FilterChips", { ...chips, value: "today" })).toBe(true);
+    expect(accepts("FilterChips", { ...chips, options: { "@path": "/options" } })).toBe(false);
+    expect(accepts("FilterChips", { ...chips, options: [{ value: "a" }] })).toBe(false);
+    expect(accepts("FilterChips", { label: "When", value: chips.value })).toBe(false);
+  });
+
+  it("tells an agent when to use it instead of a SelectField", () => {
+    const entry = rouxCatalog.promptEntries.find((e) => e.name === "FilterChips");
+    expect(entry?.description).toBe(
+      "One filter as a row of chips, one chosen at a time, bound to a data-model path; options is a list of " +
+        "{value, label}. Use for a short fixed list (up to about five); use SelectField for longer or growing " +
+        "lists. Needs no Form.",
+    );
+  });
+});

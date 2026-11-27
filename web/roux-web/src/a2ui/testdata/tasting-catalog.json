@@ -45,6 +45,39 @@
       },
       "required": ["component", "label", "value", "options"]
     },
+    "FilterChips": {
+      "type": "object",
+      "properties": {
+        "component": {
+          "const": "FilterChips"
+        },
+        "label": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "value": {
+          "$ref": "common_types.json#/$defs/DynamicString",
+          "description": "Represents a string"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": ["value", "label"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["component", "label", "value", "options"]
+    },
     "CardList": {
       "type": "object",
       "properties": {
@@ -511,6 +544,9 @@
       "oneOf": [
         {
           "$ref": "#/components/SelectField"
+        },
+        {
+          "$ref": "#/components/FilterChips"
         },
         {
           "$ref": "#/components/CardList"

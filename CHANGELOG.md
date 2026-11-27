@@ -8,6 +8,9 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **`FilterChips` in the catalog.** One filter as a row of chips, one chosen at a time: `label`, a bound
+  `value` (text) and literal `options` of `{value, label}`. Choosing a chip writes its value to the path.
+  For a short fixed list; `SelectField` stays for longer or growing ones. Needs no `Form`.
 - **Catalog 0.2.0: `Stat` tone, a column's `emptyText`, buttons in Rows.** A `Stat` takes `tone`
   (`accent` or `danger`) and colors a non-zero number (zero, zero money and nothing stay plain). A
   DataTable column takes `emptyText`, shown muted when its value is `null`, `""` or an empty list, in any

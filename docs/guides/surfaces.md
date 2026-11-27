@@ -126,6 +126,9 @@ values from the data to it. A field's `@checks` are its client rules (`required`
 `regex`, `email`, `numeric`), each with its message in roux's words, the same the server's
 `Validate` answers ([Forms](forms.md)).
 
+A `FilterChips` bound to a query's arg (`"value": {"@path": "/itemsArgs/when"}`) filters that query: choosing a
+chip writes its value to the arg, and the list answers again. It needs no `Form`.
+
 The catalog's components and their props are listed in [The A2UI catalog](a2ui-catalog.md). A
 misspelled prop passes A2UI's validation and draws nothing, so copy props from there.
 

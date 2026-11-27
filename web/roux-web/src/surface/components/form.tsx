@@ -2,12 +2,18 @@
 // the TanStack form only gives roux's fields their context, touched/blurred state and messages.
 import { type AnyFieldApi } from "@tanstack/react-form";
 import { Text, VStack } from "@chakra-ui/react";
+import { FilterChips as RouxFilterChips } from "../../table";
 import { InputField as RouxInputField, SelectField as RouxSelectField, useAppForm } from "../../form";
 import { createContext, useContext, useEffect, useEffectEvent, useRef, type ReactNode, type RefObject } from "react";
 import { rouxCatalog } from "../../a2ui";
 import { buildChildren, defineComponent, formatValue, useComponentId } from "./layout";
 
-const { Form: FormApi, InputField: InputFieldApi, SelectField: SelectFieldApi } = rouxCatalog.apis;
+const {
+  Form: FormApi,
+  InputField: InputFieldApi,
+  SelectField: SelectFieldApi,
+  FilterChips: FilterChipsApi,
+} = rouxCatalog.apis;
 
 function useBridgeForm() {
   return useAppForm({});
@@ -184,4 +190,16 @@ const SelectField = defineComponent(SelectFieldApi, ({ props }) => (
   </BridgeField>
 ));
 
-export const formComponents = [Form, InputField, SelectField];
+/** One filter: the chosen chip's value is written to the data model; no Form is involved. */
+const FilterChips = defineComponent(FilterChipsApi, ({ props }) => (
+  <div data-component-id={useComponentId()}>
+    <RouxFilterChips
+      label={textOf(props.label)}
+      options={optionsOf(props.options) as readonly { value: string; label: string }[]}
+      value={textOf(props.value)}
+      onChange={props.setValue}
+    />
+  </div>
+));
+
+export const formComponents = [Form, InputField, SelectField, FilterChips];

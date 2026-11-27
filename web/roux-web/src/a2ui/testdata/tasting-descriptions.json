@@ -1,5 +1,6 @@
 {
   "SelectField": "A labelled drop-down of choices, bound to a data-model path. options is a list of {value, label} (literal, or bound to a list in the data). Must be inside a Form.",
+  "FilterChips": "One filter as a row of chips, one chosen at a time, bound to a data-model path; options is a list of {value, label}. Use for a short fixed list (up to about five); use SelectField for longer or growing lists. Needs no Form.",
   "CardList": "The phone-friendly list: one card per record. Use instead of DataTable on phone moments. rows binds to an array in the data model; title is the field shown as each card's heading; lines are further fields shown under it (format: text, money, date); badge shows one field as a status word, with tones mapping value to neutral, info, success, warning or danger.",
   "Column": "Stacks its children vertically. The usual root of a screen.",
   "Row": "Lays its children side by side; wraps on narrow screens. Children share the width equally.",

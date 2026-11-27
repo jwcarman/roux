@@ -117,6 +117,11 @@ describe("surfaceTypes", () => {
     expect(types(column("root", ["a"]), stat("a", "/n", "number"))).toContain("  n: number;\n");
   });
 
+  it("aFilterChipsValueIsAString", () => {
+    const chips = { id: "c", component: "FilterChips", label: "When", value: at("/args/when"), options: [] };
+    expect(types(column("root", ["c"]), chips)).toContain("when: string;");
+  });
+
   it("aBoundFlagAndAMapAreTyped", () => {
     const out = types(
       column("root", ["b", "t"]),
