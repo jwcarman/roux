@@ -74,7 +74,7 @@ test("the owner adds an item for today, sees the counts move, and finds it by se
   const today = await statValue(page, "Today");
 
   // Day left blank: the item is for today.
-  const draftTitle = page.getByRole("textbox", { name: "Title" });
+  const draftTitle = page.getByRole("textbox", { name: "New item" });
   await draftTitle.fill(title);
   await page.getByRole("button", { name: "Add item" }).click();
   await expect(
@@ -90,15 +90,25 @@ test("the owner adds an item for today, sees the counts move, and finds it by se
   await expect(dataRows(page)).toHaveCount(1);
   await expect(row.getByText("Open")).toBeVisible();
 
-  const when = page.getByRole("combobox", { name: "When" });
-  const status = page.getByRole("combobox", { name: "Status" });
-  await when.selectOption({ label: "Overdue" });
+  /** A chip of a filter group, such as "When" > "Overdue". */
+  const chip = (group: string, name: string) =>
+    page.getByRole("group", { name: group }).getByRole("button", { name });
+  await expect(chip("When", "Any time")).toHaveAttribute("aria-pressed", "true");
+  await chip("When", "Overdue").click();
+  await expect(chip("When", "Overdue")).toHaveAttribute("aria-pressed", "true");
+  await expect(chip("When", "Any time")).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByText("No items yet")).toBeVisible();
-  await when.selectOption({ label: "Today" });
+  await chip("When", "Today").click();
   await expect(row).toHaveCount(1);
-  await status.selectOption({ label: "Done" });
+  await chip("Status", "Done").click();
+  await expect(chip("Status", "Done")).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("No items yet")).toBeVisible();
-  await status.selectOption({ label: "Open" });
+  await chip("Status", "Open").click();
+  await expect(row).toHaveCount(1);
+  await expect(row.getByRole("cell", { name: "All day" })).toBeVisible();
+  await chip("Assigned to", "Mine").click();
+  await expect(chip("Assigned to", "Mine")).toHaveAttribute("aria-pressed", "true");
+  await chip("Assigned to", "Anyone").click();
   await expect(row).toHaveCount(1);
 
   await row.getByRole("link", { name: title }).click();
@@ -135,7 +145,7 @@ test("a blank title is caught on the page, and the server's word on a field show
   request,
 }) => {
   await openItems(page, request);
-  const draftTitle = page.getByRole("textbox", { name: "Title" });
+  const draftTitle = page.getByRole("textbox", { name: "New item" });
   const addForm = page.locator("[data-component-id=addForm]");
 
   const adds: string[] = [];

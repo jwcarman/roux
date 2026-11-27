@@ -82,21 +82,21 @@ describe("the items surface", () => {
   it("asks for the overdue items, from the first page, when Overdue is chosen", async () => {
     open();
     await screen.findByRole("table", {}, { timeout: 5000 });
-    await userEvent.selectOptions(screen.getByLabelText("When"), "Overdue");
+    await userEvent.click(within(screen.getByRole("group", { name: "When" })).getByRole("button", { name: "Overdue" }));
     await waitFor(() => expect(latest()).toMatchObject({ when: "overdue", pageIndex: "0" }));
   });
 
   it("adds an item from its title and day, then the list and the counts refresh and the draft clears", async () => {
     open();
     await screen.findByRole("table", {}, { timeout: 5000 });
-    await userEvent.type(screen.getByLabelText(/^Title/), "Order the venue");
+    await userEvent.type(screen.getByLabelText(/^New item/), "Order the venue");
     await userEvent.click(screen.getByRole("button", { name: "Add item" }));
 
     expect(await screen.findByRole("link", { name: "Order the venue" })).toBeInTheDocument();
     expect(added).toEqual([{ title: "Order the venue", day: "" }]);
     expect(openCount()).toBe("2");
     expect(await screen.findByText("Item added")).toBeInTheDocument();
-    expect(screen.getByLabelText<HTMLInputElement>(/^Title/).value).toBe("");
+    expect(screen.getByLabelText<HTMLInputElement>(/^New item/).value).toBe("");
   });
 
   it("shows the server's word on a field under that field", async () => {

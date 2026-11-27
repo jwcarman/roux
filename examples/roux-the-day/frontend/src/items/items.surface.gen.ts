@@ -10,12 +10,20 @@ export interface ItemsSurfaceData {
   };
   itemsArgs: {
     search: string;
+    assignee: string;
     when: string;
     status: string;
-    assignee: string;
     pageIndex: number;
     sortBy: string;
     sortDirection: string;
+  };
+  draft: {
+    title: string;
+    day: string;
+  };
+  errors: {
+    title: string;
+    day: string;
   };
   items: {
     data: {
@@ -27,14 +35,6 @@ export interface ItemsSurfaceData {
       status: string | null;
     }[];
     pagination: Pagination;
-  };
-  draft: {
-    title: string;
-    day: string;
-  };
-  errors: {
-    title: string;
-    day: string;
   };
 }
 
