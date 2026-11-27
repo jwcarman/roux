@@ -107,7 +107,7 @@ function BridgeField({ kind, sync, children }: { kind: string; sync: Sync; child
     <form.AppField
       name={id}
       defaultValue={sync.value}
-      validators={{ onBlur: () => check.current, onSubmit: () => check.current }}
+      validators={{ onBlur: () => check.current }}
       listeners={{ onChange: ({ value }) => writeBack(value, sync) }}
     >
       {(field) => (

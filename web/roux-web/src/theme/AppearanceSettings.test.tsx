@@ -466,6 +466,10 @@ describe("AppearanceSettings", () => {
     expect(rulesFor(sample(flat))).toMatch(/border-width:1px/);
     expect(rulesFor(sample(flat))).not.toMatch(/box-shadow/);
     expect(rulesFor(sample(flat))).toMatch(/border-color:var\(--chakra-colors-border\)/);
+    expect(rulesFor(sample(flat))).toMatch(/background:var\(--chakra-colors-bg-panel\)/);
+    expect(rulesFor(flat.querySelector<HTMLElement>("[data-swatch]")!)).toMatch(
+      /background:var\(--chakra-colors-transparent\)/,
+    );
     expect(sample(raised)).toHaveAttribute("data-sample", "raised");
     expect(rulesFor(sample(raised))).toMatch(/box-shadow:var\(--chakra-shadows-sm\)/);
     expect(rulesFor(sample(raised))).toMatch(/border-color:var\(--chakra-colors-border-muted\)/);
