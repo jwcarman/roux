@@ -561,3 +561,8 @@ failed on a database test.
 worked; on this case every arm can reach a working app, and what the skill buys is the cost of
 getting there: about 40% fewer turns on Sonnet and about 65% fewer on Haiku. A case where success
 separates the arms needs a harder task than `app-locations`.
+
+**Note on `7d51e9d`:** the commit the rerun and the third round loaded the plugin from was local and is
+not pushed. It is `1c5c97d` with `skills/roux/scripts/check.sh` exactly as `16c5467` changed it on
+main (its log in TMPDIR by path; Prettier's errors and refused writes in a failure's summary), and
+nothing else. To repeat those runs, make that commit again and pass it to `run-evals.sh --plugin`.
