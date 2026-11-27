@@ -2,6 +2,9 @@
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
+import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
+import { ThemeProvider } from "../theme/ThemeProvider";
 import { describe, expect, it, vi } from "vitest";
 import { LuHouse, LuUsers } from "react-icons/lu";
 import { rulesFor } from "../testing/css";
@@ -184,6 +187,62 @@ describe("AppShell", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "drop second" }));
       expect(widthOf()).toContain("max-width:var(--chakra-sizes-3xl)");
+    });
+
+    it("is wide before anything can paint: the commit that mounts a caller is followed at once by the wide one", () => {
+      const host = document.createElement("div");
+      document.body.append(host);
+      const root = createRoot(host);
+      const actEnvironment = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean };
+      actEnvironment.IS_REACT_ACT_ENVIRONMENT = false;
+      try {
+        // flushSync renders what a layout effect asks for before it returns; a passive effect's update would wait.
+        flushSync(() =>
+          root.render(
+            <ThemeProvider>
+              <AppShell nav={defineNav([] as const, [])} permissions={[]} appName="Dojo">
+                <Wide name="first" />
+              </AppShell>
+            </ThemeProvider>,
+          ),
+        );
+        expect(rulesFor(host.querySelector("main") as Element)).toContain("max-width:var(--chakra-sizes-6xl)");
+      } finally {
+        flushSync(() => root.unmount());
+        host.remove();
+        actEnvironment.IS_REACT_ACT_ENVIRONMENT = true;
+      }
+    });
+
+    it("costs the shell nothing when a caller re-renders", async () => {
+      const renders = { account: 0 };
+      function Typing() {
+        const [text, setText] = useState("");
+        useWidePage();
+        return <input aria-label="Search" value={text} onChange={(event) => setText(event.target.value)} />;
+      }
+      renderInRouter(
+        <AppShell
+          nav={nav}
+          permissions={[]}
+          appName="Dojo"
+          account={() => {
+            renders.account++;
+            return null;
+          }}
+        >
+          <Typing />
+        </AppShell>,
+      );
+      await screen.findByLabelText("Search");
+
+      const before = renders.account;
+      await userEvent.type(screen.getByLabelText("Search"), "milk");
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(renders.account).toBe(before);
+      expect(widthOf()).toContain("max-width:var(--chakra-sizes-6xl)");
     });
 
     it("does nothing outside an AppShell", async () => {
