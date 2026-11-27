@@ -21,15 +21,21 @@ if [ ! -f go.mod ] || [ ! -d cmd/server ]; then
   echo "check: run this from the app's root (where go.mod and cmd/server are)" >&2
   exit 2
 fi
-log="$(mktemp -t roux-check.XXXXXX)"
+# In TMPDIR, by path: macOS's `mktemp -t` ignores TMPDIR for its per-user temp directory, which a
+# sandbox may not let it write.
+tmp="${TMPDIR:-/tmp}"
+log="$(mktemp "${tmp%/}/roux-check.XXXXXX")" || {
+  echo "check: cannot write a log file in ${tmp%/}: set TMPDIR to a directory you can write" >&2
+  exit 2
+}
 skipped=()
 
 fail() {
   echo "check: FAIL $1" >&2
   echo "  $2" >&2
-  # Compile and vet errors with file and line, failing tests, lint findings, type errors, and
-  # coverage shortfalls; then the rows that list uncovered lines.
-  grep -E '\.go:[0-9]+|^--- FAIL|^FAIL|panic:|error TS|ERROR: Coverage|FAIL |AssertionError|Expected|✗|[0-9]+:[0-9]+ +error' "$log" \
+  # Compile and vet errors with file and line, failing tests, lint findings, type errors, Prettier's
+  # errors, refused writes and coverage shortfalls; then the rows that list uncovered lines.
+  grep -E '\.go:[0-9]+|^--- FAIL|^FAIL|panic:|error TS|ERROR: Coverage|FAIL |AssertionError|Expected|✗|[0-9]+:[0-9]+ +error|^\[error\]|EPERM|EACCES' "$log" \
     | awk '!seen[$0]++' | head -n 25 | sed 's/^/  /' >&2
   grep -E '\|[^|]*\|[^|]*\|[^|]*\|[^|]*\| *[0-9][0-9,-]* *$' "$log" | head -n 10 | sed 's/^/  uncovered: /' >&2
   echo "  full output: $log" >&2

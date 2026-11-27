@@ -433,3 +433,41 @@ Anything else is reported as not supported.
 
 **Caveat:** as before, the skill's author wrote the case, the hidden tests and the reference
 solution.
+
+### Results, 2026-11-27 (roux and the plugin at `1c5c97d`)
+
+12 runs, every one reported. Cost as `claude plugin eval` reports it: $5.27 in all.
+
+| Arm | Succeeded | Acceptance | Build | Turns, mean (range) | Cost, mean | Time, mean |
+|---|---|---|---|---|---|---|
+| Sonnet with the skill | 2/3 | 3/3 | 2/3 (`format:check`) | 21 (17–27) | $0.45 | 2.8 min |
+| Sonnet without | 3/3 | 3/3 | 3/3 | 43 (28–59) | $0.93 | 3.6 min |
+| Haiku with the skill | 2/3 | 3/3 | 2/3 (`lint`) | 42 (36–49) | $0.06 | 3.7 min |
+| Haiku without | 3/3 | 3/3 | 3/3 | 54 (46–65) | $0.32 | 5.0 min |
+
+The skill fired in every run that had it. check-roux-way's other checks passed in all 12.
+
+- **Efficiency: not supported.** Sonnet with the skill took half the turns and half the cost, but
+  succeeded less often (2/3 against 3/3).
+- **A cheaper model: not supported** (Haiku with the skill 2/3, Sonnet without 3/3, Haiku without
+  3/3).
+
+**Why the arm with the skill lost runs:** the skill's `scripts/check.sh` failed in all 6 of its
+runs, on its first step, with a false "the module does not load". macOS's `mktemp -t` ignores TMPDIR
+and writes the per-user temp directory, which the eval's sandbox does not let it write. The agents
+then ran the gates by hand; both failed gates are from that. Runs that patched the script then met
+`npm run format` failing in the sandbox, with a summary that dropped Prettier's own error, so its
+cause is unknown. `eval-preflight.sh` missed both: its sandbox let that directory be written.
+
+**Haiku's costs** do not follow its tokens: the arm with the skill used about half the tokens of the
+arm without (2.5M against 4.5M cache reads, 30k against 49k output) but is reported at a sixth of the
+cost. Compare Haiku's arms by turns and tokens, not dollars.
+
+### The rerun (written before it runs)
+
+The same protocol, case, fixture (roux at `1c5c97d`) and arms, with one change: the plugin is loaded
+at `7d51e9d` (`run-evals.sh --plugin`), which is `1c5c97d` and one fix to `check.sh`: its log is
+made in TMPDIR by path, and a failure's summary shows Prettier's `[error]` lines and refused writes.
+`eval-preflight.sh` now denies writing the per-user temp directory, as the eval's sandbox does, and
+passes on the fixture with that `check.sh` (it fails with `1c5c97d`'s). Each run's `check.sh` logs
+are kept (`<tag>.check-logs/`), so a failure in the sandbox shows its cause.

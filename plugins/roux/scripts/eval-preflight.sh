@@ -8,14 +8,15 @@
 #   go test -run '^$' ./...                 every test compiled (the database tests need Docker)
 #   frontend: npm run lint, coverage, build the frontend's gates
 #   make build                              the release binary, the front end's install and build in it
-#   the skill's scripts/check.sh            at the fixture's commit, as the arm with the plugin runs it
+#   the skill's scripts/check.sh            at the plugin's commit, as the arm with the plugin runs it
 # Each must succeed; the fixture itself is never touched.
 #
-# Usage: eval-preflight.sh <fixture dir>     (eval-fixture.sh runs it on every fixture it writes)
+# Usage: eval-preflight.sh <fixture dir> [<plugin commit>]   (default: the fixture's commit;
+#        eval-fixture.sh runs it on every fixture it writes)
 set -euo pipefail
 
-if [ "$#" -ne 1 ] || [ ! -d "$1/app/.git" ] || [ ! -d "$1/home" ]; then
-  echo "usage: $(basename "$0") <fixture dir with app/ and home/>" >&2
+if [ "$#" -lt 1 ] || [ "$#" -gt 2 ] || [ ! -d "$1/app/.git" ] || [ ! -d "$1/home" ]; then
+  echo "usage: $(basename "$0") <fixture dir with app/ and home/> [<plugin commit>]" >&2
   exit 2
 fi
 fixture="$(cd "$1" && pwd -P)"
@@ -24,7 +25,8 @@ if ! command -v sandbox-exec >/dev/null; then
   exit 0
 fi
 
-base="$(mktemp -d)"
+# Under /private/tmp, as the eval's runs are: not in the per-user temp directory it denies below.
+base="$(mktemp -d /private/tmp/eval-preflight.XXXXXX)"
 base="$(cd "$base" && pwd -P)"
 run_home="$base/home"
 copy="$run_home/cwd"
@@ -62,14 +64,20 @@ done
 # mise's shims (node, npm) run too, as they do in the sandbox.
 shims="$HOME/.local/share/mise/shims"
 [ ! -d "$shims" ] || allow+="(allow file-read* (subpath \"$shims\"))"
-profile="(version 1)(allow default)(deny file-read* (subpath \"$HOME\"))$allow(deny file-write* (regex #\"/\\.(idea|vscode)(/|$)\"))"
+# Nor can it write macOS's per-user temp directory (where `mktemp -t` writes whatever TMPDIR says,
+# and xcrun keeps its cache); the agent's TMPDIR is a claude-<uid> directory under the run's tmp.
+user_tmp="$(getconf DARWIN_USER_TEMP_DIR)"
+user_tmp="$(cd "$user_tmp" && pwd -P)"
+run_tmp="$base/tmp/claude-$(id -u)"
+mkdir -p "$run_tmp"
+profile="(version 1)(allow default)(deny file-read* (subpath \"$HOME\"))$allow(deny file-write* (regex #\"/\\.(idea|vscode)(/|$)\"))(deny file-write* (subpath \"$user_tmp\"))"
 failed=0
 
 step() {
   local name="$1"
   shift
   if (cd "$copy" && env -u GOMODCACHE -u GOCACHE -u GOFLAGS -u GOTOOLCHAIN -u GOPROXY -u GOROOT \
-    -u npm_config_cache HOME="$run_home" TMPDIR="$base/tmp" HTTP_PROXY="$proxy_url" \
+    -u npm_config_cache HOME="$run_home" TMPDIR="$run_tmp" HTTP_PROXY="$proxy_url" \
     HTTPS_PROXY="$proxy_url" http_proxy="$proxy_url" https_proxy="$proxy_url" NO_PROXY=localhost \
     no_proxy=localhost sandbox-exec -p "$profile" "$@") >"$log" 2>&1; then
     echo "eval-preflight: ok   $name" >&2
@@ -89,8 +97,9 @@ step "frontend: npm run build" sh -c 'cd frontend && npm run build'
 step "make build" make build
 # The skill's own check script, as the arm with the plugin runs it (its database tests skipped).
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
-if [ -f "$fixture/commit" ] &&
-  git -C "$root" show "$(cat "$fixture/commit"):plugins/roux/skills/roux/scripts/check.sh" >"$base/check.sh" 2>/dev/null; then
+plugin_commit="${2:-$(cat "$fixture/commit" 2>/dev/null)}"
+if [ -n "$plugin_commit" ] &&
+  git -C "$root" show "$plugin_commit:plugins/roux/skills/roux/scripts/check.sh" >"$base/check.sh" 2>/dev/null; then
   step "the skill's scripts/check.sh" bash "$base/check.sh"
 fi
 

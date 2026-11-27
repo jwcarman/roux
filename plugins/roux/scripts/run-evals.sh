@@ -5,26 +5,32 @@
 #   <tag>.check.txt   check-roux-way.sh: the app's own gates, and roux's way
 #   <tag>.diff        what the run changed (git diff against the fixture, new files included)
 #   <tag>.trace.jsonl the run's transcript
+#   <tag>.check-logs/ the logs the skill's check.sh wrote in the run, when it ran
 # The fixture is evals/fixture-app.local's (eval-fixture.sh). The plugin is loaded from a git
 # worktree at the fixture's commit, so the skill the agent reads describes the roux its app is
-# built on; this checkout's evals/ is copied into it (the cases and their tests are today's).
+# built on, or at --plugin's commit (a local one is fine: only the fixture's must be pushed), for a
+# fix to the skill on top of it; this checkout's evals/ is copied into it (the cases and their
+# tests are today's).
 #
-# Usage: run-evals.sh [--runs N] [--model M] [--ablation with-without|none] <out dir> <case>...
+# Usage: run-evals.sh [--runs N] [--model M] [--ablation with-without|none] [--plugin <commit>]
+#                     <out dir> <case>...
 #        (defaults: 3 runs, sonnet, with-without; none runs only the arm with the plugin)
 set -uo pipefail
 runs=3
 model=sonnet
 ablation=with-without
+plugin_commit=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --runs) runs="$2"; shift 2 ;;
     --model) model="$2"; shift 2 ;;
     --ablation) ablation="$2"; shift 2 ;;
+    --plugin) plugin_commit="$2"; shift 2 ;;
     *) break ;;
   esac
 done
 if [ "$#" -lt 2 ]; then
-  echo "usage: $(basename "$0") [--runs N] [--model M] [--ablation with-without|none] <out dir> <case>..." >&2
+  echo "usage: $(basename "$0") [--runs N] [--model M] [--ablation with-without|none] [--plugin <commit>] <out dir> <case>..." >&2
   exit 2
 fi
 OUT="$1"; shift
@@ -32,15 +38,16 @@ PLUGIN="$(cd "$(dirname "$0")/.." && pwd -P)"
 ROOT="$(cd "$PLUGIN/../.." && pwd -P)"
 FIXTURE="$(head -n 1 "$PLUGIN/evals/fixture-app.local")"
 COMMIT="$(cat "$FIXTURE/commit")"
+PLUGIN_COMMIT="$(git -C "$ROOT" rev-parse --verify "${plugin_commit:-$COMMIT}^{commit}")" || exit 2
 mkdir -p "$OUT"
 OUT="$(cd "$OUT" && pwd -P)"
 
 worktree="$(mktemp -d)/roux"
-git -C "$ROOT" worktree add -q --detach "$worktree" "$COMMIT" || exit 1
+git -C "$ROOT" worktree add -q --detach "$worktree" "$PLUGIN_COMMIT" || exit 1
 trap 'git -C "$ROOT" worktree remove --force "$worktree"' EXIT
 rm -rf "$worktree/plugins/roux/evals"
 rsync -a --exclude /results "$PLUGIN/evals/" "$worktree/plugins/roux/evals/"
-echo "plugin at ${COMMIT:0:7} ($worktree), fixture $FIXTURE" | tee "$OUT/setup.txt"
+echo "plugin at ${PLUGIN_COMMIT:0:7} ($worktree), fixture $FIXTURE (roux at ${COMMIT:0:7})" | tee "$OUT/setup.txt"
 
 for case in "$@"; do
   echo "== $case $(date +%T)"
@@ -61,6 +68,11 @@ for c in r["cases"]:
     chmod 700 "$kept" "$kept/sealed" 2>/dev/null
     chmod -R u+w "$kept/sealed" 2>/dev/null
     cp "$kept/out/trace.jsonl" "$OUT/$tag.trace.jsonl" 2>/dev/null
+    for f in "$kept"/sealed/tmp/*/roux-check.* "$kept"/sealed/tmp/roux-check.*; do
+      [ -f "$f" ] || continue
+      mkdir -p "$OUT/$tag.check-logs"
+      cp "$f" "$OUT/$tag.check-logs/"
+    done
     work="$(mktemp -d)/work"
     rsync -a --exclude /.git "$kept/sealed/home/cwd/" "$work/"
     cp -R "$FIXTURE/app/.git" "$work/.git"
