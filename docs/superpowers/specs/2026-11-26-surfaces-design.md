@@ -80,8 +80,6 @@ Ported from the spike's `internal/cqrs` and hardened.
 - Idempotency: a command request may carry `Idempotency-Key` (a UUID). The key and the answer are
   stored in the command log in the command's own transaction; a repeat answers the stored answer. The
   log's table comes with `cqrs.Module`, which an app turns on before any module that registers commands.
-- Stale writes: a command whose input carries a `version` that no longer matches answers roux's
-  existing conflict problem (409).
 - `cqrs.Mount(k, endpoints...)` registers them; a duplicate name panics at start-up, naming both.
 - **The contract:** `cqrs.TypeScript(endpoints)` writes `contract.gen.ts`: an interface per Go type the
   endpoints name (from JSON tags; a pointer is an optional member in an input, nullable elsewhere) and
@@ -185,4 +183,7 @@ Guides and skill references for `cqrs`, surface types, `bind` and `<Surface>`, a
 - Queries and commands are the app's ports (ports and adapters). Other adapters may drive them later: agent tools (the PM agent or an owner's assistant running `addItem` with the same validation, permission, idempotency and events), a CLI, scheduled jobs.
 
 - Detail surfaces (route parameters), modals, links between surfaces, composites, options queries.
+- Stale writes in `cqrs` itself: today a command's service compares the input's `version` and answers
+  `problem.StaleVersion()` (409). A first-class check, and the surface refetching on 409, come with
+  detail surfaces, where editing needs them.
 - Where `typed-catalog` merges: this branch is cut from it.
