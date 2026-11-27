@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import { cleanup, renderHook, screen } from "@testing-library/react";
+import { flushSync } from "react-dom";
+import { createRoot } from "react-dom/client";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { formatValue, useComponentId } from "./layout";
 import { pageOf } from "../../testing";
-import { renderSurface } from "../testSurface";
+import { renderSurface, startSurface } from "../testSurface";
+import { ThemeProvider } from "../../theme";
 
 const jobs = pageOf([{ customer: "Ann Lee", job: "Leaky tap" }], {});
 
@@ -275,6 +278,45 @@ describe("content", () => {
       expect(slot.alignSelf).toBe("flex-end");
       expect(getComputedStyle(slotOf("first")).alignSelf).not.toBe("flex-end");
       expect(getComputedStyle(slotOf("first")).flexGrow).toBe(grow);
+    });
+
+    it("is right in the first committed render, before anything can paint", () => {
+      const { element } = startSurface(
+        [
+          { id: "root", component: "Row", justify: "end", children: ["a", "go"] },
+          { id: "a", component: "Text", text: "a", weight: 2 },
+          { id: "go", component: "Button", label: "Add", action: { event: { name: "add" } } },
+        ],
+        {},
+      );
+      const host = document.createElement("div");
+      document.body.append(host);
+      const root = createRoot(host);
+      const actEnvironment = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean };
+      actEnvironment.IS_REACT_ACT_ENVIRONMENT = false;
+      try {
+        // flushSync renders what a layout effect asks for before it returns; a passive effect's update would wait.
+        flushSync(() => root.render(<ThemeProvider>{element}</ThemeProvider>));
+        const slot = (id: string) =>
+          getComputedStyle(host.querySelector(`[data-component-id="${id}"]`)?.closest("[data-row-slot]") as Element);
+        expect(slot("go").flexGrow).toBe("0");
+        expect(slot("go").alignSelf).toBe("flex-end");
+        expect(slot("a").flexGrow).toBe("2");
+      } finally {
+        flushSync(() => root.unmount());
+        host.remove();
+        actEnvironment.IS_REACT_ACT_ENVIRONMENT = true;
+      }
+    });
+
+    it("follows the component when the agent turns the Button into text, and back", () => {
+      const surface = renderSurface(formWithRow(), data);
+      expect(getComputedStyle(slotOf("go")).alignSelf).toBe("flex-end");
+      surface.update([{ id: "go", component: "Text", text: "Add" }]);
+      expect(getComputedStyle(slotOf("go")).alignSelf).not.toBe("flex-end");
+      expect(getComputedStyle(slotOf("go")).flexGrow).toBe("1");
+      surface.update([{ id: "go", component: "Button", label: "Add", action: { event: { name: "add" } } }]);
+      expect(getComputedStyle(slotOf("go")).alignSelf).toBe("flex-end");
     });
 
     it("leaves the Form's fields working", async () => {

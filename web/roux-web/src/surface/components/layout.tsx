@@ -7,7 +7,7 @@ import {
 } from "@a2ui/react";
 import type { ComponentApi } from "@a2ui/web_core";
 import { Box, Button, Card, Heading, HStack, Stat, Text, VStack } from "@chakra-ui/react";
-import { createContext, useContext, useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { createContext, useContext, useLayoutEffect, useState, type ComponentType, type ReactNode } from "react";
 import { formatDate, formatTime } from "../../dates";
 import { formatMoney, type Money } from "../../money";
 import { rouxCatalog } from "../../a2ui";
@@ -42,14 +42,14 @@ const SlotWeight = createContext<((weight: number | undefined) => void) | undefi
 /** A Row slot's setter for whether its child is a Button; only the slot's own child sees it. */
 const SlotButton = createContext<((isButton: boolean) => void) | undefined>(undefined);
 
-/** Tells the slot holding this component its weight (a prop every catalog component may carry) and whether it is a Button. */
+/** Tells (before the first paint, so the slot never jumps) the slot holding this component its weight (a prop every catalog component may carry) and whether it is a Button. */
 function ReportToSlot({ node }: { node: NodeViewProps["node"] }) {
   const { weight } = useSignalValue(node.props) as { weight?: number };
   const setWeight = useContext(SlotWeight);
   const setButton = useContext(SlotButton);
-  useEffect(() => setWeight?.(weight), [setWeight, weight]);
-  const isButton = node.type === "Button";
-  useEffect(() => setButton?.(isButton), [setButton, isButton]);
+  useLayoutEffect(() => setWeight?.(weight), [setWeight, weight]);
+  // Setting the state it already has costs nothing, so this runs after every render rather than tracking when it changes.
+  useLayoutEffect(() => setButton?.(node.type === "Button"));
   return null;
 }
 
@@ -146,7 +146,7 @@ const RowJustified = createContext<boolean | undefined>(undefined);
 function RowSlot({ children }: { children: ReactNode }) {
   const justified = useContext(RowJustified);
   const [weight, setWeight] = useState<number | undefined>(undefined);
-  const [isButton, setButton] = useState(false);
+  const [isButton, setButton] = useState<boolean>();
   // A justified Row's child takes its own width, unless it has a weight: then it shares the width like the rest.
   // A Button always takes its own width and lines up with the bottom of the fields beside it.
   const sharing = (!justified || weight !== undefined) && !isButton;
