@@ -58,6 +58,11 @@ Template files:
 
 - `frontend/src/routes/_signedIn/-appearance.test.tsx`: the fixture's theme adds `depth: "flat"`.
 
+## 0.6.0 to 0.6.1
+
+- Nothing required. roux-web accepts `@testing-library/jest-dom` 7 or 8; the template moved to
+  `^8.0.0` (needs Vitest 5), optional for an app.
+
 ## Check
 
 `make dev` serves <http://localhost:5173> with the app's name in the tab (not `__APP_NAME__`) and

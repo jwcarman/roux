@@ -17,16 +17,16 @@ Upgrade one release at a time, oldest first: each section assumes the one before
 1. **The packages**, in the app's directory:
 
    ```bash
-   go get github.com/jwcarman/roux@v0.6.0 && go mod tidy
-   (cd frontend && npm install @jwcarman/roux-web@0.6.0)
+   go get github.com/jwcarman/roux@v0.6.1 && go mod tidy
+   (cd frontend && npm install @jwcarman/roux-web@0.6.1)
    ```
 
 2. **The release's template**, to copy from: a fresh app at that version, under the app's own name,
    outside the app:
 
    ```bash
-   mkdir -p /tmp/roux-0.6.0 && cd /tmp/roux-0.6.0
-   npm create @jwcarman/roux-app@0.6.0 team-planner -- --name "Team Planner"
+   mkdir -p /tmp/roux-0.6.1 && cd /tmp/roux-0.6.1
+   npm create @jwcarman/roux-app@0.6.1 team-planner -- --name "Team Planner"
    ```
 
    Its files carry the app's name where the template does (the Makefile's `bin/team-planner`), so
@@ -81,3 +81,14 @@ Upgrade one release at a time, oldest first: each section assumes the one before
 | File | What to do |
 | --- | --- |
 | `frontend/src/routes/_signedIn/-appearance.test.tsx` | The theme in its fixture adds `depth: "flat"`. |
+
+## 0.6.0 to 0.6.1
+
+**The packages.** Nothing to change. `@jwcarman/roux-web` now accepts `@testing-library/jest-dom` 8
+as well as 7, so an app may move to jest-dom 8 (it needs Vitest 5).
+
+**The template's files.**
+
+| File | What to do |
+| --- | --- |
+| `frontend/package.json` | Optional: `@testing-library/jest-dom` `^8.0.0`, then `npm install`. |

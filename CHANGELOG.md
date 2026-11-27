@@ -6,6 +6,16 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-27
+
+### Fixed
+
+- **`@jwcarman/roux-web` installs beside jest-dom 8.** Its optional peer `@testing-library/jest-dom` was `^7.0.1`,
+  so npm refused it (ERESOLVE) in an app on jest-dom 8.0.0, the current one. It is `^7.0.1 || ^8.0.0`; roux, the
+  template and Roux The Day test on 8.0.0 (which needs Vitest 5, as roux already does).
+- **A surface `Form`'s fields check once on submit.** The extra `onSubmit` validator added in 0.6.0 repeated the
+  `onBlur` check a submit already runs; it is gone, and nothing a person sees changes.
+
 ## [0.6.0] - 2026-11-27
 
 ### Changed
@@ -776,7 +786,8 @@ First release: the contracts every roux application shares, on both the Java and
 - Java 25 and Spring Boot 4.1.
 - React, Chakra UI and the TanStack libraries are peer dependencies of `@jwcarman/roux-web`.
 
-[Unreleased]: https://github.com/jwcarman/roux/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/jwcarman/roux/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/jwcarman/roux/releases/tag/v0.6.1
 [0.6.0]: https://github.com/jwcarman/roux/releases/tag/v0.6.0
 [0.5.0]: https://github.com/jwcarman/roux/releases/tag/v0.5.0
 [0.4.0]: https://github.com/jwcarman/roux/releases/tag/v0.4.0
