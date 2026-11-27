@@ -17,16 +17,16 @@ Upgrade one release at a time, oldest first: each section assumes the one before
 1. **The packages**, in the app's directory:
 
    ```bash
-   go get github.com/jwcarman/roux@v0.5.0 && go mod tidy
-   (cd frontend && npm install @jwcarman/roux-web@0.5.0)
+   go get github.com/jwcarman/roux@v0.6.0 && go mod tidy
+   (cd frontend && npm install @jwcarman/roux-web@0.6.0)
    ```
 
 2. **The release's template**, to copy from: a fresh app at that version, under the app's own name,
    outside the app:
 
    ```bash
-   mkdir -p /tmp/roux-0.5.0 && cd /tmp/roux-0.5.0
-   npm create @jwcarman/roux-app@0.5.0 team-planner -- --name "Team Planner"
+   mkdir -p /tmp/roux-0.6.0 && cd /tmp/roux-0.6.0
+   npm create @jwcarman/roux-app@0.6.0 team-planner -- --name "Team Planner"
    ```
 
    Its files carry the app's name where the template does (the Makefile's `bin/team-planner`), so
@@ -60,3 +60,24 @@ Upgrade one release at a time, oldest first: each section assumes the one before
 | `frontend/vite.config.ts` | Copy, or merge the `serverShell()` plugin and `server.port: 5173` with `strictPort`. |
 | `frontend/index.html` | The theme script is `<script nonce="__CSP_NONCE__">`. |
 | `.gitignore`, `.dockerignore` | Add `/tmp/` and `tmp` (air's build). |
+
+## 0.5.0 to 0.6.0
+
+**The packages.**
+
+- `react-dom` is a peer dependency of `@jwcarman/roux-web`. An app made from the template already
+  has it; one without it runs `npm install react-dom` in `frontend/`.
+- `<TableView insetFooter>` is gone: delete the prop. A Card around a lone table pads its footer
+  and empty message itself.
+- The theme has a `depth` (`flat` or `raised`). roux's migration adds it to the stored theme, and
+  `/api/roux/theme` requires it on a save, so update the server and the front end together. A test
+  that builds a theme by hand adds `depth: "flat"`; the type check names each one.
+- Nothing else is required. Surfaces, `cqrs`, `app.Config.Look` and `scope.Kinds` are new and
+  optional: an app takes them up feature by feature (the [surfaces](surfaces.md) guide says how to
+  set one up).
+
+**The template's files.**
+
+| File | What to do |
+| --- | --- |
+| `frontend/src/routes/_signedIn/-appearance.test.tsx` | The theme in its fixture adds `depth: "flat"`. |

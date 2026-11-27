@@ -44,6 +44,20 @@ Template files:
 - `frontend/index.html`: the theme script is `<script nonce="__CSP_NONCE__">`.
 - `.gitignore` `/tmp/`, `.dockerignore` `tmp`.
 
+## 0.5.0 to 0.6.0
+
+Packages:
+
+- `react-dom` is a peer of `@jwcarman/roux-web`: `npm install react-dom` in `frontend/` if missing.
+- `<TableView insetFooter>` is gone: delete the prop.
+- The theme's `depth` (`flat` | `raised`) is required on a save; roux migrates the stored theme. A
+  hand-built test theme adds `depth: "flat"`.
+- Surfaces, `cqrs`, `app.Config.Look`, `scope.Kinds`: new, optional; nothing to change.
+
+Template files:
+
+- `frontend/src/routes/_signedIn/-appearance.test.tsx`: the fixture's theme adds `depth: "flat"`.
+
 ## Check
 
 `make dev` serves <http://localhost:5173> with the app's name in the tab (not `__APP_NAME__`) and
