@@ -504,3 +504,17 @@ fails with `spawn EPERM` before its script starts (npm's debug log in the run's 
 The likely cause is npm finding `sh` on a PATH whose first directories are under the unreadable real
 home; `eval-preflight.sh`'s sandbox does not reproduce it. The arm without the skill does not use
 `npm run` as much, so this cost the arm with the skill more turns.
+
+### After the rerun: npm fixed in the fixture; no database possible
+
+Three probe runs on Haiku (about 2¢ in all) in the real sandbox found:
+
+- **npm:** Node's spawn of a bare `sh` fails with EPERM (the PATH's first directories are under the
+  unreadable real home); `/bin/sh` by path works, and so does `sh` with `/bin` first. The fixture's
+  `.npmrc` now sets `script-shell=/bin/sh` (`eval-fixture.sh`); with it `npm run format:check`,
+  `lint`, `coverage` and the skill's `check.sh` (at `7d51e9d`) all pass in the sandbox.
+  `eval-preflight.sh` still does not reproduce the failure (its `npm run` passes without the fix):
+  a known gap.
+- **A database:** none can be had. The sandbox refuses loopback TCP (EPERM) and Unix sockets, even
+  one in the run's own home. So the Go database tests cannot run in any arm. A variable written to
+  the home's `.zshenv` does reach the agent's shell.

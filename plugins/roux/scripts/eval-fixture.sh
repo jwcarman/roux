@@ -130,7 +130,9 @@ echo "installing the frontend and its lint tools" >&2
 # Proves the cache holds everything: a clean install offline.
 (cd "$app/frontend" && rm -rf node_modules && npm ci --offline --no-audit --no-fund) >&2
 unset npm_config_cache
-printf '%s\n' offline=true audit=false fund=false >"$home/.npmrc"
+# script-shell by path: the sandbox's PATH starts with directories under the unreadable real home,
+# and Node's spawn of a bare `sh` gives up on the first of them (EPERM), so every `npm run` failed.
+printf '%s\n' offline=true audit=false fund=false script-shell=/bin/sh >"$home/.npmrc"
 
 # The Makefile installs with `npm install`, not `npm ci`. The sandbox refuses any write under an .idea
 # directory, and a package (tunnel, through Stryker) ships one: `npm ci` deletes node_modules first,
