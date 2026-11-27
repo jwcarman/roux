@@ -5,7 +5,7 @@ app already has all of it; read this when changing it.
 
 ## Rules
 
-- **Versions:** this skill describes roux **0.5.0** (the Go server): `github.com/jwcarman/roux` in `go.mod` and `@jwcarman/roux-web` in
+- **Versions:** this skill describes roux **0.6.0** (the Go server): `github.com/jwcarman/roux` in `go.mod` and `@jwcarman/roux-web` in
   `frontend/package.json`. If the project's versions are older, tell the user before anything else:
   roux 0.3.0 and earlier were Spring Boot, and nothing here applies to them.
 - One stack: Go 1.27, `net/http`, pgx v5, PostgreSQL 17 with SQL migrations, React 19, Chakra UI
