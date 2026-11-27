@@ -25,6 +25,10 @@ export type Palette = (typeof PALETTES)[number];
 export const SHAPES = ["square", "slight", "medium", "round", "extra-round"] as const;
 export type Shape = (typeof SHAPES)[number];
 
+/** How the cards sit on the page: `flat` (bordered) or `raised` (a soft shadow on a tinted page). */
+export const DEPTHS = ["flat", "raised"] as const;
+export type Depth = (typeof DEPTHS)[number];
+
 export { FONTS, type Font } from "./fonts";
 
 /** How the app looks and what it is called: what the server writes into the page. */
@@ -35,6 +39,7 @@ export interface ShellTheme {
   /** The owner's own color, `#rrggbb`; used when `palette` is `brand`, kept when it is not. */
   brandColor: string;
   shape: Shape;
+  depth: Depth;
   headingFont: Font;
   bodyFont: Font;
 }
@@ -45,6 +50,7 @@ export const DEFAULT_THEME: ShellTheme = {
   palette: "gray",
   brandColor: "#3b82f6",
   shape: "medium",
+  depth: "flat",
   headingFont: "standard",
   bodyFont: "standard",
 };
@@ -84,6 +90,28 @@ const BUILT_IN_CONTRAST = Object.fromEntries(
 );
 
 /**
+ * What `raised` changes: the page is tinted (`bg.page`) and cards stand on it (`bg.raised`) with a soft
+ * shadow and a lighter border. Flat adds nothing, so Chakra's own look stands.
+ */
+const RAISED = {
+  globalCss: { body: { bg: "bg.page" } },
+  semanticTokens: {
+    colors: {
+      bg: {
+        page: { value: { _light: "{colors.gray.100}", _dark: "{colors.gray.900}" } },
+        raised: { value: { _light: "{colors.white}", _dark: "{colors.gray.800}" } },
+      },
+    },
+  },
+  slotRecipes: {
+    card: {
+      slots: ["root", "header", "body", "footer", "title", "description"],
+      variants: { variant: { outline: { root: { bg: "bg.raised", boxShadow: "sm", borderColor: "border.muted" } } } },
+    },
+  },
+};
+
+/**
  * The Chakra system for a theme: its palette for every colored component, corners and lettering.
  * `ThemeProvider` builds one from the page's theme; call this for an app that mounts Chakra itself.
  */
@@ -92,13 +120,16 @@ export function createThemeSystem(theme: ShellTheme): SystemContext {
   const [l1, l2, l3] = RADII[theme.shape];
   const byMode = (value: { light: string; dark: string }) => ({ value: { _light: value.light, _dark: value.dark } });
   const shades = Object.fromEntries(SHADES.map((shade) => [shade, { value: brand.shades[shade] }]));
+  const raised = theme.depth === "raised";
   return createSystem(
     defaultConfig,
     defineConfig({
       globalCss: {
         html: { colorPalette: theme.palette },
+        ...(raised ? RAISED.globalCss : {}),
       },
       theme: {
+        ...(raised ? { slotRecipes: RAISED.slotRecipes } : {}),
         tokens: {
           colors: { brand: shades },
           fonts: {
@@ -109,6 +140,7 @@ export function createThemeSystem(theme: ShellTheme): SystemContext {
         semanticTokens: {
           colors: {
             ...BUILT_IN_CONTRAST,
+            ...(raised ? RAISED.semanticTokens.colors : {}),
             brand: {
               solid: byMode(brand.tokens.solid),
               contrast: byMode(brand.tokens.contrast),

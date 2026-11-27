@@ -3,7 +3,7 @@ import { getJson, sendJson } from "../api/client";
 import { text } from "../form/rules";
 import { z } from "zod";
 import { FONTS } from "./fonts";
-import { PALETTES, SHAPES, type ShellTheme } from "./theme";
+import { DEPTHS, PALETTES, SHAPES, type ShellTheme } from "./theme";
 
 /** The theme as `/api/roux/theme` answers it: the settings and the version to save them at. */
 export type SavedTheme = ShellTheme & { version: number };
@@ -19,6 +19,7 @@ export const themeSchema = z.object({
   palette: z.enum(PALETTES),
   brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { error: "Is not in the expected format" }),
   shape: z.enum(SHAPES),
+  depth: z.enum(DEPTHS),
   headingFont: z.enum(FONTS),
   bodyFont: z.enum(FONTS),
   appName: text().max(60),

@@ -8,6 +8,12 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- **The theme has a depth: `flat` or `raised`.** `spa.Theme.Depth` (`depth` in the page's theme and
+  in `/api/roux/theme`, required on a save; migration `002_depth.sql`) and roux-web's `Depth`.
+  `raised` tints the page and stands the cards on it with a soft shadow; `flat` is as before
+  (`spa.StockTheme` is `flat`). The Appearance page shows both on sample cards, and Friendly and
+  Calm are `raised`. A theme written into a page without a `depth` is refused: update the server
+  and the app together.
 - **A feed can show only the app's kinds: `scope.Kinds(kinds...)`.** A kind is a type or any part
   of one up to a dot, so `activity.About(kid).Kinds("allowance")` is a kid's `allowance.*` rows
   and nothing else (not roux's `user.*`, not `allowances.*`). `Kinds()` with none, or a kind that

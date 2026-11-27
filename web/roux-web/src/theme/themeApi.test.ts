@@ -9,6 +9,7 @@ const THEME = {
   palette: "gray",
   brandColor: "#3b82f6",
   shape: "medium",
+  depth: "flat",
   headingFont: "standard",
   bodyFont: "standard",
 };
@@ -17,6 +18,13 @@ describe("themeSchema", () => {
   it("takes a theme the server would", () => {
     expect(themeSchema.safeParse(THEME).success).toBe(true);
     expect(themeSchema.safeParse({ ...THEME, brandColor: "#FF8800" }).success).toBe(true);
+  });
+
+  it("takes flat and raised depth only", () => {
+    expect(themeSchema.safeParse({ ...THEME, depth: "raised" }).success).toBe(true);
+    expect(themeSchema.safeParse({ ...THEME, depth: "flat" }).success).toBe(true);
+    expect(themeSchema.safeParse({ ...THEME, depth: "deep" }).success).toBe(false);
+    expect(themeSchema.safeParse({ ...THEME, depth: undefined }).success).toBe(false);
   });
 
   it.each(["x#ff8800", "#ff88001", "#ff880", "red", ""])(

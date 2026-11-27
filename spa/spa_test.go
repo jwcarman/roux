@@ -426,6 +426,7 @@ func TestInvalidThemeIsRefused(t *testing.T) {
 		func(t *spa.Theme) { t.BrandColor = "blue" },
 		func(t *spa.Theme) { t.BrandColor = "#12345" },
 		func(t *spa.Theme) { t.Shape = "pointy" },
+		func(t *spa.Theme) { t.Depth = "deep" },
 		func(t *spa.Theme) { t.HeadingFont = "comic" },
 		func(t *spa.Theme) { t.BodyFont = "" },
 	}

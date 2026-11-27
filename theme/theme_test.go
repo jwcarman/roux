@@ -12,7 +12,7 @@ import (
 	"github.com/jwcarman/roux/theme"
 )
 
-var defaults = spa.Theme{AppName: "Acme Fitness", Palette: "gray", BrandColor: "#3b82f6", Shape: "medium", HeadingFont: "standard", BodyFont: "standard"}
+var defaults = spa.Theme{AppName: "Acme Fitness", Palette: "gray", BrandColor: "#3b82f6", Shape: "medium", Depth: "flat", HeadingFont: "standard", BodyFont: "standard"}
 
 func setup(t *testing.T) (*authntest.Env, theme.Service) {
 	t.Helper()
@@ -24,7 +24,7 @@ func setup(t *testing.T) (*authntest.Env, theme.Service) {
 
 func valid(version int64) map[string]any {
 	return map[string]any{
-		"appName": "  Fit Club  ", "palette": "teal", "brandColor": "#FF8800", "shape": "round",
+		"appName": "  Fit Club  ", "palette": "teal", "brandColor": "#FF8800", "shape": "round", "depth": "raised",
 		"headingFont": "classic", "bodyFont": "friendly", "version": version,
 	}
 }
@@ -54,7 +54,7 @@ func TestTheDefaultsStandUntilTheOwnerChooses(t *testing.T) {
 	env, _ := setup(t)
 	env.Serve()
 	r := env.Browser().Get("/api/roux/theme") // anyone, signed out too
-	want := `{"appName":"Acme Fitness","palette":"gray","brandColor":"#3b82f6","shape":"medium","headingFont":"standard","bodyFont":"standard","version":0}`
+	want := `{"appName":"Acme Fitness","palette":"gray","brandColor":"#3b82f6","shape":"medium","depth":"flat","headingFont":"standard","bodyFont":"standard","version":0}`
 	if r.StatusCode != 200 || strings.TrimSpace(string(r.Body)) != want {
 		t.Fatalf("%d %s", r.StatusCode, r.Body)
 	}
@@ -87,7 +87,7 @@ func TestSavingThemeStripsLowersAndVersions(t *testing.T) {
 	owner := env.SignedIn(env.Identity(theme.ThemeManage))
 
 	r := owner.Put("/api/roux/theme", valid(0))
-	want := `{"appName":"Fit Club","palette":"teal","brandColor":"#ff8800","shape":"round","headingFont":"classic","bodyFont":"friendly","version":1}`
+	want := `{"appName":"Fit Club","palette":"teal","brandColor":"#ff8800","shape":"round","depth":"raised","headingFont":"classic","bodyFont":"friendly","version":1}`
 	if r.StatusCode != 200 || strings.TrimSpace(string(r.Body)) != want {
 		t.Fatalf("%d %s\nwant %s", r.StatusCode, r.Body, want)
 	}
@@ -159,7 +159,7 @@ func TestInvalidThemesAreRoux400s(t *testing.T) {
 	got := fieldErrors(t, owner.Put("/api/roux/theme", map[string]any{}))
 	for field, msg := range map[string]string{
 		"appName": "Must not be blank", "palette": "Must not be empty", "brandColor": "Must not be empty",
-		"shape": "Must not be empty", "headingFont": "Must not be empty", "bodyFont": "Must not be empty", "version": "Must not be empty",
+		"shape": "Must not be empty", "depth": "Must not be empty", "headingFont": "Must not be empty", "bodyFont": "Must not be empty", "version": "Must not be empty",
 	} {
 		if got[field] != msg {
 			t.Errorf("%s: %q, want %q (all: %v)", field, got[field], msg, got)
@@ -168,15 +168,15 @@ func TestInvalidThemesAreRoux400s(t *testing.T) {
 
 	// Values the front end has no look for.
 	bad := valid(0)
-	bad["palette"], bad["brandColor"], bad["shape"], bad["headingFont"], bad["bodyFont"] = "mauve", "blue", "pointy", "comic", ""
+	bad["palette"], bad["brandColor"], bad["shape"], bad["depth"], bad["headingFont"], bad["bodyFont"] = "mauve", "blue", "pointy", "deep", "comic", ""
 	got = fieldErrors(t, owner.Put("/api/roux/theme", bad))
-	for _, f := range []string{"palette", "brandColor", "shape", "headingFont", "bodyFont"} {
+	for _, f := range []string{"palette", "brandColor", "shape", "depth", "headingFont", "bodyFont"} {
 		if got[f] != "Is not in the expected format" {
 			t.Errorf("%s: %q", f, got[f])
 		}
 	}
-	if _, has := got["appName"]; has || len(got) != 5 {
-		t.Errorf("only the five bad members should be reported: %v", got)
+	if _, has := got["appName"]; has || len(got) != 6 {
+		t.Errorf("only the six bad members should be reported: %v", got)
 	}
 
 	// The name: blank, spaces only, and too long.
@@ -229,5 +229,44 @@ func TestThePageCarriesTheSavedTheme(t *testing.T) {
 	env.SignedIn(env.Identity(theme.ThemeManage)).Put("/api/roux/theme", valid(0))
 	if got := html(); !strings.Contains(got, "<title>Fit Club</title>") || !strings.Contains(got, `"palette":"teal"`) {
 		t.Fatalf("the next page served must carry the saved theme: %s", got)
+	}
+}
+
+func TestCurrentAnswersDefaultDepthWhenUnchosen(t *testing.T) {
+	env := authntest.New(t, "theme", theme.Migration)
+	d := defaults
+	d.Depth = "raised"
+	svc := theme.Service{Pool: env.Pool, Defaults: d, Clock: env.Clock.Now}
+	got, err := svc.Current(context.Background())
+	if err != nil || got.Depth != "raised" {
+		t.Fatalf("an unchosen depth is the default: %+v %v", got, err)
+	}
+	shell, err := svc.Shell(context.Background())
+	if err != nil || shell.Depth != "raised" {
+		t.Fatalf("the page carries it: %+v %v", shell, err)
+	}
+}
+
+func TestUpdateStoresDepth(t *testing.T) {
+	env, svc := setup(t)
+	env.Serve()
+	owner := env.SignedIn(env.Identity(theme.ThemeManage))
+	if r := owner.Put("/api/roux/theme", valid(0)); r.StatusCode != 200 || r.JSON(t)["depth"] != "raised" {
+		t.Fatalf("%d %s", r.StatusCode, r.Body)
+	}
+	got, err := svc.Current(context.Background())
+	if err != nil || got.Depth != "raised" {
+		t.Fatalf("stored depth: %+v %v", got, err)
+	}
+}
+
+func TestUpdateRequiresDepth(t *testing.T) {
+	env, _ := setup(t)
+	env.Serve()
+	owner := env.SignedIn(env.Identity(theme.ThemeManage))
+	in := valid(0)
+	delete(in, "depth")
+	if got := fieldErrors(t, owner.Put("/api/roux/theme", in)); got["depth"] != "Must not be empty" || len(got) != 1 {
+		t.Fatalf("%v", got)
 	}
 }

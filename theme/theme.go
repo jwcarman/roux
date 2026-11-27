@@ -1,5 +1,5 @@
 // Package theme is the owner's look for the app: its name, palette, brand colour,
-// corner shape and fonts, kept in one database row and served at /api/roux/theme.
+// corner shape, depth and fonts, kept in one database row and served at /api/roux/theme.
 // Whatever the owner has not chosen is the application's default, so the answer is
 // always a whole theme. The page itself carries the saved theme too (see kit/spa),
 // so the first paint already looks right.
@@ -50,6 +50,7 @@ type Response struct {
 	Palette     string `json:"palette"`
 	BrandColor  string `json:"brandColor"`
 	Shape       string `json:"shape"`
+	Depth       string `json:"depth"`
 	HeadingFont string `json:"headingFont"`
 	BodyFont    string `json:"bodyFont"`
 	Version     int64  `json:"version"`
@@ -62,6 +63,7 @@ type Request struct {
 	Palette     *string `json:"palette"`
 	BrandColor  *string `json:"brandColor"`
 	Shape       *string `json:"shape"`
+	Depth       *string `json:"depth"`
 	HeadingFont *string `json:"headingFont"`
 	BodyFont    *string `json:"bodyFont"`
 	Version     *int64  `json:"version"`
@@ -75,8 +77,8 @@ type Service struct {
 }
 
 type row struct {
-	version                                                int64
-	appName, palette, brandColor, shape, headingFont, body *string
+	version                                                       int64
+	appName, palette, brandColor, shape, depth, headingFont, body *string
 }
 
 func or(chosen *string, fallback string) string {
@@ -89,7 +91,7 @@ func or(chosen *string, fallback string) string {
 func (s Service) response(r row) Response {
 	return Response{
 		AppName: or(r.appName, s.Defaults.AppName), Palette: or(r.palette, s.Defaults.Palette),
-		BrandColor: or(r.brandColor, s.Defaults.BrandColor), Shape: or(r.shape, s.Defaults.Shape),
+		BrandColor: or(r.brandColor, s.Defaults.BrandColor), Shape: or(r.shape, s.Defaults.Shape), Depth: or(r.depth, s.Defaults.Depth),
 		HeadingFont: or(r.headingFont, s.Defaults.HeadingFont), BodyFont: or(r.body, s.Defaults.BodyFont),
 		Version: r.version,
 	}
@@ -99,8 +101,8 @@ func (s Service) response(r row) Response {
 func (s Service) Current(ctx context.Context) (Response, error) {
 	var r row
 	err := s.Pool.QueryRow(ctx,
-		`select version, app_name, palette, brand_color, shape, heading_font, body_font from roux_theme where id = $1`, rowID,
-	).Scan(&r.version, &r.appName, &r.palette, &r.brandColor, &r.shape, &r.headingFont, &r.body)
+		`select version, app_name, palette, brand_color, shape, depth, heading_font, body_font from roux_theme where id = $1`, rowID,
+	).Scan(&r.version, &r.appName, &r.palette, &r.brandColor, &r.shape, &r.depth, &r.headingFont, &r.body)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Response{}, errors.New("theme: roux_theme has no row: the theme migration has not run")
 	}
@@ -116,7 +118,7 @@ func (s Service) Shell(ctx context.Context) (spa.Theme, error) {
 	if err != nil {
 		return spa.Theme{}, err
 	}
-	return spa.Theme{AppName: c.AppName, Palette: c.Palette, BrandColor: c.BrandColor, Shape: c.Shape, HeadingFont: c.HeadingFont, BodyFont: c.BodyFont}, nil
+	return spa.Theme{AppName: c.AppName, Palette: c.Palette, BrandColor: c.BrandColor, Shape: c.Shape, Depth: c.Depth, HeadingFont: c.HeadingFont, BodyFont: c.BodyFont}, nil
 }
 
 // validate checks the request the way roux does and returns the theme it describes.
@@ -138,6 +140,7 @@ func validate(req Request) (spa.Theme, error) {
 		Palette:     required("palette", req.Palette),
 		BrandColor:  required("brandColor", req.BrandColor),
 		Shape:       required("shape", req.Shape),
+		Depth:       required("depth", req.Depth),
 		HeadingFont: required("headingFont", req.HeadingFont),
 		BodyFont:    required("bodyFont", req.BodyFont),
 	}
@@ -146,7 +149,7 @@ func validate(req Request) (spa.Theme, error) {
 	}
 	sent := map[string]bool{
 		"appName": true, // a missing name is as blank as an empty one
-		"palette": req.Palette != nil, "brandColor": req.BrandColor != nil, "shape": req.Shape != nil,
+		"palette": req.Palette != nil, "brandColor": req.BrandColor != nil, "shape": req.Shape != nil, "depth": req.Depth != nil,
 		"headingFont": req.HeadingFont != nil, "bodyFont": req.BodyFont != nil,
 	}
 	for _, bad := range t.Violations() {
@@ -176,10 +179,10 @@ func (s Service) Update(ctx context.Context, req Request, actor uuid.UUID) (Resp
 	// version cannot both win.
 	tag, err := s.Pool.Exec(ctx, `
 		update roux_theme
-		   set app_name = $3, palette = $4, brand_color = $5, shape = $6, heading_font = $7, body_font = $8,
-		       version = version + 1, modified_date = $9, modified_by = $10
+		   set app_name = $3, palette = $4, brand_color = $5, shape = $6, depth = $7, heading_font = $8, body_font = $9,
+		       version = version + 1, modified_date = $10, modified_by = $11
 		 where id = $1 and version = $2`,
-		rowID, *req.Version, t.AppName, t.Palette, t.BrandColor, t.Shape, t.HeadingFont, t.BodyFont, now, actor.String())
+		rowID, *req.Version, t.AppName, t.Palette, t.BrandColor, t.Shape, t.Depth, t.HeadingFont, t.BodyFont, now, actor.String())
 	if err != nil {
 		return Response{}, err
 	}

@@ -24,7 +24,7 @@ import { useSchemaForm } from "../form/schemaForm";
 import { brandPalette } from "./brandPalette";
 import { FONT_FAMILY, loadFont } from "./fonts";
 import { LOOKS, type Look } from "./looks";
-import { FONTS, PALETTES, RADII, SHAPES, type Font, type Shape, type ShellTheme } from "./theme";
+import { DEPTHS, FONTS, PALETTES, RADII, SHAPES, type Depth, type Font, type Shape, type ShellTheme } from "./theme";
 import { useShellTheme } from "./ThemeProvider";
 import { restoreTheme, saveTheme, themeQuery, themeSchema, type SavedTheme } from "./themeApi";
 
@@ -35,6 +35,8 @@ const SHAPE_LABEL: Record<Shape, string> = {
   round: "Very rounded",
   "extra-round": "Extra rounded",
 };
+
+const DEPTH_LABEL: Record<Depth, string> = { flat: "Flat", raised: "Raised" };
 
 const FONT_LABEL: Record<Font, string> = {
   standard: "Plain",
@@ -55,8 +57,8 @@ const SWATCH_PRESSED = { outline: "2px solid", outlineColor: "colorPalette.solid
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
 function settingsOf(theme: SavedTheme): ShellTheme {
-  const { appName, palette, brandColor, shape, headingFont, bodyFont } = theme;
-  return { appName, palette, brandColor, shape, headingFont, bodyFont };
+  const { appName, palette, brandColor, shape, depth, headingFont, bodyFont } = theme;
+  return { appName, palette, brandColor, shape, depth, headingFont, bodyFont };
 }
 
 function capitalized(name: string): string {
@@ -139,6 +141,7 @@ function AppearanceEditor({ saved }: Readonly<{ saved: SavedTheme }>) {
   const chooseLook = (look: Look) => {
     form.setFieldValue("palette", look.settings.palette);
     form.setFieldValue("shape", look.settings.shape);
+    form.setFieldValue("depth", look.settings.depth);
     form.setFieldValue("headingFont", look.settings.headingFont);
     form.setFieldValue("bodyFont", look.settings.bodyFont);
   };
@@ -165,6 +168,7 @@ function AppearanceEditor({ saved }: Readonly<{ saved: SavedTheme }>) {
                   aria-pressed={
                     values.palette === look.settings.palette &&
                     values.shape === look.settings.shape &&
+                    values.depth === look.settings.depth &&
                     values.headingFont === look.settings.headingFont &&
                     values.bodyFont === look.settings.bodyFont
                   }
@@ -224,6 +228,27 @@ function AppearanceEditor({ saved }: Readonly<{ saved: SavedTheme }>) {
                     onClick={() => form.setFieldValue("shape", shape)}
                   >
                     {SHAPE_LABEL[shape]}
+                  </Button>
+                ))}
+              </HStack>
+            </Part>
+
+            <Part title="Depth">
+              <HStack wrap="wrap" gap="3">
+                {DEPTHS.map((depth) => (
+                  <Button
+                    key={depth}
+                    aria-pressed={values.depth === depth}
+                    variant="outline"
+                    _pressed={PRESSED}
+                    height="auto"
+                    py="3"
+                    flexDirection="column"
+                    gap="2"
+                    onClick={() => form.setFieldValue("depth", depth)}
+                  >
+                    <DepthSample depth={depth} />
+                    {DEPTH_LABEL[depth]}
                   </Button>
                 ))}
               </HStack>
@@ -344,6 +369,27 @@ function Part({ title, children }: Readonly<{ title: string; children: ReactNode
       </Heading>
       {children}
     </Stack>
+  );
+}
+
+/**
+ * A small card as it looks at that depth: flat is bordered on the page; raised is shadowed on a
+ * tinted swatch of page. Aria-hidden: the button's label says it.
+ */
+function DepthSample({ depth }: Readonly<{ depth: Depth }>) {
+  return (
+    <Box data-swatch={depth} aria-hidden bg={depth === "raised" ? "gray.muted" : "transparent"} borderRadius="l2" p="2">
+      <Box
+        data-sample={depth}
+        bg="bg.panel"
+        color="fg"
+        borderRadius="l2"
+        width="16"
+        height="8"
+        borderWidth="1px"
+        {...(depth === "raised" ? { boxShadow: "sm", borderColor: "border.muted" } : { borderColor: "border" })}
+      />
+    </Box>
   );
 }
 

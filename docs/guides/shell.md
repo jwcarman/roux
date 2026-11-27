@@ -17,7 +17,7 @@ import { ThemeProvider } from "@jwcarman/roux-web/theme";
 ```
 
 `ThemeProvider` reads the theme the server wrote into the page (`<script type="application/json"
-id="app-theme">`, a `ShellTheme`: `appName`, `palette`, `brandColor`, `shape`, `headingFont`,
+id="app-theme">`, a `ShellTheme`: `appName`, `palette`, `brandColor`, `shape`, `depth`, `headingFont`,
 `bodyFont`) and mounts, in one place: Chakra's provider with the system built from it
 (`createThemeSystem`), the bundled font the theme uses, Emotion's cache with the page's CSP nonce
 (`cspNonce()`; without it the browser refuses Emotion's styles), and the app's name as the document
@@ -27,11 +27,14 @@ title. It replaces `ChakraProvider`. Mount no other Chakra provider, and no Emot
   stock look and the name `App`.
 - A theme with a value the app has no look for (a palette the server knows and this version of
   roux-web does not) throws at startup, naming it: the server and the app disagree.
-- `useShellTheme()` answers a `ShellThemeState`, `{ saved, shown, preview, commit }` (themes are `ShellTheme` values whose parts are the `Palette`, `Shape` and `Font` unions): the app's header shows
+- `useShellTheme()` answers a `ShellThemeState`, `{ saved, shown, preview, commit }` (themes are `ShellTheme` values whose parts are the `Palette`, `Shape`, `Depth` and `Font` unions): the app's header shows
   `shown.appName`, so the owner sees a draft name while editing. It throws outside a
   `ThemeProvider`. Chakra's `colorPalette` follows the theme; a destructive button says
   `colorPalette="red"`, whatever the theme.
 - `ThemeProvider theme={...}` starts from another theme: a test's, or a storybook's.
+- `depth` is `flat` (the default: bordered cards, Chakra's own look) or `raised`: the page gets a
+  light tint (`bg.page`, a darker grey in dark mode), cards stand on it (`bg.raised`) with a soft
+  shadow and a lighter border. A theme without a `depth` throws at startup like any other part.
 - Light or dark mode is the visitor's own (a visitor's choice is not part of the owner's theme).
   `ColorModeProvider` (inside `ThemeProvider`, around the app) follows the system's mode until the
   visitor picks one, kept in `localStorage`, and passes the page's nonce to next-themes.
@@ -56,7 +59,7 @@ export const Route = createFileRoute("/_signedIn/appearance")({
 ```
 
 `AppearanceSettings` is the whole form, in two sections: Name (the app's name), then Look (five
-ready-made looks, the one in use ringed, then a colour and a shape, with the owner's own colour and
+ready-made looks, the one in use ringed, then a colour, a shape and a depth (Flat or Raised, each shown on a small sample card), with the owner's own colour and
 the lettering under "More options"). The owner's own screen previews the draft (through
 `useShellTheme().preview`) until it is saved. It reads and saves through
 `/api/roux/theme` (a built-in `useSchemaForm`: a refusal from the server is under its field, a `409` starts

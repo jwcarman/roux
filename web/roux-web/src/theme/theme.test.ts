@@ -8,6 +8,14 @@ import { createThemeSystem, DEFAULT_THEME, PALETTES, type ShellTheme } from "./t
 /** A token's value in the system built for `theme`. */
 const tokenOf = (theme: ShellTheme, name: string): unknown => createThemeSystem(theme).tokens.getByName(name)?.value;
 
+/** The root of a Card in the system's default (outline) variant. */
+const cardRoot = (system: ReturnType<typeof createThemeSystem>) => {
+  const card = system._config.theme?.slotRecipes?.card as unknown as {
+    variants: { variant: { outline: { root: Record<string, unknown> } } };
+  };
+  return card.variants.variant.outline.root;
+};
+
 describe("createThemeSystem", () => {
   it("gives today's look for the defaults", () => {
     const system = createThemeSystem(DEFAULT_THEME);
@@ -27,6 +35,31 @@ describe("createThemeSystem", () => {
     const theme = { ...DEFAULT_THEME, shape };
 
     expect([tokenOf(theme, "radii.l1"), tokenOf(theme, "radii.l2"), tokenOf(theme, "radii.l3")]).toEqual([l1, l2, l3]);
+  });
+
+  it("is flat by default: no tinted page, cards as Chakra draws them", () => {
+    const system = createThemeSystem({ ...DEFAULT_THEME, depth: "flat" });
+
+    expect(DEFAULT_THEME.depth).toBe("flat");
+    expect(system._config.globalCss?.body).not.toMatchObject({ bg: "bg.page" });
+    expect(system.tokens.getByName("colors.bg.page")).toBeUndefined();
+    expect(cardRoot(system)).not.toHaveProperty("boxShadow");
+    expect(cardRoot(system)).toMatchObject({ borderColor: "border" });
+  });
+
+  it("raises the cards when depth is raised: a tinted page, a soft shadow, a lighter border", () => {
+    const system = createThemeSystem({ ...DEFAULT_THEME, depth: "raised" });
+
+    expect(system._config.globalCss?.body).toMatchObject({ bg: "bg.page" });
+    expect(system.tokens.getByName("colors.bg.page")?.extensions.conditions).toEqual({
+      _light: "{colors.gray.100}",
+      _dark: "{colors.gray.900}",
+    });
+    expect(system.tokens.getByName("colors.bg.raised")?.extensions.conditions).toEqual({
+      _light: "{colors.white}",
+      _dark: "{colors.gray.800}",
+    });
+    expect(cardRoot(system)).toMatchObject({ bg: "bg.raised", boxShadow: "sm", borderColor: "border.muted" });
   });
 
   it.each([

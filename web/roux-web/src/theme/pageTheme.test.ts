@@ -21,6 +21,7 @@ const SAVED: ShellTheme = {
   palette: "brand",
   brandColor: "#ff8800",
   shape: "round",
+  depth: "raised",
   headingFont: "friendly",
   bodyFont: "modern",
 };
@@ -45,6 +46,7 @@ describe("readPageTheme", () => {
       palette: "gray",
       brandColor: "#3b82f6",
       shape: "medium",
+      depth: "flat",
       headingFont: "standard",
       bodyFont: "standard",
     });
@@ -80,6 +82,7 @@ describe("readPageTheme", () => {
   it.each([
     ["palette", "mauve"],
     ["shape", "oval"],
+    ["depth", "deep"],
     ["headingFont", "comic"],
     ["bodyFont", "comic"],
   ])("refuses an unknown %s, saying the server may be newer", (part, value) => {

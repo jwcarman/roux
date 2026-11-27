@@ -17,6 +17,7 @@ type Theme struct {
 	Palette     string `json:"palette"`     // a Chakra palette name, or "brand" to generate one from BrandColor
 	BrandColor  string `json:"brandColor"`  // "#" and six hex digits
 	Shape       string `json:"shape"`       // how round corners are
+	Depth       string `json:"depth"`       // "flat" or "raised": whether cards sit on a tinted page with a soft shadow
 	HeadingFont string `json:"headingFont"` // the lettering of headings
 	BodyFont    string `json:"bodyFont"`    // the lettering of text
 }
@@ -26,6 +27,7 @@ const maxAppName = 60
 var (
 	palettes = set("gray", "red", "orange", "yellow", "green", "teal", "blue", "cyan", "purple", "pink", "brand")
 	shapes   = set("square", "slight", "medium", "round", "extra-round")
+	depths   = set("flat", "raised")
 	fonts    = set("standard", "modern", "friendly", "classic")
 	color    = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 )
@@ -40,7 +42,7 @@ func set(v ...string) map[string]bool {
 
 // StockTheme is the default look under the given name.
 func StockTheme(appName string) Theme {
-	return Theme{AppName: appName, Palette: "gray", BrandColor: "#3b82f6", Shape: "medium", HeadingFont: "standard", BodyFont: "standard"}
+	return Theme{AppName: appName, Palette: "gray", BrandColor: "#3b82f6", Shape: "medium", Depth: "flat", HeadingFont: "standard", BodyFont: "standard"}
 }
 
 // Validate refuses a value the frontend has no look for, so a theme that would
@@ -56,6 +58,7 @@ func (t Theme) Validate() error {
 		{"palette", t.Palette, palettes[t.Palette]},
 		{"brandColor", t.BrandColor, color.MatchString(t.BrandColor)},
 		{"shape", t.Shape, shapes[t.Shape]},
+		{"depth", t.Depth, depths[t.Depth]},
 		{"headingFont", t.HeadingFont, fonts[t.HeadingFont]},
 		{"bodyFont", t.BodyFont, fonts[t.BodyFont]},
 	} {
@@ -84,6 +87,7 @@ func (t Theme) Violations() []problem.Violation {
 		{"palette", palettes[t.Palette]},
 		{"brandColor", color.MatchString(t.BrandColor)},
 		{"shape", shapes[t.Shape]},
+		{"depth", depths[t.Depth]},
 		{"headingFont", fonts[t.HeadingFont]},
 		{"bodyFont", fonts[t.BodyFont]},
 	} {

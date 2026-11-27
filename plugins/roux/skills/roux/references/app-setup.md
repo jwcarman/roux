@@ -126,12 +126,12 @@ createRoot(document.getElementById("root")!).render(
 - CSP: strict, never `unsafe-inline`/`unsafe-eval`. `spa.Config.CSP` adds sources to a directive;
   `app.Run` uses the defaults alone, so an app that needs another source calls `app.Assemble` and
   `spa.Register` itself.
-- Theme: `spa.Theme` (`appName`, `palette`, `brandColor`, `shape`, `headingFont`, `bodyFont`), kept
+- Theme: `spa.Theme` (`appName`, `palette`, `brandColor`, `shape`, `depth`, `headingFont`, `bodyFont`), kept
   by the users module in `roux_theme` (`GET`/`PUT /api/roux/theme`, `theme.manage`); until the owner
   saves one, `spa.StockTheme(appName)`.
 - Browser (`/theme`): `ThemeProvider` (replaces `ChakraProvider`), `useShellTheme()` →
   `ShellThemeState` (`shown.appName`), `createThemeSystem`, `cspNonce()`, `AppearanceSettings` (the
-  whole Appearance page, guarded by `theme.manage`); types `Palette`, `Shape`, `Font`.
+  whole Appearance page, guarded by `theme.manage`); types `Palette`, `Shape`, `Depth`, `Font`.
 - Navigation (`/navigation`): `defineNav(PERMISSIONS, [{ label, to, icon, permission?, description, start? }])`
   → `Nav` of `NavEntry` (`to` is a `NavTo`); `navItemsFor`, `startPathFor`, `openingRedirect`;
   `AppShell` (`AppShellProps`: `nav`, `permissions`, `appName`, `logo`, `account` as an

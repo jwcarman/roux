@@ -1,4 +1,4 @@
-import { DEFAULT_THEME, PALETTES, SHAPES, type ShellTheme } from "./theme";
+import { DEFAULT_THEME, DEPTHS, PALETTES, SHAPES, type ShellTheme } from "./theme";
 import { FONTS } from "./fonts";
 
 /** What `index.html` holds in `#app-theme` until a server fills it in: Vite's dev server serves it so. */
@@ -52,6 +52,7 @@ export function readPageTheme(doc: Document = document): ShellTheme {
     palette: member("palette", theme.palette, PALETTES),
     brandColor,
     shape: member("shape", theme.shape, SHAPES),
+    depth: member("depth", theme.depth, DEPTHS),
     headingFont: member("headingFont", theme.headingFont, FONTS),
     bodyFont: member("bodyFont", theme.bodyFont, FONTS),
   };

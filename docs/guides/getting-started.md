@@ -372,10 +372,10 @@ that would undo the policy (`*`, `'unsafe-inline'`, `'unsafe-eval'`, a bare sche
 styles) stops startup. `app.Run` registers the shell with the defaults alone, so an app that needs
 another source calls `app.Assemble` and `spa.Register` itself.
 
-**The theme** (`spa.Theme`: `appName`, `palette`, `brandColor`, `shape`, `headingFont`,
+**The theme** (`spa.Theme`: `appName`, `palette`, `brandColor`, `shape`, `depth`, `headingFont`,
 `bodyFont`) is read for every page, so a theme the owner has just saved is in the next page. The
 users module keeps the owner's theme in roux's table `roux_theme`; until the owner chooses, it is
-`spa.StockTheme(appName)` (palette `gray`, brand colour `#3b82f6`, shape `medium`, fonts
+`spa.StockTheme(appName)` (palette `gray`, brand colour `#3b82f6`, shape `medium`, depth `flat`, fonts
 `standard`).
 
 ### The owner's theme
@@ -388,7 +388,7 @@ The users module serves the theme:
   `OWNER`): the theme with the `version` the owner read. A stale one is a `409`, a missing one a
   `400` on `version`. The values are the shell's own: palette
   `gray|red|orange|yellow|green|teal|blue|cyan|purple|pink|brand`, shape
-  `square|slight|medium|round|extra-round`, fonts `standard|modern|friendly|classic`, a `#rrggbb`
+  `square|slight|medium|round|extra-round`, depth `flat|raised`, fonts `standard|modern|friendly|classic`, a `#rrggbb`
   colour (kept lower-case) and a name of 1 to 60 characters (trimmed); a bad one is a `400` naming
   the field.
 

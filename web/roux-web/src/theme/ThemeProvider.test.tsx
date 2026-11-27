@@ -83,7 +83,7 @@ describe("ThemeProvider", () => {
 
   it("starts from the theme the server wrote into the page", () => {
     inHead(
-      '<script type="application/json" id="app-theme">{"appName":"From page","palette":"teal","brandColor":"#3b82f6","shape":"medium","headingFont":"standard","bodyFont":"standard"}</script>',
+      '<script type="application/json" id="app-theme">{"appName":"From page","palette":"teal","brandColor":"#3b82f6","shape":"medium","depth":"flat","headingFont":"standard","bodyFont":"standard"}</script>',
     );
     let current: ShellThemeState | undefined;
     function Probe() {

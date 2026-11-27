@@ -15,6 +15,7 @@ describe("/appearance", () => {
           palette: "gray",
           brandColor: "#3b82f6",
           shape: "medium",
+          depth: "flat",
           headingFont: "standard",
           bodyFont: "standard",
           version: 0,

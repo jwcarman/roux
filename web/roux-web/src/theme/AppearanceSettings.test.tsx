@@ -31,6 +31,7 @@ const SAVED = {
   palette: "gray",
   brandColor: "#3b82f6",
   shape: "medium",
+  depth: "flat",
   headingFont: "standard",
   bodyFont: "standard",
   appName: "Dojo",
@@ -41,12 +42,16 @@ const SAVED = {
 function Shown() {
   const { shown, saved } = useShellTheme();
   return (
-    <output aria-label="shown">
-      {`${shown.palette} ${shown.shape} ${shown.headingFont} ${shown.bodyFont} ${shown.appName} | saved ${saved.appName}`}
-    </output>
+    <>
+      <output aria-label="shown">
+        {`${shown.palette} ${shown.shape} ${shown.headingFont} ${shown.bodyFont} ${shown.appName} | saved ${saved.appName}`}
+      </output>
+      <output aria-label="shown depth">{shown.depth}</output>
+    </>
   );
 }
 
+const shownDepth = () => screen.getByRole("status", { name: "shown depth" }).textContent;
 const shown = () => screen.getByRole("status", { name: "shown" }).textContent;
 
 type Saved = ShellTheme & { version: number };
@@ -182,6 +187,7 @@ describe("AppearanceSettings", () => {
         palette: "blue",
         brandColor: "#3b82f6",
         shape: "slight",
+        depth: "raised",
         headingFont: "standard",
         bodyFont: "standard",
         appName: "Dojo",
@@ -445,6 +451,47 @@ describe("AppearanceSettings", () => {
     expect(screen.getByRole("button", { name: "More options" })).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("offers flat and raised depth, each with a sample card, and presses the one in use", async () => {
+    serve();
+    const { user } = show();
+    const flat = await screen.findByRole("button", { name: "Flat" });
+    const raised = screen.getByRole("button", { name: "Raised" });
+
+    expect(flat).toHaveAttribute("aria-pressed", "true");
+    expect(raised).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("heading", { name: "Depth" })).toHaveProperty("tagName", "H4");
+    expect(screen.getByRole("region", { name: "Depth" })).toContainElement(flat);
+    const sample = (button: HTMLElement) => button.querySelector<HTMLElement>("[data-sample]")!;
+    expect(sample(flat)).toHaveAttribute("data-sample", "flat");
+    expect(rulesFor(sample(flat))).toMatch(/border-width:1px/);
+    expect(rulesFor(sample(flat))).not.toMatch(/box-shadow/);
+    expect(sample(raised)).toHaveAttribute("data-sample", "raised");
+    expect(rulesFor(sample(raised))).toMatch(/box-shadow/);
+    expect(rulesFor(raised.querySelector<HTMLElement>("[data-swatch]")!)).toMatch(/background:/);
+
+    await user.click(raised);
+
+    expect(shownDepth()).toBe("raised");
+    expect(raised).toHaveAttribute("aria-pressed", "true");
+    expect(flat).toHaveAttribute("aria-pressed", "false");
+    await user.click(flat);
+    expect(shownDepth()).toBe("flat");
+  });
+
+  it("sets the depth with a ready-made look, and presses a look only at its depth", async () => {
+    serve();
+    const { user } = show();
+
+    await user.click(await screen.findByRole("button", { name: "Friendly" }));
+    expect(shownDepth()).toBe("raised");
+    expect(screen.getByRole("button", { name: "Friendly" })).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("button", { name: "Flat" }));
+    expect(screen.getByRole("button", { name: "Friendly" })).toHaveAttribute("aria-pressed", "false");
+    await user.click(screen.getByRole("button", { name: "Clean" }));
+    expect(shownDepth()).toBe("flat");
+  });
+
   it("names each lettering and presses the one in use", async () => {
     serve();
     const { user } = show();
@@ -572,6 +619,7 @@ describe("AppearanceSettings", () => {
       "Look",
       "Color",
       "Shape",
+      "Depth",
     ]);
     expect(screen.getByRole("heading", { name: "Name" })).toHaveProperty("tagName", "H3");
     expect(screen.getByRole("heading", { name: "Color" })).toHaveProperty("tagName", "H4");
