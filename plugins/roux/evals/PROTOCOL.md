@@ -471,3 +471,36 @@ made in TMPDIR by path, and a failure's summary shows Prettier's `[error]` lines
 `eval-preflight.sh` now denies writing the per-user temp directory, as the eval's sandbox does, and
 passes on the fixture with that `check.sh` (it fails with `1c5c97d`'s). Each run's `check.sh` logs
 are kept (`<tag>.check-logs/`), so a failure in the sandbox shows its cause.
+
+### Rerun results, 2026-11-27 (roux at `1c5c97d`, the plugin at `7d51e9d`)
+
+12 runs, every one reported. Cost as `claude plugin eval` reports it: $4.97 in all. Tokens are
+input, cache and output together.
+
+| Arm | Succeeded | Acceptance | Build | Turns, mean (range) | Cost, mean | Time, mean | Tokens, mean |
+|---|---|---|---|---|---|---|---|
+| Sonnet with the skill | 3/3 | 3/3 | 3/3 | 25 (22–27) | $0.49 | 2.9 min | 1.3M |
+| Sonnet without | 2/3 | 3/3 | 2/3 | 33 (26–36) | $0.68 | 3.3 min | 1.8M |
+| Haiku with the skill | 3/3 | 3/3 | 3/3 | 43 (37–46) | $0.06 | 3.8 min | 2.6M |
+| Haiku without | 2/3 | 3/3 | 2/3 | 71 (49–84) | $0.43 | 5.9 min | 6.4M |
+
+The skill fired in every run that had it. check-roux-way's other checks passed in all 12. Both
+failures are the same: a Go test the run wrote, and could not run in the sandbox (it needs the
+database), expects a 400's field errors in another order than the app gives them, so `make check`
+fails on the scorer's Postgres.
+
+- **Efficiency: supported** (3 runs per arm: a signal, not proof). Sonnet with the skill succeeded
+  as often or more (3/3 against 2/3), at a lower mean cost ($0.49 against $0.68) and time (2.9
+  against 3.3 min).
+- **A cheaper model: supported**, as signal. Haiku with the skill succeeded as often as Sonnet
+  without or more (3/3 against 2/3), at a lower mean cost (by tokens too, on a cheaper model), and
+  more often than Haiku without (3/3 against 2/3).
+
+Each claim rests on one run's difference in success; the margin in turns, time and tokens is wider.
+
+**Still against the arm with the skill:** in the eval's sandbox, every `npm run` and `npm exec`
+fails with `spawn EPERM` before its script starts (npm's debug log in the run's home says so), so
+`check.sh` still stopped at `npm run format`; the agents ran Prettier, ESLint and Vitest by hand.
+The likely cause is npm finding `sh` on a PATH whose first directories are under the unreadable real
+home; `eval-preflight.sh`'s sandbox does not reproduce it. The arm without the skill does not use
+`npm run` as much, so this cost the arm with the skill more turns.
