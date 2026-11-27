@@ -1,3 +1,4 @@
+import { cardAnatomy } from "@chakra-ui/react/anatomy";
 import { createSystem, defaultConfig, defineConfig, type SystemContext } from "@chakra-ui/react";
 import { brandPalette, SHADES } from "./brandPalette";
 import { FONT_FAMILY, type Font } from "./fonts";
@@ -105,7 +106,7 @@ const RAISED = {
   },
   slotRecipes: {
     card: {
-      slots: ["root", "header", "body", "footer", "title", "description"],
+      slots: cardAnatomy.keys(),
       variants: { variant: { outline: { root: { bg: "bg.raised", boxShadow: "sm", borderColor: "border.muted" } } } },
     },
   },

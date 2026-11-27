@@ -43,9 +43,16 @@ describe("roux's primitives", () => {
     expect(CATALOG_VERSION).toBe("0.2.0");
   });
 
-  it("keep tasting's descriptions, with Row and Column's layout explained", () => {
+  it("keep tasting's descriptions, with Row and Column's layout and a Form's Enter explained", () => {
     const described = Object.fromEntries(rouxCatalog.promptEntries.map((entry) => [entry.name, entry.description]));
-    expect({ ...described, Row: descriptions.Row, Column: descriptions.Column }).toEqual(descriptions);
+    expect({ ...described, Row: descriptions.Row, Column: descriptions.Column, Form: descriptions.Form }).toEqual(
+      descriptions,
+    );
+    expect(described.Form).toBe(
+      "Holds input fields and the button that saves them. Every InputField must be inside a Form. " +
+        "Its one solid Button is its submit: a click or Enter in a field checks every field, then runs the action only if all pass. " +
+        "An outline or ghost Button (a Cancel) runs its own action and never on Enter.",
+    );
     expect(described.Column).toBe(
       "Stacks its children vertically. The usual root of a screen. " +
         "justify places the children along the column (spaceBetween pushes them to the top and bottom); align lines " +

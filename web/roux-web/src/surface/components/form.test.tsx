@@ -304,3 +304,156 @@ describe("the bridge's field operations", () => {
     expect(written).toEqual(["Bo"]);
   });
 });
+
+describe("a Form submits through its TanStack form", () => {
+  const titleRequired = required("/draft/title", "Title is required");
+  const field = (id: string, label: string, checks: unknown[] = []) => ({
+    id,
+    component: "InputField",
+    label,
+    value: { "@path": `/draft/${id}` },
+    "@checks": checks,
+  });
+  const button = (id: string, variant?: string) => ({
+    id,
+    component: "Button",
+    label: id,
+    ...(variant ? { variant } : {}),
+    action: { event: { name: id } },
+  });
+  const form = (...children: string[]) => ({ id: "root", component: "Form", children });
+  const draft = () => ({ draft: { title: "", notes: "" } });
+  const record = () => {
+    const actions: unknown[] = [];
+    return {
+      actions,
+      onAction: (action: unknown) => actions.push(action),
+      names: () => actions.map((a) => (a as { name: string }).name),
+    };
+  };
+
+  it("Enter in a field presses the Form's solid Button, once", async () => {
+    const sent = record();
+    renderSurface([form("title", "add"), field("title", "Title"), button("add")], draft(), sent.onAction);
+    await userEvent.type(screen.getByLabelText("Title"), "Chalk{Enter}");
+    expect(sent.names()).toEqual(["add"]);
+  });
+
+  it("a click on the solid Button submits, once", async () => {
+    const sent = record();
+    renderSurface([form("title", "add"), field("title", "Title"), button("add")], draft(), sent.onAction);
+    await userEvent.type(screen.getByLabelText("Title"), "Chalk");
+    await userEvent.click(screen.getByRole("button", { name: "add" }));
+    expect(sent.names()).toEqual(["add"]);
+  });
+
+  it("a failing check shows on every field and sends nothing, Enter or click", async () => {
+    const sent = record();
+    renderSurface(
+      [
+        form("title", "notes", "add"),
+        field("title", "Title", [titleRequired]),
+        field("notes", "Notes", [required("/draft/notes", "Notes are required")]),
+        button("add"),
+      ],
+      draft(),
+      sent.onAction,
+    );
+    await userEvent.type(screen.getByLabelText("Title"), "{Enter}");
+    expect(screen.getByText("Title is required")).toBeTruthy();
+    expect(screen.getByText("Notes are required")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "add" }));
+    expect(sent.names()).toEqual([]);
+  });
+
+  it("sends once the checks pass, and their messages go", async () => {
+    const sent = record();
+    renderSurface(
+      [form("title", "add"), field("title", "Title", [titleRequired]), button("add")],
+      draft(),
+      sent.onAction,
+    );
+    await userEvent.type(screen.getByLabelText("Title"), "{Enter}");
+    expect(screen.getByText("Title is required")).toBeTruthy();
+    await userEvent.type(screen.getByLabelText("Title"), "Chalk{Enter}");
+    expect(screen.queryByText("Title is required")).toBeNull();
+    expect(sent.names()).toEqual(["add"]);
+  });
+
+  it("an outline or ghost Button is never pressed by Enter, and a click runs its own action", async () => {
+    const sent = record();
+    renderSurface(
+      [
+        form("title", "cancel", "skip", "save"),
+        field("title", "Title"),
+        button("cancel", "outline"),
+        button("skip", "ghost"),
+        button("save"),
+      ],
+      draft(),
+      sent.onAction,
+    );
+    await userEvent.type(screen.getByLabelText("Title"), "Chalk{Enter}");
+    await userEvent.click(screen.getByRole("button", { name: "cancel" }));
+    expect(sent.names()).toEqual(["save", "cancel"]);
+  });
+
+  it("a Form without a solid Button sends nothing on Enter, and keeps what was typed", async () => {
+    const sent = record();
+    const surface = renderSurface(
+      [form("title", "cancel"), field("title", "Title"), button("cancel", "outline")],
+      draft(),
+      sent.onAction,
+    );
+    await userEvent.type(screen.getByLabelText("Title"), "Chalk{Enter}");
+    expect(sent.names()).toEqual([]);
+    expect(surface.read("/draft/title")).toBe("Chalk");
+  });
+
+  it("a second solid Button says to make it outline or ghost; Enter presses the first", async () => {
+    const sent = record();
+    renderSurface(
+      [form("title", "add", "more"), field("title", "Title"), button("add"), button("more")],
+      draft(),
+      sent.onAction,
+    );
+    expect(screen.getByText(/more: a Form has one solid Button/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "more" })).toBeNull();
+    await userEvent.type(screen.getByLabelText("Title"), "Chalk{Enter}");
+    expect(sent.names()).toEqual(["add"]);
+  });
+
+  it("when the solid Button goes, the next one holds the submit", async () => {
+    const sent = record();
+    const surface = renderSurface(
+      [form("title", "add", "more"), field("title", "Title"), button("add"), button("more")],
+      draft(),
+      sent.onAction,
+    );
+    surface.update([form("title", "more")]);
+    expect(screen.queryByText(/a Form has one solid Button/)).toBeNull();
+    await userEvent.type(screen.getByLabelText("Title"), "Chalk{Enter}");
+    expect(sent.names()).toEqual(["more"]);
+  });
+
+  it("runs the solid Button's latest action when the agent redraws it", async () => {
+    const sent = record();
+    const surface = renderSurface(
+      [form("title", "add"), field("title", "Title"), button("add")],
+      draft(),
+      sent.onAction,
+    );
+    surface.update([{ ...button("add"), action: { event: { name: "save" } } }]);
+    await userEvent.type(screen.getByLabelText("Title"), "Chalk{Enter}");
+    expect(sent.names()).toEqual(["save"]);
+  });
+
+  it("a solid Button outside a Form is a plain button", async () => {
+    const sent = record();
+    renderSurface([{ id: "root", component: "Column", children: ["add"] }, button("add")], {}, sent.onAction);
+    const add = screen.getByRole("button", { name: "add" });
+    expect(add.getAttribute("type")).toBe("button");
+    await userEvent.click(add);
+    expect(sent.names()).toEqual(["add"]);
+  });
+});

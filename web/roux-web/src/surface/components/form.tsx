@@ -1,12 +1,30 @@
-// The bridge between A2UI's data model and roux's TanStack Form fields. The A2UI data model owns the values;
-// the TanStack form only gives roux's fields their context, touched/blurred state and messages.
+// The bridge between A2UI's data model and roux's TanStack Form fields. The A2UI data model owns the values; the
+// TanStack form gives roux's fields their context, touched/blurred state and messages, and submits the Form as
+// roux's forms submit: every field checked first, then the Form's solid Button's action (layout.tsx), only if all pass.
 import { type AnyFieldApi } from "@tanstack/react-form";
 import { Flex, Text, VStack } from "@chakra-ui/react";
 import { FilterChips as RouxFilterChips } from "../../table";
 import { InputField as RouxInputField, SelectField as RouxSelectField, useAppForm } from "../../form";
-import { createContext, useContext, useEffect, useEffectEvent, useRef, type ReactNode, type RefObject } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { rouxCatalog } from "../../a2ui";
-import { buildChildren, defineComponent, formatValue, useComponentId } from "./layout";
+import {
+  buildChildren,
+  defineComponent,
+  FormSubmitContext,
+  formatValue,
+  newFormSubmit,
+  useComponentId,
+  type FormSubmit,
+} from "./layout";
 
 const {
   Form: FormApi,
@@ -15,20 +33,28 @@ const {
   FilterChips: FilterChipsApi,
 } = rouxCatalog.apis;
 
-function useBridgeForm() {
-  return useAppForm({});
+function useBridgeForm(formSubmit: FormSubmit) {
+  return useAppForm({ onSubmit: () => formSubmit.submit() });
 }
 type BridgeForm = ReturnType<typeof useBridgeForm>;
 
 const FormBridge = createContext<BridgeForm | null>(null);
 
+// roux's own form.Form: Enter in a field or the solid Button submits it, through validateAllFields and handleSubmit.
 function FormHost({ id, children }: { id: string; children: ReactNode }) {
-  const form = useBridgeForm();
+  const [formSubmit] = useState(newFormSubmit);
+  const form = useBridgeForm(formSubmit);
   return (
     <FormBridge.Provider value={form}>
-      <VStack data-component-id={id} align="stretch" gap="1">
-        {children}
-      </VStack>
+      <FormSubmitContext.Provider value={formSubmit}>
+        <form.AppForm>
+          <form.Form>
+            <VStack data-component-id={id} align="stretch" gap="1">
+              {children}
+            </VStack>
+          </form.Form>
+        </form.AppForm>
+      </FormSubmitContext.Provider>
     </FormBridge.Provider>
   );
 }
@@ -81,7 +107,7 @@ function BridgeField({ kind, sync, children }: { kind: string; sync: Sync; child
     <form.AppField
       name={id}
       defaultValue={sync.value}
-      validators={{ onBlur: () => check.current }}
+      validators={{ onBlur: () => check.current, onSubmit: () => check.current }}
       listeners={{ onChange: ({ value }) => writeBack(value, sync) }}
     >
       {(field) => (

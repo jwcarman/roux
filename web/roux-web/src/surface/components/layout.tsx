@@ -7,7 +7,16 @@ import {
 } from "@a2ui/react";
 import type { ComponentApi } from "@a2ui/web_core";
 import { Box, Button, Card, Heading, HStack, Stat, Text, VStack } from "@chakra-ui/react";
-import { createContext, useContext, useLayoutEffect, useState, type ComponentType, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import { formatDate, formatTime } from "../../dates";
 import { formatMoney, type Money } from "../../money";
 import { rouxCatalog } from "../../a2ui";
@@ -34,6 +43,45 @@ export function useComponentId(): string {
     throw new Error("useComponentId is for a catalog component's render: build it with defineComponent.");
   return id;
 }
+
+/** One solid Button's hold on its Form's submit: it holds it while subscribed (mounted), as `useSyncExternalStore` does. */
+export type SubmitClaim = {
+  subscribe: (onChange: () => void) => () => void;
+  /** True for a Button that claimed after another, still mounted: a Form has one solid Button. */
+  isExtra: () => boolean;
+};
+
+/**
+ * A Form's submit (form.tsx makes one per Form): its solid Buttons claim it in the order they mount, and the first
+ * one's action is what the Form's TanStack submit runs. When that one unmounts, the next one holds it.
+ */
+export type FormSubmit = {
+  claimant: (action: () => void) => SubmitClaim;
+  submit: () => void;
+};
+
+/** A new Form's submit, which runs nothing until a solid Button claims it. */
+export function newFormSubmit(): FormSubmit {
+  let claims: { action: () => void; onChange: () => void }[] = [];
+  return {
+    claimant: (action) => ({
+      subscribe(onChange) {
+        const claim = { action, onChange };
+        claims = [...claims, claim];
+        return () => {
+          claims = claims.filter((other) => other !== claim);
+          // The ones after it move up: the next one may now hold the submit.
+          claims.forEach((other) => other.onChange());
+        };
+      },
+      isExtra: () => claims.findIndex((claim) => claim.action === action) > 0,
+    }),
+    submit: () => claims[0]?.action(),
+  };
+}
+
+/** The enclosing Form's submit; null outside a Form. */
+export const FormSubmitContext = createContext<FormSubmit | null>(null);
 
 type Render<Api extends ComponentApi> = Parameters<typeof createComponentImplementation<Api>>[1];
 
@@ -239,16 +287,59 @@ const StatC = defineComponent(StatApi, ({ props }) => (
   </Stat.Root>
 ));
 
-const ButtonC = defineComponent(ButtonApi, ({ props }) => (
-  <Button
-    data-component-id={useComponentId()}
-    alignSelf="flex-start"
-    variant={props.variant ?? "solid"}
-    disabled={props.disabled === true}
-    onClick={() => void props.action()}
-  >
-    {props.label}
-  </Button>
-));
+type SubmitButtonProps = { formSubmit: FormSubmit; disabled: boolean; action: () => unknown; children: ReactNode };
+
+// The Form's submit, as roux's SubmitButton is: a click, or Enter in a field, submits the Form's TanStack form, which
+// checks every field first and runs this action only if they pass. A second one says so instead of guessing which one
+// Enter presses.
+function SubmitButton({ formSubmit, disabled, action, children }: SubmitButtonProps) {
+  const id = useComponentId();
+  // The latest action: the agent may redraw the Button while it holds the submit.
+  const latest = useRef(action);
+  useLayoutEffect(() => {
+    latest.current = action;
+  });
+  const [claim] = useState(() => formSubmit.claimant(() => void latest.current()));
+  if (useSyncExternalStore(claim.subscribe, claim.isExtra)) {
+    return (
+      <Text data-component-id={id} color="red.500">
+        {children}: a Form has one solid Button, the one Enter presses; make this one outline or ghost
+      </Text>
+    );
+  }
+  return (
+    <Button data-component-id={id} type="submit" alignSelf="flex-start" disabled={disabled}>
+      {children}
+    </Button>
+  );
+}
+
+// In a Form, the solid Button is its submit. An outline or ghost Button (a Cancel), or any Button outside a Form,
+// runs its action on its own click and never on Enter.
+const ButtonC = defineComponent(ButtonApi, ({ props }) => {
+  const id = useComponentId();
+  const formSubmit = useContext(FormSubmitContext);
+  const variant = props.variant ?? "solid";
+  const disabled = props.disabled === true;
+  if (formSubmit !== null && variant === "solid") {
+    return (
+      <SubmitButton formSubmit={formSubmit} disabled={disabled} action={props.action}>
+        {props.label}
+      </SubmitButton>
+    );
+  }
+  return (
+    <Button
+      data-component-id={id}
+      type="button"
+      alignSelf="flex-start"
+      variant={variant}
+      disabled={disabled}
+      onClick={() => void props.action()}
+    >
+      {props.label}
+    </Button>
+  );
+});
 
 export const layoutComponents = [Column, Row, HeadingC, TextC, CardC, StatC, ButtonC];

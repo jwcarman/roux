@@ -160,7 +160,11 @@ const CardList = component("CardList")
 
 const Form = component("Form")
   .prop("children", children())
-  .describe("Holds input fields and the button that saves them. Every InputField must be inside a Form.")
+  .describe(
+    "Holds input fields and the button that saves them. Every InputField must be inside a Form. " +
+      "Its one solid Button is its submit: a click or Enter in a field checks every field, then runs the action only if all pass. " +
+      "An outline or ghost Button (a Cancel) runs its own action and never on Enter.",
+  )
   .build();
 
 const InputField = component("InputField")

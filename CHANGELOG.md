@@ -72,6 +72,15 @@ All notable changes to this project are documented in this file. The format foll
 - **Roux The Day's items list is a surface**: `items.surface.json` bound to the `items` and
   `itemCounts` queries and the `addItem` command, replacing the hand-written page and dialog.
 
+### Fixed
+
+- **A surface's `Form` submits as roux's forms do.** A `Form` was a plain box: Enter in a field did nothing (in Roux
+  The Day's add bar only a click on "Add item" added), and its Button sent whatever the fields held. It is now roux's
+  `form.Form` around its TanStack form, and its one solid Button is its submit: a click or Enter in a field checks
+  every field, shows each failing check, and runs the Button's action only if all pass. An outline or ghost Button (a
+  Cancel) runs its own action and never on Enter. A second solid Button in a `Form` shows an error in its place,
+  naming the fix (make it outline or ghost).
+
 ### Documentation
 
 - **Surfaces are how a feature's screens are built.** New guides: Queries and commands (the app's

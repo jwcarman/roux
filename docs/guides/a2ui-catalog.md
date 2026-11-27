@@ -44,7 +44,11 @@ each takes its own width and `justify` places them, while a weighted child still
 A Button in a Row always takes its own width and lines up with the bottom of the inputs beside it (not of
 the space each field keeps under its input for a message), so an "Add" button sits level with its input whatever the
 Row's `justify` or the fields' weights, and while a field shows an error. A DataTable alone in a Card fills it edge to
-edge.
+edge. A Form submits as roux's other forms do (`form.Form`): its one solid Button is its submit, and a click on it
+or Enter in a field checks every field, shows each failing check, and runs the Button's action only if all pass. So an
+add bar works from the keyboard. An outline or ghost Button (a Cancel) runs its
+own action on its click and never on Enter. A second solid Button in a Form shows an error in its place: make it
+outline or ghost.
 
 `Stat` takes a `tone`, `accent` (the palette's text color) or `danger` (red), that colors the number when it is not
 zero; a zero, a money amount of zero minor units and a missing value stay plain, so a "Late" count is red only when
