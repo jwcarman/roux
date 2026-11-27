@@ -68,6 +68,7 @@ func (g *tsGen) generate(endpoints []Endpoint) string {
 	var queries, commands []tsRow
 	for _, e := range endpoints {
 		d := e.Describe()
+		checkArgs(d)
 		in := g.ref(d.In, d.Kind == KindCommand, d.In.String())
 		out := g.ref(d.Out, false, d.Out.String())
 		if d.Kind == KindCommand {

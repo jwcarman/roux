@@ -51,6 +51,14 @@ const isObject = (value: unknown): value is Record<string, unknown> => typeof va
 const isBinding = (value: unknown): value is Binding => isObject(value) && typeof value["@path"] === "string";
 const keysOf = (path: string): string[] => path.split("/").filter(Boolean);
 
+/** The keys of an absolute path; a relative one would read as a top-level path, so it is refused. */
+function absoluteKeys(path: string, reader: string): string[] {
+  if (!path.startsWith("/")) {
+    throw new Error(`${reader} reads "${path}", a relative path; surfaces bind absolute paths like "/draft/name".`);
+  }
+  return keysOf(path);
+}
+
 function eventOf(value: unknown): Event | undefined {
   if (!isObject(value) || !isObject(value.event) || typeof value.event.name !== "string") return undefined;
   return value.event as Event;
@@ -172,9 +180,9 @@ function render(node: TypeNode, indent: string): string {
   return `{\n${lines.join("\n")}\n${indent}}`;
 }
 
-function lookup(root: TypeNode, path: string): TypeNode | undefined {
+function lookup(root: TypeNode, keys: string[]): TypeNode | undefined {
   let node: TypeNode | undefined = root;
-  for (const key of keysOf(path)) node = node?.kind === "object" ? node.fields.get(key) : undefined;
+  for (const key of keys) node = node?.kind === "object" ? node.fields.get(key) : undefined;
   return node;
 }
 
@@ -184,7 +192,7 @@ function literalType(value: unknown): Leaf {
   );
 }
 
-/** The ids a component lists as children: a list, a template's component, or one child. */
+/** The ids a component lists as children: a list of ids, or one child. A template is refused: it can't be typed yet. */
 function childIds(def: ComponentDef, component: SurfaceComponent): string[] {
   const ids: string[] = [];
   for (const [name, prop] of Object.entries(def.props)) {
@@ -192,7 +200,11 @@ function childIds(def: ComponentDef, component: SurfaceComponent): string[] {
     if (prop.kind === "child" && typeof value === "string") ids.push(value);
     if (prop.kind !== "children") continue;
     if (Array.isArray(value)) ids.push(...value.filter((id): id is string => typeof id === "string"));
-    else if (isObject(value) && typeof value.componentId === "string") ids.push(value.componentId);
+    else if (isObject(value)) {
+      throw new Error(
+        `${component.id}'s ${name} repeat ${String(value.path)} as a template, which surfaces don't support yet; list the children by id.`,
+      );
+    }
   }
   return ids;
 }
@@ -243,7 +255,7 @@ export function surfaceTypes(surface: SurfaceJson, defs: readonly ComponentDef[]
     for (const [name, prop] of Object.entries(def.props)) {
       const value = component[name];
       if (prop.kind === "bindable" && isBinding(value)) {
-        const keys = keysOf(value["@path"]);
+        const keys = absoluteKeys(value["@path"], `${component.id}.${name}`);
         const last = keys.pop();
         if (last === undefined) {
           throw new Error(
@@ -263,7 +275,7 @@ export function surfaceTypes(surface: SurfaceJson, defs: readonly ComponentDef[]
   for (const { name, context = {} } of sent) {
     const fields = Object.entries(context).map(([key, value]): [string, TypeNode] => {
       if (!isBinding(value)) return [key, literalType(value)];
-      const found = lookup(data, value["@path"]);
+      const found = lookup(data, absoluteKeys(value["@path"], `${name}'s context`));
       if (found === undefined) {
         throw new Error(
           `${name}'s context reads ${value["@path"]}, which nothing on the surface shows or edits; bind it to a path a component uses.`,

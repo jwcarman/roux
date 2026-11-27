@@ -243,6 +243,33 @@ describe("surfaceTypes", () => {
     );
   });
 
+  it("aRelativePathIsAnError", () => {
+    const input = { id: "i", component: "InputField", label: "D", value: at("name") };
+    expect(() => types(column("root", ["i"]), input)).toThrow(
+      'i.value reads "name", a relative path; surfaces bind absolute paths like "/draft/name".',
+    );
+  });
+
+  it("aRelativePathInAnEventContextIsAnError", () => {
+    const button = {
+      id: "b",
+      component: "Button",
+      label: "Go",
+      action: { event: { name: "go", context: { n: at("name") } } },
+    };
+    expect(() => types(column("root", ["b"]), button)).toThrow(
+      `go's context reads "name", a relative path; surfaces bind absolute paths like "/draft/name".`,
+    );
+  });
+
+  it("aTemplateChildListIsAnError", () => {
+    const root = { id: "root", component: "Column", children: { componentId: "row", path: "/people" } };
+    const row = { id: "row", component: "Text", text: at("name") };
+    expect(() => types(root, row)).toThrow(
+      "root's children repeat /people as a template, which surfaces don't support yet; list the children by id.",
+    );
+  });
+
   it("anActionThatIsNotAnEventIsIgnored", () => {
     for (const action of ["go", {}, { event: "go" }, { event: {} }]) {
       const button = { id: "b", component: "Button", label: "Go", action };
@@ -251,7 +278,7 @@ describe("surfaceTypes", () => {
   });
 
   it("childrenThatAreNeitherAListNorATemplateAreIgnored", () => {
-    expect(types({ id: "root", component: "Column", children: {} })).toContain("Record<string, never>");
+    expect(types({ id: "root", component: "Column", children: "x" })).toContain("Record<string, never>");
   });
 
   it("anUnknownComponentIsAnError", () => {
@@ -497,11 +524,6 @@ describe("surfaceTypes", () => {
 
   it("aListedChildIsFollowedInOrder", () => {
     firstIsWanted(types(column("root", ["wanted", "early"]), early, wanted));
-  });
-
-  it("aTemplateChildIsFollowed", () => {
-    const template = { id: "root", component: "Column", children: { componentId: "wanted", path: "/xs" } };
-    firstIsWanted(types(template, early, wanted));
   });
 
   it("aSingleChildIsFollowed", () => {

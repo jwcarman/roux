@@ -30,8 +30,8 @@ catalog document and the drawing prompt's entries are generated from them. Needs
 - Types: `text`, `email`, `url`, `phone`, `date`, `time`, `number`, `integer`, `money`, `id`, `boolean`,
   `oneOf([...])`, `record({...}, name?)`, `map(type)`, `list(type)`, `options(type)`, `array(type)`, `param("T")`,
   `fieldOf(T)`, `optional(type)`.
-- Props: `bindable(type)` (literal or `{"@path"}`), `literal(type)`, `event()`, `children()` (ids or a template
-  `{path, componentId}`), `child()`, `checks()`; `optional(prop)`.
+- Props: `bindable(type)` (literal or `{"@path"}`), `literal(type)`, `event()`, `children()` (ids; a template
+  `{path, componentId}` is refused by the surface generator), `child()`, `checks()`; `optional(prop)`.
 - `toA2ui(defs, { catalogId, version })` → `A2uiCatalog`.
 
 ## Example

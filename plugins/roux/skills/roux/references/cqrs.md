@@ -41,7 +41,9 @@ of each kind but the lookup.
   `GET /api/queries/<Name>`; answers `R`. For counts, one record, a short fixed set of options.
 - `cqrs.NoArgs`: the args of a query or lookup that takes none.
 - Args `A`: string fields tagged `query:"name"`, with `oneof:"a,b"` for a word from a set. An empty
-  value is `""`; an unknown parameter or a value outside `oneof` is a `400` on that parameter.
+  value is `""`; an unknown parameter or a value outside `oneof` is a `400` on that parameter. Every
+  exported field must be a `string` with a `query` tag: `Mount` and `TypeScript` panic on an `int`/`bool`
+  field (parse in `Run`) or an untagged exported field.
 - `cqrs.Command[I, O]{Name, Permission, Emits, Run}`: `I` a `cqrs.Input[I]`;
   `Run(ctx, tx pgx.Tx, caller, in I) (O, error)`. `POST /api/commands/<Name>`; answers
   `cqrs.Answer[O]`, `{result: O, events: [...]}`.

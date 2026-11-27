@@ -66,6 +66,33 @@ func Mount(k *app.Kit, endpoints ...Endpoint) {
 			panic(fmt.Sprintf("cqrs: two endpoints are named %q; give each its own name", name))
 		}
 		seen[name] = true
+		checkArgs(e.Describe())
 		e.register(k)
+	}
+}
+
+// checkArgs panics, naming the endpoint, unless a query's or lookup's args are a struct whose every
+// exported field is a string tagged `query`: the shape argsOf reads and the contract describes.
+// Mount and TypeScript both call it, so a bad args struct fails at start-up and in the contract
+// test rather than as a 500 on every request.
+func checkArgs(d Description) {
+	if d.Kind == KindCommand {
+		return
+	}
+	if d.In.Kind() != reflect.Struct {
+		panic(fmt.Sprintf("cqrs: %s %q takes args of type %s; args are a struct of query-tagged strings, or cqrs.NoArgs", d.Kind, d.Name, d.In))
+	}
+	for i := range d.In.NumField() {
+		f := d.In.Field(i)
+		name := f.Tag.Get("query")
+		switch {
+		case name == "" && f.IsExported():
+			panic(fmt.Sprintf("cqrs: %s %q arg field %s has no query tag; tag it query:%q or unexport it", d.Kind, d.Name, f.Name, lowerFirst(f.Name)))
+		case name == "":
+		case !f.IsExported():
+			panic(fmt.Sprintf("cqrs: %s %q arg %s is unexported; export it or drop its query tag", d.Kind, d.Name, f.Name))
+		case f.Type.Kind() != reflect.String:
+			panic(fmt.Sprintf("cqrs: %s %q arg %s has type %s; query args are strings — make it a string (with oneof for a fixed set)", d.Kind, d.Name, f.Name, f.Type))
+		}
 	}
 }

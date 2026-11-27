@@ -33,6 +33,19 @@ function generated(): string {
 }
 
 describe("roux-surface-types", () => {
+  it("reportsATemplateChildListAsAnError", () => {
+    const template = {
+      id: "items",
+      components: [{ id: "root", component: "Column", children: { componentId: "row", path: "/people" } }],
+    };
+    const run = setup({ [JSON_FILE]: JSON.stringify(template) });
+    expect(runSurfaceTypes([JSON_FILE], run.io)).toBe(1);
+    expect(run.err).toEqual([
+      `${JSON_FILE}: root's children repeat /people as a template, which surfaces don't support yet; list the children by id.`,
+    ]);
+    expect(run.written).toEqual({});
+  });
+
   it("writesTheGeneratedFileBesideTheSurface", () => {
     const run = setup({ [JSON_FILE]: SURFACE });
     expect(runSurfaceTypes([JSON_FILE], run.io)).toBe(0);

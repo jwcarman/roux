@@ -61,6 +61,11 @@ An empty parameter is `""`, which a service reads as "not filtered". A parameter
 take, or a value outside its `oneof`, is a `400` on that parameter, naming the parameters that are
 known. A query that takes none uses `cqrs.NoArgs`.
 
+Every exported field of the args must be a `string` tagged `query`: `cqrs.Mount` and
+`cqrs.TypeScript` panic, naming the endpoint and the field, on an `int` or `bool` field (query
+parameters are strings; parse them in `Run`) and on an exported field with no `query` tag (a client
+could not send it).
+
 ## Lookups
 
 ```go

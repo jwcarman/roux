@@ -183,6 +183,41 @@ func TestMountPanicsOnADuplicateName(t *testing.T) {
 	cqrs.Mount(a.Kit(), dup, dup)
 }
 
+type mountIntArgs struct {
+	Done int `query:"done"`
+}
+
+type mountStrayArgs struct {
+	Extra string
+}
+
+func TestMountRefusesBadQueryArgs(t *testing.T) {
+	a := rouxtest.New(t, "cqrs_badargs", cqrs.Module{}.Migrations()...)
+	cases := map[string]struct {
+		endpoint cqrs.Endpoint
+		want     string
+	}{
+		"a query arg that is not a string": {
+			cqrs.Query[mountIntArgs, thingRow]{Name: "items", Permission: thingsPermission},
+			`cqrs: query "items" arg Done has type int; query args are strings — make it a string (with oneof for a fixed set)`,
+		},
+		"an arg field without a query tag": {
+			cqrs.Lookup[mountStrayArgs, counts]{Name: "stray", Permission: thingsPermission},
+			`cqrs: lookup "stray" arg field Extra has no query tag; tag it query:"extra" or unexport it`,
+		},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			defer func() {
+				if got := recover(); got != c.want {
+					t.Fatalf("panic: want %q, got %v", c.want, got)
+				}
+			}()
+			cqrs.Mount(a.Kit(), c.endpoint)
+		})
+	}
+}
+
 func TestModuleIsNamedAndMigratesAfterUsers(t *testing.T) {
 	m := cqrs.Module{}.Migrations()
 	if (cqrs.Module{}).Name() != "roux-cqrs" || len(m) != 1 || m[0].Name != "roux-cqrs" || m[0].After[0] != "roux-users" {

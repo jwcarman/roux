@@ -129,6 +129,55 @@ func TestTypeScriptRefusesAFieldWithoutAJSONTag(t *testing.T) {
 	cqrs.TypeScript([]cqrs.Endpoint{cqrs.Lookup[cqrs.NoArgs, untagged]{Name: "things"}})
 }
 
+type intArgs struct {
+	When int `query:"when"`
+}
+
+type strayArgs struct {
+	Status string `query:"status"`
+	Extra  string
+}
+
+type unexportedArgs struct {
+	hidden string `query:"hidden"`
+}
+
+func (a unexportedArgs) Hidden() string { return a.hidden }
+
+func TestTypeScriptRefusesBadQueryArgs(t *testing.T) {
+	cases := map[string]struct {
+		endpoint cqrs.Endpoint
+		want     string
+	}{
+		"a query arg that is not a string": {
+			cqrs.Query[intArgs, contractAdded]{Name: "items"},
+			`cqrs: query "items" arg When has type int; query args are strings — make it a string (with oneof for a fixed set)`,
+		},
+		"an arg field without a query tag": {
+			cqrs.Query[strayArgs, contractAdded]{Name: "items"},
+			`cqrs: query "items" arg field Extra has no query tag; tag it query:"extra" or unexport it`,
+		},
+		"an unexported tagged arg": {
+			cqrs.Lookup[unexportedArgs, contractAdded]{Name: "things"},
+			`cqrs: lookup "things" arg hidden is unexported; export it or drop its query tag`,
+		},
+		"args that are not a struct": {
+			cqrs.Lookup[string, contractAdded]{Name: "things"},
+			`cqrs: lookup "things" takes args of type string; args are a struct of query-tagged strings, or cqrs.NoArgs`,
+		},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			defer func() {
+				if got := recover(); got != c.want {
+					t.Errorf("panic = %v, want %q", got, c.want)
+				}
+			}()
+			cqrs.TypeScript([]cqrs.Endpoint{c.endpoint})
+		})
+	}
+}
+
 func TestTypeScriptRefusesAnUnsupportedType(t *testing.T) {
 	defer func() {
 		want := "cqrs: Thing.Extra is a map[string]int, which the contract can't describe; use a struct or a slice"
@@ -140,7 +189,7 @@ func TestTypeScriptRefusesAnUnsupportedType(t *testing.T) {
 }
 
 type NoArgs struct {
-	Name string `json:"name"`
+	Name string `query:"name"`
 }
 
 type Money struct {

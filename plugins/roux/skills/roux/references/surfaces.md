@@ -17,7 +17,9 @@ primitives and roux's built-in pages. The recipe (`feature.md` steps 0 and 7 to 
 - Define each binding at module level (`export const labelsBinding = bind(...)`). A `bind()` inside a
   component, or in render, is a new binding each render, which restarts the surface.
 - Top-level paths are the surface's data, one per source: the query's page (`/labels`), its args
-  (`/labelsArgs`), a form's draft (`/draft`), the server's field errors (`/errors`).
+  (`/labelsArgs`), a form's draft (`/draft`), the server's field errors (`/errors`). Every bound path
+  starts with `/` (a relative `"name"` is an error); list a Column's or Row's children by id (a
+  `{componentId, path}` template is an error).
 - A field's client check (`@checks`) uses roux's word for the rule (`Must not be blank`), and the
   command's `Validate` checks the same rule.
 - A surface lives at `frontend/src/<feature>/<id>.surface.json` (the scripts' glob is

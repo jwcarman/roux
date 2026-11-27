@@ -157,7 +157,9 @@ fields its columns name, typed by each column's `format` (`date` → `IsoDate`, 
 no format → `string`, `null` for an empty cell); a `link`'s params are fields the row must have. A
 `Stat`'s value is its format's type, a `number` by default. An event's type is its context, each
 value typed from the data. One path used as two different types is an error naming the path and
-both uses; a surface the generator can't type is refused, never guessed.
+both uses; a surface the generator can't type is refused, never guessed. Paths are absolute
+(`"/draft/name"`; a relative `"name"` is an error), and a Column or Row lists its children by id (a
+`{componentId, path}` template is an error until surfaces support them).
 
 `roux-surface-types --check` writes nothing and exits 1 naming each generated file that is missing
 or stale, with the command that fixes it. The command's logic is `runSurfaceTypes(args, io)`, with
