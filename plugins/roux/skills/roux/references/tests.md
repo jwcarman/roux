@@ -31,7 +31,8 @@ the kits: the database, people and browsers, time, route tests, paged answers an
   Each returns a `Reply`: `Want(t, status, what)` (fails with the body), `JSON(t)` (a map),
   `Decode(t, &v)`.
 - The app's own: `cmd/server/permissions_test.go` (`rouxtest.PermissionsFile`,
-  `rouxtest.CheckGrants`, `permissions.md`).
+  `rouxtest.CheckGrants`, `permissions.md`) and `cmd/server/contract_test.go`
+  (`rouxtest.ContractFile(t, path, endpoints...)`, `cqrs.md`).
 
 ## Example: time
 

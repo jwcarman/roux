@@ -10,7 +10,9 @@ feature's names throughout, and `roux-app` with the module line of the app's `go
 
 In a grown app, open the existing feature most like the new one (`internal/<feature>/` and
 `frontend/src/<feature>/`) and copy its files' shape. Use this recipe for the order, the exact roux
-names and the checks. In a new app there is none: follow it as written, step 0 included.
+names and the checks. In a new app there is none: follow it as written. The template ships the surfaces' setup (the
+A2UI SDK, the `surfaces` scripts, `src/surfaces.ts`, the empty `contract.gen.ts` and its test), so
+the first feature adds only its own files.
 
 ## Rules
 
@@ -38,103 +40,6 @@ names and the checks. In a new app there is none: follow it as written, step 0 i
   (`dates.md`), so tests set the time.
 
 ## Steps
-
-### 0. Once per app: the surfaces' setup
-
-Skip this step when `frontend/src/surfaces.ts` exists.
-
-The A2UI SDK (`@a2ui/react`, `@a2ui/web_core`) and the Zod 3 it is built on, under the alias `zod3`,
-beside roux-web (its optional peers), and the scripts that generate and check the surfaces' types:
-
-<!-- run: frontend -->
-```bash
-npm install --no-audit --no-fund @a2ui/react@^0.16.1 @a2ui/web_core@^0.16.1 zod3@npm:zod@^3.25.76
-npm pkg set "scripts.surfaces=roux-surface-types src/**/*.surface.json" \
-  "scripts.surfaces:check=roux-surface-types --check src/**/*.surface.json"
-```
-
-The SDK is large. In `frontend/vite.config.ts`, replace the line `build: { outDir: "dist",
-emptyOutDir: true },` so it loads in chunks of its own, which the browser caches apart from the
-app's code (without it Vite puts it in the first surface's chunk and warns that the chunk is over
-500 kB):
-
-<!-- fragment: vite-build -->
-```ts
-build: {
-  outDir: "dist",
-  emptyOutDir: true,
-  // A surface's runtime (the A2UI SDK and the Zod 3 its schemas are built on) is large: it loads in
-  // chunks of its own, beside the page's.
-  rolldownOptions: {
-    output: {
-      codeSplitting: {
-        groups: [
-          { name: "a2ui", test: /node_modules[\\/]@a2ui[\\/]web_core[\\/]src/ },
-          { name: "zod3", test: /node_modules[\\/](zod3|@a2ui[\\/]web_core[\\/]node_modules[\\/]zod)[\\/]/ },
-        ],
-      },
-    },
-  },
-},
-```
-
-The contract and the surfaces' types are generated, not formatted: two more lines at the end of
-`frontend/.prettierignore`:
-
-<!-- fragment: prettierignore -->
-```text
-src/contract.gen.ts
-src/**/*.surface.gen.ts
-```
-
-The app's binder, made once from the generated contract, `frontend/src/surfaces.ts`:
-
-<!-- file: frontend/src/surfaces.ts -->
-```ts
-// The app's surface binder, made once from the generated contract: each surface's binding uses `bind`.
-import { surfaces } from "@jwcarman/roux-web/surface";
-import { contract, type Commands, type Queries } from "./contract.gen";
-
-export const { bind } = surfaces<Queries, Commands>(contract);
-```
-
-The contract test, `cmd/server/contract_test.go`. It writes `frontend/src/contract.gen.ts` from the
-endpoints and fails once when that changed, as the permissions test does; each feature adds its
-`Endpoints` to the list:
-
-<!-- file: cmd/server/contract_test.go -->
-```go
-package main
-
-import (
-	"os"
-	"testing"
-
-	"github.com/jwcarman/roux/cqrs"
-
-	"roux-app/internal/labels"
-)
-
-// contractFile is the front end's copy of the server's queries and commands.
-const contractFile = "../../frontend/src/contract.gen.ts"
-
-// The front end's contract is the server's queries and commands: a change to one is rewritten into
-// frontend/src/contract.gen.ts, and this test fails once so the change is noticed and committed.
-// Each feature adds its endpoints: slices.Concat(labels.Endpoints(labels.Service{}), ...).
-func TestTheFrontEndContractIsCurrent(t *testing.T) {
-	want := cqrs.TypeScript(labels.Endpoints(labels.Service{}))
-	if got, err := os.ReadFile(contractFile); err == nil && string(got) == want {
-		return
-	}
-	if err := os.WriteFile(contractFile, []byte(want), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	t.Fatal("frontend/src/contract.gen.ts was stale and is rewritten: run the test again and commit it")
-}
-```
-
-`cqrs.Module{}` (the command log's table) is turned on in step 6, before the first feature with
-commands.
 
 ### 1. The table: `internal/labels/migrations/001_label.sql`
 
@@ -549,18 +454,15 @@ func TestTheListSearchesFiltersSortsAndRefusesWhatItDoesNotKnow(t *testing.T) {
 
 ### 6. Turn it on: `cmd/server/modules.go`
 
-The imports, beside the file's other imports (`cqrs` only for the app's first feature with
-commands):
+The import, beside the file's other imports:
 
 <!-- fragment: modules-import -->
 ```go
-"github.com/jwcarman/roux/cqrs"
 "roux-app/internal/labels"
 ```
 
-The modules, at the end of the line that adds `email` and `members` (after them, so
-`k.Organization()` holds the `ORG_*` settings). `cqrs.Module{}` comes once, before every module with
-commands:
+The module, at the end of the line that adds `email`, `members` and `cqrs.Module{}` (after them, so
+`k.Organization()` holds the `ORG_*` settings and the command log's table exists):
 
 <!-- fragment: modules-append -->
 ```go
@@ -574,11 +476,18 @@ Its permissions, in `permissions()`:
 return slices.Concat(app.RouxPermissions(), labels.Permissions)
 ```
 
+Its queries and commands, in `endpoints()`:
+
+<!-- fragment: endpoints -->
+```go
+return slices.Concat(labels.Endpoints(labels.Service{}))
+```
+
 Then run `go test ./cmd/server` **twice**: the first run rewrites `frontend/src/permissions.gen.ts`
 (adding `LABELS_READ` and `LABELS_MANAGE`) and `frontend/src/contract.gen.ts` (the `labels` query,
 the `addLabel` command and their types) and fails so the change is noticed; the second passes. The
-check script does this for you. In a grown app, add the feature's `Endpoints` to
-`contract_test.go`'s list.
+check script does this for you. A later feature adds one more argument to each of `permissions()`
+and `endpoints()`.
 
 ### 7. The surface: `frontend/src/labels/labels.surface.json`
 

@@ -81,3 +81,9 @@ func (*appRoles) Migrations() []pgdb.Migration {
 func permissions() []string {
 	return slices.Concat(app.RouxPermissions(), items.Permissions)
 }
+
+// endpoints is every query and command the application serves. Its contract test writes them into
+// the front end (frontend/src/contract.gen.ts), which the screens' bindings are checked against.
+func endpoints() []cqrs.Endpoint {
+	return slices.Concat(items.Endpoints(items.Service{}))
+}

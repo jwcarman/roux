@@ -158,25 +158,30 @@ handler does ([Errors](errors.md)).
 - `contract`, the object the runtime reads: each query's `kind` and `dependsOn`, each command's
   `emits`.
 
-The text is the same whatever order the endpoints come in. An app's `cmd/server/contract_test.go`
-compares it with the committed file, rewrites the file when it differs, and fails once so the change
-is noticed, as the permissions test does with `permissions.gen.ts`:
+The text is the same whatever order the endpoints come in. With no endpoints, `Queries` and
+`Commands` are `Record<never, never>` (an empty interface would accept any value).
+
+The app's endpoints are `endpoints()` in `cmd/server/modules.go`, one argument per feature, as
+`permissions()` lists its permissions:
 
 ```go
-func TestTheFrontEndContractIsCurrent(t *testing.T) {
-	want := cqrs.TypeScript(labels.Endpoints(labels.Service{}))
-	if got, err := os.ReadFile(contractFile); err == nil && string(got) == want {
-		return
-	}
-	if err := os.WriteFile(contractFile, []byte(want), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	t.Fatal("frontend/src/contract.gen.ts was stale and is rewritten: run the test again and commit it")
+func endpoints() []cqrs.Endpoint {
+	return slices.Concat(labels.Endpoints(labels.Service{}), items.Endpoints(items.Service{}))
 }
 ```
 
-Each feature adds its `Endpoints` to the list. The file is generated, so it is listed in the front
-end's `.prettierignore` (beside `src/**/*.surface.gen.ts`) and never edited.
+The template's `cmd/server/contract_test.go` compares their contract with the committed file,
+rewrites the file when it differs, and fails once so the change is noticed, as the permissions test
+does with `permissions.gen.ts`:
+
+```go
+func TestTheFrontEndContractIsCurrent(t *testing.T) {
+	rouxtest.ContractFile(t, "../../frontend/src/contract.gen.ts", endpoints()...)
+}
+```
+
+`rouxtest.ContractFile(t, path, endpoints...)` is that check. The file is generated, so it is listed
+in the front end's `.prettierignore` (beside `src/**/*.surface.gen.ts`) and never edited.
 
 The generator reads each endpoint through `cqrs.Endpoint`'s `Describe()`, a `cqrs.Description`
 (`Kind`, `Name`, `Permission`, `Events`, `In`, `Out`). Its `cqrs.Kind` is `cqrs.KindQuery`,

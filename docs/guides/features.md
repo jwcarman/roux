@@ -21,16 +21,15 @@ code here compiles and passes.
 | `internal/labels/service.go` | The domain service: the rules, the SQL, the list |
 | `internal/labels/cqrs.go` | The queries and commands: the feature's ports, and the command's input |
 | `internal/labels/labels_test.go` | The endpoints over a real database, one test per rule ([Testing](testing.md)) |
-| `cmd/server/modules.go` | The module in the list, its permissions in `permissions()` |
-| `cmd/server/contract_test.go` | The front end's contract, generated from every feature's endpoints |
+| `cmd/server/modules.go` | The module in the list, its permissions in `permissions()`, its endpoints in `endpoints()` |
 | `frontend/src/labels/labels.surface.json` | The screen, drawn from roux's catalog |
 | `frontend/src/labels/labels.surface.gen.ts` | Generated: what the screen needs from outside |
 | `frontend/src/labels/labels.binding.ts` | The screen's paths and events bound to the query and the command |
 | `frontend/src/routes/_signedIn/labels.tsx` | The route: a guard and `<Surface>` |
 | `frontend/src/labels/labels.binding.test.tsx` | The screen through its route, against MSW answers |
 
-An app's first surface also needs the surfaces' setup: the A2UI SDK, two scripts, Vite's chunks,
-the contract test and the app's binder, once ([Surfaces](surfaces.md#setting-up-an-app)).
+The template ships the surfaces' setup (the A2UI SDK, two scripts, Vite's chunks, the contract test
+and the app's binder), so the first feature adds only these files ([Surfaces](surfaces.md#setting-up-an-app)).
 
 ## The table
 
@@ -363,8 +362,8 @@ func deref(s *string) string {
 
 ## Turning it on
 
-In `cmd/server/modules.go`, the command log (`cqrs.Module{}`, once, before the first feature with
-commands) and the module join the list, and the feature's permissions join the app's:
+In `cmd/server/modules.go`, the module joins the list after the command log (`cqrs.Module{}`, which
+the template turns on), and the feature's permissions join the app's:
 
 ```go
 mods = append(mods, email, members, cqrs.Module{}, labels.Module{})
@@ -374,11 +373,11 @@ mods = append(mods, email, members, cqrs.Module{}, labels.Module{})
 return slices.Concat(app.RouxPermissions(), labels.Permissions)
 ```
 
-The front end's contract lists every feature's endpoints, in `cmd/server/contract_test.go`
+Its endpoints join the app's in `endpoints()`, which the contract test writes into the front end
 ([Queries and commands](cqrs.md#the-contract)):
 
 ```go
-want := cqrs.TypeScript(labels.Endpoints(labels.Service{}))
+return slices.Concat(labels.Endpoints(labels.Service{}))
 ```
 
 The next `go test ./cmd/server` rewrites `frontend/src/permissions.gen.ts` (`LABELS_READ`,

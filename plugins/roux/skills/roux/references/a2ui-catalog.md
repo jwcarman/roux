@@ -3,7 +3,8 @@
 The catalog is what a feature's screens (surfaces, `surfaces.md`) are drawn from. roux's A2UI
 components are defined once, typed, in `@jwcarman/roux-web/a2ui`; the A2UI SDK's schemas, the
 catalog document and the drawing prompt's entries are generated from them. Needs `@a2ui/react`,
-`@a2ui/web_core` and `"zod3": "npm:zod@^3.25.76"` installed beside roux-web (`feature.md` step 0).
+`@a2ui/web_core` and `"zod3": "npm:zod@^3.25.76"` installed beside roux-web; the template installs
+them.
 
 ## Rules
 

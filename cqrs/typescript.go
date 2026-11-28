@@ -122,11 +122,20 @@ func (g *tsGen) generate(endpoints []Endpoint) string {
 		}
 		return l.String()
 	}
-	b.WriteString("export interface Queries {\n" + lines(queries, true) + "}\n\n")
-	b.WriteString("export interface Commands {\n" + lines(commands, true) + "}\n\n")
+	b.WriteString(table("Queries", lines(queries, true)))
+	b.WriteString(table("Commands", lines(commands, true)))
 	b.WriteString("/** Each query's events and each command's, for the runtime (the types above are for the compiler). */\n")
 	b.WriteString("export const contract = {\n  queries: {\n" + lines(queries, false) + "  },\n  commands: {\n" + lines(commands, false) + "  },\n} as const;\n")
 	return b.String()
+}
+
+// table is the Queries or Commands interface; with no members it is Record<never, never>, since an
+// empty interface accepts any value and the app's lint refuses it.
+func table(name, members string) string {
+	if members == "" {
+		return "export type " + name + " = Record<never, never>;\n\n"
+	}
+	return "export interface " + name + " {\n" + members + "}\n\n"
 }
 
 func jsList(s []string) string {

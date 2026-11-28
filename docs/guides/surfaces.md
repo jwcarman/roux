@@ -23,44 +23,23 @@ JSON diff.
 
 ## Setting up an app
 
-Once per app, before its first surface:
+`create-roux-app` ships the surfaces' setup, so an app's first surface adds only its own files:
 
 - **The SDK.** `@a2ui/react` and `@a2ui/web_core` (the A2UI SDK) and Zod 3 under the alias `zod3`,
-  which web_core's schemas are built on. They are roux-web's optional peers, so an app without
-  surfaces doesn't install them:
-
-  ```bash
-  npm install @a2ui/react@^0.16.1 @a2ui/web_core@^0.16.1 zod3@npm:zod@^3.25.76
-  ```
-
+  which web_core's schemas are built on. They are roux-web's optional peers; the template installs
+  them.
 - **The scripts.** `"surfaces": "roux-surface-types src/**/*.surface.json"` writes every
   surface's types; `"surfaces:check": "roux-surface-types --check src/**/*.surface.json"` fails
   naming a stale one, for CI. The shell's glob reaches one folder down, which is where surfaces
   live: `src/<feature>/<id>.surface.json`.
 - **Vite's chunks.** The SDK is large (about 500 kB minified, with Zod 3). Without help Vite bundles
-  it into the first surface's route chunk and warns that the chunk is over 500 kB. The app's
-  `vite.config.ts` puts it in chunks of its own, which the browser fetches once and caches apart
-  from the app's code:
-
-  ```ts
-  build: {
-    outDir: "dist",
-    emptyOutDir: true,
-    rolldownOptions: {
-      output: {
-        codeSplitting: {
-          groups: [
-            { name: "a2ui", test: /node_modules[\\/]@a2ui[\\/]web_core[\\/]src/ },
-            { name: "zod3", test: /node_modules[\\/](zod3|@a2ui[\\/]web_core[\\/]node_modules[\\/]zod)[\\/]/ },
-          ],
-        },
-      },
-    },
-  },
-  ```
-
-- **The contract.** `cmd/server/contract_test.go` writes `frontend/src/contract.gen.ts` from the
-  app's endpoints ([Queries and commands](cqrs.md#the-contract)). It and the surfaces' types are
+  it into the first surface's route chunk and warns that the chunk is over 500 kB. The template's
+  `vite.config.ts` puts it in chunks of its own (`build.rolldownOptions.output.codeSplitting`, an
+  `a2ui` group and a `zod3` group), which the browser fetches once and caches apart from the app's
+  code.
+- **The contract.** `cmd/server/contract_test.go` writes `frontend/src/contract.gen.ts` from
+  `endpoints()` in `cmd/server/modules.go` ([Queries and commands](cqrs.md#the-contract)). A new
+  app's is empty: `Queries` and `Commands` with no members. It and the surfaces' types are
   generated, so `frontend/.prettierignore` lists `src/contract.gen.ts` and `src/**/*.surface.gen.ts`.
 - **The binder.** `frontend/src/surfaces.ts` makes the app's `bind` once from the contract:
 

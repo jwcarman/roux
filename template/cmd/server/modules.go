@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/jwcarman/roux/app"
+	"github.com/jwcarman/roux/cqrs"
 	"github.com/jwcarman/roux/pgdb"
 )
 
@@ -40,7 +41,7 @@ func modules(k *app.Kit) ([]app.Module, error) {
 	if err != nil {
 		return nil, err
 	}
-	mods = append(mods, email, members)
+	mods = append(mods, email, members, cqrs.Module{})
 	if passkeys != nil {
 		mods = append(mods, passkeys)
 	}
@@ -80,4 +81,13 @@ func (*appRoles) Migrations() []pgdb.Migration {
 // labels.Permissions, items.Permissions).
 func permissions() []string {
 	return slices.Concat(app.RouxPermissions())
+}
+
+// endpoints is every query and command the application serves. Its contract test writes them into
+// the front end (frontend/src/contract.gen.ts), which the screens' bindings are checked against.
+//
+// Each feature adds its list as one more argument, as for permissions:
+// slices.Concat(labels.Endpoints(labels.Service{}), items.Endpoints(items.Service{})).
+func endpoints() []cqrs.Endpoint {
+	return slices.Concat[[]cqrs.Endpoint]()
 }

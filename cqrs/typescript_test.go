@@ -94,6 +94,20 @@ func TestTypeScriptMatchesGolden(t *testing.T) {
 	}
 }
 
+// An app with no endpoints yet still has a contract its binder compiles against, and no empty
+// interface, which the app's lint refuses.
+func TestTypeScriptWithNoEndpointsHasEmptyTables(t *testing.T) {
+	got := cqrs.TypeScript(nil)
+	for _, want := range []string{"export type Queries = Record<never, never>;", "export type Commands = Record<never, never>;"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("contract lacks %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "interface") {
+		t.Errorf("an empty contract declares an interface:\n%s", got)
+	}
+}
+
 type Thing struct {
 	Extra map[string]int `json:"extra"`
 }

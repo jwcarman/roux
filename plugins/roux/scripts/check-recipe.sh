@@ -14,10 +14,9 @@
 # The copy lives at recipe-app/ (one level down, like template/) so the template's relative links
 # to roux (go.mod's replace) and to roux-web (frontend/package.json) still resolve.
 #
-# Usage: check-recipe.sh   (from anywhere; needs Go, Node, npm's registry or its cache (the recipe
-#                           installs the A2UI SDK), and PostgreSQL through TEST_DATABASE_URL or
-#                           Docker, whose test containers take free ports; builds roux-web first, so
-#                           it tests this checkout's roux)
+# Usage: check-recipe.sh   (from anywhere; needs Go, Node, npm's registry or its cache, and
+#                           PostgreSQL through TEST_DATABASE_URL or Docker, whose test containers
+#                           take free ports; builds roux-web first, so it tests this checkout's roux)
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
@@ -86,15 +85,11 @@ for kind, target, indent, body in blocks:
         # Each line beside the file's other imports; gofmt sorts them.
         insert_after(modules, "import (\n", "".join("\t" + line.strip() + "\n" for line in body.strip().split("\n")))
     elif target == "modules-append":
-        replace_once(modules, "mods = append(mods, email, members)", body.strip())
+        replace_once(modules, "mods = append(mods, email, members, cqrs.Module{})", body.strip())
     elif target == "permissions":
         replace_once(modules, "return slices.Concat(app.RouxPermissions())", body.strip())
-    elif target == "vite-build":
-        replace_once(app / "frontend/vite.config.ts", '  build: { outDir: "dist", emptyOutDir: true },\n',
-                     "".join("  " + line + "\n" if line else "\n" for line in body.rstrip("\n").split("\n")))
-    elif target == "prettierignore":
-        ignore = app / "frontend/.prettierignore"
-        ignore.write_text(ignore.read_text() + body)
+    elif target == "endpoints":
+        replace_once(modules, "return slices.Concat[[]cqrs.Endpoint]()", body.strip())
     elif target == "nav":
         imports, entry = [part for part in body.split("\n\n") if part.strip()]
         nav = app / "frontend/src/shell/nav.ts"
@@ -117,11 +112,12 @@ gofmt -w $(go list -f '{{.Dir}}' ./...)
 for generated in TestTheFrontEndListsEveryPermission TestTheFrontEndContractIsCurrent; do
   go test ./cmd/server -run "$generated" >/dev/null 2>&1 || go test ./cmd/server -run "$generated"
 done
+# The front end is installed as create-roux-app leaves it, before the recipe's commands use its bins.
+(cd frontend && npm ci --ignore-scripts --no-audit --no-fund >/dev/null \
+  && npm ci --ignore-scripts --no-audit --no-fund --prefix lint-tools >/dev/null)
 python3 -c "$recipe" run "$app" "${recipes[@]}"
 make fmt vet lint
 make test
-(cd frontend && npm ci --ignore-scripts --no-audit --no-fund >/dev/null \
-  && npm ci --ignore-scripts --no-audit --no-fund --prefix lint-tools >/dev/null \
-  && npm run format:check && npm run surfaces:check \
+(cd frontend && npm run format:check && npm run surfaces:check \
   && npm run coverage && npm run build && npm run lint)
 echo "check-recipe: ok, the recipes' feature builds and passes its checks" >&2
