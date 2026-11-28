@@ -170,6 +170,11 @@ describe("create", () => {
 
     expect(read(".claude/skills/roux/SKILL.md")).toBe("Made by `create-roux-app`, module `roux-app`.\n");
     expect(read(".claude/skills/roux/references/feature.md")).toBe('"roux-app/internal/labels"\n');
+  });
+
+  it("names the app in agent files outside the skills", () => {
+    create(OPTIONS, { template, cwd: work, git: git() });
+
     expect(read(".claude/notes.md")).toBe("Acme Gym, module acme-gym.\n");
   });
 
