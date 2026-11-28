@@ -58,6 +58,21 @@ Template files:
 
 - `frontend/src/routes/_signedIn/-appearance.test.tsx`: the fixture's theme adds `depth: "flat"`.
 
+## 0.6.5 to 0.7.0
+
+- Packages: nothing to change. New: `rouxtest.ContractFile`.
+- Template files, for an app with no surface yet (one that has a surface already did all this by
+  hand; optionally move to the template's shape): from the fresh app, copy
+  `cmd/server/contract_test.go`, `frontend/src/surfaces.ts` and `frontend/src/contract.gen.ts`; in
+  `cmd/server/modules.go`, add `cqrs.Module{}` after `members` and the `endpoints()` function;
+  merge `frontend/package.json` (the `@a2ui/react`, `@a2ui/web_core` and `zod3` dependencies, the
+  `surfaces` and `surfaces:check` scripts, then `npm install`), `frontend/vite.config.ts` (the
+  `build.rolldownOptions` chunks) and `frontend/.prettierignore` (`src/contract.gen.ts`,
+  `src/**/*.surface.gen.ts`). Then `go test ./cmd/server` twice.
+- An app whose contract test lists endpoints itself: move the list into `endpoints()` and take the
+  template's one-line test.
+- Replace `.claude/skills/roux/` with the fresh app's copy.
+
 ## 0.6.3 to 0.6.5
 
 - Packages: nothing.

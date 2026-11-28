@@ -6,6 +6,26 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-28
+
+### Added
+
+- **`rouxtest.ContractFile(t, path, endpoints...)`.** The contract test in one line: it writes
+  `cqrs.TypeScript(endpoints)` to the front end's `contract.gen.ts` when the file differs and fails
+  once so the change is committed, as `rouxtest.PermissionsFile` does for permissions.
+
+### Changed
+
+- **A new app ships the surfaces' setup.** The template has the A2UI SDK (`@a2ui/react`,
+  `@a2ui/web_core`, `zod3`), the `surfaces` and `surfaces:check` scripts, Vite's `a2ui` and `zod3`
+  chunks, the `.prettierignore` lines, `src/surfaces.ts`, an empty `src/contract.gen.ts` and
+  `cmd/server/contract_test.go`, with `cqrs.Module{}` on. An app's first feature adds only its own
+  files: the skill's recipe has no "once per app" step any more.
+- **The app's endpoints are `endpoints()` in `cmd/server/modules.go`**, one argument per feature,
+  as `permissions()` lists its permissions; the contract test reads it.
+- **An empty contract has no empty interfaces.** With no queries or commands, `cqrs.TypeScript`
+  writes `Queries` and `Commands` as `Record<never, never>`, which the app's lint accepts.
+
 ## [0.6.5] - 2026-11-28
 
 ### Changed
@@ -842,7 +862,8 @@ First release: the contracts every roux application shares, on both the Java and
 - Java 25 and Spring Boot 4.1.
 - React, Chakra UI and the TanStack libraries are peer dependencies of `@jwcarman/roux-web`.
 
-[Unreleased]: https://github.com/jwcarman/roux/compare/v0.6.5...HEAD
+[Unreleased]: https://github.com/jwcarman/roux/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/jwcarman/roux/releases/tag/v0.7.0
 [0.6.5]: https://github.com/jwcarman/roux/releases/tag/v0.6.5
 [0.6.4]: https://github.com/jwcarman/roux/releases/tag/v0.6.4
 [0.6.3]: https://github.com/jwcarman/roux/releases/tag/v0.6.3

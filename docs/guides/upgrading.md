@@ -82,6 +82,25 @@ Upgrade one release at a time, oldest first: each section assumes the one before
 | --- | --- |
 | `frontend/src/routes/_signedIn/-appearance.test.tsx` | The theme in its fixture adds `depth: "flat"`. |
 
+## 0.6.5 to 0.7.0
+
+**The packages.** Nothing to change. `rouxtest.ContractFile(t, path, endpoints...)` is new: the
+contract test in one line.
+
+**The template's files.** A new app ships the surfaces' setup, so its first feature adds only its
+own files. An app with no surface yet takes it now; one with a surface already set it up by hand and
+may move to the template's shape (its endpoints in `endpoints()`, the one-line test).
+
+| File | What to do |
+| --- | --- |
+| `cmd/server/contract_test.go` | Copy (replaces a hand-written one). |
+| `cmd/server/modules.go` | Add `cqrs.Module{}` after `members`, and `endpoints()`, listing each feature's `Endpoints`. |
+| `frontend/src/surfaces.ts`, `frontend/src/contract.gen.ts` | Copy if missing; `go test ./cmd/server` twice rewrites the contract. |
+| `frontend/package.json` | Add `@a2ui/react`, `@a2ui/web_core`, `"zod3": "npm:zod@^3.25.76"` and the `surfaces`, `surfaces:check` scripts, then `npm install`. |
+| `frontend/vite.config.ts` | Merge `build.rolldownOptions` (the `a2ui` and `zod3` chunks). |
+| `frontend/.prettierignore` | Add `src/contract.gen.ts` and `src/**/*.surface.gen.ts`. |
+| `.claude/skills/roux/` | Replace with the fresh app's copy. |
+
 ## 0.6.2 to 0.6.3
 
 **The packages.** Nothing to change.
