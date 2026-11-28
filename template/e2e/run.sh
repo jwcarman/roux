@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# The Playwright suite against the app as it is now: `make e2e`. It makes the database app_e2e afresh
-# on the Postgres server DATABASE_URL names (cmd/e2edb), builds and starts the server on port 8099,
-# sending its mail to SMTP_ADDR, and runs the suite there, reading mail from E2E_MAILPIT_URL;
-# `make dev`'s server and data are left alone. It starts nothing: each address defaults to
-# `make services`' Postgres and Mailpit on this machine, and gives way to the environment.
-# Arguments go to Playwright: `make e2e ARGS="tests/user.spec.ts"`.
+# The Playwright suite against the app as it is now: `make e2e`. cmd/e2eservices makes the database
+# app_e2e afresh on the Postgres server DATABASE_URL names and checks Mailpit at E2E_MAILPIT_URL;
+# then the server is built and started on port 8099, sending its mail to SMTP_ADDR, and the suite
+# runs there. `make dev`'s server and data are left alone. It starts nothing: each setting comes as
+# the app's do (a variable set, then a service binding, then .env), else `make services`' Postgres
+# and Mailpit on this machine. Arguments go to Playwright: `make e2e ARGS="tests/user.spec.ts"`.
 
 set -euo pipefail
 
@@ -15,21 +15,15 @@ URL="http://localhost:$PORT"
 OWNER_EMAIL=owner@example.test
 OWNER_NAME="Olive Owner"
 
-DATABASE_URL="${DATABASE_URL:-postgres://app:app@localhost:5432/app}"
-E2E_MAILPIT_URL="${E2E_MAILPIT_URL:-http://localhost:8025}"
-SMTP_ADDR="${SMTP_ADDR:-localhost:1025}"
-
-if ! curl -fs "$E2E_MAILPIT_URL/api/v1/info" >/dev/null; then
-  echo "error: no Mailpit at $E2E_MAILPIT_URL: run make services for this machine's, or set E2E_MAILPIT_URL (and SMTP_ADDR) to the one to use" >&2
-  exit 1
-fi
-E2E_DATABASE_URL="$(DATABASE_URL="$DATABASE_URL" go run ./cmd/e2edb)"
+# E2E_DATABASE_URL and E2E_MAILPIT_URL; the assignment fails, and so this script, when they cannot be had.
+services="$(go run ./cmd/e2eservices)"
+eval "$services"
 make --no-print-directory frontend/dist/index.html
 go build -o bin/e2e-server ./cmd/server
 (cd e2e && npm ci --ignore-scripts --no-audit --no-fund >/dev/null && node_modules/.bin/playwright install chromium >/dev/null)
 
 CODE_SECRET=e2e-only-code-secret-not-for-anything-else \
-  DATABASE_URL="$E2E_DATABASE_URL" SMTP_ADDR="$SMTP_ADDR" SMTP_ALLOW_PLAINTEXT=true \
+  DATABASE_URL="$E2E_DATABASE_URL" SMTP_ALLOW_PLAINTEXT=true \
   OWNER_EMAIL="$OWNER_EMAIL" OWNER_NAME="$OWNER_NAME" \
   ADDR=":$PORT" PUBLIC_URL="$URL" EMAIL_RESEND_INTERVAL=1s \
   FRONTEND_DIR=frontend/dist LOG_FORMAT=text \

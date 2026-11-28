@@ -6,8 +6,23 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- **Service bindings: `bindings.Apply`.** A platform can mount its services as files
+  ([servicebinding.io](https://servicebinding.io)) under `SERVICE_BINDING_ROOT`: `postgresql`, `smtp`
+  (roux's own type) and `mailpit` set `DATABASE_URL` and `TEST_DATABASE_URL`, `SMTP_ADDR` (with
+  `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_FROM`) and `E2E_MAILPIT_URL`. A variable already set wins;
+  a binding that cannot be read, lacks an entry or shares its type with another stops startup,
+  naming it. `pgtest` reads them too.
+- **`.env`, and `app.LoadEnv`.** `app.Main` reads service bindings, then `.env` in the working
+  directory, before anything reads the environment, never overwriting: a variable set wins, then a
+  binding, then `.env`, then roux's defaults. `make dev`'s defaults give way to `.env` too.
+
 ### Changed
 
+- **The template's `cmd/e2edb` is `cmd/e2eservices`.** It finds the Playwright suite's Postgres and
+  Mailpit as the app finds its settings (bindings and `.env` included), makes `app_e2e`, checks
+  Mailpit, and gives both to `e2e/run.sh`, which no longer sets `SMTP_ADDR` itself.
 - **`make verify` runs fastest first.** The static checks (gofmt, `go vet`, golangci-lint, Prettier,
   ESLint and the new `npm run typecheck`), then the Go and Vitest tests, then the release build
   (`make build`), then the Playwright suite, so a formatting slip fails in seconds, not after the

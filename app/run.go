@@ -49,6 +49,10 @@ type Config struct {
 // Main is an application's whole main: it runs the app until SIGINT or SIGTERM, and exits 1,
 // logging why, if it fails.
 func Main(cfg Config) {
+	if err := LoadEnv(); err != nil {
+		slog.Error("fatal", "err", err)
+		os.Exit(1)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	err := Run(ctx, cfg)
 	stop()

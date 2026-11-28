@@ -86,12 +86,17 @@ Upgrade one release at a time, oldest first: each section assumes the one before
 
 **The packages.** Nothing to change.
 
-**The template's files.** Optional: `make verify` runs fastest first.
+**The template's files.** Optional: `make verify` runs fastest first, and the Playwright suite finds its services as the app does (service bindings, `.env`).
 
 | File | What to do |
 | --- | --- |
 | `Makefile` | Take the template's `verify` target. |
 | `frontend/package.json` | Add the script `"typecheck": "tsc -b"`. |
+| `cmd/e2edb/` | Remove it, and copy the template's `cmd/e2eservices/` (both files). |
+| `e2e/run.sh` | Take the template's, keeping any settings your app adds to the server's line. |
+| `scripts/dev.sh` | Take the template's: its defaults give way to `.env`. |
+
+Nothing else changes: with no `SERVICE_BINDING_ROOT` and no `.env`, the app reads its settings as before.
 
 ## 0.6.1 to 0.6.2
 

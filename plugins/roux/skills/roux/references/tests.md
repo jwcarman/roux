@@ -117,8 +117,9 @@ it("filters by status and keeps it in the URL", async () => {
 `make e2e` runs it against a fresh copy of the app on port 8099 (`make e2e ARGS="tests/x.spec.ts"`
 for one file). The skill's check script does not run it.
 
-- It starts nothing: `make services` first (Postgres and Mailpit in Docker), or set `DATABASE_URL`
-  (a database on the server; `app_e2e` is made beside it), `SMTP_ADDR` and `E2E_MAILPIT_URL`.
+- It starts nothing: `make services` first (Postgres and Mailpit in Docker), or give `DATABASE_URL`
+  (a database on the server; `app_e2e` is made beside it), `SMTP_ADDR` and `E2E_MAILPIT_URL` as
+  variables, service bindings or `.env` lines (app-setup.md). `cmd/e2eservices` finds them for run.sh.
 - `make verify`, fastest first: static checks (Go's and the front end's, `npm run typecheck`
   included), the tests (Go, Vitest), `make build`, then the suite. With those three and `TEST_DATABASE_URL` set it needs no Docker.
 

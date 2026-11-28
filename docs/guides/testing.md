@@ -465,8 +465,8 @@ string the endpoint received.
 ## Playwright
 
 The end-to-end suite (`e2e/`) drives the app in Chromium against a real database and a real mail
-catcher. `make e2e` runs it: `e2e/run.sh` makes the database `app_e2e` afresh (`cmd/e2edb`, which
-needs no Postgres tools), builds the server and starts it on <http://localhost:8099>, and runs the
+catcher. `make e2e` runs it: `e2e/run.sh` makes the database `app_e2e` afresh (`cmd/e2eservices`,
+which needs no Postgres tools), builds the server and starts it on <http://localhost:8099>, and runs the
 suite there, so `make dev`'s server and data are left alone. Pass Playwright arguments with
 `make e2e ARGS="tests/user.spec.ts"`.
 
@@ -479,7 +479,10 @@ It starts no services. On your machine, `make services` starts PostgreSQL and Ma
 | `SMTP_ADDR` | Mailpit's SMTP `host:port`, where the server sends sign-in mail | `localhost:1025` |
 | `E2E_MAILPIT_URL` | Mailpit's web address, where the suite reads that mail | `http://localhost:8025` |
 
-When Postgres or Mailpit does not answer, run.sh stops, naming the address it tried. The Go tests
+Each also comes as the app's settings do: from a service binding (`postgresql`, `smtp`, `mailpit`), or
+from `.env` ([Settings](getting-started.md#where-settings-come-from)). `cmd/e2eservices` finds them,
+makes the database and checks Mailpit for run.sh. When Postgres or Mailpit does not answer, run.sh
+stops, naming the address it tried. The Go tests
 take `TEST_DATABASE_URL` the same way (otherwise each package starts a Postgres container). With
 all four set, `make verify` runs every check without Docker.
 

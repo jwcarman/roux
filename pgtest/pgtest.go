@@ -4,7 +4,7 @@
 // database you run the app against).
 //
 // The database is TEST_DATABASE_URL when it is set (CI's Postgres service, or one you
-// run yourself). Otherwise each test package starts a Postgres container of its own
+// run yourself), or a platform's postgresql service binding (package bindings) when it is not. Otherwise each test package starts a Postgres container of its own
 // (testcontainers-go) on first use, removed when the package's tests end. Without
 // Docker the test fails: a database test never silently skips.
 package pgtest
@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 
+	"github.com/jwcarman/roux/bindings"
 	"github.com/jwcarman/roux/pgdb"
 )
 
@@ -41,10 +42,16 @@ var started = sync.OnceValues(func() (string, error) {
 	return c.ConnectionString(ctx, "sslmode=disable")
 })
 
-// URL is the test database's connection string: TEST_DATABASE_URL, or this test
-// package's container, started on first use.
+// applied reads the service bindings once, before the first test asks for its database.
+var applied = sync.OnceValue(bindings.Apply)
+
+// URL is the test database's connection string: TEST_DATABASE_URL (or a postgresql service
+// binding), or this test package's container, started on first use.
 func URL(t *testing.T) string {
 	t.Helper()
+	if err := applied(); err != nil {
+		t.Fatalf("pgtest: %v", err)
+	}
 	if raw := os.Getenv("TEST_DATABASE_URL"); raw != "" {
 		return raw
 	}

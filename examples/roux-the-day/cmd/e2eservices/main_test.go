@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -96,5 +98,45 @@ func TestFreshRefusesToDropTheDatabaseItConnectsTo(t *testing.T) {
 	_, err := fresh(context.Background(), "postgres://app:app@127.0.0.1:1/app_e2e", "app_e2e")
 	if err == nil || !strings.Contains(err.Error(), "another database") {
 		t.Fatalf("error %v, want one asking for another database on the server", err)
+	}
+}
+
+func TestInboxIsMailpitAnswering(t *testing.T) {
+	mailpit := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/info" {
+			http.NotFound(w, r)
+		}
+	}))
+	defer mailpit.Close()
+	if err := inbox(mailpit.URL); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestInboxSaysWhatToDoWhenMailpitIsNotThere(t *testing.T) {
+	err := inbox("http://127.0.0.1:1")
+	if err == nil {
+		t.Fatal("no error with nothing listening")
+	}
+	for _, want := range []string{"http://127.0.0.1:1", "make services", "E2E_MAILPIT_URL"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not say %q", err, want)
+		}
+	}
+}
+
+func TestInboxIsNotSomethingElse(t *testing.T) {
+	other := httptest.NewServer(http.NotFoundHandler())
+	defer other.Close()
+	if err := inbox(other.URL); err == nil || !strings.Contains(err.Error(), "404") {
+		t.Fatalf("error %v, want one giving the status", err)
+	}
+}
+
+func TestShellLinesQuoteEveryValue(t *testing.T) {
+	got := shellLines([][2]string{{"E2E_DATABASE_URL", "postgres://a:it's@h/app_e2e"}, {"E2E_MAILPIT_URL", "http://m:8025"}})
+	want := "E2E_DATABASE_URL='postgres://a:it'\\''s@h/app_e2e'\nE2E_MAILPIT_URL='http://m:8025'\n"
+	if got != want {
+		t.Fatalf("got %q, want %q", got, want)
 	}
 }

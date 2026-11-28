@@ -195,6 +195,35 @@ has a unit (`30s`).
 | `SHUTDOWN_DELAY` | How long to keep serving after readiness fails, with a unit: `5s`. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` and the other `OTEL_*` | Where traces, metrics and logs go (`compose.yaml`'s `otel` profile runs a collector and Grafana). |
 
+#### Where settings come from
+
+`app.Main` fills the environment before anything reads it (`app.LoadEnv`), and never overwrites a
+variable already set, so the first of these wins:
+
+1. A variable set in the environment (an empty one counts as unset).
+2. A service binding the platform mounts (below).
+3. `.env` in the working directory: one line `NAME=value` each, for this machine's settings, such as
+   its secrets or `OWNER_EMAIL=you@example.com`. The template's `.gitignore` and `.dockerignore`
+   keep it out of git and the image. A `.env` that cannot be read stops startup.
+4. roux's default, where the table above gives one (`make dev` adds its own, after `.env`).
+
+#### Service bindings
+
+A platform can hand roux its services as files instead of variables, as
+[servicebinding.io](https://servicebinding.io) describes: `SERVICE_BINDING_ROOT` names a directory
+with one directory per service, holding one file per entry and always a `type` file. roux reads
+three types; others are ignored, as are names starting with a dot.
+
+| `type` | Entries | Sets |
+| --- | --- | --- |
+| `postgresql` | `uri`, or `host`, `port`, `database`, `username`, `password` (and `sslmode`) | `DATABASE_URL`, `TEST_DATABASE_URL` |
+| `smtp` | `host`, `port`; `username` with `password`, and `from`, if the server needs them | `SMTP_ADDR`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_FROM` |
+| `mailpit` | `uri`, Mailpit's web address (for the Playwright suite only) | `E2E_MAILPIT_URL` |
+
+`smtp` is roux's own type (servicebinding.io has none for mail). A binding that cannot be read, lacks
+an entry, or shares its type with another stops startup, naming it. Package `bindings` does the
+reading: `bindings.Apply()` is what `app.LoadEnv` and `pgtest` call.
+
 roux's tables and the app's are made by the migrations the modules declare (see
 [A feature](features.md#the-table)). There is nothing to run by hand: every start
 applies the migrations it has not applied, each in its own transaction, and a migration that has

@@ -60,8 +60,11 @@ Template files:
 
 ## 0.6.2 to 0.6.3
 
-- Packages: nothing. Template files, optional (`make verify` fastest first): the `Makefile`'s
-  `verify` target, and `"typecheck": "tsc -b"` in `frontend/package.json`'s scripts.
+- Packages: nothing to change. `app.Main` now reads service bindings and `.env` (neither there:
+  as before).
+- Template files, optional: the `Makefile`'s `verify` target (fastest first); `"typecheck": "tsc -b"`
+  in `frontend/package.json`'s scripts; `cmd/e2edb/` replaced by `cmd/e2eservices/`; the template's
+  `e2e/run.sh` (keep the app's own server settings) and `scripts/dev.sh`.
 
 ## 0.6.1 to 0.6.2
 

@@ -80,6 +80,21 @@ with the front end inside; `make image` the container image; `make up` that imag
 | `JWT_ISSUER`, `JWT_AUDIENCES`, `JWT_JWKS_URL` | bearer tokens for API-only callers |
 | `FRONTEND_DIR`, `LOG_FORMAT`, `SHUTDOWN_DELAY`, `OTEL_*` | development and operations |
 
+Where they come from, first wins (`app.LoadEnv`, which `app.Main` calls first; nothing is overwritten):
+a variable set (empty counts as unset), then a service binding, then `.env` (this machine's
+settings and secrets; never committed or in the image), then roux's defaults.
+
+Service bindings (servicebinding.io): `SERVICE_BINDING_ROOT/<name>/` with a `type` file and one file
+per entry; `bindings.Apply()` reads them (`app.LoadEnv` and `pgtest` call it).
+
+| `type` | Entries | Sets |
+| --- | --- | --- |
+| `postgresql` | `uri`, or `host`, `port`, `database`, `username`, `password` (+ `sslmode`) | `DATABASE_URL`, `TEST_DATABASE_URL` |
+| `smtp` | `host`, `port`; `username` + `password`, `from` | `SMTP_ADDR`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_FROM` |
+| `mailpit` | `uri` (the Playwright suite's inbox) | `E2E_MAILPIT_URL` |
+
+Other types are ignored; an unreadable binding, a missing entry, or two of one type stops startup.
+
 ## Names: the app root (`main.tsx`)
 
 ```tsx
