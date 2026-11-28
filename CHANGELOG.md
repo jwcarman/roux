@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
-## [0.6.4] - 2026-11-28
+## [0.6.5] - 2026-11-28
 
 ### Changed
 
@@ -15,6 +15,11 @@ All notable changes to this project are documented in this file. The format foll
   it). Claude Code loads it with nothing to install, so a headless agent (`claude -p`) gets it too;
   it never installed the plugin the app's `.claude/settings.json` named, which the app no longer
   names.
+
+## [0.6.4] - 2026-11-28
+
+Not published: its release check failed (a test of the template export). 0.6.5 is the same
+change.
 
 ## [0.6.3] - 2026-11-27
 
@@ -837,7 +842,8 @@ First release: the contracts every roux application shares, on both the Java and
 - Java 25 and Spring Boot 4.1.
 - React, Chakra UI and the TanStack libraries are peer dependencies of `@jwcarman/roux-web`.
 
-[Unreleased]: https://github.com/jwcarman/roux/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/jwcarman/roux/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/jwcarman/roux/releases/tag/v0.6.5
 [0.6.4]: https://github.com/jwcarman/roux/releases/tag/v0.6.4
 [0.6.3]: https://github.com/jwcarman/roux/releases/tag/v0.6.3
 [0.6.2]: https://github.com/jwcarman/roux/releases/tag/v0.6.2

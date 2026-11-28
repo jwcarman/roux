@@ -50,7 +50,7 @@ grep -q '"@jwcarman/roux-web": "9.8.7"' "$out/frontend/package.json" && pass "ro
 [[ -e "$out/frontend/package-lock.json" ]] && fail "the frontend lock is left out" || pass "the frontend lock is left out"
 diff -r "$ROOT/plugins/roux/skills/roux" "$out/.claude/skills/roux" >/dev/null \
   && pass "roux's skill ships in the app, as the release has it" || fail "roux's skill ships in the app, as the release has it"
-grep -rqs -e extraKnownMarketplaces -e enabledPlugins "$out/.claude" \
+grep -qs -e extraKnownMarketplaces -e enabledPlugins "$out/.claude/settings.json" \
   && fail "the app installs no plugin: its skill is in .claude/skills" || pass "the app installs no plugin: its skill is in .claude/skills"
 [[ -f "$out/cmd/server/main.go" ]] && [[ -f "$out/frontend/src/main.tsx" ]] && pass "tracked files are copied" || fail "tracked files are copied"
 [[ -e "$out/coverage.out" ]] && fail "untracked files stay behind" || pass "untracked files stay behind"
