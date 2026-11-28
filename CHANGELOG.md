@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-11-27
+
 ### Added
 
 - **`make verify` and `make services` in the template.** `make verify` runs every check an app has,
@@ -801,7 +803,8 @@ First release: the contracts every roux application shares, on both the Java and
 - Java 25 and Spring Boot 4.1.
 - React, Chakra UI and the TanStack libraries are peer dependencies of `@jwcarman/roux-web`.
 
-[Unreleased]: https://github.com/jwcarman/roux/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/jwcarman/roux/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/jwcarman/roux/releases/tag/v0.6.2
 [0.6.1]: https://github.com/jwcarman/roux/releases/tag/v0.6.1
 [0.6.0]: https://github.com/jwcarman/roux/releases/tag/v0.6.0
 [0.5.0]: https://github.com/jwcarman/roux/releases/tag/v0.5.0

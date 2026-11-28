@@ -17,16 +17,16 @@ Upgrade one release at a time, oldest first: each section assumes the one before
 1. **The packages**, in the app's directory:
 
    ```bash
-   go get github.com/jwcarman/roux@v0.6.1 && go mod tidy
-   (cd frontend && npm install @jwcarman/roux-web@0.6.1)
+   go get github.com/jwcarman/roux@v0.6.2 && go mod tidy
+   (cd frontend && npm install @jwcarman/roux-web@0.6.2)
    ```
 
 2. **The release's template**, to copy from: a fresh app at that version, under the app's own name,
    outside the app:
 
    ```bash
-   mkdir -p /tmp/roux-0.6.1 && cd /tmp/roux-0.6.1
-   npm create @jwcarman/roux-app@0.6.1 team-planner -- --name "Team Planner"
+   mkdir -p /tmp/roux-0.6.2 && cd /tmp/roux-0.6.2
+   npm create @jwcarman/roux-app@0.6.2 team-planner -- --name "Team Planner"
    ```
 
    Its files carry the app's name where the template does (the Makefile's `bin/team-planner`), so
