@@ -21,6 +21,9 @@ function writeTemplate() {
   writeFileSync(join(template, "README.md"), "# Roux App\n");
   writeFileSync(join(template, "_gitignore"), "target/\n");
   writeFileSync(join(template, "frontend/_gitignore"), "dist/\n");
+  // Agent settings outside the skills, which are named like any other file.
+  mkdirSync(join(template, ".claude"), { recursive: true });
+  writeFileSync(join(template, ".claude/notes.md"), "Roux App, module roux-app.\n");
   // roux's skill, which names the starter and the template's module on purpose.
   mkdirSync(join(template, ".claude/skills/roux/references"), { recursive: true });
   writeFileSync(join(template, ".claude/skills/roux/SKILL.md"), "Made by `create-roux-app`, module `roux-app`.\n");
@@ -167,6 +170,7 @@ describe("create", () => {
 
     expect(read(".claude/skills/roux/SKILL.md")).toBe("Made by `create-roux-app`, module `roux-app`.\n");
     expect(read(".claude/skills/roux/references/feature.md")).toBe('"roux-app/internal/labels"\n');
+    expect(read(".claude/notes.md")).toBe("Acme Gym, module acme-gym.\n");
   });
 
   it("copies a file that is not text as it is", () => {
