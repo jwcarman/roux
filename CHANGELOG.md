@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-11-28
+
 ### Changed
 
 - **A new app carries roux's skill as files.** `create-roux-app` puts the skill in
@@ -836,6 +838,7 @@ First release: the contracts every roux application shares, on both the Java and
 - React, Chakra UI and the TanStack libraries are peer dependencies of `@jwcarman/roux-web`.
 
 [Unreleased]: https://github.com/jwcarman/roux/compare/v0.6.3...HEAD
+[0.6.4]: https://github.com/jwcarman/roux/releases/tag/v0.6.4
 [0.6.3]: https://github.com/jwcarman/roux/releases/tag/v0.6.3
 [0.6.2]: https://github.com/jwcarman/roux/releases/tag/v0.6.2
 [0.6.1]: https://github.com/jwcarman/roux/releases/tag/v0.6.1

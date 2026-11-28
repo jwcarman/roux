@@ -58,7 +58,7 @@ Template files:
 
 - `frontend/src/routes/_signedIn/-appearance.test.tsx`: the fixture's theme adds `depth: "flat"`.
 
-## 0.6.3 to the next release
+## 0.6.3 to 0.6.4
 
 - Packages: nothing.
 - Template files: roux's skill now ships in the app as `.claude/skills/roux/`, copied as it is. Copy
