@@ -3,6 +3,7 @@ module roux-app
 go 1.27
 
 require (
+	github.com/jackc/pgx/v5 v5.13.0
 	github.com/jwcarman/roux v0.0.0
 	go.yaml.in/yaml/v3 v3.0.5
 )
@@ -53,7 +54,6 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.31.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/jackc/pgx/v5 v5.13.0 // indirect
 	github.com/jackc/puddle/v2 v2.2.3 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.20.2 // indirect

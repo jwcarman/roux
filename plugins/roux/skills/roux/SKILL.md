@@ -88,7 +88,7 @@ name anything wrong. The TypeScript language server may not start (TypeScript 7 
 | A record's history, an activity feed | `references/activity-log.md` (~1,500 tokens) |
 | The emails roux sends, rewording one, SMTP settings | `references/email.md` (~1,100 tokens) |
 | roux's A2UI catalog: defining a component, its types and props, translating for the A2UI SDK, `surfaceComponents` | `references/a2ui-catalog.md` (~1,100 tokens) |
-| Upgrading the app to a new roux release | `references/upgrading.md` (~700 tokens) |
+| Upgrading the app to a new roux release | `references/upgrading.md` (~970 tokens) |
 
 ## Before you finish
 

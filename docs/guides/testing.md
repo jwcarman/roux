@@ -465,12 +465,26 @@ string the endpoint received.
 ## Playwright
 
 The end-to-end suite (`e2e/`) drives the app in Chromium against a real database and a real mail
-catcher. `make e2e` runs it: `e2e/run.sh` starts PostgreSQL and Mailpit, makes the database
-`app_e2e` afresh, builds the server and starts it on <http://localhost:8099>, and runs the suite
-there, so `make dev`'s server and data are left alone. Pass Playwright arguments with
-`make e2e ARGS="tests/user.spec.ts"`. The suite takes the addresses it is given
-(`E2E_BASE_URL`, `E2E_MAILPIT_URL`) and the owner run.sh makes (`E2E_OWNER_EMAIL`,
-`E2E_OWNER_NAME`).
+catcher. `make e2e` runs it: `e2e/run.sh` makes the database `app_e2e` afresh (`cmd/e2edb`, which
+needs no Postgres tools), builds the server and starts it on <http://localhost:8099>, and runs the
+suite there, so `make dev`'s server and data are left alone. Pass Playwright arguments with
+`make e2e ARGS="tests/user.spec.ts"`.
+
+It starts no services. On your machine, `make services` starts PostgreSQL and Mailpit in Docker
+(`make dev` does too). Anywhere else, such as a build container without Docker, give it theirs:
+
+| Variable | What it is | Default |
+| --- | --- | --- |
+| `DATABASE_URL` | A database on the Postgres server to use; `app_e2e` is made beside it | `postgres://app:app@localhost:5432/app` |
+| `SMTP_ADDR` | Mailpit's SMTP `host:port`, where the server sends sign-in mail | `localhost:1025` |
+| `E2E_MAILPIT_URL` | Mailpit's web address, where the suite reads that mail | `http://localhost:8025` |
+
+When Postgres or Mailpit does not answer, run.sh stops, naming the address it tried. The Go tests
+take `TEST_DATABASE_URL` the same way (otherwise each package starts a Postgres container). With
+all four set, `make verify` runs every check without Docker.
+
+The suite also takes the address of the app (`E2E_BASE_URL`) and the owner run.sh makes
+(`E2E_OWNER_EMAIL`, `E2E_OWNER_NAME`).
 
 The suite signs in as a user does: it asks for a link on the sign-in page, reads the link from
 Mailpit's API, and opens it. Passkeys use Chrome's virtual authenticator (the DevTools `WebAuthn`

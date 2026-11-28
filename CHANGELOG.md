@@ -6,6 +6,21 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- **`make verify` and `make services` in the template.** `make verify` runs every check an app has,
+  stopping at the first failure: `make check`, the front end's format check, lint, coverage and
+  build, then the Playwright suite. `make services` starts Postgres and Mailpit in Docker; `make dev`
+  runs it.
+
+### Changed
+
+- **`make e2e` starts nothing.** It uses the Postgres and Mailpit it is given (`DATABASE_URL`,
+  `SMTP_ADDR`, `E2E_MAILPIT_URL`), which default to `make services`' on this machine, and stops
+  naming the address when one does not answer. The new `cmd/e2edb` makes `app_e2e` on that server,
+  so the suite needs neither Docker nor Postgres's tools: with those and `TEST_DATABASE_URL` set,
+  `make verify` runs in a container without Docker.
+
 ## [0.6.1] - 2026-11-27
 
 ### Fixed

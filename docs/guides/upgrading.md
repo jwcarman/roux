@@ -82,6 +82,21 @@ Upgrade one release at a time, oldest first: each section assumes the one before
 | --- | --- |
 | `frontend/src/routes/_signedIn/-appearance.test.tsx` | The theme in its fixture adds `depth: "flat"`. |
 
+## 0.6.1 to 0.6.2
+
+**The packages.** Nothing to change.
+
+**The template's files.** Optional: they give the app `make verify` (every check) and let
+`make e2e` use services it is given, not only Docker's.
+
+| File | What to do |
+| --- | --- |
+| `Makefile` | Take the template's `verify` and `services` targets; `dev` runs `services`, `e2e` no longer starts anything. |
+| `e2e/run.sh` | Take the template's, keeping any settings your app adds to the server's line. |
+| `cmd/e2edb/` | Copy both files, then `go mod tidy` (it makes `github.com/jackc/pgx/v5` a direct requirement). |
+
+After this, `make e2e` on your machine needs `make services` (or `make dev`) first.
+
 ## 0.6.0 to 0.6.1
 
 **The packages.** Nothing to change. `@jwcarman/roux-web` now accepts `@testing-library/jest-dom` 8

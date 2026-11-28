@@ -58,6 +58,13 @@ Template files:
 
 - `frontend/src/routes/_signedIn/-appearance.test.tsx`: the fixture's theme adds `depth: "flat"`.
 
+## 0.6.1 to 0.6.2
+
+- Packages: nothing. Template files, optional (`make verify`, and `make e2e` on given services):
+  `Makefile` (`verify`, `services`; `dev` runs `services`; `e2e` starts nothing), `e2e/run.sh`
+  (keep the app's own server settings), `cmd/e2edb/` (both files, then `go mod tidy`).
+- After it, `make e2e` needs `make services` (or `make dev`) first.
+
 ## 0.6.0 to 0.6.1
 
 - Nothing required. roux-web accepts `@testing-library/jest-dom` 7 or 8; the template moved to

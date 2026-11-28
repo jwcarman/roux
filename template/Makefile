@@ -6,17 +6,27 @@
 GOLANGCI_LINT_VERSION := v2.15.0
 GOLANGCI_LINT := bin/golangci-lint-$(GOLANGCI_LINT_VERSION)
 
-.PHONY: check dev up down e2e fmt lint build web build-dev image test vet clean
+.PHONY: check verify services dev up down e2e fmt lint build web build-dev image test vet clean
 
 check: fmt vet lint test
+
+# make verify is every check an app has, fastest first, stopping at the first failure: its exit status
+# alone says whether the app is good. It starts nothing (see make services).
+verify: check ## every check: the Go checks, the front end's format, lint, tests and build, then the Playwright suite
+	cd frontend && npm ci && npm run format:check && npm run lint && npm run coverage && npm run build
+	e2e/run.sh
+
+# Postgres and Mailpit, on this machine, for make dev, make e2e and make verify. Elsewhere, give
+# their addresses instead: DATABASE_URL, SMTP_ADDR and E2E_MAILPIT_URL (TEST_DATABASE_URL for make test).
+services: ## Postgres and Mailpit on this machine (http://localhost:8025): make e2e and make verify need them, or their addresses
+	docker compose up -d --wait postgres mailpit
 
 # make dev is the working loop: Postgres and Mailpit, then the server under air (rebuilt when a Go file
 # changes) and Vite (the pages, reloaded as you edit) together, at http://localhost:5173
 # (scripts/dev.sh). Its settings are for this machine, and each gives way to the environment:
 # OWNER_EMAIL=you@... make dev signs you in as yourself. A deployment makes its own CODE_SECRET
 # (openssl rand -base64 32).
-dev: frontend/node_modules/.package-lock.json ## the live loop at http://localhost:5173: Postgres and Mailpit (http://localhost:8025), the server rebuilt when Go changes, Vite
-	docker compose up -d --wait postgres mailpit
+dev: services frontend/node_modules/.package-lock.json ## the live loop at http://localhost:5173: Postgres and Mailpit (http://localhost:8025), the server rebuilt when Go changes, Vite
 	scripts/dev.sh
 
 up: ## the app in Docker at http://localhost:8080, as a deployment runs it: the image built, Postgres and Mailpit beside it
@@ -26,7 +36,7 @@ up: ## the app in Docker at http://localhost:8080, as a deployment runs it: the 
 down: ## stop everything docker compose started; the database keeps its data
 	docker compose --profile app --profile oidc --profile otel stop
 
-e2e: ## the Playwright suite against a fresh copy of the app on port 8099 (its own database); ARGS go to Playwright
+e2e: ## the Playwright suite against a fresh copy of the app on port 8099 (its own database; make services first); ARGS go to Playwright
 	e2e/run.sh $(ARGS)
 
 fmt:
