@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-11-27
+
 ### Added
 
 - **Service bindings: `bindings.Apply`.** A platform can mount its services as files
@@ -825,7 +827,8 @@ First release: the contracts every roux application shares, on both the Java and
 - Java 25 and Spring Boot 4.1.
 - React, Chakra UI and the TanStack libraries are peer dependencies of `@jwcarman/roux-web`.
 
-[Unreleased]: https://github.com/jwcarman/roux/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/jwcarman/roux/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/jwcarman/roux/releases/tag/v0.6.3
 [0.6.2]: https://github.com/jwcarman/roux/releases/tag/v0.6.2
 [0.6.1]: https://github.com/jwcarman/roux/releases/tag/v0.6.1
 [0.6.0]: https://github.com/jwcarman/roux/releases/tag/v0.6.0

@@ -31,7 +31,7 @@ name anything wrong. The TypeScript language server may not start (TypeScript 7 
 
 ## First, look at the project
 
-- **Versions:** this skill covers roux **0.6.2**, the Go server. `github.com/jwcarman/roux` in
+- **Versions:** this skill covers roux **0.6.3**, the Go server. `github.com/jwcarman/roux` in
   `go.mod` and `@jwcarman/roux-web` in `frontend/package.json` must be that or newer; roux 0.3.0
   and earlier were Spring Boot. If not, tell the user before anything else.
 - **The nearest feature:** in a grown app, find the existing feature most like the task and copy its
