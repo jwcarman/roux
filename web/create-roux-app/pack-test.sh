@@ -29,7 +29,8 @@ mkdir "$work/apps"
 ) && pass "the packed starter runs" || { fail "the packed starter runs"; cat "$work/out.txt"; }
 app="$work/apps/acme-gym"
 
-left="$(grep -rIl --exclude-dir=.git -e 'Roux App' -e 'roux-app' "$app" || true)"
+# roux's skill names the starter and the template's module on purpose, and is copied as it is.
+left="$(grep -rIl --exclude-dir=.git --exclude-dir=skills -e 'Roux App' -e 'roux-app' "$app" || true)"
 [[ -z "$left" ]] && pass "no template name is left" || fail "no template name is left: $left"
 mangled="$(grep -rIl --exclude-dir=.git -e '@jwcarman/acme-gym' -e 'create-acme-gym' "$app" || true)"
 [[ -z "$mangled" ]] && pass "no starter name was renamed into the app's" || fail "no starter name was renamed into the app's: $mangled"
@@ -38,7 +39,7 @@ grep -q $'^\tgithub.com/jwcarman/roux v'"$version"'$' "$app/go.mod" && pass "rou
 grep -q 'DisplayName: "Acme Gym"' "$app/cmd/server/main.go" && pass "the app is called Acme Gym" || fail "the app is called Acme Gym"
 grep -q '"name": "acme-gym-web"' "$app/frontend/package.json" && pass "the front end is acme-gym-web" || fail "the front end is acme-gym-web"
 [[ -f "$app/.gitignore" ]] && [[ ! -e "$app/_gitignore" ]] && pass "the .gitignore is back" || fail "the .gitignore is back"
-grep -q '"roux@roux": true' "$app/.claude/settings.json" 2>/dev/null && pass "roux's plugin is enabled in the app" || fail "roux's plugin is enabled in the app"
+cmp -s "$here/../../plugins/roux/skills/roux/SKILL.md" "$app/.claude/skills/roux/SKILL.md" && pass "roux's skill is in the app, as roux wrote it" || fail "roux's skill is in the app, as roux wrote it"
 [[ "$(git -C "$app" rev-list --count HEAD 2>/dev/null)" = 1 ]] && pass "the app has its first commit" || fail "the app has its first commit"
 [[ -z "$(git -C "$app" status --porcelain)" ]] && pass "the commit holds everything" || fail "the commit holds everything"
 grep -q "cd acme-gym" "$work/out.txt" && pass "it says how to start the app" || fail "it says how to start the app"

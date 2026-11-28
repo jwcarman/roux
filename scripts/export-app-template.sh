@@ -47,9 +47,14 @@ fi
 mkdir -p "$OUT"
 OUT="$(cd "$OUT" && pwd)"
 git -C "$FROM" ls-files -z | (cd "$FROM" && xargs -0 tar cf -) | tar xf - -C "$OUT"
+# roux's skill, as files the app's agents load with no plugin to install (a headless agent installs
+# none): roux's own copy, at this release.
+SKILL="$ROOT/plugins/roux/skills/roux"
+mkdir -p "$OUT/.claude/skills/roux"
+git -C "$SKILL" ls-files -z | (cd "$SKILL" && xargs -0 tar cf -) | tar xf - -C "$OUT/.claude/skills/roux"
 
 python3 - "$OUT" "$VERSION" <<'EOF'
-import json, re, sys
+import json, os, re, sys
 out, version = sys.argv[1], sys.argv[2]
 tag = "v" + version
 
@@ -68,13 +73,18 @@ sum_path = f"{out}/go.sum"
 lines = open(sum_path).read().splitlines(keepends=True)
 open(sum_path, "w").writelines(l for l in lines if not l.startswith("github.com/jwcarman/roux "))
 
-# roux's Claude Code plugin at this release.
+# roux's plugin, which the template uses inside roux's repository: the app has the skill's files
+# instead (.claude/skills/roux), so it would load twice.
 settings_path = f"{out}/.claude/settings.json"
 settings = json.load(open(settings_path))
-settings["extraKnownMarketplaces"]["roux"]["source"]["ref"] = tag
-with open(settings_path, "w") as f:
-    json.dump(settings, f, indent=2)
-    f.write("\n")
+settings.pop("extraKnownMarketplaces", None)
+settings.pop("enabledPlugins", None)
+if settings:
+    with open(settings_path, "w") as f:
+        json.dump(settings, f, indent=2)
+        f.write("\n")
+else:
+    os.remove(settings_path)
 
 package_path = f"{out}/frontend/package.json"
 package = json.load(open(package_path))

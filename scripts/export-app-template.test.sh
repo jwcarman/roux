@@ -48,9 +48,10 @@ grep -q '^ignore node_modules$' "$out/go.mod" && pass "the rest of go.mod stays"
 grep -q '^github.com/jwcarman/roux ' "$out/go.sum" && fail "go.sum names no roux" || pass "go.sum names no roux"
 grep -q '"@jwcarman/roux-web": "9.8.7"' "$out/frontend/package.json" && pass "roux-web comes from npm at the release" || fail "roux-web comes from npm at the release"
 [[ -e "$out/frontend/package-lock.json" ]] && fail "the frontend lock is left out" || pass "the frontend lock is left out"
-python3 -c "import json,sys; s=json.load(open(sys.argv[1]))['extraKnownMarketplaces']['roux']['source']; sys.exit(0 if s=={'source':'github','repo':'jwcarman/roux','ref':'v9.8.7'} else 1)" "$out/.claude/settings.json" \
-  && pass "roux's plugin marketplace is pinned to the release's tag" || fail "roux's plugin marketplace is pinned to the release's tag"
-grep -q '"roux@roux": true' "$out/.claude/settings.json" && pass "roux's plugin is enabled" || fail "roux's plugin is enabled"
+diff -r "$ROOT/plugins/roux/skills/roux" "$out/.claude/skills/roux" >/dev/null \
+  && pass "roux's skill ships in the app, as the release has it" || fail "roux's skill ships in the app, as the release has it"
+grep -rqs -e extraKnownMarketplaces -e enabledPlugins "$out/.claude" \
+  && fail "the app installs no plugin: its skill is in .claude/skills" || pass "the app installs no plugin: its skill is in .claude/skills"
 [[ -f "$out/cmd/server/main.go" ]] && [[ -f "$out/frontend/src/main.tsx" ]] && pass "tracked files are copied" || fail "tracked files are copied"
 [[ -e "$out/coverage.out" ]] && fail "untracked files stay behind" || pass "untracked files stay behind"
 

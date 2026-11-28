@@ -21,6 +21,10 @@ function writeTemplate() {
   writeFileSync(join(template, "README.md"), "# Roux App\n");
   writeFileSync(join(template, "_gitignore"), "target/\n");
   writeFileSync(join(template, "frontend/_gitignore"), "dist/\n");
+  // roux's skill, which names the starter and the template's module on purpose.
+  mkdirSync(join(template, ".claude/skills/roux/references"), { recursive: true });
+  writeFileSync(join(template, ".claude/skills/roux/SKILL.md"), "Made by `create-roux-app`, module `roux-app`.\n");
+  writeFileSync(join(template, ".claude/skills/roux/references/feature.md"), '"roux-app/internal/labels"\n');
   // Not text: copied as it is, even where its bytes happen to spell the name.
   writeFileSync(join(template, "frontend/icon.bin"), Buffer.from([0, 1, ...Buffer.from("roux-app")]));
 }
@@ -156,6 +160,13 @@ describe("create", () => {
     expect(read(".gitignore")).toBe("target/\n");
     expect(read("frontend/.gitignore")).toBe("dist/\n");
     expect(existsSync(join(work, "acme-gym/_gitignore"))).toBe(false);
+  });
+
+  it("copies roux's skill as it is, since it names the starter and the template on purpose", () => {
+    create(OPTIONS, { template, cwd: work, git: git() });
+
+    expect(read(".claude/skills/roux/SKILL.md")).toBe("Made by `create-roux-app`, module `roux-app`.\n");
+    expect(read(".claude/skills/roux/references/feature.md")).toBe('"roux-app/internal/labels"\n');
   });
 
   it("copies a file that is not text as it is", () => {

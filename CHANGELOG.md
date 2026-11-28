@@ -6,6 +6,14 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+
+- **A new app carries roux's skill as files.** `create-roux-app` puts the skill in
+  `.claude/skills/roux/`, at the app's roux version, copied as it is (the app's names are not put in
+  it). Claude Code loads it with nothing to install, so a headless agent (`claude -p`) gets it too;
+  it never installed the plugin the app's `.claude/settings.json` named, which the app no longer
+  names.
+
 ## [0.6.3] - 2026-11-27
 
 ### Added

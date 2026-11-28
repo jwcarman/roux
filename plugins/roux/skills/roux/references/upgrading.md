@@ -58,6 +58,14 @@ Template files:
 
 - `frontend/src/routes/_signedIn/-appearance.test.tsx`: the fixture's theme adds `depth: "flat"`.
 
+## 0.6.3 to the next release
+
+- Packages: nothing.
+- Template files: roux's skill now ships in the app as `.claude/skills/roux/`, copied as it is. Copy
+  that folder from the fresh app, and remove `extraKnownMarketplaces` and `enabledPlugins` from
+  `.claude/settings.json` (delete the file if nothing else is left), or the skill loads twice.
+- From now on, every upgrade replaces `.claude/skills/roux/` whole with the fresh app's copy.
+
 ## 0.6.2 to 0.6.3
 
 - Packages: nothing to change. `app.Main` now reads service bindings and `.env` (neither there:
