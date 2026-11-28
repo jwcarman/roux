@@ -28,9 +28,6 @@ const USAGE = 'usage: npm create @jwcarman/roux-app <directory> [-- --name "App 
 const DIRECTORY = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 // npm leaves a .gitignore out of a package, so the template ships each one under this name.
 const SHIPPED_GITIGNORE = "_gitignore";
-// Agent skills, roux's among them: they name the starter and the template's module on purpose, so
-// the app's names are not put in them.
-const SKILLS = join(".claude", "skills");
 
 export function directoryError(directory: string): string | undefined {
   return DIRECTORY.test(directory)
@@ -113,7 +110,9 @@ export function create(options: CreateOptions, { template, cwd, git }: CreateCon
     return { ok: false, message: `${directory} already exists.` };
   }
   cpSync(template, directory, { recursive: true });
-  const skills = join(directory, SKILLS) + sep;
+  // Agent skills, roux's among them: they name the starter and the template's module on purpose, so
+  // the app's names are not put in them.
+  const skills = join(directory, ".claude", "skills") + sep;
   for (const file of filesUnder(directory)) {
     const bytes = readFileSync(file);
     // A NUL byte: not text, so copied as it is.
