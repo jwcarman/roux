@@ -6,6 +6,13 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+
+- **`make verify` runs fastest first.** The static checks (gofmt, `go vet`, golangci-lint, Prettier,
+  ESLint and the new `npm run typecheck`), then the Go and Vitest tests, then the release build
+  (`make build`), then the Playwright suite, so a formatting slip fails in seconds, not after the
+  tests.
+
 ## [0.6.2] - 2026-11-27
 
 ### Added

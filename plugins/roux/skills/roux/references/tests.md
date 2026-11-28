@@ -119,8 +119,8 @@ for one file). The skill's check script does not run it.
 
 - It starts nothing: `make services` first (Postgres and Mailpit in Docker), or set `DATABASE_URL`
   (a database on the server; `app_e2e` is made beside it), `SMTP_ADDR` and `E2E_MAILPIT_URL`.
-- `make verify`: `make check`, the front end's format check, lint, coverage and build, then the
-  suite. With those three and `TEST_DATABASE_URL` set it needs no Docker.
+- `make verify`, fastest first: static checks (Go's and the front end's, `npm run typecheck`
+  included), the tests (Go, Vitest), `make build`, then the suite. With those three and `TEST_DATABASE_URL` set it needs no Docker.
 
 ## Check
 

@@ -58,6 +58,11 @@ Template files:
 
 - `frontend/src/routes/_signedIn/-appearance.test.tsx`: the fixture's theme adds `depth: "flat"`.
 
+## 0.6.2 to 0.6.3
+
+- Packages: nothing. Template files, optional (`make verify` fastest first): the `Makefile`'s
+  `verify` target, and `"typecheck": "tsc -b"` in `frontend/package.json`'s scripts.
+
 ## 0.6.1 to 0.6.2
 
 - Packages: nothing. Template files, optional (`make verify`, and `make e2e` on given services):

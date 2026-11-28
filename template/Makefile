@@ -10,10 +10,20 @@ GOLANGCI_LINT := bin/golangci-lint-$(GOLANGCI_LINT_VERSION)
 
 check: fmt vet lint test
 
-# make verify is every check an app has, fastest first, stopping at the first failure: its exit status
-# alone says whether the app is good. It starts nothing (see make services).
-verify: check ## every check: the Go checks, the front end's format, lint, tests and build, then the Playwright suite
-	cd frontend && npm ci && npm run format:check && npm run lint && npm run coverage && npm run build
+# make verify is every check an app has, fastest first, stopping at the first failure, so a slip
+# shows in seconds: the static checks, then the tests, then the release build, then the slowest and
+# most brittle, the Playwright suite. Its exit status alone says whether the app is good. It starts
+# nothing (see make services).
+verify: ## every check, fastest first: static checks, the tests, the release build, the Playwright suite
+	@echo "verify: static checks"
+	$(MAKE) --no-print-directory fmt vet lint
+	cd frontend && npm ci && npm run format:check && npm run lint && npm run typecheck
+	@echo "verify: tests"
+	$(MAKE) --no-print-directory test
+	cd frontend && npm run coverage
+	@echo "verify: the release build"
+	$(MAKE) --no-print-directory build
+	@echo "verify: the Playwright suite"
 	e2e/run.sh
 
 # Postgres and Mailpit, on this machine, for make dev, make e2e and make verify. Elsewhere, give

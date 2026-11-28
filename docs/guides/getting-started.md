@@ -47,8 +47,9 @@ Either way, features use roux by importing from it; no plumbing is written in th
    `frontend/src/routes/_signedIn/`, and an entry in `frontend/src/shell/nav.ts`
    ([The shell](shell.md)).
 
-`make verify` runs every check, stopping at the first failure: `make check`, the front end's format
-check, lint, tests and build, then the Playwright suite (`make e2e`). It starts nothing: run
+`make verify` runs every check, fastest first, stopping at the first failure: the static checks
+(gofmt, `go vet`, golangci-lint, Prettier, ESLint, `npm run typecheck`), then the tests (Go and
+Vitest), then the release build (`make build`), then the Playwright suite (`make e2e`). It starts nothing: run
 `make services` (Postgres and Mailpit in Docker) first, or give it the addresses of ones already
 running, `DATABASE_URL`, `SMTP_ADDR`, `E2E_MAILPIT_URL` and `TEST_DATABASE_URL` ([Testing](testing.md#playwright)).
 

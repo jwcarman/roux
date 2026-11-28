@@ -82,6 +82,17 @@ Upgrade one release at a time, oldest first: each section assumes the one before
 | --- | --- |
 | `frontend/src/routes/_signedIn/-appearance.test.tsx` | The theme in its fixture adds `depth: "flat"`. |
 
+## 0.6.2 to 0.6.3
+
+**The packages.** Nothing to change.
+
+**The template's files.** Optional: `make verify` runs fastest first.
+
+| File | What to do |
+| --- | --- |
+| `Makefile` | Take the template's `verify` target. |
+| `frontend/package.json` | Add the script `"typecheck": "tsc -b"`. |
+
 ## 0.6.1 to 0.6.2
 
 **The packages.** Nothing to change.

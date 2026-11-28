@@ -773,8 +773,8 @@ k.Handle("GET /api/labels/export", LabelsRead, func(w http.ResponseWriter, r *ht
 ## Check it
 
 - `make check` runs gofmt, `go vet`, golangci-lint and every test. The database tests start
-  PostgreSQL in Docker, or use `TEST_DATABASE_URL`. `make verify` runs every check, the front end's
-  and the Playwright suite's too.
+  PostgreSQL in Docker, or use `TEST_DATABASE_URL`. `make verify` runs every check, fastest first:
+  the static checks, the tests, the release build, the Playwright suite.
 - A migration that fails stops every test that runs it, naming the file and PostgreSQL's error.
 - `go test ./cmd/server` checks the permissions (the front end's list, and every grant) and the
   contract.
